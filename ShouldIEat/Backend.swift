@@ -42,7 +42,6 @@ class Backend {
                 )
         ]
         
-        print("OpenAI Ingredients:\n\(ingredients)")
         print("OpenAI User Preference:\n\(userPreference)")
         
         let chat = try await openAIClient.chats.create(
@@ -53,6 +52,36 @@ class Backend {
         let response = chat.choices.first?.message.content
         
         print("OpenAI Response:\n\(response ?? "Empty")")
+        
+        return response
+    }
+    
+    func extractIngredients(ocrText: String) async throws -> String? {
+        
+        let messages: [Chat.Message] = [
+            Chat.Message.system(content:
+                "You are an expert text extractor. Below is OCR text from the picture of " +
+                "a packaged food item. Your task is to extract the list of ingredients from " +
+                "this blob of text. The list of ingredients generally starts with 'INGREDIENTS'."
+                ),
+            Chat.Message.user(content:
+                "OCR Text of packaged food item picture:\n" +
+                "```\n" +
+                "\(ocrText)\n" +
+                "```\n"
+                )
+        ]
+        
+        print("OpenAI OCR Text:\n\(ocrText)")
+
+        let chat = try await openAIClient.chats.create(
+            model: Model.GPT4.gpt4,
+            messages: messages,
+            temperature: 0.1)
+        
+        let response = chat.choices.first?.message.content
+        
+        print("OpenAI Ingredients:\n\(response ?? "Empty")")
         
         return response
     }
