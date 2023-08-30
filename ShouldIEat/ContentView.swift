@@ -7,44 +7,6 @@
 
 import SwiftUI
 
-struct MyTextEditor: View {
-
-    @Binding var text: String
-    @FocusState private var isTextEditorFocused: Bool
-
-    var body: some View {
-        TextEditor(text: $text)
-            .focused($isTextEditorFocused)
-            .frame(height: 150)
-            .padding()
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.gray, lineWidth: 1)
-            )
-            .padding()
-            .overlay(
-                Text("Enter your dietary preferences in plain English here.")
-                    .foregroundColor(.gray)
-                    .opacity(text.isEmpty ? 1 : 0)
-            )
-            .overlay(
-                Group {
-                    if isTextEditorFocused {
-                        Button(action: {
-                            isTextEditorFocused = false
-                        }) {
-                            Text("Save")
-                                .padding()
-                        }
-                        .padding()
-                        .transition(.scale)
-                    }
-                }, alignment: .bottomTrailing
-            )
-            .padding(.top)
-    }
-}
-
 struct AnalyzedItem : Identifiable {
     var id = UUID()
     var Image: UIImage
@@ -55,10 +17,10 @@ struct ContentView: View {
     @AppStorage("userPreferenceText") var userPreferenceText: String = ""
     @State private var analyzedItems: [AnalyzedItem] = []
     @State private var showAnalysisSheet: Bool = false
+    @State private var showPreferenceSheet: Bool = false
 
     var body: some View {
         VStack {
-            MyTextEditor(text: $userPreferenceText)
             List(analyzedItems.reversed()) { item in
                 Image(uiImage: item.Image)
                     .resizable()
@@ -67,14 +29,34 @@ struct ContentView: View {
                     .padding()
             }
             Spacer()
-            Button("Should I Eat?".uppercased()) {
-                self.showAnalysisSheet = true
+            HStack {
+                Spacer()
+                Button("Should I Eat?".uppercased()) {
+                    self.showAnalysisSheet = true
+                }
+                .padding()
+                .background(Color.accentColor)
+                .foregroundColor(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                Spacer()
+                Button("Dietary Preference") {
+                    self.showPreferenceSheet = true
+                }
+                .padding()
+                .background(Color.accentColor)
+                .foregroundColor(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                Spacer()
             }
             .padding(.bottom, 40)
         }
         .sheet(isPresented: $showAnalysisSheet) {
             AnalysisView(userPreferenceText: $userPreferenceText,
                          analyzedItems: $analyzedItems)
+        }
+        .sheet(isPresented: $showPreferenceSheet) {
+            PreferenceView(preferenceText: $userPreferenceText)
+                .presentationDetents([.medium])
         }
     }
 }
