@@ -35,9 +35,6 @@ struct MyTextEditor: View {
                         }) {
                             Text("Save")
                                 .padding()
-//                                .background(Color.blue)
-//                                .foregroundColor(.white)
-//                                .clipShape(RoundedRectangle())
                         }
                         .padding()
                         .transition(.scale)
@@ -48,17 +45,27 @@ struct MyTextEditor: View {
     }
 }
 
+struct AnalyzedItem : Identifiable {
+    var id = UUID()
+    var Image: UIImage
+    var Analysis: String
+}
+
 struct ContentView: View {
     @AppStorage("userPreferenceText") var userPreferenceText: String = ""
-    @State private var lastSavedImage: UIImage?
-    @State private var lastSavedAnalysis: String?
+    @State private var analyzedItems: [AnalyzedItem] = []
     @State private var showAnalysisSheet: Bool = false
 
     var body: some View {
         VStack {
             MyTextEditor(text: $userPreferenceText)
-            lastSavedImage.map { Image(uiImage: $0).resizable().scaledToFit() }
-            lastSavedAnalysis.map { Text($0).padding() }
+            List(analyzedItems.reversed()) { item in
+                Image(uiImage: item.Image)
+                    .resizable()
+                    .scaledToFit()
+                Text(item.Analysis)
+                    .padding()
+            }
             Spacer()
             Button("Should I Eat?".uppercased()) {
                 self.showAnalysisSheet = true
@@ -67,8 +74,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAnalysisSheet) {
             AnalysisView(userPreferenceText: $userPreferenceText,
-                         savedImage: $lastSavedImage,
-                         savedAnalysis: $lastSavedAnalysis)
+                         analyzedItems: $analyzedItems)
         }
     }
 }

@@ -10,8 +10,7 @@ import SwiftUI
 struct AnalysisView: View {
     
     @Binding var userPreferenceText: String
-    @Binding var savedImage: UIImage?
-    @Binding var savedAnalysis: String?
+    @Binding var analyzedItems: [AnalyzedItem]
     
     @State private var image: UIImage?
     @State private var imageOCRText: String?
@@ -26,10 +25,11 @@ struct AnalysisView: View {
                 .resizable()
                 .scaledToFit()
                 .padding()
-                .onAppear { self.savedImage = image }
             if let analysis = self.analysis {
                 Text(analysis)
-                    .onAppear { self.savedAnalysis = analysis }
+                    .onAppear {
+                        self.analyzedItems.append(AnalyzedItem(Image: image, Analysis: analysis))
+                    }
             } else {
                 if let imageOCRText = self.imageOCRText {
                     if errorExtractingIngredientsList {
@@ -71,10 +71,8 @@ struct AnalysisView: View {
 struct AnalysisView_Previews: PreviewProvider {
     static var previews: some View {
         @State var userPreferenceText: String = ""
-        @State var lastSavedImage: UIImage?
-        @State var lastSavedAnalysis: String?
+        @State var analyzedItems: [AnalyzedItem] = []
         AnalysisView(userPreferenceText: $userPreferenceText,
-                     savedImage: $lastSavedImage,
-                     savedAnalysis: $lastSavedAnalysis)
+                     analyzedItems: $analyzedItems)
     }
 }
