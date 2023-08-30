@@ -24,19 +24,21 @@ class Backend {
         
         let messages: [Chat.Message] = [
             Chat.Message.system(content:
-                "You are an expert nutritionist. Your task is to read a list of ingredients of a packaged " +
-                "food item, consider the human's dietary preferences, and then provide a recommendation " +
-                "on whether or not the human should eat the packaged food item. If recommendation is No, " +
-                "list all ingredients that are against the human's dietary preferences."
+                "You understand ingredients found in processed food. " +
+                "Your task is to read a list of ingredients of a packaged " +
+                "food item, consider the uers's dietary preferences, and then provide a recommendation " +
+                "on whether or not the user should eat the packaged food item. If recommendation is No, " +
+                "list all ingredients that are against the user's dietary preferences. Only consider " +
+                "the dietary preferences listed below."
                 ),
             Chat.Message.user(content:
+                "My dietary preferences:\n" +
+                "```\n" +
+                "\(userPreference)\n" +
+                "```\n" +
                 "Ingredients:\n" +
                 "```\n" +
                 "\(ingredients)\n" +
-                "```\n" +
-                "Human's dietary preferences:\n" +
-                "```\n" +
-                "\(userPreference)\n" +
                 "```\n" +
                 "Should I eat?"
                 )
@@ -45,7 +47,7 @@ class Backend {
         print("OpenAI User Preference:\n\(userPreference)")
         
         let chat = try await openAIClient.chats.create(
-            model: Model.GPT4.gpt4,
+            model: Model.GPT3.gpt3_5Turbo,
             messages: messages,
             temperature: 0.1)
         
@@ -75,7 +77,7 @@ class Backend {
         print("OpenAI OCR Text:\n\(ocrText)")
 
         let chat = try await openAIClient.chats.create(
-            model: Model.GPT4.gpt4,
+            model: Model.GPT3.gpt3_5Turbo,
             messages: messages,
             temperature: 0.1)
         
