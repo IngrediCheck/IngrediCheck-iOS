@@ -8,6 +8,13 @@
 import Foundation
 import OpenAIKit
 
+extension Model {
+    public enum New: String, ModelID {
+        case gpt35turbo1106 = "gpt-3.5-turbo-1106"
+        case gpt40125preview = "gpt-4-0125-preview"
+    }
+}
+
 class Backend {
 
     private var openAIClient: OpenAIKit.Client
@@ -47,7 +54,7 @@ class Backend {
         print("OpenAI User Preference:\n\(userPreference)")
         
         let chat = try await openAIClient.chats.create(
-            model: Model.GPT3.gpt3_5Turbo,
+            model: Model.New.gpt40125preview,
             messages: messages,
             temperature: 0.1)
         
