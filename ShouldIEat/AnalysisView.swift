@@ -63,7 +63,7 @@ struct AnalysisView: View {
                 }
             }
         } else {
-            ImageCaptureView(image: $image, imageOCRText: $imageOCRText)
+            CaptureView(image: $image, imageOCRText: $imageOCRText)
         }
     }
 }

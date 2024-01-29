@@ -30,35 +30,29 @@ struct ImageCaptureView: View {
     var cameraManager = CameraManager()
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                CameraPreview(session: cameraManager.session)
-                    .aspectRatio(3/4, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.paletteSecondary, lineWidth: 0.8)
-                    )
-                Spacer()
-                Button(action: {
-                    capturePhoto()
-                }, label: {
-                    Image(systemName: "circle.dotted.circle")
-                        .resizable()
-                        .frame(width: 50, height: 50)
-                        .foregroundColor(.paletteAccent)
-                })
-            }
-            .padding()
-            .navigationBarItems(trailing: CloseButton())
-            .navigationTitle("Capture photo")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                cameraManager.setupSession()
-            }
-            .onDisappear {
-                cameraManager.stopSession()
-            }
+        VStack {
+            CameraPreview(session: cameraManager.session)
+                .aspectRatio(3/4, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                )
+            Spacer()
+            Button(action: {
+                capturePhoto()
+            }, label: {
+                Image(systemName: "circle.dotted.circle")
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .foregroundColor(.paletteAccent)
+            })
+        }
+        .onAppear {
+            cameraManager.setupSession()
+        }
+        .onDisappear {
+            cameraManager.stopSession()
         }
     }
     

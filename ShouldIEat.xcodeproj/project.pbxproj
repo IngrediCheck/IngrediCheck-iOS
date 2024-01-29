@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
+		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
 		39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */; };
 		39F2A8802A9D3972004EBB9A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87F2A9D3972004EBB9A /* ContentView.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
@@ -21,6 +22,7 @@
 
 /* Begin PBXFileReference section */
 		397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView.swift; sourceTree = "<group>"; };
+		397C85DA2B686DF000FB9DAD /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShouldIEat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldIEatApp.swift; sourceTree = "<group>"; };
 		39F2A87F2A9D3972004EBB9A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -72,6 +74,7 @@
 				397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */,
 				39F2A8812A9D3974004EBB9A /* Assets.xcassets */,
 				39F2A8832A9D3974004EBB9A /* Preview Content */,
+				397C85DA2B686DF000FB9DAD /* CaptureView.swift */,
 			);
 			path = ShouldIEat;
 			sourceTree = "<group>";
@@ -163,6 +166,7 @@
 			files = (
 				39F2A8912A9E61B7004EBB9A /* AnalysisView.swift in Sources */,
 				39F2A8802A9D3972004EBB9A /* ContentView.swift in Sources */,
+				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				39F2A8932A9E70CE004EBB9A /* Backend.swift in Sources */,
