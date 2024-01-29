@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		397C85D92B6858AC00FB9DAD /* ImageCaptureView2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView2.swift */; };
 		39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */; };
 		39F2A8802A9D3972004EBB9A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87F2A9D3972004EBB9A /* ContentView.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
@@ -20,6 +21,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		397C85D82B6858AC00FB9DAD /* ImageCaptureView2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView2.swift; sourceTree = "<group>"; };
 		39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShouldIEat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldIEatApp.swift; sourceTree = "<group>"; };
 		39F2A87F2A9D3972004EBB9A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -72,6 +74,7 @@
 				39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */,
 				39F2A8812A9D3974004EBB9A /* Assets.xcassets */,
 				39F2A8832A9D3974004EBB9A /* Preview Content */,
+				397C85D82B6858AC00FB9DAD /* ImageCaptureView2.swift */,
 			);
 			path = ShouldIEat;
 			sourceTree = "<group>";
@@ -115,7 +118,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1430;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 1520;
 				TargetAttributes = {
 					39F2A8792A9D3972004EBB9A = {
 						CreatedOnToolsVersion = 14.3.1;
@@ -165,6 +168,7 @@
 				39F2A88F2A9E5E06004EBB9A /* ImageCaptureView.swift in Sources */,
 				39F2A8802A9D3972004EBB9A /* ContentView.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */,
+				397C85D92B6858AC00FB9DAD /* ImageCaptureView2.swift in Sources */,
 				39F2A8932A9E70CE004EBB9A /* Backend.swift in Sources */,
 				39F2A89A2A9EDBEE004EBB9A /* PreferenceView.swift in Sources */,
 			);
@@ -177,6 +181,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -209,6 +214,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -237,6 +243,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -269,6 +276,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -304,6 +312,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -334,6 +343,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
