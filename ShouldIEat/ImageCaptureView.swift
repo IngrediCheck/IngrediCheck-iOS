@@ -1,42 +1,76 @@
-//
-//  ImageCaptureView.swift
-//  BeforeIForget
-//
-//  Created by sanket patel on 7/15/23.
-//
-
 import SwiftUI
-import UIKit
-import UniformTypeIdentifiers
-import VisionKit
+import AVFoundation
 import Vision
 
-struct ImageCaptureView: UIViewControllerRepresentable {
+func buttonImage(systemName: String, foregroundColor: Color) -> some View {
+    Image(systemName: systemName)
+        .frame(width: 20, height: 20)
+        .font(.title3.weight(.thin))
+        .foregroundColor(foregroundColor)
+}
+
+struct CloseButton : View {
+
+    var disableClose: Bool = false
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        Button(action: {
+            dismiss()
+        }, label: {
+            buttonImage(systemName: "x.circle", foregroundColor: disableClose ? .gray : .paletteAccent)
+        })
+        .disabled(disableClose)
+    }
+}
+
+struct ImageCaptureView: View {
     @Binding var image: UIImage?
     @Binding var imageOCRText: String?
-    @Environment(\.presentationMode) var presentationMode
+    var cameraManager = CameraManager()
 
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        @Binding var image: UIImage?
-        @Binding var imageText: String?
-        @Binding var presentationMode: PresentationMode
-
-        init(image: Binding<UIImage?>, imageText: Binding<String?>, presentationMode: Binding<PresentationMode>) {
-            _image = image
-            _imageText = imageText
-            _presentationMode = presentationMode
+    var body: some View {
+        NavigationStack {
+            VStack {
+                CameraPreview(session: cameraManager.session)
+                    .aspectRatio(3/4, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                    )
+                Spacer()
+                Button(action: {
+                    capturePhoto()
+                }, label: {
+                    Image(systemName: "circle.dotted.circle")
+                        .resizable()
+                        .frame(width: 50, height: 50)
+                        .foregroundColor(.paletteAccent)
+                })
+            }
+            .padding()
+            .navigationBarItems(trailing: CloseButton())
+            .navigationTitle("Capture photo")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                cameraManager.setupSession()
+            }
+            .onDisappear {
+                cameraManager.stopSession()
+            }
         }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let selectedImage = info[.originalImage] as? UIImage {
-                image = selectedImage
+    }
+    
+    func capturePhoto() {
+        cameraManager.capturePhoto { image in
+            if let image = image {
                 
+                var imageText = ""
                 let request = VNRecognizeTextRequest { request, error in
                     guard let observations = request.results as? [VNRecognizedTextObservation] else {
                         fatalError("Received invalid observations")
                     }
-                    
-                    var text = ""
 
                     for observation in observations {
                         guard let bestCandidate = observation.topCandidates(1).first else {
@@ -44,40 +78,101 @@ struct ImageCaptureView: UIViewControllerRepresentable {
                             continue
                         }
                         
-                        text += bestCandidate.string
-                        text += "\n"
+                        imageText += bestCandidate.string
+                        imageText += "\n"
                     }
-                    
-                    self.imageText = text
                 }
                 
-                let handler = VNImageRequestHandler(cgImage: (image?.cgImage)!, options: [:])
+                let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
                 try? handler.perform([request])
+
+                self.image = image
+                self.imageOCRText = imageText
             }
-
-//            presentationMode.dismiss()
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            presentationMode.dismiss()
         }
     }
+}
 
-    func makeCoordinator() -> Coordinator {
-        return Coordinator(image: $image, imageText: $imageOCRText, presentationMode: presentationMode)
+struct CameraPreview: UIViewRepresentable {
+    var session: AVCaptureSession
+    
+    func makeUIView(context: Context) -> CameraPreviewUIView {
+        let view = CameraPreviewUIView(session: session)
+        return view
     }
-
-    func makeUIViewController(context: UIViewControllerRepresentableContext<ImageCaptureView>) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = .camera
-        picker.allowsEditing = false
-        picker.showsCameraControls = true
-        picker.mediaTypes = [UTType.image.identifier]
-        return picker
+    
+    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
+        // Update code here
     }
+}
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<ImageCaptureView>) {
-        // No need to update
+class CameraPreviewUIView: UIView {
+    var previewLayer: AVCaptureVideoPreviewLayer
+    
+    init(session: AVCaptureSession) {
+        self.previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        super.init(frame: .zero)
+        
+        self.previewLayer.videoGravity = .resizeAspectFill
+        self.layer.addSublayer(self.previewLayer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        previewLayer.frame = self.bounds
+    }
+}
+
+class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
+    var session = AVCaptureSession()
+    var photoOutput = AVCapturePhotoOutput()
+    var completion: ((UIImage?) -> Void)?
+    
+    func setupSession() {
+        session.sessionPreset = .photo
+        guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            print("No back camera available.")
+            return
+        }
+        
+        do {
+            let input = try AVCaptureDeviceInput(device: backCamera)
+            if session.canAddInput(input) {
+                session.addInput(input)
+                if session.canAddOutput(photoOutput) {
+                    session.addOutput(photoOutput)
+                    Task {
+                        session.startRunning()
+                    }
+                }
+            }
+        } catch {
+            print("Error: \(error.localizedDescription)")
+        }
+    }
+    
+    func stopSession() {
+        session.stopRunning()
+    }
+    
+    func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+        self.completion = completion
+        let settings = AVCapturePhotoSettings()
+        self.photoOutput.capturePhoto(with: settings, delegate: self)
+    }
+    
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let completion = self.completion {
+            if let imageData = photo.fileDataRepresentation(),
+               let uiImage = UIImage(data: imageData) {
+                completion(uiImage)
+            } else {
+                completion(nil)
+            }
+        }
     }
 }
