@@ -25,8 +25,7 @@ struct CloseButton : View {
 }
 
 struct ImageCaptureView: View {
-    @Binding var image: UIImage?
-    @Binding var imageOCRText: String?
+    @Binding var capturedItem: CapturedItem?
     var cameraManager = CameraManager()
 
     var body: some View {
@@ -80,8 +79,7 @@ struct ImageCaptureView: View {
                 let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
                 try? handler.perform([request])
 
-                self.image = image
-                self.imageOCRText = imageText
+                self.capturedItem = .ingredientLabel((image: image, imageOCRText: imageText))
             }
         }
     }

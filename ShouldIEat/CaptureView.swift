@@ -7,8 +7,7 @@ enum Choice {
 
 struct CaptureView: View {
     
-    @Binding var image: UIImage?
-    @Binding var imageOCRText: String?
+    @Binding var capturedItem: CapturedItem?
     @State private var selection: Choice = .barcode
     
     private var navigationTitle: String {
@@ -24,9 +23,9 @@ struct CaptureView: View {
         NavigationStack {
             VStack {
                 if selection == .barcode {
-                    Spacer()
+                    BarcodeScannerView(capturedItem: $capturedItem)
                 } else {
-                    ImageCaptureView(image: $image, imageOCRText: $imageOCRText)
+                    ImageCaptureView(capturedItem: $capturedItem)
                 }
                 
                 Picker("Options", selection: $selection) {
