@@ -134,7 +134,7 @@ struct DataScannerView: UIViewControllerRepresentable {
 //            self.recognizedItems = recognizedItems.filter { item in
 //                !removedItems.contains(where: {$0.id == item.id })
 //            }
-            print("didRemovedItems \(removedItems)")
+//            print("didRemovedItems \(removedItems)")
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, becameUnavailableWithError error: DataScannerViewController.ScanningUnavailable) {

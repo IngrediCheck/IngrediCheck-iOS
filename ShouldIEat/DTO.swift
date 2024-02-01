@@ -51,7 +51,7 @@ class DTO {
     }
     
     struct Product: Codable, Hashable {
-        let brand: String
+        let brand: String?
         let name: String
         let ingredients: [Ingredient]
         let images: [ImageInfo]

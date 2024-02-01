@@ -40,13 +40,14 @@ enum NetworkError: Error {
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
-        guard let product = try? JSONDecoder().decode(DTO.Product.self, from: data) else {
-            print("Failed to decode Product object")
+        do {
+            let product = try JSONDecoder().decode(DTO.Product.self, from: data)
+            return product
+        } catch {
+            print("Failed to decode Product object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
             throw NetworkError.decodingError
         }
-        
-        return product
     }
 }
