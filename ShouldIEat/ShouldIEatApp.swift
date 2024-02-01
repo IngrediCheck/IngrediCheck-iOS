@@ -9,14 +9,16 @@ import SwiftUI
 
 @main
 struct ShouldIEatApp: App {
+    @State var webService = WebService()
     let authController = AuthController()
     var body: some Scene {
         WindowGroup {
             if let authEvent = authController.authEvent {
-                if authEvent != .signedOut {
+                if let session = authController.session {
                     ContentView()
+                        .environment(webService)
                 } else {
-                    ProgressView()
+                    Text("Sign-in failed")
                 }
             } else {
                 ProgressView()

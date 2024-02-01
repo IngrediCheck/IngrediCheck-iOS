@@ -34,15 +34,11 @@ struct AnalysisView: View {
             case .ingredientLabel(let label):
                 ingredientAnalysis(label: label)
             case .barcode(let barcode):
-                barcodeAnalysis(barcode: barcode)
+                BarcodeAnalysisView(barcode: barcode)
             }
         } else {
             CaptureView(capturedItem: $capturedItem)
         }
-    }
-    
-    private func barcodeAnalysis(barcode: String) -> some View {
-        Text(barcode)
     }
 
     private func ingredientAnalysis(label: IngredientLabel) -> some View {

@@ -128,7 +128,6 @@ struct DataScannerView: UIViewControllerRepresentable {
                let barcodeString = barcodeItem.payloadStringValue {
                 self.capturedItem = .barcode(barcodeString)
             }
-            print("didAddItems \(addedItems)")
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didRemove removedItems: [RecognizedItem], allItems: [RecognizedItem]) {

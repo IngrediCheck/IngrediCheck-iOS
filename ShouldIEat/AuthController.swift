@@ -5,8 +5,8 @@ import KeychainSwift
 
 enum Config {
     static let supabaseURL =
-        URL(string: "https://bsihbsyxvfwdjqnyxaoe.supabase.co")!
-    static let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzaWhic3l4dmZ3ZGpxbnl4YW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODcwMDkxODEsImV4cCI6MjAwMjU4NTE4MX0.pV1ArWUMNc4JVHgel8xFggDnlfSGCov97OEq57RbKUk"
+        URL(string: "https://htbpuvswuskxhsxwcxez.supabase.co")!
+    static let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0YnB1dnN3dXNreGhzeHdjeGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDY2NTI1MjIsImV4cCI6MjAyMjIyODUyMn0.h9frQIG00iaGv8Rwo1Lv4JZ4hZ3TVAR0PK69PpIohYQ"
 }
     
 let supabaseClient =
