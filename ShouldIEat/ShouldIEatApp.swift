@@ -9,9 +9,21 @@ import SwiftUI
 
 @main
 struct ShouldIEatApp: App {
+    let authController = AuthController()
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if let authEvent = authController.authEvent {
+                if authEvent != .signedOut {
+                    ContentView()
+                } else {
+                    ProgressView()
+                }
+            } else {
+                ProgressView()
+                    .onAppear {
+                        authController.initialize()
+                    }
+            }
         }
     }
 }

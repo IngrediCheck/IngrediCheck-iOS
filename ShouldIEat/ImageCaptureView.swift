@@ -79,7 +79,7 @@ struct ImageCaptureView: View {
                 let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
                 try? handler.perform([request])
 
-                self.capturedItem = .ingredientLabel((image: image, imageOCRText: imageText))
+                self.capturedItem = .ingredientLabel(IngredientLabel(image: image, imageOCRText: imageText))
             }
         }
     }

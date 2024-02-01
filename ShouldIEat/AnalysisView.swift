@@ -7,9 +7,14 @@
 
 import SwiftUI
 
+struct IngredientLabel {
+    let image: UIImage
+    let imageOCRText: String?
+}
+
 enum CapturedItem {
     case barcode(String)
-    case ingredientLabel((image: UIImage, imageOCRText: String?))
+    case ingredientLabel(IngredientLabel)
 }
 
 struct AnalysisView: View {
@@ -25,53 +30,64 @@ struct AnalysisView: View {
 
     var body: some View {
         if let capturedItem = self.capturedItem {
-            if case let .ingredientLabel(label) = capturedItem {
-                Image(uiImage: label.image)
-                .resizable()
-                .scaledToFit()
-                .padding()
-                if let analysis = self.analysis {
-                    Text(analysis)
-                        .onAppear {
-                            self.analyzedItems.append(AnalyzedItem(Image: label.image, Analysis: analysis))
-                        }
-                } else {
-                    if let imageOCRText = label.imageOCRText {
-                        if errorExtractingIngredientsList {
-                            Text("Failed to extract ingredients list from this food label:")
-                            Text("\(imageOCRText)")
-                        } else {
-                            ProgressView()
-                                .onAppear {
-                                    Task {
-                                        let ingredientsList =
-                                        try await backend.extractIngredients(ocrText: imageOCRText)
-                                        if let ingredientsList = ingredientsList {
-                                            let analysisResponse =
-                                            try await backend.generateRecommendation(
-                                                ingredients: ingredientsList,
-                                                userPreference: userPreferenceText)
-                                            DispatchQueue.main.async {
-                                                self.analysis = analysisResponse
-                                            }
-                                        } else {
-                                            DispatchQueue.main.async {
-                                                self.errorExtractingIngredientsList = true
-                                            }
-                                        }
-                                    }
-                                }
-                        }
-                    } else {
-                        Text("This does not look like a valid food label:")
-                        Text("\(label.imageOCRText ?? "Empty")")
-                    }
-                }
-            } else {
-                // TODO: barcode
+            switch capturedItem {
+            case .ingredientLabel(let label):
+                ingredientAnalysis(label: label)
+            case .barcode(let barcode):
+                barcodeAnalysis(barcode: barcode)
             }
         } else {
             CaptureView(capturedItem: $capturedItem)
+        }
+    }
+    
+    private func barcodeAnalysis(barcode: String) -> some View {
+        Text(barcode)
+    }
+
+    private func ingredientAnalysis(label: IngredientLabel) -> some View {
+        VStack {
+            Image(uiImage: label.image)
+                .resizable()
+                .scaledToFit()
+                .padding()
+            if let analysis = self.analysis {
+                Text(analysis)
+                    .onAppear {
+                        self.analyzedItems.append(AnalyzedItem(Image: label.image, Analysis: analysis))
+                    }
+            } else {
+                if let imageOCRText = label.imageOCRText {
+                    if errorExtractingIngredientsList {
+                        Text("Failed to extract ingredients list from this food label:")
+                        Text("\(imageOCRText)")
+                    } else {
+                        ProgressView()
+                            .onAppear {
+                                Task {
+                                    let ingredientsList =
+                                    try await backend.extractIngredients(ocrText: imageOCRText)
+                                    if let ingredientsList = ingredientsList {
+                                        let analysisResponse =
+                                        try await backend.generateRecommendation(
+                                            ingredients: ingredientsList,
+                                            userPreference: userPreferenceText)
+                                        DispatchQueue.main.async {
+                                            self.analysis = analysisResponse
+                                        }
+                                    } else {
+                                        DispatchQueue.main.async {
+                                            self.errorExtractingIngredientsList = true
+                                        }
+                                    }
+                                }
+                            }
+                    }
+                } else {
+                    Text("This does not look like a valid food label:")
+                    Text("\(label.imageOCRText ?? "Empty")")
+                }
+            }
         }
     }
 }

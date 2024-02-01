@@ -10,6 +10,14 @@
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
 		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
 		397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */; };
+		397C85EB2B6B536100FB9DAD /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85EA2B6B536100FB9DAD /* Auth */; };
+		397C85ED2B6B536100FB9DAD /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85EC2B6B536100FB9DAD /* Functions */; };
+		397C85EF2B6B536100FB9DAD /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85EE2B6B536100FB9DAD /* PostgREST */; };
+		397C85F12B6B536100FB9DAD /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85F02B6B536100FB9DAD /* Realtime */; };
+		397C85F32B6B536100FB9DAD /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85F22B6B536100FB9DAD /* Storage */; };
+		397C85F52B6B536100FB9DAD /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85F42B6B536100FB9DAD /* Supabase */; };
+		397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 397C85F72B6B537600FB9DAD /* KeychainSwift */; };
+		397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85F92B6B538500FB9DAD /* AuthController.swift */; };
 		39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */; };
 		39F2A8802A9D3972004EBB9A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87F2A9D3972004EBB9A /* ContentView.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
@@ -25,6 +33,7 @@
 		397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView.swift; sourceTree = "<group>"; };
 		397C85DA2B686DF000FB9DAD /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
+		397C85F92B6B538500FB9DAD /* AuthController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthController.swift; sourceTree = "<group>"; };
 		39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShouldIEat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldIEatApp.swift; sourceTree = "<group>"; };
 		39F2A87F2A9D3972004EBB9A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -41,6 +50,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				397C85F52B6B536100FB9DAD /* Supabase in Frameworks */,
+				397C85F32B6B536100FB9DAD /* Storage in Frameworks */,
+				397C85EF2B6B536100FB9DAD /* PostgREST in Frameworks */,
+				397C85ED2B6B536100FB9DAD /* Functions in Frameworks */,
+				397C85EB2B6B536100FB9DAD /* Auth in Frameworks */,
+				397C85F12B6B536100FB9DAD /* Realtime in Frameworks */,
+				397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */,
 				39F2A8982A9E8278004EBB9A /* OpenAIKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -78,6 +94,7 @@
 				39F2A8832A9D3974004EBB9A /* Preview Content */,
 				397C85DA2B686DF000FB9DAD /* CaptureView.swift */,
 				397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */,
+				397C85F92B6B538500FB9DAD /* AuthController.swift */,
 			);
 			path = ShouldIEat;
 			sourceTree = "<group>";
@@ -108,6 +125,13 @@
 			name = ShouldIEat;
 			packageProductDependencies = (
 				39F2A8972A9E8278004EBB9A /* OpenAIKit */,
+				397C85EA2B6B536100FB9DAD /* Auth */,
+				397C85EC2B6B536100FB9DAD /* Functions */,
+				397C85EE2B6B536100FB9DAD /* PostgREST */,
+				397C85F02B6B536100FB9DAD /* Realtime */,
+				397C85F22B6B536100FB9DAD /* Storage */,
+				397C85F42B6B536100FB9DAD /* Supabase */,
+				397C85F72B6B537600FB9DAD /* KeychainSwift */,
 			);
 			productName = ShouldIEat;
 			productReference = 39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */;
@@ -139,6 +163,8 @@
 			mainGroup = 39F2A8712A9D3972004EBB9A;
 			packageReferences = (
 				39F2A8962A9E8278004EBB9A /* XCRemoteSwiftPackageReference "openai-kit" */,
+				397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -171,6 +197,7 @@
 				39F2A8912A9E61B7004EBB9A /* AnalysisView.swift in Sources */,
 				39F2A8802A9D3972004EBB9A /* ContentView.swift in Sources */,
 				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
+				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				39F2A8932A9E70CE004EBB9A /* Backend.swift in Sources */,
@@ -385,6 +412,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
+		397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/evgenyneu/keychain-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 21.0.0;
+			};
+		};
 		39F2A8962A9E8278004EBB9A /* XCRemoteSwiftPackageReference "openai-kit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/dylanshine/openai-kit";
@@ -396,6 +439,41 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		397C85EA2B6B536100FB9DAD /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		397C85EC2B6B536100FB9DAD /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		397C85EE2B6B536100FB9DAD /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		397C85F02B6B536100FB9DAD /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		397C85F22B6B536100FB9DAD /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		397C85F42B6B536100FB9DAD /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		397C85F72B6B537600FB9DAD /* KeychainSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */;
+			productName = KeychainSwift;
+		};
 		39F2A8972A9E8278004EBB9A /* OpenAIKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 39F2A8962A9E8278004EBB9A /* XCRemoteSwiftPackageReference "openai-kit" */;
