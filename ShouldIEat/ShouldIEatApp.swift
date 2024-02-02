@@ -13,8 +13,8 @@ struct ShouldIEatApp: App {
     let authController = AuthController()
     var body: some Scene {
         WindowGroup {
-            if let authEvent = authController.authEvent {
-                if let session = authController.session {
+            if let _ = authController.authEvent {
+                if let _ = authController.session {
                     ContentView()
                         .environment(webService)
                 } else {

@@ -56,4 +56,15 @@ class DTO {
         let ingredients: [Ingredient]
         let images: [ImageInfo]
     }
+    
+    enum SafetyRecommendation: String, Codable {
+        case maybeUnsafe = "MaybeUnsafe"
+        case definitelyUnsafe = "DefinitelyUnsafe"
+    }
+    
+    struct IngredientRecommendation: Codable {
+        let ingredientName: String
+        let safetyRecommendation: SafetyRecommendation
+        let reasoning: String
+    }
 }

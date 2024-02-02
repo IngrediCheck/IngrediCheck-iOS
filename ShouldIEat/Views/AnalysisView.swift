@@ -34,7 +34,7 @@ struct AnalysisView: View {
             case .ingredientLabel(let label):
                 ingredientAnalysis(label: label)
             case .barcode(let barcode):
-                BarcodeAnalysisView(barcode: barcode)
+                BarcodeAnalysisView(barcode: barcode, userPreferenceText: userPreferenceText)
             }
         } else {
             CaptureView(capturedItem: $capturedItem)
