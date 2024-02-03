@@ -31,7 +31,7 @@ struct BarcodeAnalysisView: View {
     
     @State private var product: DTO.Product? = nil
     @State private var error: Error? = nil
-    @State private var ingredientRecommendations: [DTO.IngredientRecommendation] = []
+    @State private var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
     @State private var rating: Int = 0
     
     func buttonImage(systemName: String, foregroundColor: Color) -> some View {
@@ -90,11 +90,19 @@ struct BarcodeAnalysisView: View {
                     }
                 }
                 Section(header: Text("Feedback").hidden()) {
-                    HStack(spacing: 25) {
-                        Text("Not accurate?")
-                        Spacer()
-                        downVoteButton
-//                        upVoteButton
+                    if let _ = self.ingredientRecommendations {
+                        HStack(spacing: 25) {
+                            Text("Not accurate?")
+                            Spacer()
+                            downVoteButton
+    //                        upVoteButton
+                        }
+                    } else {
+                        HStack(spacing: 25) {
+                            Text("Analyzing your preferences...")
+                            Spacer()
+                            ProgressView()
+                        }
                     }
                 }
                 ForEach(product.ingredients, id: \.self) { ingredient in
@@ -133,17 +141,19 @@ struct BarcodeAnalysisView: View {
     }
     
     private func rowBackground(forItem ingredient: DTO.Ingredient) -> Color {
-        let recommendations =
-            self.ingredientRecommendations.filter { ingredientRecommendation in
-                ingredientRecommendation.ingredientName.lowercased() == ingredient.name.lowercased()
-            }
-        
-        if !recommendations.isEmpty {
-            switch recommendations[0].safetyRecommendation {
-            case .definitelyUnsafe:
-                return .red
-            case .maybeUnsafe:
-                return .yellow
+        if let ingredientRecommendations = self.ingredientRecommendations {
+            let matchingRecommendation =
+                ingredientRecommendations.filter { ingredientRecommendation in
+                    ingredientRecommendation.ingredientName.lowercased() == ingredient.name.lowercased()
+                }
+
+            if !matchingRecommendation.isEmpty {
+                switch matchingRecommendation.first!.safetyRecommendation {
+                case .definitelyUnsafe:
+                    return .red
+                case .maybeUnsafe:
+                    return .yellow
+                }
             }
         }
         
