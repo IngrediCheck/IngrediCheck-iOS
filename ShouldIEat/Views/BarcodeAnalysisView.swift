@@ -81,10 +81,12 @@ struct UpvoteButton: View {
 }
 
 struct BarcodeAnalysisView: View {
+    
     let barcode: String
-    let userPreferenceText: String
     let clientActivityId = UUID().uuidString
+    
     @Environment(WebService.self) var webService
+    @Environment(UserPreferences.self) var userPreferences
     
     @State private var rating: Int = 0
     @State private var product: DTO.Product? = nil
@@ -130,8 +132,9 @@ struct BarcodeAnalysisView: View {
                     self.ingredientRecommendations =
                         try await webService.fetchIngredientRecommendations(
                             clientActivityId: clientActivityId,
-                            userPreferenceText: userPreferenceText,
-                            barcode: barcode)
+                            userPreferenceText: userPreferences.asString,
+                            barcode: barcode
+                        )
                 } catch {
                     self.error = error
                 }

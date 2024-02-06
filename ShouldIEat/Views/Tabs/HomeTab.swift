@@ -32,6 +32,8 @@ struct HomeTab: View {
                     }
                 }
                 .listStyle(.plain)
+                Divider()
+                    .padding(.bottom)
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Your Dietary Preferences")

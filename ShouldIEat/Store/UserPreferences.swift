@@ -7,6 +7,10 @@ import SwiftUI
         }
     }
     
+    var asString: String {
+        preferences.joined(separator: "\n")
+    }
+    
     init() {
         preferences = UserDefaults.standard.stringArray(forKey: "userPreferences") ?? []
     }

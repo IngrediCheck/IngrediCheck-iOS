@@ -2,10 +2,12 @@
 import SwiftUI
 
 struct LabelAnalysisView: View {
+    
     let ingredientLabel: IngredientLabel
-    let userPreferenceText: String
     let clientActivityId = UUID().uuidString
+    
     @Environment(WebService.self) var webService
+    @Environment(UserPreferences.self) var userPreferences
 
     @State private var rating: Int = 0
     @State private var product: DTO.Product? = nil
@@ -51,7 +53,7 @@ struct LabelAnalysisView: View {
                     self.ingredientRecommendations =
                         try await webService.fetchIngredientRecommendations(
                             clientActivityId: clientActivityId,
-                            userPreferenceText: userPreferenceText
+                            userPreferenceText: userPreferences.asString
                         )
                 } catch {
                     self.error = error
