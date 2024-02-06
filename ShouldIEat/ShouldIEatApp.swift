@@ -15,7 +15,7 @@ struct ShouldIEatApp: App {
         WindowGroup {
             if let _ = authController.authEvent {
                 if let _ = authController.session {
-                    ContentView()
+                    LoggedInRootView()
                         .environment(webService)
                 } else {
                     Text("Sign-in failed")
