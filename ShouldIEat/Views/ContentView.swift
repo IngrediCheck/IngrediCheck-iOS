@@ -15,19 +15,11 @@ struct AnalyzedItem : Identifiable {
 
 struct ContentView: View {
     @AppStorage("userPreferenceText") var userPreferenceText: String = ""
-    @State private var analyzedItems: [AnalyzedItem] = []
     @State private var showAnalysisSheet: Bool = false
     @State private var showPreferenceSheet: Bool = false
 
     var body: some View {
         VStack {
-            List(analyzedItems.reversed()) { item in
-                Image(uiImage: item.Image)
-                    .resizable()
-                    .scaledToFit()
-                Text(item.Analysis)
-                    .padding()
-            }
             Spacer()
             HStack {
                 Spacer()
@@ -51,8 +43,7 @@ struct ContentView: View {
             .padding(.bottom, 40)
         }
         .sheet(isPresented: $showAnalysisSheet) {
-            AnalysisView(userPreferenceText: $userPreferenceText,
-                         analyzedItems: $analyzedItems)
+            AnalysisView(userPreferenceText: userPreferenceText)
         }
         .sheet(isPresented: $showPreferenceSheet) {
             PreferenceView(preferenceText: $userPreferenceText)

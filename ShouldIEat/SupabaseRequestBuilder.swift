@@ -5,6 +5,7 @@ enum SafeEatsEndpoint: String {
     case inventory = "inventory/%@"
     case analyze = "analyze"
     case analyze_rate = "analyze/rate"
+    case extract = "extract"
 }
 
 class SupabaseRequestBuilder {
@@ -66,7 +67,7 @@ class SupabaseRequestBuilder {
         httpBody.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
         httpBody.append("\(value)".data(using: .utf8)!)
         httpBody.append("\r\n".data(using: .utf8)!)
-        
+
         hasMultipartFormData = true
         return self
     }

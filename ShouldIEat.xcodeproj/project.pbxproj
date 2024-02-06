@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
 		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
 		397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */; };
@@ -27,13 +28,12 @@
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
 		39F2A8852A9D3974004EBB9A /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8842A9D3974004EBB9A /* Preview Assets.xcassets */; };
 		39F2A8912A9E61B7004EBB9A /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A8902A9E61B7004EBB9A /* AnalysisView.swift */; };
-		39F2A8932A9E70CE004EBB9A /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A8922A9E70CE004EBB9A /* Backend.swift */; };
 		39F2A8952A9E7563004EBB9A /* secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8942A9E7563004EBB9A /* secrets.plist */; };
-		39F2A8982A9E8278004EBB9A /* OpenAIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 39F2A8972A9E8278004EBB9A /* OpenAIKit */; };
 		39F2A89A2A9EDBEE004EBB9A /* PreferenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A8992A9EDBEE004EBB9A /* PreferenceView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelAnalysisView.swift; sourceTree = "<group>"; };
 		397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView.swift; sourceTree = "<group>"; };
 		397C85DA2B686DF000FB9DAD /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
@@ -48,7 +48,6 @@
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		39F2A8842A9D3974004EBB9A /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		39F2A8902A9E61B7004EBB9A /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
-		39F2A8922A9E70CE004EBB9A /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
 		39F2A8942A9E7563004EBB9A /* secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = secrets.plist; sourceTree = "<group>"; };
 		39F2A8992A9EDBEE004EBB9A /* PreferenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -65,7 +64,6 @@
 				397C85EB2B6B536100FB9DAD /* Auth in Frameworks */,
 				397C85F12B6B536100FB9DAD /* Realtime in Frameworks */,
 				397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */,
-				39F2A8982A9E8278004EBB9A /* OpenAIKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +80,7 @@
 				397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */,
 				39F2A8902A9E61B7004EBB9A /* AnalysisView.swift */,
 				397C86052B6C22B900FB9DAD /* BarcodeAnalysisView.swift */,
+				3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -107,7 +106,6 @@
 			isa = PBXGroup;
 			children = (
 				397C86022B6C16F500FB9DAD /* Views */,
-				39F2A8922A9E70CE004EBB9A /* Backend.swift */,
 				39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */,
 				39F2A8812A9D3974004EBB9A /* Assets.xcassets */,
 				39F2A8832A9D3974004EBB9A /* Preview Content */,
@@ -144,7 +142,6 @@
 			);
 			name = ShouldIEat;
 			packageProductDependencies = (
-				39F2A8972A9E8278004EBB9A /* OpenAIKit */,
 				397C85EA2B6B536100FB9DAD /* Auth */,
 				397C85EC2B6B536100FB9DAD /* Functions */,
 				397C85EE2B6B536100FB9DAD /* PostgREST */,
@@ -182,7 +179,6 @@
 			);
 			mainGroup = 39F2A8712A9D3972004EBB9A;
 			packageReferences = (
-				39F2A8962A9E8278004EBB9A /* XCRemoteSwiftPackageReference "openai-kit" */,
 				397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */,
 			);
@@ -223,7 +219,7 @@
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
-				39F2A8932A9E70CE004EBB9A /* Backend.swift in Sources */,
+				3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */,
 				39F2A89A2A9EDBEE004EBB9A /* PreferenceView.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
 			);
@@ -452,14 +448,6 @@
 				minimumVersion = 21.0.0;
 			};
 		};
-		39F2A8962A9E8278004EBB9A /* XCRemoteSwiftPackageReference "openai-kit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/dylanshine/openai-kit";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -497,11 +485,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */;
 			productName = KeychainSwift;
-		};
-		39F2A8972A9E8278004EBB9A /* OpenAIKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 39F2A8962A9E8278004EBB9A /* XCRemoteSwiftPackageReference "openai-kit" */;
-			productName = OpenAIKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
