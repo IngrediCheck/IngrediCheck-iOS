@@ -10,8 +10,6 @@ enum SafeEatsEndpoint: String {
 
 class SupabaseRequestBuilder {
 
-    private static let baseURL = "https://htbpuvswuskxhsxwcxez.supabase.co/functions/v1/safeeats/"
-
     private var request: URLRequest
     private var httpBody = Data()
     private var hasMultipartFormData: Bool = false
@@ -21,14 +19,14 @@ class SupabaseRequestBuilder {
 
     init(endpoint: SafeEatsEndpoint) {
         self.endpoint = endpoint
-        self.url = URL(string: (SupabaseRequestBuilder.baseURL + endpoint.rawValue))!
+        self.url = URL(string: (Config.supabaseFunctionsURL + endpoint.rawValue))!
         self.request = URLRequest(url: self.url)
     }
     
     init(endpoint: SafeEatsEndpoint, itemId: String, subItemId: String? = nil) {
 
         func formattedUrlString() -> String {
-            let urlFormat = SupabaseRequestBuilder.baseURL + endpoint.rawValue
+            let urlFormat = Config.supabaseFunctionsURL + endpoint.rawValue
             if let subItemId = subItemId {
                 return String(format: urlFormat, itemId, subItemId)
             } else {

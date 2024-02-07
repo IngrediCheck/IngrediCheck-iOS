@@ -3,12 +3,6 @@ import AuthenticationServices
 import Supabase
 import KeychainSwift
 
-enum Config {
-    static let supabaseURL =
-        URL(string: "https://htbpuvswuskxhsxwcxez.supabase.co")!
-    static let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0YnB1dnN3dXNreGhzeHdjeGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDY2NTI1MjIsImV4cCI6MjAyMjIyODUyMn0.h9frQIG00iaGv8Rwo1Lv4JZ4hZ3TVAR0PK69PpIohYQ"
-}
-    
 let supabaseClient =
     SupabaseClient(supabaseURL: Config.supabaseURL, supabaseKey: Config.supabaseKey)
 
