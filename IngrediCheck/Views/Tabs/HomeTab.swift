@@ -10,22 +10,19 @@ struct HomeTab: View {
         NavigationStack {
             VStack {
                 TextField("Add your preference here", text: $newPreference)
-                    .frame(height: 60)
-                    .padding(5)
-                    .cornerRadius(15)
-                    .shadow(radius: isFocused ? 1 : 0)
+                    .padding()
+                    .textFieldStyle(.roundedBorder)
+                    .focused(self.$isFocused)
+                    .multilineTextAlignment(.center)
                     .onSubmit {
                         if !newPreference.isEmpty {
                             userPreferences.preferences.insert(newPreference, at: 0)
                             newPreference = ""
                         }
                     }
-                    .focused(self.$isFocused)
-                    .multilineTextAlignment(.center)
-                    .padding()
                 List {
                     ForEach(userPreferences.preferences, id: \.self) { preference in
-                        Text(preference)
+                        Label(preference, systemImage: "hand.point.right")
                     }
                     .onDelete { offsets in
                         userPreferences.preferences.remove(atOffsets: offsets)
