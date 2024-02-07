@@ -13,7 +13,7 @@ enum DataScannerAccessStatusType {
 
 @MainActor struct BarcodeScannerView: View {
     
-    @Binding var capturedItem: CapturedItem?
+    @Binding var routes: [CapturedItem]
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
 
     var body: some View {
@@ -38,7 +38,7 @@ enum DataScannerAccessStatusType {
     }
     
     private var mainView: some View {
-        DataScannerView(capturedItem: $capturedItem)
+        DataScannerView(routes: $routes)
             .aspectRatio(3/4, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
@@ -81,7 +81,7 @@ enum DataScannerAccessStatusType {
 
 struct DataScannerView: UIViewControllerRepresentable {
     
-    @Binding var capturedItem: CapturedItem?
+    @Binding var routes: [CapturedItem]
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let vc = DataScannerViewController(
@@ -100,7 +100,7 @@ struct DataScannerView: UIViewControllerRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(capturedItem: $capturedItem)
+        Coordinator(routes: $routes)
     }
     
     static func dismantleUIViewController(_ uiViewController: DataScannerViewController, coordinator: Coordinator) {
@@ -110,10 +110,10 @@ struct DataScannerView: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, DataScannerViewControllerDelegate {
         
-        @Binding var capturedItem: CapturedItem?
+        @Binding var routes: [CapturedItem]
 
-        init(capturedItem: Binding<CapturedItem?>) {
-            self._capturedItem = capturedItem
+        init(routes: Binding<[CapturedItem]>) {
+            self._routes = routes
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
@@ -126,7 +126,7 @@ struct DataScannerView: UIViewControllerRepresentable {
             if let firstItem = addedItems.first,
                case let .barcode(barcodeItem) = firstItem,
                let barcodeString = barcodeItem.payloadStringValue {
-                self.capturedItem = .barcode(barcodeString)
+                self.routes.append(.barcode(barcodeString))
             }
         }
         

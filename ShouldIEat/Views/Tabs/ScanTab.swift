@@ -7,36 +7,37 @@
 
 import SwiftUI
 
-struct IngredientLabel {
+struct IngredientLabel: Hashable {
     let image: UIImage
     let imageOCRText: String
 }
 
-enum CapturedItem {
+enum CapturedItem: Hashable {
     case barcode(String)
     case ingredientLabel(IngredientLabel)
 }
 
 struct ScanTab: View {
-    @State private var capturedItem: CapturedItem?
+    @State private var routes: [CapturedItem] = []
     @State private var analysis: String?
     @State private var errorExtractingIngredientsList: Bool = false
 
     var body: some View {
-        VStack {
-            if let capturedItem = self.capturedItem {
-                switch capturedItem {
-                case .ingredientLabel(let label):
-                    LabelAnalysisView(ingredientLabel: label)
-                case .barcode(let barcode):
-                    BarcodeAnalysisView(barcode: barcode)
-                }
-            } else {
-                CaptureView(capturedItem: $capturedItem)
+        NavigationStack(path: $routes) {
+            VStack {
+                CaptureView(routes: $routes)
+                Spacer()
+                Divider()
+                    .padding(.bottom)
             }
-            Spacer()
-            Divider()
-                .padding(.bottom)
+            .navigationDestination(for: CapturedItem.self) { item in
+                switch item {
+                    case .ingredientLabel(let label):
+                        LabelAnalysisView(ingredientLabel: label)
+                    case .barcode(let barcode):
+                        BarcodeAnalysisView(barcode: barcode)
+                }
+            }
         }
     }
 }

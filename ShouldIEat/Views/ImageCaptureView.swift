@@ -2,30 +2,8 @@ import SwiftUI
 import AVFoundation
 import Vision
 
-func buttonImage(systemName: String, foregroundColor: Color) -> some View {
-    Image(systemName: systemName)
-        .frame(width: 20, height: 20)
-        .font(.title3.weight(.thin))
-        .foregroundColor(foregroundColor)
-}
-
-struct CloseButton : View {
-
-    var disableClose: Bool = false
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        Button(action: {
-            dismiss()
-        }, label: {
-            buttonImage(systemName: "x.circle", foregroundColor: disableClose ? .gray : .paletteAccent)
-        })
-        .disabled(disableClose)
-    }
-}
-
 struct ImageCaptureView: View {
-    @Binding var capturedItem: CapturedItem?
+    @Binding var routes: [CapturedItem]
     var cameraManager = CameraManager()
 
     var body: some View {
@@ -38,6 +16,7 @@ struct ImageCaptureView: View {
                         .stroke(Color.paletteSecondary, lineWidth: 0.8)
                 )
             Spacer()
+            Spacer()
             Button(action: {
                 capturePhoto()
             }, label: {
@@ -46,6 +25,7 @@ struct ImageCaptureView: View {
                     .frame(width: 50, height: 50)
                     .foregroundColor(.paletteAccent)
             })
+            Spacer()
         }
         .onAppear {
             cameraManager.setupSession()
@@ -79,7 +59,7 @@ struct ImageCaptureView: View {
                 let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
                 try? handler.perform([request])
 
-                self.capturedItem = .ingredientLabel(IngredientLabel(image: image, imageOCRText: imageText))
+                self.routes.append(.ingredientLabel(IngredientLabel(image: image, imageOCRText: imageText)))
             }
         }
     }
