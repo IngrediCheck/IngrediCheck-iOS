@@ -1,14 +1,7 @@
-//
-//  ShouldIEatApp.swift
-//  ShouldIEat
-//
-//  Created by sanket patel on 8/28/23.
-//
-
 import SwiftUI
 
 @main
-struct ShouldIEatApp: App {
+struct IngrediCheckApp: App {
     @State var webService = WebService()
     let authController = AuthController()
     var body: some Scene {

@@ -29,9 +29,8 @@
 		397C86012B6C090B00FB9DAD /* WebService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C86002B6C090B00FB9DAD /* WebService.swift */; };
 		397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */; };
 		397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C86052B6C22B900FB9DAD /* BarcodeAnalysisView.swift */; };
-		39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */; };
+		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
-		39F2A8852A9D3974004EBB9A /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8842A9D3974004EBB9A /* Preview Assets.xcassets */; };
 		39F2A8952A9E7563004EBB9A /* secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8942A9E7563004EBB9A /* secrets.plist */; };
 /* End PBXBuildFile section */
 
@@ -51,10 +50,9 @@
 		397C86002B6C090B00FB9DAD /* WebService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebService.swift; sourceTree = "<group>"; };
 		397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseRequestBuilder.swift; sourceTree = "<group>"; };
 		397C86052B6C22B900FB9DAD /* BarcodeAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeAnalysisView.swift; sourceTree = "<group>"; };
-		39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShouldIEat.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldIEatApp.swift; sourceTree = "<group>"; };
+		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		39F2A8842A9D3974004EBB9A /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		39F2A8942A9E7563004EBB9A /* secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = secrets.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -113,7 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				39F2A8942A9E7563004EBB9A /* secrets.plist */,
-				39F2A87C2A9D3972004EBB9A /* ShouldIEat */,
+				39F2A87C2A9D3972004EBB9A /* IngrediCheck */,
 				39F2A87B2A9D3972004EBB9A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -121,41 +119,32 @@
 		39F2A87B2A9D3972004EBB9A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */,
+				39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		39F2A87C2A9D3972004EBB9A /* ShouldIEat */ = {
+		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
 				392D9C042B72D56700166CF1 /* Store */,
 				397C86022B6C16F500FB9DAD /* Views */,
-				39F2A87D2A9D3972004EBB9A /* ShouldIEatApp.swift */,
+				39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */,
 				39F2A8812A9D3974004EBB9A /* Assets.xcassets */,
-				39F2A8832A9D3974004EBB9A /* Preview Content */,
 				397C85F92B6B538500FB9DAD /* AuthController.swift */,
 				397C85FE2B6C08FE00FB9DAD /* DTO.swift */,
 				397C86002B6C090B00FB9DAD /* WebService.swift */,
 				397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */,
 			);
-			path = ShouldIEat;
-			sourceTree = "<group>";
-		};
-		39F2A8832A9D3974004EBB9A /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				39F2A8842A9D3974004EBB9A /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
+			path = IngrediCheck;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		39F2A8792A9D3972004EBB9A /* ShouldIEat */ = {
+		39F2A8792A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "ShouldIEat" */;
+			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */;
 			buildPhases = (
 				39F2A8762A9D3972004EBB9A /* Sources */,
 				39F2A8772A9D3972004EBB9A /* Frameworks */,
@@ -165,7 +154,7 @@
 			);
 			dependencies = (
 			);
-			name = ShouldIEat;
+			name = IngrediCheck;
 			packageProductDependencies = (
 				397C85EA2B6B536100FB9DAD /* Auth */,
 				397C85EC2B6B536100FB9DAD /* Functions */,
@@ -175,8 +164,8 @@
 				397C85F42B6B536100FB9DAD /* Supabase */,
 				397C85F72B6B537600FB9DAD /* KeychainSwift */,
 			);
-			productName = ShouldIEat;
-			productReference = 39F2A87A2A9D3972004EBB9A /* ShouldIEat.app */;
+			productName = IngrediCheck;
+			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -194,7 +183,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 39F2A8752A9D3972004EBB9A /* Build configuration list for PBXProject "ShouldIEat" */;
+			buildConfigurationList = 39F2A8752A9D3972004EBB9A /* Build configuration list for PBXProject "IngrediCheck" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -211,7 +200,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				39F2A8792A9D3972004EBB9A /* ShouldIEat */,
+				39F2A8792A9D3972004EBB9A /* IngrediCheck */,
 			);
 		};
 /* End PBXProject section */
@@ -221,7 +210,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				39F2A8852A9D3974004EBB9A /* Preview Assets.xcassets in Resources */,
 				39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */,
 				39F2A8952A9E7563004EBB9A /* secrets.plist in Resources */,
 			);
@@ -241,7 +229,7 @@
 				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */,
-				39F2A87E2A9D3972004EBB9A /* ShouldIEatApp.swift in Sources */,
+				39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,
 				392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */,
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
@@ -378,10 +366,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"ShouldIEat/Preview Content\"";
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -397,7 +383,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ShouldIEat;
+				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -409,10 +395,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"ShouldIEat/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"IngrediCheck/Preview Content\"";
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -428,7 +413,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ShouldIEat;
+				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -439,7 +424,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		39F2A8752A9D3972004EBB9A /* Build configuration list for PBXProject "ShouldIEat" */ = {
+		39F2A8752A9D3972004EBB9A /* Build configuration list for PBXProject "IngrediCheck" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				39F2A8862A9D3974004EBB9A /* Debug */,
@@ -448,7 +433,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "ShouldIEat" */ = {
+		39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				39F2A8892A9D3974004EBB9A /* Debug */,

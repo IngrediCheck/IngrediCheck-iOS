@@ -1,10 +1,3 @@
-//
-//  DTO.swift
-//  ShouldIEat
-//
-//  Created by sanket patel on 2/1/24.
-//
-
 import Foundation
 import SwiftUI
 

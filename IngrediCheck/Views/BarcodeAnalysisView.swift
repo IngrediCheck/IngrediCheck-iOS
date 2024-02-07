@@ -1,10 +1,3 @@
-//
-//  BarcodeAnalysisView.swift
-//  ShouldIEat
-//
-//  Created by sanket patel on 2/1/24.
-//
-
 import SwiftUI
 
 struct HeaderImage: View {

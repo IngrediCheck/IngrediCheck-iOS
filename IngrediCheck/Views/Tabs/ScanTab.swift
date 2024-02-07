@@ -1,10 +1,3 @@
-//
-//  ScanTab.swift
-//  ShouldIEat
-//
-//  Created by sanket patel on 2/6/24.
-//
-
 import SwiftUI
 
 struct IngredientLabel: Hashable {
