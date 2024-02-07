@@ -31,7 +31,6 @@
 		397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C86052B6C22B900FB9DAD /* BarcodeAnalysisView.swift */; };
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
-		39F2A8952A9E7563004EBB9A /* secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8942A9E7563004EBB9A /* secrets.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,7 +52,6 @@
 		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		39F2A8942A9E7563004EBB9A /* secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = secrets.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,7 +108,6 @@
 		39F2A8712A9D3972004EBB9A = {
 			isa = PBXGroup;
 			children = (
-				39F2A8942A9E7563004EBB9A /* secrets.plist */,
 				39F2A87C2A9D3972004EBB9A /* IngrediCheck */,
 				39F2A87B2A9D3972004EBB9A /* Products */,
 			);
@@ -211,7 +208,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */,
-				39F2A8952A9E7563004EBB9A /* secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
