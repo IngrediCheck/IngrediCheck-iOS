@@ -8,6 +8,7 @@ enum NetworkError: Error {
     case badUrl
     case decodingError
     case authError
+    case notFound(String)
 }
 
 @Observable final class WebService {
@@ -35,7 +36,12 @@ enum NetworkError: Error {
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
-            throw NetworkError.invalidResponse(httpResponse.statusCode)
+            if httpResponse.statusCode == 404 {
+                print("Not found")
+                throw NetworkError.notFound("Product with barcode \(barcode) not found in Inventory")
+            } else {
+                throw NetworkError.invalidResponse(httpResponse.statusCode)
+            }
         }
         
         do {

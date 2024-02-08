@@ -83,13 +83,14 @@ struct BarcodeAnalysisView: View {
     
     @State private var rating: Int = 0
     @State private var product: DTO.Product? = nil
-    @State private var error: Error? = nil
+    @State private var errorMessage: String? = nil
     @State private var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
 
     var body: some View {
-        if let error = self.error {
-            Text("Error: \(error.localizedDescription)")
-        } else if let product = self.product {
+        if let errorMessage {
+            Text(errorMessage)
+                .padding()
+        } else if let product {
             ScrollView {
                 VStack(spacing: 20) {
                     if case let .url(url) = product.images.first {
@@ -130,7 +131,7 @@ struct BarcodeAnalysisView: View {
                         self.ingredientRecommendations = result
                     }
                 } catch {
-                    self.error = error
+                    self.errorMessage = error.localizedDescription
                 }
             }
         } else {
@@ -144,8 +145,10 @@ struct BarcodeAnalysisView: View {
             .task {
                 do {
                     self.product = try await webService.fetchProductDetailsFromBarcode(barcode: barcode)
+                } catch NetworkError.notFound(let errorMessage) {
+                    self.errorMessage = errorMessage
                 } catch {
-                    self.error = error
+                    self.errorMessage = error.localizedDescription
                 }
             }
         }
