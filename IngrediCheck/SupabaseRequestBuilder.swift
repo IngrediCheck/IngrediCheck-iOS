@@ -19,14 +19,14 @@ class SupabaseRequestBuilder {
 
     init(endpoint: SafeEatsEndpoint) {
         self.endpoint = endpoint
-        self.url = URL(string: (Config.supabaseFunctionsURL + endpoint.rawValue))!
+        self.url = URL(string: (Config.supabaseFunctionsURLBase + endpoint.rawValue))!
         self.request = URLRequest(url: self.url)
     }
     
     init(endpoint: SafeEatsEndpoint, itemId: String, subItemId: String? = nil) {
 
         func formattedUrlString() -> String {
-            let urlFormat = Config.supabaseFunctionsURL + endpoint.rawValue
+            let urlFormat = Config.supabaseFunctionsURLBase + endpoint.rawValue
             if let subItemId = subItemId {
                 return String(format: urlFormat, itemId, subItemId)
             } else {
