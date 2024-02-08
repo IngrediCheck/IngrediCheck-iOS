@@ -82,6 +82,22 @@ class DTO {
             return depth
         }
         
+        private func productHasIngredient(ingredientName: String) -> Bool {
+            return ingredients.contains { i in
+                if i.name == ingredientName {
+                    return true
+                }
+                return i.ingredients.contains { i2 in
+                    if i2.name == ingredientName {
+                        return true
+                    }
+                    return i2.ingredients.contains { i3 in
+                        return i3.name == ingredientName
+                    }
+                }
+            }
+        }
+        
         private func ingredientsListDepth2(ingredients: [Ingredient]) -> String {
             ingredients.map { ingredient in
                 if ingredient.ingredients.isEmpty {
@@ -112,7 +128,7 @@ class DTO {
         }
         
         func decoratedIngredientsList(
-            ingredientRecommendations: [DTO.IngredientRecommendation]?
+            ingredientRecommendations: [IngredientRecommendation]?
         ) -> AttributedString {
             var attributedString = AttributedString(ingredientsList)
             
@@ -124,7 +140,7 @@ class DTO {
                 let color: Color
                 switch recommendation.safetyRecommendation {
                 case .maybeUnsafe:
-                    color = .yellow
+                    color = .orange
                 case .definitelyUnsafe:
                     color = .red
                 }
@@ -135,6 +151,25 @@ class DTO {
             }
             
             return attributedString
+        }
+        
+        func calculateMatch(
+            ingredientRecommendations: [IngredientRecommendation]
+        ) -> ProductRecommendation {
+            var result: ProductRecommendation = .match
+            for recommendation in ingredientRecommendations {
+                if productHasIngredient(ingredientName: recommendation.ingredientName) {
+                    switch recommendation.safetyRecommendation {
+                    case .definitelyUnsafe:
+                        result = .notMatch
+                    case .maybeUnsafe:
+                        if result == .match {
+                            result = .needsReview
+                        }
+                    }
+                }
+            }
+            return result
         }
     }
     
@@ -147,5 +182,11 @@ class DTO {
         let ingredientName: String
         let safetyRecommendation: SafetyRecommendation
         let reasoning: String
+    }
+    
+    enum ProductRecommendation {
+        case match
+        case needsReview
+        case notMatch
     }
 }

@@ -29,20 +29,16 @@ struct LabelAnalysisView: View {
                     if let name = product.name {
                         Text(name)
                     }
-                    
-                   Text(product.decoratedIngredientsList(ingredientRecommendations: ingredientRecommendations))
-                    
+
+                    AnalysisResultView(product: product, ingredientRecommendations: ingredientRecommendations)
+
+                    Text(product.decoratedIngredientsList(ingredientRecommendations: ingredientRecommendations))
+
                     if let _ = self.ingredientRecommendations {
                         HStack(spacing: 25) {
                             Spacer()
                             UpvoteButton(rating: $rating, clientActivityId: clientActivityId)
                             DownvoteButton(rating: $rating, clientActivityId: clientActivityId)
-                        }
-                    } else {
-                        HStack(spacing: 25) {
-                            Text("Analyzing your preferences...")
-                            Spacer()
-                            ProgressView()
                         }
                     }
                 }
@@ -78,24 +74,5 @@ struct LabelAnalysisView: View {
                 }
             }
         }
-    }
-    
-    private func rowBackground(forItem ingredient: DTO.Ingredient) -> Color {
-        if let ingredientRecommendations = self.ingredientRecommendations {
-            let matchingRecommendation =
-                ingredientRecommendations.filter { ingredientRecommendation in
-                    ingredientRecommendation.ingredientName.lowercased() == ingredient.name.lowercased()
-                }
-
-            if !matchingRecommendation.isEmpty {
-                switch matchingRecommendation.first!.safetyRecommendation {
-                case .definitelyUnsafe:
-                    return .red.opacity(0.50)
-                case .maybeUnsafe:
-                    return .yellow.opacity(0.50)
-                }
-            }
-        }
-        return .clear
     }
 }

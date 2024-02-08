@@ -14,6 +14,8 @@
 		392D9BFD2B72CCD300166CF1 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BFC2B72CCD300166CF1 /* SettingsTab.swift */; };
 		392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C052B72D58400166CF1 /* UserPreferences.swift */; };
 		392D9C092B743B5300166CF1 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C082B743B5300166CF1 /* Config.swift */; };
+		392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C0B2B75500000166CF1 /* CapsuleWithDivider.swift */; };
+		392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */; };
 		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
 		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
@@ -43,6 +45,8 @@
 		392D9C052B72D58400166CF1 /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
 		392D9C072B73665500166CF1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		392D9C082B743B5300166CF1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		392D9C0B2B75500000166CF1 /* CapsuleWithDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapsuleWithDivider.swift; sourceTree = "<group>"; };
+		392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisResultView.swift; sourceTree = "<group>"; };
 		3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelAnalysisView.swift; sourceTree = "<group>"; };
 		397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView.swift; sourceTree = "<group>"; };
 		397C85DA2B686DF000FB9DAD /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
@@ -95,15 +99,25 @@
 			path = Store;
 			sourceTree = "<group>";
 		};
+		392D9C0A2B754FDA00166CF1 /* Lib */ = {
+			isa = PBXGroup;
+			children = (
+				392D9C0B2B75500000166CF1 /* CapsuleWithDivider.swift */,
+			);
+			path = Lib;
+			sourceTree = "<group>";
+		};
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				392D9C0A2B754FDA00166CF1 /* Lib */,
 				392D9BF32B72CB0100166CF1 /* Tabs */,
 				397C85DA2B686DF000FB9DAD /* CaptureView.swift */,
 				397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */,
 				397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */,
 				397C86052B6C22B900FB9DAD /* BarcodeAnalysisView.swift */,
 				3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */,
+				392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -229,6 +243,7 @@
 				392D9BF92B72CCA200166CF1 /* ScanTab.swift in Sources */,
 				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
 				392D9C092B743B5300166CF1 /* Config.swift in Sources */,
+				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */,
@@ -238,6 +253,7 @@
 				392D9BFD2B72CCD300166CF1 /* SettingsTab.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
+				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,
 				3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
 			);

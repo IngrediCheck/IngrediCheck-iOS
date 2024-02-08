@@ -91,7 +91,7 @@ struct BarcodeAnalysisView: View {
             Text("Error: \(error.localizedDescription)")
         } else if let product = self.product {
             ScrollView {
-                VStack(spacing: 25) {
+                VStack(spacing: 20) {
                     if case let .url(url) = product.images.first {
                         HeaderImage(url: url)
                     }
@@ -102,7 +102,10 @@ struct BarcodeAnalysisView: View {
                         Text(name)
                     }
 
-                   Text(product.decoratedIngredientsList(ingredientRecommendations: ingredientRecommendations))
+                    AnalysisResultView(product: product, ingredientRecommendations: ingredientRecommendations)
+                        .padding(.bottom)
+                    
+                    Text(product.decoratedIngredientsList(ingredientRecommendations: ingredientRecommendations))
 
                     if let _ = self.ingredientRecommendations {
                         HStack(spacing: 25) {
@@ -110,24 +113,21 @@ struct BarcodeAnalysisView: View {
                             UpvoteButton(rating: $rating, clientActivityId: clientActivityId)
                             DownvoteButton(rating: $rating, clientActivityId: clientActivityId)
                         }
-                    } else {
-                        HStack(spacing: 25) {
-                            Text("Analyzing your preferences...")
-                            Spacer()
-                            ProgressView()
-                        }
                     }
                 }
                 .padding()
             }
             .task {
                 do {
-                    self.ingredientRecommendations =
+                    let result =
                         try await webService.fetchIngredientRecommendations(
                             clientActivityId: clientActivityId,
                             userPreferenceText: userPreferences.asString,
                             barcode: barcode
                         )
+                    withAnimation {
+                        self.ingredientRecommendations = result
+                    }
                 } catch {
                     self.error = error
                 }
@@ -148,24 +148,5 @@ struct BarcodeAnalysisView: View {
                 }
             }
         }
-    }
-    
-    private func rowBackground(forItem ingredient: DTO.Ingredient) -> Color {
-        if let ingredientRecommendations = self.ingredientRecommendations {
-            let matchingRecommendation =
-                ingredientRecommendations.filter { ingredientRecommendation in
-                    ingredientRecommendation.ingredientName.lowercased() == ingredient.name.lowercased()
-                }
-
-            if !matchingRecommendation.isEmpty {
-                switch matchingRecommendation.first!.safetyRecommendation {
-                case .definitelyUnsafe:
-                    return .red.opacity(0.50)
-                case .maybeUnsafe:
-                    return .yellow.opacity(0.50)
-                }
-            }
-        }
-        return .clear
     }
 }
