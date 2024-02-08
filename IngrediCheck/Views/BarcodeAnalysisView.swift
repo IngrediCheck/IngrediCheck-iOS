@@ -38,7 +38,7 @@ struct DownvoteButton: View {
         }, label: {
             buttonImage(
                 systemName: rating == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                foregroundColor: .paletteAccent
+                foregroundColor: .red
             )
         })
     }
@@ -67,7 +67,7 @@ struct UpvoteButton: View {
         }, label: {
             buttonImage(
                 systemName: rating == 1 ? "hand.thumbsup.fill" : "hand.thumbsup",
-                foregroundColor: .paletteAccent
+                foregroundColor: .green
             )
         })
     }
@@ -106,6 +106,7 @@ struct BarcodeAnalysisView: View {
                         .padding(.bottom)
                     
                     Text(product.decoratedIngredientsList(ingredientRecommendations: ingredientRecommendations))
+                        .padding(.top)
 
                     if let _ = self.ingredientRecommendations {
                         HStack(spacing: 25) {

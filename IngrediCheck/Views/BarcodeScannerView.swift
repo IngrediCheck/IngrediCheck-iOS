@@ -15,12 +15,18 @@ enum DataScannerAccessStatusType {
     
     @Binding var routes: [CapturedItem]
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
+    @State private var showScanner = true
 
     var body: some View {
         VStack {
             switch dataScannerAccessStatus {
             case .scannerAvailable:
-                mainView
+                // Workaround: Dismantle DataScannerViewController when navigating away from this view.
+                // This is because the following sequence of actions results in freeze of scanning:
+                // startScanning => stopScanning() => startScanning().
+                if showScanner {
+                    mainView
+                }
             case .cameraNotAvailable:
                 Text("Your device doesn't have a camera")
             case .scannerNotAvailable:
@@ -35,6 +41,12 @@ enum DataScannerAccessStatusType {
         .task {
             await requestDataScannerAccessStatus()
         }
+        .onAppear {
+            showScanner = true
+        }
+        .onDisappear {
+            showScanner = false
+        }
     }
     
     private var mainView: some View {
@@ -48,9 +60,11 @@ enum DataScannerAccessStatusType {
     }
     
     private var isScannerAvailable: Bool {
-        DataScannerViewController.isAvailable && DataScannerViewController.isSupported
+        DataScannerViewController.isAvailable
+        &&
+        DataScannerViewController.isSupported
     }
-    
+
     func requestDataScannerAccessStatus() async {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
             dataScannerAccessStatus = .cameraNotAvailable
@@ -79,34 +93,35 @@ enum DataScannerAccessStatusType {
     }
 }
 
+@MainActor
 struct DataScannerView: UIViewControllerRepresentable {
     
     @Binding var routes: [CapturedItem]
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
-        let vc = DataScannerViewController(
+        let uiViewController = DataScannerViewController(
             recognizedDataTypes: [.barcode(symbologies: [.ean13, .ean8])],
             qualityLevel: .balanced,
             recognizesMultipleItems: false,
             isGuidanceEnabled: true,
             isHighlightingEnabled: true
         )
-        return vc
+        uiViewController.delegate = context.coordinator
+        try? uiViewController.startScanning()
+        return uiViewController
     }
     
     func updateUIViewController(_ uiViewController: DataScannerViewController, context: Context) {
-        uiViewController.delegate = context.coordinator
-        try? uiViewController.startScanning()
+        //
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(routes: $routes)
+        return Coordinator(routes: $routes)
     }
     
     static func dismantleUIViewController(_ uiViewController: DataScannerViewController, coordinator: Coordinator) {
-        uiViewController.stopScanning()
+        //
     }
-    
     
     class Coordinator: NSObject, DataScannerViewControllerDelegate {
         
@@ -117,12 +132,10 @@ struct DataScannerView: UIViewControllerRepresentable {
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
-            print("didTapOn \(item)")
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-//            recognizedItems.append(contentsOf: addedItems)
             if let firstItem = addedItems.first,
                case let .barcode(barcodeItem) = firstItem,
                let barcodeString = barcodeItem.payloadStringValue {
@@ -131,10 +144,8 @@ struct DataScannerView: UIViewControllerRepresentable {
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didRemove removedItems: [RecognizedItem], allItems: [RecognizedItem]) {
-//            self.recognizedItems = recognizedItems.filter { item in
-//                !removedItems.contains(where: {$0.id == item.id })
-//            }
-//            print("didRemovedItems \(removedItems)")
+//            print("dataScanner: didRemove")
+//            print(removedItems)
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, becameUnavailableWithError error: DataScannerViewController.ScanningUnavailable) {
