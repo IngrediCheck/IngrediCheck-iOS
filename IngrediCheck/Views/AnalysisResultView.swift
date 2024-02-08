@@ -25,7 +25,7 @@ struct AnalysisResultView: View {
                 }
             case .notMatch:
                 CapsuleWithDivider(color: .red) {
-                    Text("Does not Match")
+                    Text("Does not Match :(")
                 }
             }
         } else {

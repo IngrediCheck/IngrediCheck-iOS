@@ -84,15 +84,15 @@ class DTO {
         
         private func productHasIngredient(ingredientName: String) -> Bool {
             return ingredients.contains { i in
-                if i.name == ingredientName {
+                if i.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
                     return true
                 }
                 return i.ingredients.contains { i2 in
-                    if i2.name == ingredientName {
+                    if i2.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
                         return true
                     }
                     return i2.ingredients.contains { i3 in
-                        return i3.name == ingredientName
+                        return i3.name.caseInsensitiveCompare(ingredientName) == .orderedSame
                     }
                 }
             }
