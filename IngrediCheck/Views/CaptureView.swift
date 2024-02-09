@@ -32,6 +32,7 @@ struct CaptureView: View {
                 Text("Ingredients").tag(Choice.ingredients)
             }
             .pickerStyle(.segmented)
+            .padding(.bottom, 10)
 //                None of these approaches work to apply a tint to the picker
 //                .accentColor(.paletteAccent)
 //                .tint(.paletteAccent)
@@ -39,7 +40,7 @@ struct CaptureView: View {
 //                .foregroundStyle(.paletteAccent)
         }
         .animation(.default, value: selection)
-        .padding()
+        .padding(.horizontal)
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
     }

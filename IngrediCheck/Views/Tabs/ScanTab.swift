@@ -20,7 +20,7 @@ struct ScanTab: View {
             VStack {
                 CaptureView(routes: $routes)
                 Divider()
-                    .padding(.bottom)
+                    .padding(.bottom, 5)
             }
             .navigationDestination(for: CapturedItem.self) { item in
                 switch item {
