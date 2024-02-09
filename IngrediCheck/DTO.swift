@@ -114,7 +114,6 @@ class DTO {
         }
         
         var ingredientsList: String {
-            print(ingredients)
             if ingredientsDepth == 3 {
                 return ingredients.map { ingredient in
                     return ingredient.name

@@ -4,7 +4,6 @@ import SwiftUI
 struct LabelAnalysisView: View {
     
     let ingredientLabel: IngredientLabel
-    let clientActivityId = UUID().uuidString
     
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
@@ -13,6 +12,9 @@ struct LabelAnalysisView: View {
     @State private var product: DTO.Product? = nil
     @State private var error: Error? = nil
     @State private var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
+
+    // Note: This cannot be a let variable, because its value must persist across re-renders.
+    @State private var clientActivityId = UUID().uuidString
     
     var body: some View {
         if let error = self.error {
@@ -31,8 +33,10 @@ struct LabelAnalysisView: View {
                     }
 
                     AnalysisResultView(product: product, ingredientRecommendations: ingredientRecommendations)
+                        .padding(.bottom)
 
                     Text(product.decoratedIngredientsList(ingredientRecommendations: ingredientRecommendations))
+                        .padding(.top)
 
                     if let _ = self.ingredientRecommendations {
                         HStack(spacing: 25) {

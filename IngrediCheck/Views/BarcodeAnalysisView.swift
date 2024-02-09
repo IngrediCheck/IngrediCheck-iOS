@@ -76,7 +76,6 @@ struct UpvoteButton: View {
 struct BarcodeAnalysisView: View {
     
     let barcode: String
-    let clientActivityId = UUID().uuidString
     
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
@@ -85,6 +84,9 @@ struct BarcodeAnalysisView: View {
     @State private var product: DTO.Product? = nil
     @State private var errorMessage: String? = nil
     @State private var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
+    
+    // Note: This cannot be a let variable, because its value must persist across re-renders.
+    @State private var clientActivityId = UUID().uuidString
 
     var body: some View {
         if let errorMessage {
