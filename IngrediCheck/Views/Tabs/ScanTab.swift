@@ -19,7 +19,6 @@ struct ScanTab: View {
         NavigationStack(path: $routes) {
             VStack {
                 CaptureView(routes: $routes)
-                Spacer()
                 Divider()
                     .padding(.bottom)
             }
