@@ -37,9 +37,6 @@ struct CaptureView: View {
 //                .tint(.paletteAccent)
 //                .foregroundColor(.paletteAccent)
 //                .foregroundStyle(.paletteAccent)
-            Spacer()
-            Divider()
-                .padding(.bottom)
         }
         .animation(.default, value: selection)
         .padding()
