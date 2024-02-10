@@ -144,14 +144,24 @@ class DTO {
                     color = .red
                 }
                 
-                if let range = attributedString.range(of: recommendation.ingredientName, options: .caseInsensitive) {
-                    attributedString[range].foregroundColor = color
+                // Note: I could not find a straightforward Api to find all matches of
+                // a substring in an AttributedString, so using this convoluted approach.
+                var tempAttributedString = AttributedString()
+                while let range = attributedString.range(of: recommendation.ingredientName, options: .caseInsensitive) {
+                    var prefix = attributedString[..<range.lowerBound]
+                    var ingredientName = attributedString[range]
+                    ingredientName.foregroundColor = color
+                    tempAttributedString.append(prefix)
+                    tempAttributedString.append(ingredientName)
+                    attributedString = AttributedString(attributedString[range.upperBound...])
                 }
+                tempAttributedString.append(attributedString)
+                attributedString = tempAttributedString
             }
             
             return attributedString
         }
-        
+
         func calculateMatch(
             ingredientRecommendations: [IngredientRecommendation]
         ) -> ProductRecommendation {
