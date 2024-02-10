@@ -38,6 +38,9 @@ struct CaptureView: View {
 //                .tint(.paletteAccent)
 //                .foregroundColor(.paletteAccent)
 //                .foregroundStyle(.paletteAccent)
+            .onAppear {
+                UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.paletteAccent], for: .normal)
+            }
         }
         .animation(.default, value: selection)
         .padding(.horizontal)
