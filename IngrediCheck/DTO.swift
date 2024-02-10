@@ -148,7 +148,7 @@ class DTO {
                 // a substring in an AttributedString, so using this convoluted approach.
                 var tempAttributedString = AttributedString()
                 while let range = attributedString.range(of: recommendation.ingredientName, options: .caseInsensitive) {
-                    var prefix = attributedString[..<range.lowerBound]
+                    let prefix = attributedString[..<range.lowerBound]
                     var ingredientName = attributedString[range]
                     ingredientName.foregroundColor = color
                     tempAttributedString.append(prefix)
