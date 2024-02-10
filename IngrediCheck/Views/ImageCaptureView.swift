@@ -4,7 +4,7 @@ import Vision
 
 struct ImageCaptureView: View {
     @Binding var routes: [CapturedItem]
-    var cameraManager = CameraManager()
+    @State private var cameraManager = CameraManager()
 
     var body: some View {
         VStack {
@@ -117,10 +117,10 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
                 session.addInput(input)
                 if session.canAddOutput(photoOutput) {
                     session.addOutput(photoOutput)
-                    Task {
-                        session.startRunning()
-                    }
                 }
+            }
+            Task {
+                session.startRunning()
             }
         } catch {
             print("Error: \(error.localizedDescription)")
