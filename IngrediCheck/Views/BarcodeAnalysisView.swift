@@ -73,10 +73,11 @@ struct UpvoteButton: View {
         self.webService = webService
         self.userPreferences = userPreferences
     }
-    
-    var product: DTO.Product? = nil
-    var errorMessage: String? = nil
-    var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
+
+    var product: DTO.Product?
+    var notFound: Bool?
+    var errorMessage: String?
+    var ingredientRecommendations: [DTO.IngredientRecommendation]?
     let clientActivityId = UUID().uuidString
     
     func analyze() async {
@@ -95,8 +96,8 @@ struct UpvoteButton: View {
                 ingredientRecommendations = result
             }
             
-        } catch NetworkError.notFound(let errorMessage) {
-            self.errorMessage = errorMessage
+        } catch NetworkError.notFound {
+            self.notFound = true
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -109,8 +110,10 @@ struct UpvoteButton: View {
 
 struct BarcodeAnalysisView: View {
     
-    let barcode: String
-    
+    @Binding var routes: [CapturedItem]
+    @Binding var captureSelection: CaptureSelectionType
+    @Binding var barcode: String?
+
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     
@@ -123,6 +126,19 @@ struct BarcodeAnalysisView: View {
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .padding()
+                } else if let _ = viewModel.notFound {
+                    VStack {
+                        Text("Congratulations!")
+                        Text("You found a product that is not in our Database.")
+                        Text("Earn Ingredipoints by submitting photos!")
+                        Button(action: {
+                            captureSelection = .ingredients
+                            _ = routes.popLast()
+                        }, label: {
+                            Text("Click here to add Photos")
+                        })
+                        .padding(.top)
+                    }
                 } else if let product = viewModel.product {
                     ScrollView {
                         VStack(spacing: 20) {
@@ -158,7 +174,7 @@ struct BarcodeAnalysisView: View {
                 } else {
                     VStack {
                         Spacer()
-                        Text("Looking up \(barcode)")
+                        Text("Looking up \(barcode!)")
                         Spacer()
                         ProgressView()
                         Spacer()
@@ -168,7 +184,7 @@ struct BarcodeAnalysisView: View {
                 Text("")
                     .onAppear {
                         viewModel = BarcodeAnalysisViewModel(
-                            barcode: barcode,
+                            barcode: barcode!,
                             webService: webService,
                             userPreferences: userPreferences
                         )

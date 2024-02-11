@@ -1,31 +1,27 @@
 import SwiftUI
 
-enum Choice {
-    case barcode
-    case ingredients
-}
-
 struct CaptureView: View {
     
     @Binding var routes: [CapturedItem]
-    @State private var selection: Choice = .barcode
+    @Binding var captureSelection: CaptureSelectionType
+    @Binding var barcode: String?
 
     var body: some View {
         VStack {
-            if selection == .barcode {
-                BarcodeScannerView(routes: $routes)
+            if captureSelection == .barcode {
+                BarcodeScannerView(routes: $routes, barcode: $barcode)
             } else {
                 ImageCaptureView(routes: $routes)
             }
         }
-        .animation(.default, value: selection)
+        .animation(.default, value: captureSelection)
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("Options", selection: $selection) {
-                    Text("Barcode").tag(Choice.barcode)
-                    Text("Ingredients").tag(Choice.ingredients)
+                Picker("Options", selection: $captureSelection) {
+                    Text("Barcode").tag(CaptureSelectionType.barcode)
+                    Text("Ingredients").tag(CaptureSelectionType.ingredients)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()

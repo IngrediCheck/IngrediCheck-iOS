@@ -8,19 +8,24 @@ struct ProductImage: Hashable {
 }
 
 enum CapturedItem: Hashable {
-    case barcode(String)
+    case barcode
     case productImages([ProductImage])
+}
+
+enum CaptureSelectionType {
+    case barcode
+    case ingredients
 }
 
 struct ScanTab: View {
     @State private var routes: [CapturedItem] = []
-    @State private var analysis: String?
-    @State private var errorExtractingIngredientsList: Bool = false
+    @State private var captureSelection: CaptureSelectionType = .barcode
+    @State private var barcode: String?
 
     var body: some View {
         NavigationStack(path: $routes) {
             VStack {
-                CaptureView(routes: $routes)
+                CaptureView(routes: $routes, captureSelection: $captureSelection, barcode: $barcode)
                 Divider()
                     .padding(.bottom, 5)
             }
@@ -28,8 +33,8 @@ struct ScanTab: View {
                 switch item {
                     case .productImages(let productImages):
                         LabelAnalysisView(productImages: productImages)
-                    case .barcode(let barcode):
-                        BarcodeAnalysisView(barcode: barcode)
+                    case .barcode:
+                        BarcodeAnalysisView(routes: $routes, captureSelection: $captureSelection, barcode: $barcode)
                 }
             }
         }
