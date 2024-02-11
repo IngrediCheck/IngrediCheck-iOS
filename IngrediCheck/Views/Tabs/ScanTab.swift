@@ -2,7 +2,8 @@ import SwiftUI
 
 struct ProductImage: Hashable {
     let image: UIImage
-    let imageOCRText: String
+    let ocrTask: Task<String, Error>
+    let uploadTask: Task<String, Error>
 }
 
 enum CapturedItem: Hashable {

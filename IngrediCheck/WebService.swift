@@ -70,22 +70,16 @@ enum NetworkError: Error {
         }
 
         var productImagesDTO: [ImageInfo] = []
-        let uploadImageTasks = productImages.map { productImage in
-            Task {
-                (productImage, try await uploadImage(image: productImage.image))
-            }
-        }
-
-        for task in uploadImageTasks {
-            let (productImage, imageFileHash) = try await task.value
+        for productImage in productImages {
             productImagesDTO.append(ImageInfo(
-                imageFileHash: imageFileHash,
-                imageOCRText: productImage.imageOCRText
-            ))
+                imageFileHash: try await productImage.uploadTask.value,
+                imageOCRText: try await productImage.ocrTask.value))
         }
 
         let jsonData = try JSONEncoder().encode(productImagesDTO)
         let jsonString = String(data: jsonData, encoding: .utf8)!
+        
+        print(jsonString)
 
         let request = SupabaseRequestBuilder(endpoint: .extract)
             .setAuthorization(with: token)
@@ -199,5 +193,9 @@ enum NetworkError: Error {
         )
 
         return imageFileName
+    }
+    
+    func deleteImages(imageFileNames: [String]) async throws {
+        _ = try await supabaseClient.storage.from("productimages").remove(paths: imageFileNames)
     }
 }

@@ -6,6 +6,7 @@ struct ImageCaptureView: View {
     @Binding var routes: [CapturedItem]
     @State private var cameraManager = CameraManager()
     @State private var capturedImages: [ProductImage] = []
+    @Environment(WebService.self) var webService
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,7 +50,7 @@ struct ImageCaptureView: View {
         .navigationBarItems(
             leading:
                 Button("Cancel") {
-                    capturedImages = []
+                    deleteCapturedImages()
                 }
                 .disabled(capturedImages.isEmpty)
                 .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent),
@@ -73,28 +74,61 @@ struct ImageCaptureView: View {
         cameraManager.capturePhoto { image in
             if let image = image {
                 
-                var imageText = ""
-                let request = VNRecognizeTextRequest { request, error in
-                    guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                        fatalError("Received invalid observations")
-                    }
+                let ocrTask = startOCRTask(image: image)
+                let uploadTask = startUploadTask(image: image)
 
-                    for observation in observations {
-                        guard let bestCandidate = observation.topCandidates(1).first else {
-                            print("No candidate")
-                            continue
-                        }
-                        
-                        imageText += bestCandidate.string
-                        imageText += "\n"
-                    }
+                capturedImages.append(ProductImage(
+                    image: image,
+                    ocrTask: ocrTask,
+                    uploadTask: uploadTask
+                    )
+                )
+            }
+        }
+    }
+    
+    func startUploadTask(image: UIImage) -> Task<String, Error> {
+        Task {
+            try await webService.uploadImage(image: image)
+        }
+    }
+    
+    func startOCRTask(image: UIImage) -> Task<String, Error> {
+        Task {
+            var imageText = ""
+            let request = VNRecognizeTextRequest { request, error in
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    fatalError("Received invalid observations")
                 }
                 
-                let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
-                try? handler.perform([request])
-
-                capturedImages.append(ProductImage(image: image, imageOCRText: imageText))
+                for observation in observations {
+                    guard let bestCandidate = observation.topCandidates(1).first else {
+                        print("No candidate")
+                        continue
+                    }
+                    
+                    imageText += bestCandidate.string
+                    imageText += "\n"
+                }
             }
+            
+            let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
+            try? handler.perform([request])
+            return imageText
+        }
+    }
+    
+    func deleteCapturedImages() {
+        let imagesToDelete = capturedImages
+        capturedImages = []
+
+        Task {
+            var filesToDelete: [String] = []
+            for productImage in imagesToDelete {
+                filesToDelete.append(try await productImage.uploadTask.value)
+                _ = try await productImage.ocrTask.value
+            }
+            try await webService.deleteImages(imageFileNames: filesToDelete)
         }
     }
 }
