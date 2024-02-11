@@ -69,25 +69,35 @@ enum NetworkError: Error {
             throw NetworkError.authError
         }
 
+        var barcode: String? = nil
         var productImagesDTO: [ImageInfo] = []
         for productImage in productImages {
             productImagesDTO.append(ImageInfo(
                 imageFileHash: try await productImage.uploadTask.value,
                 imageOCRText: try await productImage.ocrTask.value))
+            if let barcodeString = try await productImage.barcodeDetectionTask.value {
+                barcode = barcodeString
+            }
         }
 
-        let jsonData = try JSONEncoder().encode(productImagesDTO)
-        let jsonString = String(data: jsonData, encoding: .utf8)!
+        let productImagesJsonData = try JSONEncoder().encode(productImagesDTO)
+        let productImagesJsonString = String(data: productImagesJsonData, encoding: .utf8)!
         
-        print(jsonString)
+        print(productImagesJsonString)
 
-        let request = SupabaseRequestBuilder(endpoint: .extract)
+        var requestBuilder = SupabaseRequestBuilder(endpoint: .extract)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
             .setFormData(name: "clientActivityId", value: clientActivityId)
-            .setFormData(name: "productImages", value: jsonString)
-            .build()
+            .setFormData(name: "productImages", value: productImagesJsonString)
         
+        if let barcode {
+            requestBuilder = requestBuilder
+                .setFormData(name: "barcode", value: barcode)
+        }
+        
+        let request = requestBuilder.build()
+
         print(request)
 
         let (data, response) = try await URLSession.shared.data(for: request)

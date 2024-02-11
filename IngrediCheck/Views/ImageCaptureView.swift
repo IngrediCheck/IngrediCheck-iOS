@@ -76,13 +76,13 @@ struct ImageCaptureView: View {
                 
                 let ocrTask = startOCRTask(image: image)
                 let uploadTask = startUploadTask(image: image)
+                let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
                 capturedImages.append(ProductImage(
                     image: image,
                     ocrTask: ocrTask,
-                    uploadTask: uploadTask
-                    )
-                )
+                    uploadTask: uploadTask,
+                    barcodeDetectionTask: barcodeDetectionTask))
             }
         }
     }
@@ -95,6 +95,10 @@ struct ImageCaptureView: View {
     
     func startOCRTask(image: UIImage) -> Task<String, Error> {
         Task {
+            guard let cgImage = image.cgImage else {
+                return ""
+            }
+            
             var imageText = ""
             let request = VNRecognizeTextRequest { request, error in
                 guard let observations = request.results as? [VNRecognizedTextObservation] else {
@@ -112,9 +116,35 @@ struct ImageCaptureView: View {
                 }
             }
             
-            let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             try? handler.perform([request])
             return imageText
+        }
+    }
+    
+    func startBarcodeDetectionTask(image: UIImage) -> Task<String?, Error> {
+        Task {
+            guard let cgImage = image.cgImage else {
+                return nil
+            }
+
+            let request = VNDetectBarcodesRequest()
+            request.symbologies = [.ean8, .ean13]
+            request.coalesceCompositeSymbologies = true
+
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+
+            do {
+                try handler.perform([request])
+                guard let results = request.results as [VNBarcodeObservation]?, !results.isEmpty else {
+                    return nil
+                }
+                
+                return results.first?.payloadStringValue
+            } catch {
+                print("Failed to perform barcode detection: \(error)")
+                return nil
+            }
         }
     }
     

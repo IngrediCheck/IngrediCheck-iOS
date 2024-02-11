@@ -4,6 +4,7 @@ struct ProductImage: Hashable {
     let image: UIImage
     let ocrTask: Task<String, Error>
     let uploadTask: Task<String, Error>
+    let barcodeDetectionTask: Task<String?, Error>
 }
 
 enum CapturedItem: Hashable {
