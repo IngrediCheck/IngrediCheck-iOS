@@ -3,12 +3,12 @@ import SwiftUI
 
 @Observable class LabelAnalysisViewModel {
     
-    let ingredientLabel: IngredientLabel
+    let productImages: [ProductImage]
     let webService: WebService
     let userPreferences: UserPreferences
     
-    init(ingredientLabel: IngredientLabel, webService: WebService, userPreferences: UserPreferences) {
-        self.ingredientLabel = ingredientLabel
+    init(_ productImages: [ProductImage], _ webService: WebService, _ userPreferences: UserPreferences) {
+        self.productImages = productImages
         self.webService = webService
         self.userPreferences = userPreferences
     }
@@ -22,7 +22,7 @@ import SwiftUI
         do {
             self.product = try await webService.extractProductDetailsFromLabelImages(
                 clientActivityId: clientActivityId,
-                labelImages: [ingredientLabel]
+                productImages: productImages
             )
             let result =
                 try await webService.fetchIngredientRecommendations(
@@ -44,8 +44,8 @@ import SwiftUI
 
 struct LabelAnalysisView: View {
     
-    let ingredientLabel: IngredientLabel
-    
+    let productImages: [ProductImage]
+
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
 
@@ -60,9 +60,22 @@ struct LabelAnalysisView: View {
                 } else if let product = viewModel.product {
                     ScrollView {
                         VStack(spacing: 20) {
-                            Image(uiImage: ingredientLabel.image)
-                                .resizable()
-                                .scaledToFit()
+                            ScrollView(.horizontal) {
+                                HStack(spacing: 10) {
+                                    ForEach(productImages.indices, id: \.self) { index in
+                                        Image(uiImage: productImages[index].image)
+                                            .resizable()
+                                            .scaledToFit()
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                                        )
+                                    }
+                                }
+                            }
+                            .frame(height: (UIScreen.main.bounds.width - 20) * (4/3))
+
                             if let brand = product.brand {
                                 Text(brand)
                             }
@@ -101,11 +114,7 @@ struct LabelAnalysisView: View {
             } else {
                 Text("")
                     .onAppear {
-                        viewModel = LabelAnalysisViewModel(
-                            ingredientLabel: ingredientLabel,
-                            webService: webService,
-                            userPreferences: userPreferences
-                        )
+                        viewModel = LabelAnalysisViewModel(productImages, webService, userPreferences)
                         Task { await viewModel?.analyze() }
                     }
             }

@@ -57,7 +57,7 @@ enum NetworkError: Error {
     
     func extractProductDetailsFromLabelImages(
         clientActivityId: String,
-        labelImages: [IngredientLabel]
+        productImages: [ProductImage]
     ) async throws -> DTO.Product {
 
         struct ImageInfo: Codable {
@@ -69,13 +69,22 @@ enum NetworkError: Error {
             throw NetworkError.authError
         }
 
-        let imageFileHash = try await uploadImage(image: labelImages[0].image)
-        let labelInfo: [ImageInfo] = [ImageInfo(
-            imageFileHash: imageFileHash,
-            imageOCRText: labelImages.first!.imageOCRText
-        )]
+        var productImagesDTO: [ImageInfo] = []
+        let uploadImageTasks = productImages.map { productImage in
+            Task {
+                (productImage, try await uploadImage(image: productImage.image))
+            }
+        }
 
-        let jsonData = try JSONEncoder().encode(labelInfo)
+        for task in uploadImageTasks {
+            let (productImage, imageFileHash) = try await task.value
+            productImagesDTO.append(ImageInfo(
+                imageFileHash: imageFileHash,
+                imageOCRText: productImage.imageOCRText
+            ))
+        }
+
+        let jsonData = try JSONEncoder().encode(productImagesDTO)
         let jsonString = String(data: jsonData, encoding: .utf8)!
 
         let request = SupabaseRequestBuilder(endpoint: .extract)

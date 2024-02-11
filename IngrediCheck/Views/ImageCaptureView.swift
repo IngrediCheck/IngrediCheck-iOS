@@ -5,9 +5,10 @@ import Vision
 struct ImageCaptureView: View {
     @Binding var routes: [CapturedItem]
     @State private var cameraManager = CameraManager()
+    @State private var capturedImages: [ProductImage] = []
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             CameraPreview(session: cameraManager.session)
                 .aspectRatio(3/4, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -15,19 +16,52 @@ struct ImageCaptureView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.paletteSecondary, lineWidth: 0.8)
                 )
+                .padding(.top)
             Spacer()
-            Spacer()
-            Button(action: {
-                capturePhoto()
-            }, label: {
-                Image(systemName: "circle.dotted.circle")
-                    .resizable()
-                    .frame(width: 50, height: 50)
-                    .foregroundColor(.paletteAccent)
-            })
-            Spacer()
+            HStack {
+                if capturedImages.isEmpty {
+                    Rectangle()
+                        .foregroundColor(.clear)
+                        .frame(width: 100 * (3/4), height: 100)
+                } else {
+                    Image(uiImage: capturedImages.last!.image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 100 * (3/4), height: 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                Spacer()
+                Button(action: {
+                    capturePhoto()
+                }, label: {
+                    Image(systemName: "circle.dotted.circle")
+                        .resizable()
+                        .frame(width: 50, height: 50)
+                        .foregroundColor(.paletteAccent)
+                })
+                Spacer()
+                Rectangle()
+                    .foregroundColor(.clear)
+                    .frame(width: 100 * (3/4), height: 100)
+            }
+            .padding(.bottom)
         }
+        .navigationBarItems(
+            leading:
+                Button("Cancel") {
+                    capturedImages = []
+                }
+                .disabled(capturedImages.isEmpty)
+                .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent),
+            trailing:
+                Button("Done") {
+                    routes.append(.productImages(capturedImages))
+                }
+                .disabled(capturedImages.isEmpty)
+                .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
+        )
         .onAppear {
+            capturedImages = []
             cameraManager.setupSession()
         }
         .onDisappear {
@@ -59,7 +93,7 @@ struct ImageCaptureView: View {
                 let handler = VNImageRequestHandler(cgImage: (image.cgImage)!, options: [:])
                 try? handler.perform([request])
 
-                self.routes.append(.ingredientLabel(IngredientLabel(image: image, imageOCRText: imageText)))
+                capturedImages.append(ProductImage(image: image, imageOCRText: imageText))
             }
         }
     }

@@ -1,13 +1,13 @@
 import SwiftUI
 
-struct IngredientLabel: Hashable {
+struct ProductImage: Hashable {
     let image: UIImage
     let imageOCRText: String
 }
 
 enum CapturedItem: Hashable {
     case barcode(String)
-    case ingredientLabel(IngredientLabel)
+    case productImages([ProductImage])
 }
 
 struct ScanTab: View {
@@ -24,8 +24,8 @@ struct ScanTab: View {
             }
             .navigationDestination(for: CapturedItem.self) { item in
                 switch item {
-                    case .ingredientLabel(let label):
-                        LabelAnalysisView(ingredientLabel: label)
+                    case .productImages(let productImages):
+                        LabelAnalysisView(productImages: productImages)
                     case .barcode(let barcode):
                         BarcodeAnalysisView(barcode: barcode)
                 }

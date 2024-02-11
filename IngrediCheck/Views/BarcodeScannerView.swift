@@ -38,6 +38,19 @@ enum DataScannerAccessStatusType {
             }
             Spacer()
         }
+        .navigationBarItems(
+            leading:
+                Button("Cancel") {
+                    //
+                }
+                .disabled(true)
+                .foregroundStyle(.clear),
+            trailing:
+                Button("Done") {
+                    //
+                }.disabled(true)
+                .foregroundStyle(.clear)
+        )
         .task {
             await requestDataScannerAccessStatus()
         }
@@ -57,6 +70,7 @@ enum DataScannerAccessStatusType {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.paletteSecondary, lineWidth: 0.8)
             )
+            .padding(.top)
     }
     
     private var isScannerAvailable: Bool {
