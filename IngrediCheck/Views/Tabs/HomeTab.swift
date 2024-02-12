@@ -1,15 +1,16 @@
 import SwiftUI
 
 struct HomeTab: View {
-    
     @Environment(UserPreferences.self) var userPreferences
     @State private var newPreference: String = ""
+    @State private var placeholder: String = "Add your preference here"
+    @State private var preferenceExamples = PreferenceExamples()
     @FocusState var isFocused: Bool
 
     var body: some View {
         NavigationStack {
             VStack {
-                TextField("Add your preference here", text: $newPreference)
+                TextField(preferenceExamples.placeholder, text: $newPreference)
                     .padding()
                     .background(.ultraThinMaterial, in: .capsule)
                     .padding()
@@ -27,6 +28,13 @@ struct HomeTab: View {
                     .onDelete { offsets in
                         userPreferences.preferences.remove(atOffsets: offsets)
                     }
+                    .onChange(of: isFocused) { oldValue, newValue in
+                        if newValue {
+                            preferenceExamples.stopAnimatingExamples()
+                        } else {
+                            preferenceExamples.startAnimatingExamples()
+                        }
+                    }
                 }
                 .listStyle(.plain)
                 Divider()
@@ -37,6 +45,12 @@ struct HomeTab: View {
             .gesture(TapGesture().onEnded {
                 isFocused = false
             })
+            .onAppear {
+                preferenceExamples.startAnimatingExamples()
+            }
+            .onDisappear {
+                preferenceExamples.stopAnimatingExamples()
+            }
         }
     }
 }
