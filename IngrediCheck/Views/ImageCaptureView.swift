@@ -27,7 +27,7 @@ struct ImageCaptureView: View {
                 } else {
                     Image(uiImage: capturedImages.last!.image)
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(3/4, contentMode: .fit)
                         .frame(width: 100 * (3/4), height: 100)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }

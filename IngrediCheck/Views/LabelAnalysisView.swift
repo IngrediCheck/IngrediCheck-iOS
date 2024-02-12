@@ -59,35 +59,41 @@ struct LabelAnalysisView: View {
                     Text("Error: \(error.localizedDescription)")
                 } else if let product = viewModel.product {
                     ScrollView {
-                        VStack(spacing: 20) {
+                        VStack(spacing: 0) {
+
+                            if let brand = product.brand {
+                                Text(brand)
+                            }
+
+                            if let name = product.name {
+                                Text(name)
+                            }
+
                             ScrollView(.horizontal) {
                                 HStack(spacing: 10) {
                                     ForEach(productImages.indices, id: \.self) { index in
                                         Image(uiImage: productImages[index].image)
                                             .resizable()
                                             .scaledToFit()
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.paletteSecondary, lineWidth: 0.8)
-                                        )
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                                            )
+                                            .frame(width: UIScreen.main.bounds.width - 60)
                                     }
                                 }
+                                .scrollTargetLayout()
                             }
+                            .scrollIndicators(.hidden)
+                            .scrollTargetBehavior(.viewAligned)
                             .frame(height: (UIScreen.main.bounds.width - 20) * (4/3))
-
-                            if let brand = product.brand {
-                                Text(brand)
-                            }
-                            if let name = product.name {
-                                Text(name)
-                            }
                             
                             AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
-                                .padding(.bottom)
+                                .padding(.vertical)
                             
                             Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                .padding(.top)
+                                .padding(.vertical)
                             
                             if viewModel.ingredientRecommendations != nil {
                                 HStack(spacing: 25) {
@@ -99,6 +105,7 @@ struct LabelAnalysisView: View {
                         }
                         .padding()
                     }
+                    .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
                         Task { await viewModel.submitRating(rating: newRating) }
                     }

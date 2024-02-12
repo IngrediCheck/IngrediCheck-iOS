@@ -7,7 +7,12 @@ struct HeaderImage: View {
         AsyncImage(url: url) { image in
             image
                 .resizable()
-                .scaledToFit()
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                )
         } placeholder: {
             ProgressView()
         }
@@ -141,22 +146,39 @@ struct BarcodeAnalysisView: View {
                     }
                 } else if let product = viewModel.product {
                     ScrollView {
-                        VStack(spacing: 20) {
-                            if case let .url(url) = product.images.first {
-                                HeaderImage(url: url)
-                            }
+                        VStack(spacing: 0) {
+
                             if let brand = product.brand {
                                 Text(brand)
                             }
+
                             if let name = product.name {
                                 Text(name)
                             }
                             
+                            if !product.images.isEmpty {
+                                ScrollView(.horizontal) {
+                                    HStack(spacing: 10) {
+                                        ForEach(product.images.indices, id:\.self) { index in
+                                            if case let .url(url) = product.images[index] {
+                                                HeaderImage(url: url)
+                                                    .frame(width: UIScreen.main.bounds.width - 60)
+                                            }
+                                        }
+                                    }
+                                    .scrollTargetLayout()
+                                }
+                                .scrollIndicators(.hidden)
+                                .scrollTargetBehavior(.viewAligned)
+                                .frame(height: (UIScreen.main.bounds.width - 20) * (4/3))
+                            }
+                            
                             AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
+                                .padding(.vertical)
                                 .padding(.bottom)
                             
                             Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                .padding(.top)
+                                .padding(.vertical)
                             
                             if viewModel.ingredientRecommendations != nil {
                                 HStack(spacing: 25) {
@@ -168,6 +190,7 @@ struct BarcodeAnalysisView: View {
                         }
                         .padding()
                     }
+                    .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
                         Task { await viewModel.submitRating(rating: newRating) }
                     }
