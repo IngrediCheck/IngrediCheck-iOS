@@ -2,16 +2,15 @@ import SwiftUI
 
 struct CaptureView: View {
     
-    @Binding var routes: [CapturedItem]
     @Binding var captureSelection: CaptureSelectionType
     @Binding var barcode: String?
 
     var body: some View {
         VStack {
             if captureSelection == .barcode {
-                BarcodeScannerView(routes: $routes, barcode: $barcode)
+                BarcodeScannerView(barcode: $barcode)
             } else {
-                ImageCaptureView(routes: $routes)
+                ImageCaptureView()
             }
         }
         .animation(.default, value: captureSelection)

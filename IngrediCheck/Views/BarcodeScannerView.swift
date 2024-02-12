@@ -13,10 +13,11 @@ enum DataScannerAccessStatusType {
 
 @MainActor struct BarcodeScannerView: View {
     
-    @Binding var routes: [CapturedItem]
     @Binding var barcode: String?
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
     @State private var showScanner = true
+
+    @Environment(NavigationRoutes.self) var navigationRoutes
 
     var body: some View {
         VStack {
@@ -64,7 +65,8 @@ enum DataScannerAccessStatusType {
     }
     
     private var mainView: some View {
-        DataScannerView(routes: $routes, barcode: $barcode)
+        @Bindable var navigationRoutesBindable = navigationRoutes
+        return DataScannerView(routes: $navigationRoutesBindable.scanRoutes, barcode: $barcode)
             .aspectRatio(3/4, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
@@ -117,7 +119,7 @@ struct DataScannerView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let uiViewController = DataScannerViewController(
             recognizedDataTypes: [.barcode(symbologies: [.ean13, .ean8])],
-            qualityLevel: .balanced,
+            qualityLevel: .accurate,
             recognizesMultipleItems: false,
             isGuidanceEnabled: true,
             isHighlightingEnabled: true

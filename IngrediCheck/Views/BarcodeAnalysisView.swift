@@ -110,12 +110,12 @@ struct UpvoteButton: View {
 
 struct BarcodeAnalysisView: View {
     
-    @Binding var routes: [CapturedItem]
     @Binding var captureSelection: CaptureSelectionType
     @Binding var barcode: String?
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(NavigationRoutes.self) var navigationRoutes
     
     @State private var rating: Int = 0
     @State private var viewModel: BarcodeAnalysisViewModel?
@@ -133,7 +133,7 @@ struct BarcodeAnalysisView: View {
                         Text("Earn Ingredipoints by submitting photos!")
                         Button(action: {
                             captureSelection = .ingredients
-                            _ = routes.popLast()
+                            _ = navigationRoutes.scanRoutes.popLast()
                         }, label: {
                             Text("Click here to add Photos")
                         })

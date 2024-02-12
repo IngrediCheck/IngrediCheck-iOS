@@ -42,13 +42,18 @@ extension TabScreen {
     }
 }
 
+@Observable class NavigationRoutes {
+    var scanRoutes: [CapturedItem] = []
+}
+
 struct LoggedInRootView: View {
 
-    @State private var selectedTab: TabScreen = .home
+    @State private var activeTab: TabScreen = .home
     @State private var userPreferences: UserPreferences = UserPreferences()
+    @State private var navigationRoutes = NavigationRoutes()
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: selectedTab) {
             ForEach(TabScreen.allCases) { screen in
                 screen.destination
                     .tag(screen as TabScreen?)
@@ -56,11 +61,24 @@ struct LoggedInRootView: View {
             }
         }
         .environment(userPreferences)
+        .environment(navigationRoutes)
         .tint(.paletteAccent)
         .onAppear {
             if !userPreferences.preferences.isEmpty {
-                selectedTab = .scan
+                activeTab = .scan
             }
+        }
+    }
+    
+    var selectedTab: Binding<TabScreen> {
+        return .init {
+            return activeTab
+        } set: { newValue in
+            if newValue == activeTab {
+                print("Same tab tapped, going to top of stack")
+                navigationRoutes.scanRoutes = []
+            }
+            activeTab = newValue
         }
     }
 }

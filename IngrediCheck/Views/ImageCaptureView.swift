@@ -3,10 +3,10 @@ import AVFoundation
 import Vision
 
 struct ImageCaptureView: View {
-    @Binding var routes: [CapturedItem]
     @State private var cameraManager = CameraManager()
     @State private var capturedImages: [ProductImage] = []
     @Environment(WebService.self) var webService
+    @Environment(NavigationRoutes.self) var navigationRoutes
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,7 +56,7 @@ struct ImageCaptureView: View {
                 .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent),
             trailing:
                 Button("Done") {
-                    routes.append(.productImages(capturedImages))
+                    navigationRoutes.scanRoutes.append(.productImages(capturedImages))
                 }
                 .disabled(capturedImages.isEmpty)
                 .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
@@ -115,6 +115,9 @@ struct ImageCaptureView: View {
                     imageText += "\n"
                 }
             }
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            request.automaticallyDetectsLanguage = true
             
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             try? handler.perform([request])
