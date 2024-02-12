@@ -11,9 +11,9 @@ struct HomeTab: View {
             VStack {
                 TextField("Add your preference here", text: $newPreference)
                     .padding()
-                    .textFieldStyle(.roundedBorder)
+                    .background(.ultraThinMaterial, in: .capsule)
+                    .padding()
                     .focused(self.$isFocused)
-                    .multilineTextAlignment(.center)
                     .onSubmit {
                         if !newPreference.isEmpty {
                             userPreferences.preferences.insert(newPreference, at: 0)
