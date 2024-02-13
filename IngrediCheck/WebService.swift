@@ -186,7 +186,7 @@ enum NetworkError: Error {
 
         let httpResponse = response as! HTTPURLResponse
 
-        guard httpResponse.statusCode == 200 else {
+        guard httpResponse.statusCode == 204 else {
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
@@ -213,7 +213,7 @@ enum NetworkError: Error {
 
         let httpResponse = response as! HTTPURLResponse
 
-        guard httpResponse.statusCode == 200 else {
+        guard httpResponse.statusCode == 204 else {
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
