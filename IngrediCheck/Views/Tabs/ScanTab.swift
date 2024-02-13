@@ -20,11 +20,11 @@ enum CaptureSelectionType {
 struct ScanTab: View {
     @State private var captureSelection: CaptureSelectionType = .barcode
     @State private var barcode: String?
-    @Environment(NavigationRoutes.self) var navigationRoutes
+    @Environment(AppState.self) var appState
 
     var body: some View {
-        @Bindable var navigationRoutesBinding = navigationRoutes
-        NavigationStack(path: $navigationRoutesBinding.scanRoutes) {
+        @Bindable var appStateBinding = appState
+        NavigationStack(path: $appStateBinding.scanRoutes) {
             VStack {
                 CaptureView(captureSelection: $captureSelection, barcode: $barcode)
                 Divider()
@@ -43,7 +43,7 @@ struct ScanTab: View {
     
     var scanRoutes: Binding<[CapturedItem]> {
         return .init {
-            return navigationRoutes.scanRoutes
+            return appState.scanRoutes
         } set: { newValue in
             
         }

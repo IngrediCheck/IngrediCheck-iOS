@@ -120,7 +120,7 @@ struct BarcodeAnalysisView: View {
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
-    @Environment(NavigationRoutes.self) var navigationRoutes
+    @Environment(AppState.self) var appState
     
     @State private var rating: Int = 0
     @State private var viewModel: BarcodeAnalysisViewModel?
@@ -138,7 +138,7 @@ struct BarcodeAnalysisView: View {
                         Text("Earn Ingredipoints by submitting photos!")
                         Button(action: {
                             captureSelection = .ingredients
-                            _ = navigationRoutes.scanRoutes.popLast()
+                            _ = appState.scanRoutes.popLast()
                         }, label: {
                             Text("Click here to add Photos")
                         })

@@ -6,7 +6,7 @@ struct ImageCaptureView: View {
     @State private var cameraManager = CameraManager()
     @State private var capturedImages: [ProductImage] = []
     @Environment(WebService.self) var webService
-    @Environment(NavigationRoutes.self) var navigationRoutes
+    @Environment(AppState.self) var appState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,7 +56,7 @@ struct ImageCaptureView: View {
                 .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent),
             trailing:
                 Button("Done") {
-                    navigationRoutes.scanRoutes.append(.productImages(capturedImages))
+                    appState.scanRoutes.append(.productImages(capturedImages))
                 }
                 .disabled(capturedImages.isEmpty)
                 .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
