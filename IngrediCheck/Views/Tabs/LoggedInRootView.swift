@@ -42,8 +42,21 @@ extension TabScreen {
     }
 }
 
+enum Sheets: Identifiable {
+
+    case captureFeedback(onSubmit: (String) -> Void)
+
+    var id: String {
+        switch self {
+        case .captureFeedback:
+            return "captureFeedback"
+        }
+    }
+}
+
 @Observable class AppState {
     var scanRoutes: [CapturedItem] = []
+    var activeSheet: Sheets?
 }
 
 struct LoggedInRootView: View {
@@ -66,6 +79,13 @@ struct LoggedInRootView: View {
         .onAppear {
             if !userPreferences.preferences.isEmpty {
                 activeTab = .scan
+            }
+        }
+        .sheet(item: $appState.activeSheet) { sheet in
+            switch sheet {
+            case .captureFeedback(let onSubmit):
+                FeedbackView(onSubmit: onSubmit)
+                    .presentationDetents([.medium])
             }
         }
     }

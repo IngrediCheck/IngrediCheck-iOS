@@ -37,8 +37,17 @@ import SwiftUI
         }
     }
     
-    func submitRating(rating: Int) async {
-        try? await webService.rateAnalysis(clientActivityId: clientActivityId, rating: rating)
+    func submitRating(rating: Int) {
+        Task {
+            try? await webService.submitFeedbackRating(clientActivityId: clientActivityId, rating: rating)
+        }
+    }
+
+    func submitFeedbackText(feedbackText: String) {
+        guard !feedbackText.isEmpty else { return }
+        Task {
+            try? await webService.submitFeedbackText(clientActivityId: clientActivityId, feedbackText: feedbackText)
+        }
     }
 }
 
@@ -48,6 +57,7 @@ struct LabelAnalysisView: View {
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(AppState.self) var appState
 
     @State private var rating: Int = 0
     @State private var viewModel: LabelAnalysisViewModel?
@@ -94,20 +104,25 @@ struct LabelAnalysisView: View {
                             
                             Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
                                 .padding(.vertical)
-                            
-                            if viewModel.ingredientRecommendations != nil {
-                                HStack(spacing: 25) {
-                                    Spacer()
-                                    UpvoteButton(rating: $rating)
-                                    DownvoteButton(rating: $rating)
-                                }
-                            }
                         }
                         .padding()
                     }
                     .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
-                        Task { await viewModel.submitRating(rating: newRating) }
+                        viewModel.submitRating(rating: newRating)
+                        if newRating == -1 {
+                            appState.activeSheet = .captureFeedback(onSubmit: { feedbackText in
+                                viewModel.submitFeedbackText(feedbackText: feedbackText)
+                            })
+                        }
+                    }
+                    .toolbar {
+                        ToolbarItemGroup(placement: .topBarTrailing) {
+                            if viewModel.ingredientRecommendations != nil {
+                                UpvoteButton(rating: $rating)
+                                DownvoteButton(rating: $rating)
+                            }
+                        }
                     }
                 } else {
                     VStack {

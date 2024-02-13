@@ -165,7 +165,7 @@ enum NetworkError: Error {
         }
     }
     
-    func rateAnalysis(
+    func submitFeedbackRating(
         clientActivityId: String,
         rating: Int
     ) async throws {
@@ -182,6 +182,33 @@ enum NetworkError: Error {
             .build()
 
         print("Rating analysis: \(rating)")
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func submitFeedbackText(
+        clientActivityId: String,
+        feedbackText: String
+    ) async throws {
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        let request = SupabaseRequestBuilder(endpoint: .analyze_feedback)
+            .setAuthorization(with: token)
+            .setMethod(to: "PATCH")
+            .setFormData(name: "clientActivityId", value: clientActivityId)
+            .setFormData(name: "feedbackText", value: feedbackText)
+            .build()
+
+        print("Feedback: \(feedbackText)")
         let (_, response) = try await URLSession.shared.data(for: request)
 
         let httpResponse = response as! HTTPURLResponse
