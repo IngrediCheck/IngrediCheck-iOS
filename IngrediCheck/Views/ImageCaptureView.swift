@@ -30,6 +30,10 @@ struct ImageCaptureView: View {
                         .aspectRatio(3/4, contentMode: .fit)
                         .frame(width: 100 * (3/4), height: 100)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                        )
                 }
                 Spacer()
                 Button(action: {
@@ -38,7 +42,6 @@ struct ImageCaptureView: View {
                     Image(systemName: "circle.dotted.circle")
                         .resizable()
                         .frame(width: 50, height: 50)
-                        .foregroundColor(.paletteAccent)
                 })
                 Spacer()
                 Rectangle()
@@ -48,18 +51,8 @@ struct ImageCaptureView: View {
             .padding(.bottom)
         }
         .navigationBarItems(
-            leading:
-                Button("Cancel") {
-                    deleteCapturedImages()
-                }
-                .disabled(capturedImages.isEmpty)
-                .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent),
-            trailing:
-                Button("Done") {
-                    appState.scanRoutes.append(.productImages(capturedImages))
-                }
-                .disabled(capturedImages.isEmpty)
-                .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
+            leading: cancelButton,
+            trailing: doneButton
         )
         .onAppear {
             capturedImages = []
@@ -67,6 +60,26 @@ struct ImageCaptureView: View {
         }
         .onDisappear {
             cameraManager.stopSession()
+        }
+    }
+    
+    private var cancelButton: some View {
+        Group {
+            if !capturedImages.isEmpty {
+                Button("Cancel") {
+                    deleteCapturedImages()
+                }
+            }
+        }
+    }
+
+    private var doneButton: some View {
+        Group {
+            if !capturedImages.isEmpty {
+                Button("Done") {
+                    appState.scanRoutes.append(.productImages(capturedImages))
+                }
+            }
         }
     }
     
@@ -78,11 +91,13 @@ struct ImageCaptureView: View {
                 let uploadTask = startUploadTask(image: image)
                 let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
-                capturedImages.append(ProductImage(
-                    image: image,
-                    ocrTask: ocrTask,
-                    uploadTask: uploadTask,
-                    barcodeDetectionTask: barcodeDetectionTask))
+                withAnimation {
+                    capturedImages.append(ProductImage(
+                        image: image,
+                        ocrTask: ocrTask,
+                        uploadTask: uploadTask,
+                        barcodeDetectionTask: barcodeDetectionTask))
+                }
             }
         }
     }
@@ -153,7 +168,10 @@ struct ImageCaptureView: View {
     
     func deleteCapturedImages() {
         let imagesToDelete = capturedImages
-        capturedImages = []
+        
+        withAnimation {
+            capturedImages = []
+        }
 
         Task {
             var filesToDelete: [String] = []

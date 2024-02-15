@@ -75,7 +75,6 @@ struct LoggedInRootView: View {
         }
         .environment(userPreferences)
         .environment(appState)
-        .tint(.paletteAccent)
         .onAppear {
             if !userPreferences.preferences.isEmpty {
                 activeTab = .scan

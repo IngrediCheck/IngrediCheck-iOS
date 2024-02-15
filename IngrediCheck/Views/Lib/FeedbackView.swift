@@ -10,9 +10,6 @@ struct CloseButton : View {
             dismiss()
         }, label: {
             Image(systemName: "x.circle")
-                .frame(width: 20, height: 20)
-                .font(.title3.weight(.thin))
-                .foregroundColor(.paletteAccent)
         })
     }
 }

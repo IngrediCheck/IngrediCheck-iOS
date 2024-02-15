@@ -10,6 +10,7 @@ struct IngrediCheckApp: App {
                 if let _ = authController.session {
                     LoggedInRootView()
                         .environment(webService)
+                        .tint(.paletteAccent)
                 } else {
                     Text("Sign-in failed")
                 }

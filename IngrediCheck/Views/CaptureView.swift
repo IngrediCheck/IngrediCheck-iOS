@@ -24,9 +24,6 @@ struct CaptureView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .onAppear {
-                    UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.paletteAccent], for: .normal)
-                }
             }
         }
     }
