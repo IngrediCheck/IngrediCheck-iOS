@@ -22,17 +22,24 @@ struct HomeTab: View {
                         }
                     }
                 List {
-                    ForEach(userPreferences.preferences, id: \.self) { preference in
-                        Label(preference, systemImage: "hand.point.right")
-                    }
-                    .onDelete { offsets in
-                        userPreferences.preferences.remove(atOffsets: offsets)
-                    }
-                    .onChange(of: isFocused) { oldValue, newValue in
-                        if newValue {
-                            preferenceExamples.stopAnimatingExamples()
-                        } else {
-                            preferenceExamples.startAnimatingExamples()
+                    if userPreferences.preferences.isEmpty {
+                        ForEach(preferenceExamples.preferences, id: \.self) { preference in
+                            Label(preference, systemImage: "hand.point.right")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(userPreferences.preferences, id: \.self) { preference in
+                            Label(preference, systemImage: "hand.point.right")
+                        }
+                        .onDelete { offsets in
+                            userPreferences.preferences.remove(atOffsets: offsets)
+                        }
+                        .onChange(of: isFocused) { oldValue, newValue in
+                            if newValue {
+                                preferenceExamples.stopAnimatingExamples()
+                            } else {
+                                preferenceExamples.startAnimatingExamples()
+                            }
                         }
                     }
                 }
