@@ -55,7 +55,6 @@ import Foundation
                 self?.animateExamples()
             }
         } else {
-            print("next example in 1s")
             charIndex = 0
             exampleIndex += 1
             timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in

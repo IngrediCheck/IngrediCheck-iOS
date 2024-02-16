@@ -69,14 +69,18 @@ struct UpvoteButton: View {
 }
 
 @Observable class BarcodeAnalysisViewModel {
+
     let barcode: String
     let webService: WebService
     let userPreferences: UserPreferences
-    
+
+    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+
     init(barcode: String, webService: WebService, userPreferences: UserPreferences) {
         self.barcode = barcode
         self.webService = webService
         self.userPreferences = userPreferences
+        impactFeedback.prepare()
     }
 
     var product: DTO.Product?
@@ -84,18 +88,22 @@ struct UpvoteButton: View {
     var errorMessage: String?
     var ingredientRecommendations: [DTO.IngredientRecommendation]?
     let clientActivityId = UUID().uuidString
-    
+
+    func impactOccurred() {
+        impactFeedback.impactOccurred()
+    }
+
     func analyze() async {
         
         do {
             product = try await webService.fetchProductDetailsFromBarcode(barcode: barcode)
-            
+            impactOccurred()
+
             let result =
                 try await webService.fetchIngredientRecommendations(
                     clientActivityId: clientActivityId,
                     userPreferenceText: userPreferences.asString,
-                    barcode: barcode
-                )
+                    barcode: barcode)
 
             withAnimation {
                 ingredientRecommendations = result
@@ -106,6 +114,8 @@ struct UpvoteButton: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+
+        impactOccurred()
     }
     
     func submitRating(rating: Int) {

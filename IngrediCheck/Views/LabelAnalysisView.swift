@@ -6,11 +6,14 @@ import SwiftUI
     let productImages: [ProductImage]
     let webService: WebService
     let userPreferences: UserPreferences
+
+    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
     
     init(_ productImages: [ProductImage], _ webService: WebService, _ userPreferences: UserPreferences) {
         self.productImages = productImages
         self.webService = webService
         self.userPreferences = userPreferences
+        impactFeedback.prepare()
     }
     
     var product: DTO.Product? = nil
@@ -18,25 +21,33 @@ import SwiftUI
     var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
     let clientActivityId = UUID().uuidString
 
+    func impactOccurred() {
+        impactFeedback.impactOccurred()
+    }
+
     func analyze() async {
         do {
-            self.product = try await webService.extractProductDetailsFromLabelImages(
+            product = try await webService.extractProductDetailsFromLabelImages(
                 clientActivityId: clientActivityId,
                 productImages: productImages
             )
+            impactOccurred()
+
             let result =
                 try await webService.fetchIngredientRecommendations(
                     clientActivityId: clientActivityId,
-                    userPreferenceText: userPreferences.asString
-                )
+                    userPreferenceText: userPreferences.asString)
+
             withAnimation {
                 ingredientRecommendations = result
             }
         } catch {
             self.error = error
         }
+
+        impactOccurred()
     }
-    
+
     func submitRating(rating: Int) {
         Task {
             try? await webService.submitFeedbackRating(clientActivityId: clientActivityId, rating: rating)
