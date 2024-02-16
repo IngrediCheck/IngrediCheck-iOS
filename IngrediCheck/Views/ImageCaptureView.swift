@@ -18,6 +18,8 @@ struct ImageCaptureView: View {
                         .stroke(Color.paletteSecondary, lineWidth: 0.8)
                 )
                 .padding(.top)
+            Text("Take photo of an Ingredient Label.")
+                .padding(.top)
             Spacer()
             HStack {
                 if capturedImages.isEmpty {

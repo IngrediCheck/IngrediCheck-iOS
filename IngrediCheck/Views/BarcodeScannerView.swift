@@ -20,7 +20,7 @@ enum DataScannerAccessStatusType {
     @Environment(AppState.self) var appState
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             switch dataScannerAccessStatus {
             case .scannerAvailable:
                 // Workaround: Dismantle DataScannerViewController when navigating away from this view.
@@ -28,6 +28,9 @@ enum DataScannerAccessStatusType {
                 // startScanning => stopScanning() => startScanning().
                 if showScanner {
                     mainView
+                    Text("Scan Barcode of a Packaged Food Item.")
+                        .padding(.top)
+                    Spacer()
                 }
             case .cameraNotAvailable:
                 Text("Your device doesn't have a camera")
@@ -36,9 +39,8 @@ enum DataScannerAccessStatusType {
             case .cameraAccessNotGranted:
                 Text("Please provide access to the camera in settings")
             case .notDetermined:
-                Text("Requesting camera access")
+                ProgressView()
             }
-            Spacer()
         }
         .navigationBarItems(
             leading:
