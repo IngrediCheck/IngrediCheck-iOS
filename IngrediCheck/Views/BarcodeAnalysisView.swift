@@ -157,7 +157,7 @@ struct BarcodeAnalysisView: View {
                         Text("Earn Ingredipoints by submitting photos!")
                         Button(action: {
                             userPreferencesBindable.captureType = .ingredients
-                            _ = appState.scanRoutes.popLast()
+                            _ = appState.checkRoutes.popLast()
                         }, label: {
                             Text("Click here to add Photos")
                         })

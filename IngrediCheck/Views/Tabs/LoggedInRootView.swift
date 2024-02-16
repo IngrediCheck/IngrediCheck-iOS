@@ -4,7 +4,7 @@ import SwiftUI
 enum TabScreen: Hashable, Identifiable, CaseIterable {
     
     case home
-    case scan
+    case check
     case history
     case settings
 
@@ -18,8 +18,8 @@ extension TabScreen {
         switch self {
         case .home:
             Label("Home", systemImage: "house.fill")
-        case .scan:
-            Label("Scan", systemImage: "barcode.viewfinder")
+        case .check:
+            Label("Check", systemImage: "barcode.viewfinder")
         case .history:
             Label("History", systemImage: "clock.arrow.circlepath")
         case .settings:
@@ -32,8 +32,8 @@ extension TabScreen {
         switch self {
         case .home:
             HomeTab()
-        case .scan:
-            ScanTab()
+        case .check:
+            CheckTab()
         case .history:
             HistoryTab()
         case .settings:
@@ -55,13 +55,13 @@ enum Sheets: Identifiable {
 }
 
 @Observable class AppState {
-    var scanRoutes: [CapturedItem] = []
+    var checkRoutes: [CapturedItem] = []
     var activeSheet: Sheets?
+    var activeTab: TabScreen = .home
 }
 
 struct LoggedInRootView: View {
 
-    @State private var activeTab: TabScreen = .home
     @State private var userPreferences: UserPreferences = UserPreferences()
     @State private var appState = AppState()
 
@@ -77,7 +77,7 @@ struct LoggedInRootView: View {
         .environment(appState)
         .onAppear {
             if !userPreferences.preferences.isEmpty {
-                activeTab = .scan
+                appState.activeTab = .check
             }
         }
         .sheet(item: $appState.activeSheet) { sheet in
@@ -91,13 +91,13 @@ struct LoggedInRootView: View {
     
     var selectedTab: Binding<TabScreen> {
         return .init {
-            return activeTab
+            return appState.activeTab
         } set: { newValue in
-            if newValue == activeTab {
+            if newValue == appState.activeTab {
                 print("Same tab tapped, going to top of stack")
-                appState.scanRoutes = []
+                appState.checkRoutes = []
             }
-            activeTab = newValue
+            appState.activeTab = newValue
         }
     }
 }

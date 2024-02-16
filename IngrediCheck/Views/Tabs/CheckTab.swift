@@ -12,13 +12,13 @@ enum CapturedItem: Hashable {
     case productImages([ProductImage])
 }
 
-struct ScanTab: View {
+struct CheckTab: View {
     @State private var barcode: String?
     @Environment(AppState.self) var appState
 
     var body: some View {
         @Bindable var appStateBinding = appState
-        NavigationStack(path: $appStateBinding.scanRoutes) {
+        NavigationStack(path: $appStateBinding.checkRoutes) {
             VStack {
                 CaptureView(barcode: $barcode)
                 Divider()
@@ -37,5 +37,5 @@ struct ScanTab: View {
 }
 
 #Preview {
-    ScanTab()
+    CheckTab()
 }

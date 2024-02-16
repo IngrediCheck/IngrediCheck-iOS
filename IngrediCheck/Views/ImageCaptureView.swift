@@ -75,7 +75,7 @@ struct ImageCaptureView: View {
 
     private var doneButton: some View {
         Button("Done") {
-            appState.scanRoutes.append(.productImages(capturedImages))
+            appState.checkRoutes.append(.productImages(capturedImages))
         }
         .disabled(capturedImages.isEmpty)
         .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)

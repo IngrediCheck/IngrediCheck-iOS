@@ -68,7 +68,7 @@ enum DataScannerAccessStatusType {
     
     private var mainView: some View {
         @Bindable var appStateBindable = appState
-        return DataScannerView(routes: $appStateBindable.scanRoutes, barcode: $barcode)
+        return DataScannerView(routes: $appStateBindable.checkRoutes, barcode: $barcode)
             .aspectRatio(3/4, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
