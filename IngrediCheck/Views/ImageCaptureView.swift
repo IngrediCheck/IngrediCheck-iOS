@@ -53,8 +53,8 @@ struct ImageCaptureView: View {
             .padding(.bottom)
         }
         .navigationBarItems(
-            leading: cancelButton,
-            trailing: doneButton
+            leading: clearButton,
+            trailing: checkButton
         )
         .onAppear {
             capturedImages = []
@@ -65,16 +65,16 @@ struct ImageCaptureView: View {
         }
     }
     
-    private var cancelButton: some View {
-        Button("Cancel") {
+    private var clearButton: some View {
+        Button("Clear") {
             deleteCapturedImages()
         }
         .disabled(capturedImages.isEmpty)
         .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
     }
 
-    private var doneButton: some View {
-        Button("Done") {
+    private var checkButton: some View {
+        Button("Check") {
             appState.checkRoutes.append(.productImages(capturedImages))
         }
         .disabled(capturedImages.isEmpty)

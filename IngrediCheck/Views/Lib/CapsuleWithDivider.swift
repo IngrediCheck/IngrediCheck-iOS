@@ -7,24 +7,22 @@ struct CapsuleWithDivider<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 0) {
-                line
-                content()
-                    .frame(width: geometry.size.width *  0.4)
-                    .lineLimit(1)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 20)
-                    .layoutPriority(1)
-                    .background(
-                        Capsule()
-                            .fill(color.opacity(0.3))
-                    )
-                    .overlay(
-                        Capsule().stroke(color, lineWidth: 1)
-                    )
-                line
-            }
+        HStack(spacing: 0) {
+            line
+            content()
+                .frame(width: UIScreen.main.bounds.width *  0.4)
+                .lineLimit(1)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 20)
+                .layoutPriority(1)
+                .background(
+                    Capsule()
+                        .fill(color.opacity(0.3))
+                )
+                .overlay(
+                    Capsule().stroke(color, lineWidth: 1)
+                )
+            line
         }
     }
     
@@ -37,10 +35,21 @@ struct CapsuleWithDivider<Content: View>: View {
 
 
 #Preview {
-    CapsuleWithDivider(color: .blue) {
-        HStack(spacing: 25) {
-            Text("Analyzing")
-            ProgressView()
+    VStack {
+        CapsuleWithDivider(color: .blue) {
+            HStack(spacing: 25) {
+                Text("Analyzing")
+                ProgressView()
+            }
+        }
+        CapsuleWithDivider(color: .green) {
+            Text("Match!")
+        }
+        CapsuleWithDivider(color: .yellow) {
+            Text("Needs Review")
+        }
+        CapsuleWithDivider(color: .red) {
+            Text("Does not Match :(")
         }
     }
 }

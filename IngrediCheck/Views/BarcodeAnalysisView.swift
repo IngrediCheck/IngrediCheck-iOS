@@ -20,39 +20,8 @@ struct HeaderImage: View {
     }
 }
 
-struct DownvoteButton: View {
-    @Binding var rating: Int
-
-    func buttonImage(systemName: String, foregroundColor: Color) -> some View {
-        Image(systemName: systemName)
-            .frame(width: 20, height: 20)
-            .font(.title3.weight(.thin))
-            .foregroundColor(foregroundColor)
-    }
-    
-    var body: some View {
-        Button(action: {
-            withAnimation {
-                self.rating = (self.rating == -1) ? 0 : -1
-            }
-        }, label: {
-            buttonImage(
-                systemName: rating == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                foregroundColor: .red
-            )
-        })
-    }
-}
-
 struct UpvoteButton: View {
     @Binding var rating: Int
-
-    func buttonImage(systemName: String, foregroundColor: Color) -> some View {
-        Image(systemName: systemName)
-            .frame(width: 20, height: 20)
-            .font(.title3.weight(.thin))
-            .foregroundColor(foregroundColor)
-    }
 
     var body: some View {
         Button(action: {
@@ -60,10 +29,31 @@ struct UpvoteButton: View {
                 self.rating = (self.rating == 1) ? 0 : 1
             }
         }, label: {
-            buttonImage(
-                systemName: rating == 1 ? "hand.thumbsup.fill" : "hand.thumbsup",
-                foregroundColor: .green
-            )
+            Image(systemName: rating == 1 ? "hand.thumbsup.fill" : "hand.thumbsup")
+        })
+    }
+}
+
+struct DownvoteButton: View {
+    @Binding var rating: Int
+
+    var body: some View {
+        Button(action: {
+            withAnimation {
+                self.rating = (self.rating == -1) ? 0 : -1
+            }
+        }, label: {
+            Image(systemName: rating == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+        })
+    }
+}
+
+struct AddImagesButton: View {
+    var body: some View {
+        Button(action: {
+            
+        }, label: {
+            Image(systemName: "photo.badge.plus")
         })
     }
 }
@@ -96,7 +86,12 @@ struct UpvoteButton: View {
     func analyze() async {
         
         do {
-            product = try await webService.fetchProductDetailsFromBarcode(barcode: barcode)
+            let product = try await webService.fetchProductDetailsFromBarcode(barcode: barcode)
+            
+            withAnimation {
+                self.product = product
+            }
+
             impactOccurred()
 
             let result =
@@ -106,7 +101,7 @@ struct UpvoteButton: View {
                     barcode: barcode)
 
             withAnimation {
-                ingredientRecommendations = result
+                self.ingredientRecommendations = result
             }
             
         } catch NetworkError.notFound {
@@ -165,16 +160,16 @@ struct BarcodeAnalysisView: View {
                     }
                 } else if let product = viewModel.product {
                     ScrollView {
-                        VStack(spacing: 0) {
-
-                            if let brand = product.brand {
-                                Text(brand)
-                            }
+                        VStack(spacing: 15) {
 
                             if let name = product.name {
                                 Text(name)
+                                    .font(.headline)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal)
                             }
-                            
+
                             if !product.images.isEmpty {
                                 ScrollView(.horizontal) {
                                     HStack(spacing: 10) {
@@ -187,19 +182,24 @@ struct BarcodeAnalysisView: View {
                                     }
                                     .scrollTargetLayout()
                                 }
+                                .padding(.leading)
                                 .scrollIndicators(.hidden)
                                 .scrollTargetBehavior(.viewAligned)
-                                .frame(height: (UIScreen.main.bounds.width - 20) * (4/3))
+                                .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
                             }
-                            
+  
+                            if let brand = product.brand {
+                                Text(brand)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal)
+                            }
+                          
                             AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
-                                .padding(.vertical)
-                                .padding(.bottom)
                             
                             Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                .padding(.vertical)
+                                .padding(.horizontal)
                         }
-                        .padding()
                     }
                     .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
@@ -215,6 +215,7 @@ struct BarcodeAnalysisView: View {
                             if viewModel.ingredientRecommendations != nil {
                                 UpvoteButton(rating: $rating)
                                 DownvoteButton(rating: $rating)
+                                AddImagesButton()
                             }
                         }
                     }

@@ -8,7 +8,7 @@ import SwiftUI
     let userPreferences: UserPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-    
+
     init(_ productImages: [ProductImage], _ webService: WebService, _ userPreferences: UserPreferences) {
         self.productImages = productImages
         self.webService = webService
@@ -80,16 +80,17 @@ struct LabelAnalysisView: View {
                     Text("Error: \(error.localizedDescription)")
                 } else if let product = viewModel.product {
                     ScrollView {
-                        VStack(spacing: 0) {
-
-                            if let brand = product.brand {
-                                Text(brand)
-                            }
+                        VStack(spacing: 15) {
 
                             if let name = product.name {
                                 Text(name)
+                                    .font(.headline)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal)
                             }
 
+                            // Note: we are not using product.images here.
                             ScrollView(.horizontal) {
                                 HStack(spacing: 10) {
                                     ForEach(productImages.indices, id: \.self) { index in
@@ -106,17 +107,23 @@ struct LabelAnalysisView: View {
                                 }
                                 .scrollTargetLayout()
                             }
+                            .padding(.leading)
                             .scrollIndicators(.hidden)
                             .scrollTargetBehavior(.viewAligned)
-                            .frame(height: (UIScreen.main.bounds.width - 20) * (4/3))
+                            .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
+
+                            if let brand = product.brand {
+                                Text(brand)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal)
+                            }
                             
                             AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
-                                .padding(.vertical)
                             
                             Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                .padding(.vertical)
+                                .padding(.horizontal)
                         }
-                        .padding()
                     }
                     .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
@@ -132,6 +139,7 @@ struct LabelAnalysisView: View {
                             if viewModel.ingredientRecommendations != nil {
                                 UpvoteButton(rating: $rating)
                                 DownvoteButton(rating: $rating)
+                                AddImagesButton()
                             }
                         }
                     }
