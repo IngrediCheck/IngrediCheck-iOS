@@ -13,7 +13,7 @@ struct CapsuleWithDivider<Content: View>: View {
                 content()
                     .frame(width: geometry.size.width *  0.4)
                     .lineLimit(1)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 8)
                     .padding(.horizontal, 20)
                     .layoutPriority(1)
                     .background(

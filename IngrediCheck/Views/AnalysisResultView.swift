@@ -20,7 +20,7 @@ struct AnalysisResultView: View {
                     Text("Match!")
                 }
             case .needsReview:
-                CapsuleWithDivider(color: .orange) {
+                CapsuleWithDivider(color: .yellow) {
                     Text("Needs Review")
                 }
             case .notMatch:
@@ -29,7 +29,7 @@ struct AnalysisResultView: View {
                 }
             }
         } else {
-            CapsuleWithDivider(color: .blue) {
+            CapsuleWithDivider(color: .paletteAccent) {
                 HStack(spacing: 25) {
                     ProgressView()
                     Text("Analyzing...")
