@@ -21,8 +21,15 @@ struct HomeTab: View {
                             newPreference = ""
                         }
                     }
+                    .onChange(of: isFocused) { oldValue, newValue in
+                        if newValue {
+                            preferenceExamples.stopAnimatingExamples()
+                        } else {
+                            preferenceExamples.startAnimatingExamples()
+                        }
+                    }
                 List {
-                    if userPreferences.preferences.isEmpty {
+                    if userPreferences.preferences.isEmpty && !isFocused {
                         ForEach(preferenceExamples.preferences, id: \.self) { preference in
                             Label(preference, systemImage: "hand.point.right")
                                 .foregroundStyle(.secondary)
@@ -33,13 +40,6 @@ struct HomeTab: View {
                         }
                         .onDelete { offsets in
                             userPreferences.preferences.remove(atOffsets: offsets)
-                        }
-                        .onChange(of: isFocused) { oldValue, newValue in
-                            if newValue {
-                                preferenceExamples.stopAnimatingExamples()
-                            } else {
-                                preferenceExamples.startAnimatingExamples()
-                            }
                         }
                     }
                 }
