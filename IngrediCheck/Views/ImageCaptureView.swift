@@ -66,23 +66,19 @@ struct ImageCaptureView: View {
     }
     
     private var cancelButton: some View {
-        Group {
-            if !capturedImages.isEmpty {
-                Button("Cancel") {
-                    deleteCapturedImages()
-                }
-            }
+        Button("Cancel") {
+            deleteCapturedImages()
         }
+        .disabled(capturedImages.isEmpty)
+        .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
     }
 
     private var doneButton: some View {
-        Group {
-            if !capturedImages.isEmpty {
-                Button("Done") {
-                    appState.scanRoutes.append(.productImages(capturedImages))
-                }
-            }
+        Button("Done") {
+            appState.scanRoutes.append(.productImages(capturedImages))
         }
+        .disabled(capturedImages.isEmpty)
+        .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
     }
     
     func capturePhoto() {

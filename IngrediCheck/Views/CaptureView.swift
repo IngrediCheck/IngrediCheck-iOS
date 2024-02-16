@@ -2,25 +2,26 @@ import SwiftUI
 
 struct CaptureView: View {
     
-    @Binding var captureSelection: CaptureSelectionType
     @Binding var barcode: String?
+    @Environment(UserPreferences.self) var userPreferences
 
     var body: some View {
+        @Bindable var userPreferencesBindable = userPreferences
         VStack {
-            if captureSelection == .barcode {
+            if userPreferences.captureType == .barcode {
                 BarcodeScannerView(barcode: $barcode)
             } else {
                 ImageCaptureView()
             }
         }
-        .animation(.default, value: captureSelection)
+        .animation(.default, value: userPreferences.captureType)
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("Options", selection: $captureSelection) {
-                    Text("Barcode").tag(CaptureSelectionType.barcode)
-                    Text("Ingredients").tag(CaptureSelectionType.ingredients)
+                Picker("Options", selection: $userPreferencesBindable.captureType) {
+                    Text("Barcode").tag(CaptureType.barcode)
+                    Text("Ingredients").tag(CaptureType.ingredients)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()

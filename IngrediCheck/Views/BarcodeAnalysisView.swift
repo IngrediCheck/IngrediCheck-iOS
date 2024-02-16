@@ -124,7 +124,6 @@ struct UpvoteButton: View {
 
 struct BarcodeAnalysisView: View {
     
-    @Binding var captureSelection: CaptureSelectionType
     @Binding var barcode: String?
 
     @Environment(WebService.self) var webService
@@ -135,6 +134,7 @@ struct BarcodeAnalysisView: View {
     @State private var viewModel: BarcodeAnalysisViewModel?
 
     var body: some View {
+        @Bindable var userPreferencesBindable = userPreferences
         Group {
             if let viewModel {
                 if let errorMessage = viewModel.errorMessage {
@@ -146,7 +146,7 @@ struct BarcodeAnalysisView: View {
                         Text("You found a product that is not in our Database.")
                         Text("Earn Ingredipoints by submitting photos!")
                         Button(action: {
-                            captureSelection = .ingredients
+                            userPreferencesBindable.captureType = .ingredients
                             _ = appState.scanRoutes.popLast()
                         }, label: {
                             Text("Click here to add Photos")
