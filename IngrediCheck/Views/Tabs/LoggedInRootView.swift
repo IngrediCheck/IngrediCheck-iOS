@@ -94,8 +94,9 @@ struct LoggedInRootView: View {
             return appState.activeTab
         } set: { newValue in
             if newValue == appState.activeTab {
-                print("Same tab tapped, going to top of stack")
-                appState.checkRoutes = []
+                if case .check = newValue {
+                    appState.checkRoutes = []
+                }
             }
             appState.activeTab = newValue
         }
