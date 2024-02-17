@@ -85,6 +85,7 @@ struct LoggedInRootView: View {
             case .captureFeedback(let onSubmit):
                 FeedbackView(onSubmit: onSubmit)
                     .presentationDetents([.medium])
+                    .presentationBackground(.regularMaterial)
             }
         }
     }
