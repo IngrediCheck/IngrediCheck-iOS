@@ -76,8 +76,9 @@ struct DownvoteButton: View {
     func analyze() async {
         
         do {
-            let product = try await webService.fetchProductDetailsFromBarcode(barcode: barcode)
-            
+            let product =
+                try await webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
+
             withAnimation {
                 self.product = product
             }

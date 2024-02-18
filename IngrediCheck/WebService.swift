@@ -31,13 +31,19 @@ extension Sequence {
         
     }
     
-    func fetchProductDetailsFromBarcode(barcode: String) async throws -> DTO.Product {
+    func fetchProductDetailsFromBarcode(
+        clientActivityId: String,
+        barcode: String
+    ) async throws -> DTO.Product {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
 
         let request = SupabaseRequestBuilder(endpoint: .inventory, itemId: barcode)
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "clientActivityId", value: clientActivityId)
+            ])
             .setAuthorization(with: token)
             .setMethod(to: "GET")
             .build()
