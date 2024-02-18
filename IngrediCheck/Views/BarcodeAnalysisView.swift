@@ -109,11 +109,10 @@ struct DownvoteButton: View {
             try? await webService.submitUpVote(clientActivityId: clientActivityId)
         }
     }
-    
-    func submitFeedbackText(feedbackText: String) {
-        guard !feedbackText.isEmpty else { return }
+
+    func submitFeedback(feedbackData: FeedbackData) {
         Task {
-            try? await webService.submitFeedbackText(clientActivityId: clientActivityId, feedbackText: feedbackText)
+            try? await webService.submitFeedback(clientActivityId: clientActivityId, feedbackData: feedbackData)
         }
     }
 }
@@ -197,13 +196,15 @@ struct BarcodeAnalysisView: View {
                     }
                     .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
-                        if newRating == 1 {
+                        switch newRating {
+                        case 1:
                             viewModel.submitUpVote()
-                        }
-                        if newRating == -1 {
-                            appState.activeSheet = .captureFeedback(onSubmit: { feedbackText in
-                                viewModel.submitFeedbackText(feedbackText: feedbackText)
+                        case -1:
+                            appState.activeSheet = .captureFeedbackOnly(onSubmit: { feedbackData in
+                                viewModel.submitFeedback(feedbackData: feedbackData)
                             })
+                        default:
+                            break
                         }
                     }
                     .toolbar {

@@ -26,11 +26,7 @@ extension Sequence {
 }
 
 @Observable final class WebService {
-    
-    init() {
-        
-    }
-    
+
     func fetchProductDetailsFromBarcode(
         clientActivityId: String,
         barcode: String
@@ -202,33 +198,58 @@ extension Sequence {
         }
     }
     
-    func submitFeedbackText(
+    func submitFeedback(
         clientActivityId: String,
-        feedbackText: String
+        feedbackData: FeedbackData
     ) async throws {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
         
-        let request = SupabaseRequestBuilder(endpoint: .analyze_feedback)
+        var feedbackDataDto = DTO.FeedbackData()
+        feedbackDataDto.rating = feedbackData.rating
+        feedbackDataDto.reasons =
+            feedbackData.reasons.isEmpty
+            ? nil
+            : Array(feedbackData.reasons).map { reason in reason.rawValue }
+        feedbackDataDto.note =
+            feedbackData.note.isEmpty
+            ? nil
+            : feedbackData.note
+        feedbackDataDto.images =
+            feedbackData.images.isEmpty
+            ? nil
+            : try await feedbackData.images.asyncMap { productImage in
+                DTO.ImageInfo(
+                    imageFileHash: try await productImage.uploadTask.value,
+                    imageOCRText: try await productImage.ocrTask.value,
+                    barcode: try await productImage.barcodeDetectionTask.value
+                )
+            }
+
+        let feedbackDataJson = try JSONEncoder().encode(feedbackDataDto)
+        let feedbackDataJsonString = String(data: feedbackDataJson, encoding: .utf8)!
+        
+        print(feedbackDataJsonString)
+
+        let request = SupabaseRequestBuilder(endpoint: .feedback)
             .setAuthorization(with: token)
-            .setMethod(to: "PATCH")
+            .setMethod(to: "POST")
             .setFormData(name: "clientActivityId", value: clientActivityId)
-            .setFormData(name: "feedbackText", value: feedbackText)
+            .setFormData(name: "feedback", value: feedbackDataJsonString)
             .build()
 
-        print("Feedback: \(feedbackText)")
         let (_, response) = try await URLSession.shared.data(for: request)
 
         let httpResponse = response as! HTTPURLResponse
 
-        guard httpResponse.statusCode == 204 else {
+        guard httpResponse.statusCode == 201 else {
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
-    
+
     func uploadImage(image: UIImage) async throws -> String {
         
         let imageData = image.jpegData(compressionQuality: 1.0)!
