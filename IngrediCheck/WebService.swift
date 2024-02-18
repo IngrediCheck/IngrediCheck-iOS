@@ -97,7 +97,7 @@ extension Sequence {
         
         print(productImagesJsonString)
 
-        var request = SupabaseRequestBuilder(endpoint: .extract)
+        let request = SupabaseRequestBuilder(endpoint: .extract)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
             .setFormData(name: "clientActivityId", value: clientActivityId)

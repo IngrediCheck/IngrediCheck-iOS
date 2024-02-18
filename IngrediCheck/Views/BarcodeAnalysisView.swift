@@ -48,16 +48,6 @@ struct DownvoteButton: View {
     }
 }
 
-struct AddImagesButton: View {
-    var body: some View {
-        Button(action: {
-            
-        }, label: {
-            Image(systemName: "photo.badge.plus")
-        })
-    }
-}
-
 @Observable class BarcodeAnalysisViewModel {
 
     let barcode: String
@@ -179,6 +169,7 @@ struct BarcodeAnalysisView: View {
                                                     .frame(width: UIScreen.main.bounds.width - 60)
                                             }
                                         }
+                                        addImagesButton
                                     }
                                     .scrollTargetLayout()
                                 }
@@ -186,6 +177,8 @@ struct BarcodeAnalysisView: View {
                                 .scrollIndicators(.hidden)
                                 .scrollTargetBehavior(.viewAligned)
                                 .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
+                            } else {
+                                addImagesButton
                             }
   
                             if let brand = product.brand {
@@ -215,7 +208,6 @@ struct BarcodeAnalysisView: View {
                             if viewModel.ingredientRecommendations != nil {
                                 UpvoteButton(rating: $rating)
                                 DownvoteButton(rating: $rating)
-                                AddImagesButton()
                             }
                         }
                     }
@@ -240,5 +232,15 @@ struct BarcodeAnalysisView: View {
                     }
             }
         }
+    }
+    
+    var addImagesButton: some View {
+        Button(action: {
+            // TODO
+        }, label: {
+            Image(systemName: "photo.badge.plus")
+                .font(.largeTitle)
+                .padding()
+        })
     }
 }

@@ -104,6 +104,7 @@ struct LabelAnalysisView: View {
                                             )
                                             .frame(width: UIScreen.main.bounds.width - 60)
                                     }
+                                    addImagesButton
                                 }
                                 .scrollTargetLayout()
                             }
@@ -139,7 +140,6 @@ struct LabelAnalysisView: View {
                             if viewModel.ingredientRecommendations != nil {
                                 UpvoteButton(rating: $rating)
                                 DownvoteButton(rating: $rating)
-                                addImagesButton
                             }
                         }
                     }
@@ -168,6 +168,8 @@ struct LabelAnalysisView: View {
             _ = appState.checkTabState.routes.popLast()
         }, label: {
             Image(systemName: "photo.badge.plus")
+                .font(.largeTitle)
+                .padding()
         })
     }
 }
