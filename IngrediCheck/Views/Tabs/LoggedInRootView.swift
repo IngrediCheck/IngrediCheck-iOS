@@ -54,10 +54,15 @@ enum Sheets: Identifiable {
     }
 }
 
+struct CheckTabState {
+    var routes: [CapturedItem] = []
+    var capturedImages: [ProductImage] = []
+}
+
 @Observable class AppState {
-    var checkRoutes: [CapturedItem] = []
     var activeSheet: Sheets?
     var activeTab: TabScreen = .home
+    var checkTabState = CheckTabState()
 }
 
 struct LoggedInRootView: View {
@@ -80,14 +85,21 @@ struct LoggedInRootView: View {
                 appState.activeTab = .check
             }
         }
-        .sheet(item: $appState.activeSheet) { sheet in
-            switch sheet {
-            case .captureFeedback(let onSubmit):
-                FeedbackView(onSubmit: onSubmit)
-                    .presentationDetents([.medium])
-                    .presentationBackground(.regularMaterial)
+        .sheet(
+            item:
+                $appState.activeSheet,
+            onDismiss: {
+                // TODO
+            },
+            content: { sheet in
+                switch sheet {
+                case .captureFeedback(let onSubmit):
+                    FeedbackView(onSubmit: onSubmit)
+                        .presentationDetents([.medium, .large])
+                        .presentationBackground(.regularMaterial)
+                }
             }
-        }
+        )
     }
     
     var selectedTab: Binding<TabScreen> {
@@ -96,7 +108,7 @@ struct LoggedInRootView: View {
         } set: { newValue in
             if newValue == appState.activeTab {
                 if case .check = newValue {
-                    appState.checkRoutes = []
+                    appState.checkTabState.routes = []
                 }
             }
             appState.activeTab = newValue

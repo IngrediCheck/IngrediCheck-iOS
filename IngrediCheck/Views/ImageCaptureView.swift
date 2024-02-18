@@ -4,7 +4,6 @@ import Vision
 
 struct ImageCaptureView: View {
     @State private var cameraManager = CameraManager()
-    @State private var capturedImages: [ProductImage] = []
     @Environment(WebService.self) var webService
     @Environment(AppState.self) var appState
 
@@ -22,12 +21,12 @@ struct ImageCaptureView: View {
                 .padding(.top)
             Spacer()
             HStack {
-                if capturedImages.isEmpty {
+                if appState.checkTabState.capturedImages.isEmpty {
                     Rectangle()
                         .foregroundColor(.clear)
                         .frame(width: 100 * (3/4), height: 100)
                 } else {
-                    Image(uiImage: capturedImages.last!.image)
+                    Image(uiImage: appState.checkTabState.capturedImages.last!.image)
                         .resizable()
                         .aspectRatio(3/4, contentMode: .fit)
                         .frame(width: 100 * (3/4), height: 100)
@@ -57,10 +56,10 @@ struct ImageCaptureView: View {
             trailing: checkButton
         )
         .onAppear {
-            capturedImages = []
             cameraManager.setupSession()
         }
         .onDisappear {
+            appState.checkTabState.capturedImages = []
             cameraManager.stopSession()
         }
     }
@@ -69,16 +68,16 @@ struct ImageCaptureView: View {
         Button("Clear") {
             deleteCapturedImages()
         }
-        .disabled(capturedImages.isEmpty)
-        .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
+        .disabled(appState.checkTabState.capturedImages.isEmpty)
+        .foregroundStyle(appState.checkTabState.capturedImages.isEmpty ? .clear : .paletteAccent)
     }
 
     private var checkButton: some View {
         Button("Check") {
-            appState.checkRoutes.append(.productImages(capturedImages))
+            appState.checkTabState.routes.append(.productImages(appState.checkTabState.capturedImages))
         }
-        .disabled(capturedImages.isEmpty)
-        .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
+        .disabled(appState.checkTabState.capturedImages.isEmpty)
+        .foregroundStyle(appState.checkTabState.capturedImages.isEmpty ? .clear : .paletteAccent)
     }
     
     func capturePhoto() {
@@ -90,7 +89,7 @@ struct ImageCaptureView: View {
                 let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
                 withAnimation {
-                    capturedImages.append(ProductImage(
+                    appState.checkTabState.capturedImages.append(ProductImage(
                         image: image,
                         ocrTask: ocrTask,
                         uploadTask: uploadTask,
@@ -165,10 +164,10 @@ struct ImageCaptureView: View {
     }
     
     func deleteCapturedImages() {
-        let imagesToDelete = capturedImages
+        let imagesToDelete = appState.checkTabState.capturedImages
         
         withAnimation {
-            capturedImages = []
+            appState.checkTabState.capturedImages = []
         }
 
         Task {

@@ -18,7 +18,7 @@ struct CheckTab: View {
 
     var body: some View {
         @Bindable var appStateBinding = appState
-        NavigationStack(path: $appStateBinding.checkRoutes) {
+        NavigationStack(path: $appStateBinding.checkTabState.routes) {
             VStack {
                 CaptureView(barcode: $barcode)
                 Divider()
