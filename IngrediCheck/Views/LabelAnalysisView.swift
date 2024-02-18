@@ -139,7 +139,7 @@ struct LabelAnalysisView: View {
                             if viewModel.ingredientRecommendations != nil {
                                 UpvoteButton(rating: $rating)
                                 DownvoteButton(rating: $rating)
-                                AddImagesButton()
+                                addImagesButton
                             }
                         }
                     }
@@ -160,5 +160,14 @@ struct LabelAnalysisView: View {
                     }
             }
         }
+    }
+    
+    var addImagesButton: some View {
+        Button(action: {
+            appState.checkTabState.capturedImages = productImages
+            _ = appState.checkTabState.routes.popLast()
+        }, label: {
+            Image(systemName: "photo.badge.plus")
+        })
     }
 }
