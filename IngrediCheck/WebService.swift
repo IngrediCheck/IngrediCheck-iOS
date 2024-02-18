@@ -11,6 +11,20 @@ enum NetworkError: Error {
     case notFound(String)
 }
 
+extension Sequence {
+    func asyncMap<T>(
+        _ transform: (Element) async throws -> T
+    ) async rethrows -> [T] {
+        var values = [T]()
+
+        for element in self {
+            try await values.append(transform(element))
+        }
+
+        return values
+    }
+}
+
 @Observable final class WebService {
     
     init() {
@@ -63,21 +77,19 @@ enum NetworkError: Error {
         struct ImageInfo: Codable {
             let imageFileHash: String
             let imageOCRText: String
+            let barcode: String?
         }
 
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
 
-        var barcode: String? = nil
-        var productImagesDTO: [ImageInfo] = []
-        for productImage in productImages {
-            productImagesDTO.append(ImageInfo(
+        let productImagesDTO = try await productImages.asyncMap { productImage in
+            ImageInfo(
                 imageFileHash: try await productImage.uploadTask.value,
-                imageOCRText: try await productImage.ocrTask.value))
-            if let barcodeString = try await productImage.barcodeDetectionTask.value {
-                barcode = barcodeString
-            }
+                imageOCRText: try await productImage.ocrTask.value,
+                barcode: try await productImage.barcodeDetectionTask.value
+            )
         }
 
         let productImagesJsonData = try JSONEncoder().encode(productImagesDTO)
@@ -85,18 +97,12 @@ enum NetworkError: Error {
         
         print(productImagesJsonString)
 
-        var requestBuilder = SupabaseRequestBuilder(endpoint: .extract)
+        var request = SupabaseRequestBuilder(endpoint: .extract)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
             .setFormData(name: "clientActivityId", value: clientActivityId)
             .setFormData(name: "productImages", value: productImagesJsonString)
-        
-        if let barcode {
-            requestBuilder = requestBuilder
-                .setFormData(name: "barcode", value: barcode)
-        }
-        
-        let request = requestBuilder.build()
+            .build()
 
         print(request)
 
