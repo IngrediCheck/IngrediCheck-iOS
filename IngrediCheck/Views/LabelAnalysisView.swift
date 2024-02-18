@@ -48,9 +48,9 @@ import SwiftUI
         impactOccurred()
     }
 
-    func submitRating(rating: Int) {
+    func submitUpVote() {
         Task {
-            try? await webService.submitFeedbackRating(clientActivityId: clientActivityId, rating: rating)
+            try? await webService.submitUpVote(clientActivityId: clientActivityId)
         }
     }
 
@@ -128,7 +128,9 @@ struct LabelAnalysisView: View {
                     }
                     .scrollIndicators(.hidden)
                     .onChange(of: rating) { oldRating, newRating in
-                        viewModel.submitRating(rating: newRating)
+                        if newRating == 1 {
+                            viewModel.submitUpVote()
+                        }
                         if newRating == -1 {
                             appState.activeSheet = .captureFeedback(onSubmit: { feedbackText in
                                 viewModel.submitFeedbackText(feedbackText: feedbackText)

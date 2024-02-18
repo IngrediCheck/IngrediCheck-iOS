@@ -198,4 +198,17 @@ class DTO {
         case needsReview
         case notMatch
     }
+
+    struct ImageInfo: Codable {
+        let imageFileHash: String
+        let imageOCRText: String
+        let barcode: String?
+    }
+    
+    struct FeedbackData: Codable {
+        var rating: Int?
+        var reasons: [String]?
+        var note: String?
+        var images: [ImageInfo]?
+    }
 }

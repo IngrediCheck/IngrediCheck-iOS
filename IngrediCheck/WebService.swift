@@ -80,18 +80,12 @@ extension Sequence {
         productImages: [ProductImage]
     ) async throws -> DTO.Product {
 
-        struct ImageInfo: Codable {
-            let imageFileHash: String
-            let imageOCRText: String
-            let barcode: String?
-        }
-
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
 
         let productImagesDTO = try await productImages.asyncMap { productImage in
-            ImageInfo(
+            DTO.ImageInfo(
                 imageFileHash: try await productImage.uploadTask.value,
                 imageOCRText: try await productImage.ocrTask.value,
                 barcode: try await productImage.barcodeDetectionTask.value
@@ -177,28 +171,32 @@ extension Sequence {
         }
     }
     
-    func submitFeedbackRating(
-        clientActivityId: String,
-        rating: Int
+    func submitUpVote(
+        clientActivityId: String
     ) async throws {
-        
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
         
-        let request = SupabaseRequestBuilder(endpoint: .analyze_rate)
+        let feedbackData = DTO.FeedbackData(rating: 1)
+        let feedbackDataJson = try JSONEncoder().encode(feedbackData)
+        let feedbackDataJsonString = String(data: feedbackDataJson, encoding: .utf8)!
+        
+        print(feedbackDataJsonString)
+
+        let request = SupabaseRequestBuilder(endpoint: .feedback)
             .setAuthorization(with: token)
-            .setMethod(to: "PATCH")
+            .setMethod(to: "POST")
             .setFormData(name: "clientActivityId", value: clientActivityId)
-            .setFormData(name: "rating", value: String(rating))
+            .setFormData(name: "feedback", value: feedbackDataJsonString)
             .build()
 
-        print("Rating analysis: \(rating)")
         let (_, response) = try await URLSession.shared.data(for: request)
 
         let httpResponse = response as! HTTPURLResponse
 
-        guard httpResponse.statusCode == 204 else {
+        guard httpResponse.statusCode == 201 else {
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }

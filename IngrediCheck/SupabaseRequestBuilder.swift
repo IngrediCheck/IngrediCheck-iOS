@@ -4,9 +4,9 @@ import Foundation
 enum SafeEatsEndpoint: String {
     case inventory = "inventory/%@"
     case analyze = "analyze"
-    case analyze_rate = "analyze/rate"
     case analyze_feedback = "analyze/feedback"
     case extract = "extract"
+    case feedback = "feedback"
 }
 
 class SupabaseRequestBuilder {
