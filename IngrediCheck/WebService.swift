@@ -166,38 +166,7 @@ extension Sequence {
             throw NetworkError.decodingError
         }
     }
-    
-    func submitUpVote(
-        clientActivityId: String
-    ) async throws {
 
-        guard let token = try? await supabaseClient.auth.session.accessToken else {
-            throw NetworkError.authError
-        }
-        
-        let feedbackData = DTO.FeedbackData(rating: 1)
-        let feedbackDataJson = try JSONEncoder().encode(feedbackData)
-        let feedbackDataJsonString = String(data: feedbackDataJson, encoding: .utf8)!
-        
-        print(feedbackDataJsonString)
-
-        let request = SupabaseRequestBuilder(endpoint: .feedback)
-            .setAuthorization(with: token)
-            .setMethod(to: "POST")
-            .setFormData(name: "clientActivityId", value: clientActivityId)
-            .setFormData(name: "feedback", value: feedbackDataJsonString)
-            .build()
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-
-        let httpResponse = response as! HTTPURLResponse
-
-        guard httpResponse.statusCode == 201 else {
-            print("Bad response from server: \(httpResponse.statusCode)")
-            throw NetworkError.invalidResponse(httpResponse.statusCode)
-        }
-    }
-    
     func submitFeedback(
         clientActivityId: String,
         feedbackData: FeedbackData

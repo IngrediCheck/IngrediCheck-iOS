@@ -44,12 +44,12 @@ extension TabScreen {
 
 enum Sheets: Identifiable {
 
-    case captureFeedbackOnly(onSubmit: (FeedbackData) -> Void)
+    case feedback(FeedbackConfig)
 
     var id: String {
         switch self {
-        case .captureFeedbackOnly:
-            return "captureFeedback"
+        case .feedback:
+            return "feedback"
         }
     }
 }
@@ -87,11 +87,15 @@ struct LoggedInRootView: View {
         }
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {
-            case .captureFeedbackOnly(let onSubmit):
-                FeedbackView(captureImages: false, onSubmit: onSubmit)
-                    .presentationDetents([.medium, .large])
-                    .presentationBackground(.regularMaterial)
-                    .interactiveDismissDisabled()
+            case .feedback(let feedbackConfig):
+                FeedbackView(
+                    feedbackData: feedbackConfig.feedbackData,
+                    feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
+                    onSubmit: feedbackConfig.onSubmit
+                )
+                .presentationDetents([.medium, .large])
+                .presentationBackground(.regularMaterial)
+                .interactiveDismissDisabled()
             }
         }
     }

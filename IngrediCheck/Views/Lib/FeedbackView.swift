@@ -15,12 +15,24 @@ struct FeedbackData {
     var images: [ProductImage] = []
 }
 
+enum FeedbackCaptureOptions {
+    case feedbackOnly
+    case feedbackAndImages
+    case imagesOnly
+}
+
+struct FeedbackConfig {
+    let feedbackData: Binding<FeedbackData>
+    let feedbackCaptureOptions: FeedbackCaptureOptions
+    let onSubmit: () -> Void
+}
+
 struct FeedbackView: View {
 
-    let captureImages: Bool
-    let onSubmit: (FeedbackData) -> Void
-    
-    @State private var feedbackData = FeedbackData(rating: -1, reasons: [])
+    @Binding var feedbackData: FeedbackData
+    let feedbackCaptureOptions: FeedbackCaptureOptions
+    let onSubmit: () -> Void
+
     @Environment(\.dismiss) var dismiss
     @FocusState var isFocused: Bool
 
@@ -105,15 +117,34 @@ struct FeedbackView: View {
             if captureImages {
                 // TODO
             } else {
-                onSubmit(feedbackData)
+                onSubmit()
                 dismiss()
             }
+        }
+    }
+    
+    private var captureImages: Bool {
+        switch feedbackCaptureOptions {
+        case .feedbackOnly:
+            false
+        case .feedbackAndImages:
+            true
+        case .imagesOnly:
+            true
+        }
+    }
+}
+
+struct FeedbackViewPreview: View {
+    @State private var feedbackData = FeedbackData()
+    
+    var body: some View {
+        FeedbackView(feedbackData: $feedbackData, feedbackCaptureOptions: .feedbackOnly) {
+            print(feedbackData)
         }
     }
 }
 
 #Preview {
-    FeedbackView(captureImages: false) { feedbackData in
-        print(feedbackData)
-    }
+    FeedbackViewPreview()
 }

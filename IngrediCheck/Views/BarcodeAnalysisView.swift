@@ -67,6 +67,7 @@ struct DownvoteButton: View {
     var notFound: Bool?
     var errorMessage: String?
     var ingredientRecommendations: [DTO.IngredientRecommendation]?
+    var feedbackData = FeedbackData()
     let clientActivityId = UUID().uuidString
 
     func impactOccurred() {
@@ -103,14 +104,8 @@ struct DownvoteButton: View {
 
         impactOccurred()
     }
-    
-    func submitUpVote() {
-        Task {
-            try? await webService.submitUpVote(clientActivityId: clientActivityId)
-        }
-    }
 
-    func submitFeedback(feedbackData: FeedbackData) {
+    func submitFeedback() {
         Task {
             try? await webService.submitFeedback(clientActivityId: clientActivityId, feedbackData: feedbackData)
         }
@@ -125,29 +120,42 @@ struct BarcodeAnalysisView: View {
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
     
-    @State private var rating: Int = 0
     @State private var viewModel: BarcodeAnalysisViewModel?
 
     var body: some View {
         @Bindable var userPreferencesBindable = userPreferences
         Group {
             if let viewModel {
+                @Bindable var viewModelBindable = viewModel
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .padding()
                 } else if let _ = viewModel.notFound {
                     VStack {
-                        Text("Congratulations!")
-                        Text("You found a product that is not in our Database.")
-                        Text("Earn Ingredipoints by submitting photos!")
+                        Spacer()
+                        
+                        Text("You found a Product that is not in our Database. Submit Product Images and Earn IngrediPoints\u{00A9}!")
+                            .padding()
+                            .multilineTextAlignment(.center)
+                        
                         Button(action: {
                             userPreferencesBindable.captureType = .ingredients
                             _ = appState.checkTabState.routes.popLast()
                         }, label: {
-                            Text("Click here to add Photos")
+                            Image(systemName: "photo.badge.plus")
+                                .font(.largeTitle)
+                                .padding()
                         })
-                        .padding(.top)
+                        .padding()
+
+                        Text("Product will be analyzed instantly!")
+                        
+                        Spacer()
+                        Spacer()
+                        Spacer()
                     }
+                    .navigationTitle("Congratulations!")
+                    .navigationBarTitleDisplayMode(.inline)
                 } else if let product = viewModel.product {
                     ScrollView {
                         VStack(spacing: 15) {
@@ -169,7 +177,17 @@ struct BarcodeAnalysisView: View {
                                                     .frame(width: UIScreen.main.bounds.width - 60)
                                             }
                                         }
-                                        addImagesButton
+                                        Button(action: {
+                                            appState.activeSheet = .feedback(FeedbackConfig(
+                                                feedbackData: $viewModelBindable.feedbackData,
+                                                feedbackCaptureOptions: .imagesOnly,
+                                                onSubmit: { viewModel.submitFeedback() }
+                                            ))
+                                        }, label: {
+                                            Image(systemName: "photo.badge.plus")
+                                                .font(.largeTitle)
+                                                .padding()
+                                        })
                                     }
                                     .scrollTargetLayout()
                                 }
@@ -178,7 +196,17 @@ struct BarcodeAnalysisView: View {
                                 .scrollTargetBehavior(.viewAligned)
                                 .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
                             } else {
-                                addImagesButton
+                                Button(action: {
+                                    appState.activeSheet = .feedback(FeedbackConfig(
+                                        feedbackData: $viewModelBindable.feedbackData,
+                                        feedbackCaptureOptions: .imagesOnly,
+                                        onSubmit: { viewModel.submitFeedback() }
+                                    ))
+                                }, label: {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.largeTitle)
+                                        .padding()
+                                })
                             }
   
                             if let brand = product.brand {
@@ -195,23 +223,23 @@ struct BarcodeAnalysisView: View {
                         }
                     }
                     .scrollIndicators(.hidden)
-                    .onChange(of: rating) { oldRating, newRating in
+                    .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
                         switch newRating {
-                        case 1:
-                            viewModel.submitUpVote()
                         case -1:
-                            appState.activeSheet = .captureFeedbackOnly(onSubmit: { feedbackData in
-                                viewModel.submitFeedback(feedbackData: feedbackData)
-                            })
+                            appState.activeSheet = .feedback(FeedbackConfig(
+                                feedbackData: $viewModelBindable.feedbackData,
+                                feedbackCaptureOptions: .feedbackAndImages,
+                                onSubmit: { viewModel.submitFeedback() }
+                            ))
                         default:
-                            break
+                            viewModel.submitFeedback()
                         }
                     }
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                UpvoteButton(rating: $rating)
-                                DownvoteButton(rating: $rating)
+                                UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                             }
                         }
                     }
@@ -236,15 +264,5 @@ struct BarcodeAnalysisView: View {
                     }
             }
         }
-    }
-    
-    var addImagesButton: some View {
-        Button(action: {
-            // TODO
-        }, label: {
-            Image(systemName: "photo.badge.plus")
-                .font(.largeTitle)
-                .padding()
-        })
     }
 }

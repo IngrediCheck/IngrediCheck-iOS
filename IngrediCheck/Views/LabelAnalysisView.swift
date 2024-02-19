@@ -19,6 +19,7 @@ import SwiftUI
     var product: DTO.Product? = nil
     var error: Error? = nil
     var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
+    var feedbackData = FeedbackData()
     let clientActivityId = UUID().uuidString
 
     func impactOccurred() {
@@ -48,13 +49,7 @@ import SwiftUI
         impactOccurred()
     }
 
-    func submitUpVote() {
-        Task {
-            try? await webService.submitUpVote(clientActivityId: clientActivityId)
-        }
-    }
-
-    func submitFeedback(feedbackData: FeedbackData) {
+    func submitFeedback() {
         Task {
             try? await webService.submitFeedback(clientActivityId: clientActivityId, feedbackData: feedbackData)
         }
@@ -69,12 +64,12 @@ struct LabelAnalysisView: View {
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
 
-    @State private var rating: Int = 0
     @State private var viewModel: LabelAnalysisViewModel?
 
     var body: some View {
         Group {
             if let viewModel {
+                @Bindable var viewModelBindable = viewModel
                 if let error = viewModel.error {
                     Text("Error: \(error.localizedDescription)")
                 } else if let product = viewModel.product {
@@ -126,23 +121,23 @@ struct LabelAnalysisView: View {
                         }
                     }
                     .scrollIndicators(.hidden)
-                    .onChange(of: rating) { oldRating, newRating in
+                    .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
                         switch newRating {
-                        case 1:
-                            viewModel.submitUpVote()
                         case -1:
-                            appState.activeSheet = .captureFeedbackOnly(onSubmit: { feedbackData in
-                                viewModel.submitFeedback(feedbackData: feedbackData)
-                            })
+                            appState.activeSheet = .feedback(FeedbackConfig(
+                                feedbackData: $viewModelBindable.feedbackData,
+                                feedbackCaptureOptions: .feedbackOnly,
+                                onSubmit: { viewModel.submitFeedback() }
+                            ))
                         default:
-                            break
+                            viewModel.submitFeedback()
                         }
                     }
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                UpvoteButton(rating: $rating)
-                                DownvoteButton(rating: $rating)
+                                UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                             }
                         }
                     }
