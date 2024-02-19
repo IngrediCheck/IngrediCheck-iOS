@@ -3,9 +3,13 @@ import AVFoundation
 import Vision
 
 struct ImageCaptureView: View {
+    
+    @Binding var capturedImages: [ProductImage]
+    let onSubmit: () -> Void
+    let showClearButton: Bool
+
     @State private var cameraManager = CameraManager()
     @Environment(WebService.self) var webService
-    @Environment(AppState.self) var appState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,12 +25,12 @@ struct ImageCaptureView: View {
                 .padding(.top)
             Spacer()
             HStack {
-                if appState.checkTabState.capturedImages.isEmpty {
+                if capturedImages.isEmpty {
                     Rectangle()
                         .foregroundColor(.clear)
                         .frame(width: 100 * (3/4), height: 100)
                 } else {
-                    Image(uiImage: appState.checkTabState.capturedImages.last!.image)
+                    Image(uiImage: capturedImages.last!.image)
                         .resizable()
                         .aspectRatio(3/4, contentMode: .fit)
                         .frame(width: 100 * (3/4), height: 100)
@@ -52,14 +56,24 @@ struct ImageCaptureView: View {
             .padding(.bottom)
         }
         .navigationBarItems(
-            leading: clearButton,
-            trailing: checkButton
+            leading: Group {
+                if showClearButton {
+                    clearButton
+                }
+            },
+            trailing: Group {
+                if showClearButton {
+                    checkButton
+                } else {
+                    submitButton
+                }
+            }
         )
         .onAppear {
             cameraManager.setupSession()
         }
         .onDisappear {
-            appState.checkTabState.capturedImages = []
+            capturedImages = []
             cameraManager.stopSession()
         }
     }
@@ -68,16 +82,22 @@ struct ImageCaptureView: View {
         Button("Clear") {
             deleteCapturedImages()
         }
-        .disabled(appState.checkTabState.capturedImages.isEmpty)
-        .foregroundStyle(appState.checkTabState.capturedImages.isEmpty ? .clear : .paletteAccent)
+        .disabled(capturedImages.isEmpty)
+        .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
+    }
+    
+    private var submitButton: some View {
+        Button("Submit") {
+            onSubmit()
+        }
     }
 
     private var checkButton: some View {
         Button("Check") {
-            appState.checkTabState.routes.append(.productImages(appState.checkTabState.capturedImages))
+            onSubmit()
         }
-        .disabled(appState.checkTabState.capturedImages.isEmpty)
-        .foregroundStyle(appState.checkTabState.capturedImages.isEmpty ? .clear : .paletteAccent)
+        .disabled(capturedImages.isEmpty)
+        .foregroundStyle(capturedImages.isEmpty ? .clear : .paletteAccent)
     }
     
     func capturePhoto() {
@@ -89,7 +109,7 @@ struct ImageCaptureView: View {
                 let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
                 withAnimation {
-                    appState.checkTabState.capturedImages.append(ProductImage(
+                    capturedImages.append(ProductImage(
                         image: image,
                         ocrTask: ocrTask,
                         uploadTask: uploadTask,
@@ -164,10 +184,10 @@ struct ImageCaptureView: View {
     }
     
     func deleteCapturedImages() {
-        let imagesToDelete = appState.checkTabState.capturedImages
+        let imagesToDelete = capturedImages
         
         withAnimation {
-            appState.checkTabState.capturedImages = []
+            capturedImages = []
         }
 
         Task {

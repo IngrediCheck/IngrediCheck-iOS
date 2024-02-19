@@ -93,9 +93,6 @@ struct LoggedInRootView: View {
                     feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
                     onSubmit: feedbackConfig.onSubmit
                 )
-                .presentationDetents([.medium, .large])
-                .presentationBackground(.regularMaterial)
-                .interactiveDismissDisabled()
             }
         }
     }
