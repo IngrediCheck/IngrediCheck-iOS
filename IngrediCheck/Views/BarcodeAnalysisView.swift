@@ -255,7 +255,6 @@ struct BarcodeAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                StarButton()
                                 Button(action: {
                                     appState.activeSheet = .feedback(FeedbackConfig(
                                         feedbackData: $viewModelBindable.feedbackData,
@@ -266,6 +265,7 @@ struct BarcodeAnalysisView: View {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.subheadline)
                                 })
+                                StarButton()
                                 UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                             }

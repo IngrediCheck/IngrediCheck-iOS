@@ -136,8 +136,8 @@ struct LabelAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                StarButton()
                                 addImagesButton
+                                StarButton()
                                 UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                             }
