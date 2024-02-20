@@ -76,12 +76,11 @@ struct FeedbackView: View {
                                     .stroke(Color.secondary, lineWidth: 1)
                             )
                             .overlay(
-                                VStack(alignment: .leading) {
-                                    Text("Optionally, leave me a note here.")
-                                        .foregroundColor(.gray)
-                                        .opacity(isFocused ? 0 : 1)
-                                        .padding()
-                                    Spacer()
+                                Group {
+                                    if !isFocused && feedbackData.note.isEmpty {
+                                        Text("Optionally, leave me a note here.")
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                             )
 
