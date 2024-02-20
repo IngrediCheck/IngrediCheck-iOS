@@ -20,6 +20,20 @@ struct HeaderImage: View {
     }
 }
 
+struct StarButton: View {
+    @State private var starred: Bool = false
+    var body: some View {
+        Button(action: {
+            // TODO
+            starred.toggle()
+        }, label: {
+            Image(systemName: starred ? "star.fill" : "star")
+                .font(.subheadline)
+
+        })
+    }
+}
+
 struct UpvoteButton: View {
     @Binding var rating: Int
 
@@ -30,6 +44,7 @@ struct UpvoteButton: View {
             }
         }, label: {
             Image(systemName: rating == 1 ? "hand.thumbsup.fill" : "hand.thumbsup")
+                .font(.subheadline)
         })
     }
 }
@@ -44,6 +59,8 @@ struct DownvoteButton: View {
             }
         }, label: {
             Image(systemName: rating == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                .font(.subheadline)
+
         })
     }
 }
@@ -238,6 +255,17 @@ struct BarcodeAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
+                                StarButton()
+                                Button(action: {
+                                    appState.activeSheet = .feedback(FeedbackConfig(
+                                        feedbackData: $viewModelBindable.feedbackData,
+                                        feedbackCaptureOptions: .imagesOnly,
+                                        onSubmit: { viewModel.submitFeedback() }
+                                    ))
+                                }, label: {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.subheadline)
+                                })
                                 UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                             }
