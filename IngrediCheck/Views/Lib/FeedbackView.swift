@@ -100,14 +100,26 @@ struct FeedbackView: View {
                 })
                 .navigationDestination(for: String.self) { item in
                     if item == "captureImages" {
-                        ImageCaptureView(capturedImages: $feedbackData.images, onSubmit: { onSubmit(); dismiss() }, showClearButton: false)
-                            .padding(.horizontal)
+                        ImageCaptureView(
+                            capturedImages: $feedbackData.images,
+                            onSubmit: { onSubmit(); dismiss() },
+                            showClearButton: false,
+                            showTitle: true,
+                            showCancelButton: false
+                        )
+                        .padding(.horizontal)
                     }
                 }
                 .presentationDetents([.medium, .large])
                 .presentationBackground(.regularMaterial)
             case .imagesOnly:
-                ImageCaptureView(capturedImages: $feedbackData.images, onSubmit: { onSubmit(); dismiss() }, showClearButton: false)
+                ImageCaptureView(
+                    capturedImages: $feedbackData.images,
+                    onSubmit: { onSubmit(); dismiss() },
+                    showClearButton: false,
+                    showTitle: true,
+                    showCancelButton: true
+                )
                     .presentationDetents([.large])
                     .presentationBackground(.regularMaterial)
                     .padding(.horizontal)

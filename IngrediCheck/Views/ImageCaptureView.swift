@@ -2,14 +2,28 @@ import SwiftUI
 import AVFoundation
 import Vision
 
+extension View {
+    @ViewBuilder
+    func conditionalNavigationBarTitle(_ condition: Bool, title: String) -> some View {
+        if condition {
+            self.navigationBarTitle(title)
+        } else {
+            self
+        }
+    }
+}
+
 struct ImageCaptureView: View {
     
     @Binding var capturedImages: [ProductImage]
     let onSubmit: () -> Void
     let showClearButton: Bool
+    let showTitle: Bool
+    let showCancelButton: Bool
 
     @State private var cameraManager = CameraManager()
     @Environment(WebService.self) var webService
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,6 +74,9 @@ struct ImageCaptureView: View {
                 if showClearButton {
                     clearButton
                 }
+                if showCancelButton {
+                    cancelButton
+                }
             },
             trailing: Group {
                 if showClearButton {
@@ -69,12 +86,21 @@ struct ImageCaptureView: View {
                 }
             }
         )
+        .navigationBarTitleDisplayMode(.inline)
+        .conditionalNavigationBarTitle(showTitle, title: "Add Photos")
         .onAppear {
             cameraManager.setupSession()
         }
         .onDisappear {
             capturedImages = []
             cameraManager.stopSession()
+        }
+    }
+    
+    private var cancelButton: some View {
+        Button("Cancel") {
+            deleteCapturedImages()
+            dismiss()
         }
     }
     

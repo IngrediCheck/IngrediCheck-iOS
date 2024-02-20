@@ -18,7 +18,9 @@ struct CaptureView: View {
                     onSubmit: {
                         appState.checkTabState.routes.append(.productImages(appState.checkTabState.capturedImages))
                     },
-                    showClearButton: true
+                    showClearButton: true,
+                    showTitle: false,
+                    showCancelButton: false
                 )
             }
         }
