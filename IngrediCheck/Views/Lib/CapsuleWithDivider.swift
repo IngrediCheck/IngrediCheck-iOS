@@ -10,7 +10,7 @@ struct CapsuleWithDivider<Content: View>: View {
         HStack(spacing: 0) {
             line
             content()
-                .frame(width: UIScreen.main.bounds.width *  0.4)
+                .frame(minWidth: UIScreen.main.bounds.width *  0.4)
                 .lineLimit(1)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 20)
