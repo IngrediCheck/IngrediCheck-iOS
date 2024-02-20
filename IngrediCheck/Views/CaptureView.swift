@@ -33,6 +33,9 @@ struct CaptureView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .onAppear {
+                    UISegmentedControl.appearance().selectedSegmentTintColor = .paletteAccent
+                }
             }
         }
     }
