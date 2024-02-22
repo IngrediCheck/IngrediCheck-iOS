@@ -136,7 +136,13 @@ struct LabelAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                addImagesButton
+                                Button(action: {
+                                    appState.checkTabState.capturedImages = productImages
+                                    _ = appState.checkTabState.routes.popLast()
+                                }, label: {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.subheadline)
+                                })
                                 StarButton()
                                 UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
