@@ -25,6 +25,7 @@ struct ImageCaptureView: View {
 
     @State private var cameraManager = CameraManager()
     @Environment(WebService.self) var webService
+    @Environment(UserPreferences.self) var userPreferences
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -132,7 +133,12 @@ struct ImageCaptureView: View {
         cameraManager.capturePhoto { image in
             if let image = image {
                 
-                let ocrTask = startMLKitOCRTask(image: image)
+                let ocrTask =
+                    if case OcrModel.googleMLKit = userPreferences.ocrModel {
+                        startMLKitOCRTask(image: image)
+                    } else {
+                        startOCRTask(image: image)
+                    }
                 let uploadTask = startUploadTask(image: image)
                 let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
