@@ -66,3 +66,26 @@ fastlane/test_output
 iOSInjectionProject/
 
 Config.swift
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Xcode
+*.xcworkspace
+xcuserdata/
+*.xcuserdatad
+*.xcscmblueprint
+
+# Derived Data
+DerivedData/
+
+# Swift PM
+.swift-package-manager/
+
+# OS X
+.DS_Store
+
+# Thumbnails
+._*
+

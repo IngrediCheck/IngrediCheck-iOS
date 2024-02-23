@@ -1,6 +1,8 @@
 import SwiftUI
 import AVFoundation
 import Vision
+import MLKitTextRecognition
+import MLKitVision
 
 extension View {
     @ViewBuilder
@@ -130,7 +132,7 @@ struct ImageCaptureView: View {
         cameraManager.capturePhoto { image in
             if let image = image {
                 
-                let ocrTask = startOCRTask(image: image)
+                let ocrTask = startMLKitOCRTask(image: image)
                 let uploadTask = startUploadTask(image: image)
                 let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
@@ -183,6 +185,17 @@ struct ImageCaptureView: View {
         }
     }
     
+    func startMLKitOCRTask(image: UIImage) -> Task<String, Error> {
+        Task {
+            let visionImage = VisionImage(image: image)
+            visionImage.orientation = image.imageOrientation
+            let textRecognizer = TextRecognizer.textRecognizer()
+            let result = try await textRecognizer.process(visionImage)
+            print(result)
+            return result.blocks.map({ return $0.text }).joined(separator: "\n")
+        }
+    }
+
     func startBarcodeDetectionTask(image: UIImage) -> Task<String?, Error> {
         Task {
             guard let cgImage = image.cgImage else {
@@ -266,6 +279,26 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
     var photoOutput = AVCapturePhotoOutput()
     var completion: ((UIImage?) -> Void)?
     
+    func focusOnPoint(device: AVCaptureDevice, point: CGPoint) {
+        do {
+            try device.lockForConfiguration()
+
+            if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.autoFocus) {
+                device.focusPointOfInterest = point
+                device.focusMode = .continuousAutoFocus
+            }
+
+            if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.autoExpose) {
+                device.exposurePointOfInterest = point
+                device.exposureMode = .continuousAutoExposure
+            }
+
+            device.unlockForConfiguration()
+        } catch {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+
     func setupSession() {
         session.sessionPreset = .photo
         guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
@@ -274,6 +307,9 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
         }
         
         do {
+            
+//            focusOnPoint(device: backCamera, point: CGPoint(x: 0.5, y: 0.5))
+
             let input = try AVCaptureDeviceInput(device: backCamera)
             if session.canAddInput(input) {
                 session.addInput(input)

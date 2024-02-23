@@ -36,9 +36,11 @@
 		397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397DA1D82B7C153100BFB26F /* FeedbackView.swift */; };
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
+		67482C3B7CC358948D6FED1E /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB9E2B71766679973099A9EC /* Pods_IngrediCheck.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		038BC3CAB05638A45E54E91B /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
 		392D9BF42B72CB0C00166CF1 /* LoggedInRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggedInRootView.swift; sourceTree = "<group>"; };
 		392D9BF62B72CC8A00166CF1 /* HomeTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTab.swift; sourceTree = "<group>"; };
 		392D9BF82B72CCA200166CF1 /* CheckTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckTab.swift; sourceTree = "<group>"; };
@@ -63,6 +65,8 @@
 		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		879618449883C38400FE7150 /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
+		FB9E2B71766679973099A9EC /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +81,7 @@
 				397C85EB2B6B536100FB9DAD /* Auth in Frameworks */,
 				397C85F12B6B536100FB9DAD /* Realtime in Frameworks */,
 				397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */,
+				67482C3B7CC358948D6FED1E /* Pods_IngrediCheck.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +138,8 @@
 			children = (
 				39F2A87C2A9D3972004EBB9A /* IngrediCheck */,
 				39F2A87B2A9D3972004EBB9A /* Products */,
+				6129BCCF6EBB4E1C75C2304C /* Pods */,
+				47765D44630EC0C01CD932C7 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -161,6 +168,23 @@
 			path = IngrediCheck;
 			sourceTree = "<group>";
 		};
+		47765D44630EC0C01CD932C7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FB9E2B71766679973099A9EC /* Pods_IngrediCheck.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		6129BCCF6EBB4E1C75C2304C /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				038BC3CAB05638A45E54E91B /* Pods-IngrediCheck.debug.xcconfig */,
+				879618449883C38400FE7150 /* Pods-IngrediCheck.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -168,9 +192,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */;
 			buildPhases = (
+				9894794314C33CE38DA6FC60 /* [CP] Check Pods Manifest.lock */,
 				39F2A8762A9D3972004EBB9A /* Sources */,
 				39F2A8772A9D3972004EBB9A /* Frameworks */,
 				39F2A8782A9D3972004EBB9A /* Resources */,
+				610871C3FD6AD9F1E419563F /* [CP] Embed Pods Frameworks */,
+				70727DDFE389B9232F5D0345 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -237,6 +264,65 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		610871C3FD6AD9F1E419563F /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		70727DDFE389B9232F5D0345 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		9894794314C33CE38DA6FC60 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-IngrediCheck-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		39F2A8762A9D3972004EBB9A /* Sources */ = {
@@ -307,7 +393,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -369,7 +455,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -390,6 +476,7 @@
 		};
 		39F2A8892A9D3974004EBB9A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 038BC3CAB05638A45E54E91B /* Pods-IngrediCheck.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
@@ -424,6 +511,7 @@
 		};
 		39F2A88A2A9D3974004EBB9A /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 879618449883C38400FE7150 /* Pods-IngrediCheck.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
