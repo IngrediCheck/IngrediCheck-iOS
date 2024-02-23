@@ -31,7 +31,7 @@ struct CaptureView: View {
             ToolbarItem(placement: .principal) {
                 Picker("Options", selection: $userPreferencesBindable.captureType) {
                     Text("Barcode").tag(CaptureType.barcode)
-                    Text("Ingredients").tag(CaptureType.ingredients)
+                    Text("Photo").tag(CaptureType.ingredients)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
