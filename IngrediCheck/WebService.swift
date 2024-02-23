@@ -226,7 +226,8 @@ extension Sequence {
 
         try await supabaseClient.storage.from("productimages").upload(
             path: imageFileName,
-            file: imageData
+            file: imageData,
+            options: FileOptions(contentType: "image/jpeg")
         )
 
         return imageFileName
