@@ -93,6 +93,7 @@ struct LoggedInRootView: View {
                     feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
                     onSubmit: feedbackConfig.onSubmit
                 )
+                .environment(userPreferences)
             }
         }
     }
