@@ -233,10 +233,26 @@ struct BarcodeAnalysisView: View {
                                     .padding(.horizontal)
                             }
                           
-                            AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
-                            
-                            Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                .padding(.horizontal)
+                            if product.ingredients.isEmpty {
+                                Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                                    .font(.subheadline)
+                                    .padding()
+                                    .multilineTextAlignment(.center)
+                                Button(action: {
+                                    userPreferencesBindable.captureType = .ingredients
+                                    _ = appState.checkTabState.routes.popLast()
+                                }, label: {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.largeTitle)
+                                })
+                                Text("Product will be analyzed instantly!")
+                                    .font(.subheadline)
+                            } else {
+                                AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
+                                
+                                Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
+                                    .padding(.horizontal)
+                            }
                         }
                     }
                     .scrollIndicators(.hidden)
@@ -255,7 +271,7 @@ struct BarcodeAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                if !product.images.isEmpty {
+                                if !product.images.isEmpty && !product.ingredients.isEmpty {
                                     Button(action: {
                                         appState.activeSheet = .feedback(FeedbackConfig(
                                             feedbackData: $viewModelBindable.feedbackData,
