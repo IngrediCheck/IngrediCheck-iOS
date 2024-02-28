@@ -255,16 +255,18 @@ struct BarcodeAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                Button(action: {
-                                    appState.activeSheet = .feedback(FeedbackConfig(
-                                        feedbackData: $viewModelBindable.feedbackData,
-                                        feedbackCaptureOptions: .imagesOnly,
-                                        onSubmit: { viewModel.submitFeedback() }
-                                    ))
-                                }, label: {
-                                    Image(systemName: "photo.badge.plus")
-                                        .font(.subheadline)
-                                })
+                                if !product.images.isEmpty {
+                                    Button(action: {
+                                        appState.activeSheet = .feedback(FeedbackConfig(
+                                            feedbackData: $viewModelBindable.feedbackData,
+                                            feedbackCaptureOptions: .imagesOnly,
+                                            onSubmit: { viewModel.submitFeedback() }
+                                        ))
+                                    }, label: {
+                                        Image(systemName: "photo.badge.plus")
+                                            .font(.subheadline)
+                                    })
+                                }
                                 StarButton()
                                 UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
