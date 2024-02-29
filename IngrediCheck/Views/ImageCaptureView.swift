@@ -82,7 +82,7 @@ struct ImageCaptureView: View {
                 }
             },
             trailing: Group {
-                if !capturedImages.isEmpty {
+                if !showCancelButton || !capturedImages.isEmpty {
                     if showClearButton {
                         checkButton
                     } else {
