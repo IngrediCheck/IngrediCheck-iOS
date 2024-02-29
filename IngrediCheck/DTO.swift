@@ -67,21 +67,7 @@ class DTO {
         let name: String?
         let ingredients: [Ingredient]
         let images: [ImageLocationInfo]
-        
-        private var ingredientsDepth: Int {
-            var depth: Int = 0
-            ingredients.forEach { i in
-                depth = max(1, depth)
-                i.ingredients.forEach { i2 in
-                    depth = max(2, depth)
-                    i2.ingredients.forEach { i3 in
-                        depth = 3
-                    }
-                }
-            }
-            return depth
-        }
-        
+
         private func productHasIngredient(ingredientName: String) -> Bool {
             return ingredients.contains { i in
                 if i.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
@@ -98,38 +84,33 @@ class DTO {
             }
         }
         
-        private func ingredientsListDepth2(ingredients: [Ingredient]) -> String {
-            ingredients.map { ingredient in
-                if ingredient.ingredients.isEmpty {
-                    return ingredient.name
-                } else {
-                    return ingredient.name
-                        + " ("
-                        + ingredient.ingredients.map { i in i.name }.joined(separator: ", ")
-                        + ")"
-                }
+        private func ingredientToString(_ ingredient: Ingredient) -> String {
+            if ingredient.ingredients.isEmpty {
+                return ingredient.name
+            } else {
+                return ingredient.name
+                    + " ("
+                    + ingredient.ingredients.map { i in
+                        ingredientToString(i)
+                      }
+                      .joined(separator: ", ")
+                      .capitalized
+                    + ")"
+            }
+        }
+        
+        private var ingredientsListAsString: String {
+            return ingredients.map { ingredient in
+                ingredientToString(ingredient)
             }
             .joined(separator: ", ")
             .capitalized
         }
-        
-        var ingredientsList: String {
-            if ingredientsDepth == 3 {
-                return ingredients.map { ingredient in
-                    return ingredient.name
-                        + ": "
-                        + ingredientsListDepth2(ingredients: ingredient.ingredients)
-                }
-                .joined(separator: "\n")
-            } else {
-                return ingredientsListDepth2(ingredients: ingredients)
-            }
-        }
-        
+
         func decoratedIngredientsList(
             ingredientRecommendations: [IngredientRecommendation]?
         ) -> AttributedString {
-            var attributedString = AttributedString(ingredientsList)
+            var attributedString = AttributedString(ingredientsListAsString)
             
             guard let ingredientRecommendations = ingredientRecommendations else {
                 return attributedString
