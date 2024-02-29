@@ -344,12 +344,18 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
     }
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        if let completion = self.completion {
-            if let imageData = photo.fileDataRepresentation(),
-               let uiImage = UIImage(data: imageData) {
-                completion(uiImage)
-            } else {
-                completion(nil)
+        if let error {
+            print("photoOutput callback received error: \(error)")
+        } else {
+            if let completion = self.completion {
+                if let imageData = photo.fileDataRepresentation(),
+                   let uiImage = UIImage(data: imageData) {
+                    DispatchQueue.main.async {
+                        completion(uiImage)
+                    }
+                } else {
+                    completion(nil)
+                }
             }
         }
     }
