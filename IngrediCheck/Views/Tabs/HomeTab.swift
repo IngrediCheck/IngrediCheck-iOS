@@ -53,7 +53,9 @@ struct HomeTab: View {
                 isFocused = false
             })
             .onAppear {
-                preferenceExamples.startAnimatingExamples()
+                if userPreferences.preferences.isEmpty {
+                    preferenceExamples.startAnimatingExamples()
+                }
             }
             .onDisappear {
                 preferenceExamples.stopAnimatingExamples()

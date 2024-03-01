@@ -2,14 +2,14 @@ import Foundation
 
 @Observable class PreferenceExamples {
 
-    var placeholder: String = .init()
+    var placeholder: String = examples[0]
     var preferences: [String] = []
 
     private var exampleIndex = 0
     private var charIndex = 0
     private var timer: Timer?
     
-    private let examples = [
+    private static let examples = [
         "Add your preferences here",
         "Avoid Gluten",
         "No Palm oil for me",
@@ -27,25 +27,25 @@ import Foundation
     func stopAnimatingExamples() {
         timer?.invalidate()
         timer = nil
-        placeholder = .init()
+        placeholder = PreferenceExamples.examples[0]
         exampleIndex = 0
         charIndex = 0
     }
 
     private func animateExamples() {
-        if exampleIndex >= examples.count {
+        if exampleIndex >= PreferenceExamples.examples.count {
             exampleIndex = 0
         }
         
         if charIndex == 0 {
             if exampleIndex > 1 {
-                preferences.append(examples[exampleIndex-1])
+                preferences.append(PreferenceExamples.examples[exampleIndex-1])
             } else {
                 preferences = []
             }
         }
         
-        let example = examples[exampleIndex]
+        let example = PreferenceExamples.examples[exampleIndex]
 
         if charIndex <= example.count {
             let index = example.index(example.startIndex, offsetBy: charIndex)
