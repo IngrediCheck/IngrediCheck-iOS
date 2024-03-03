@@ -25,7 +25,67 @@ extension Sequence {
     }
 }
 
+enum ImageSize {
+    case small
+    case medium
+    case large
+}
+
 @Observable final class WebService {
+    
+    private let smallImageStore: FileStore
+    private let mediumImageStore: FileStore
+    private let largeImageStore: FileStore
+
+    init() {
+        self.smallImageStore =
+            FileCache(
+                cacheName: "smallproductimages",
+                maximumDiskUsage: (256*1024*1024),
+                fileStore: ImageFileStore(resize: CGSize(width: 256, height: 0))
+            )
+        
+        self.mediumImageStore =
+            FileCache(
+                cacheName: "mediumproductimages",
+                maximumDiskUsage: (512*1024*1024),
+                fileStore: ImageFileStore(resize: CGSize(width: 512, height: 0))
+            )
+        
+        self.largeImageStore =
+            FileCache(
+                cacheName: "largeproductimages",
+                maximumDiskUsage: (512*1024*1024),
+                fileStore: ImageFileStore(resize: nil)
+            )
+    }
+    
+    func fetchImage(imageLocation: DTO.ImageLocationInfo, imageSize: ImageSize) async throws -> UIImage {
+
+        var fileLocation: FileLocation {
+            switch imageLocation {
+            case .url(let url):
+                return FileLocation.url(url)
+            case .imageFileHash(let imageFileHash):
+                return FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
+            }
+        }
+        
+        var imageData: Data {
+            get async throws {
+                switch imageSize {
+                case .small:
+                    return try await smallImageStore.fetchFile(fileLocation: fileLocation)
+                case .medium:
+                    return try await mediumImageStore.fetchFile(fileLocation: fileLocation)
+                case .large:
+                    return try await largeImageStore.fetchFile(fileLocation: fileLocation)
+                }
+            }
+        }
+        
+        return UIImage(data: try await imageData)!
+    }
 
     func fetchProductDetailsFromBarcode(
         clientActivityId: String,
@@ -216,6 +276,39 @@ extension Sequence {
         guard httpResponse.statusCode == 201 else {
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func fetchHistory() async throws -> [DTO.HistoryItem] {
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request = SupabaseRequestBuilder(endpoint: .history)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+
+        print(request)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+
+        do {
+            let history = try JSONDecoder().decode([DTO.HistoryItem].self, from: data)
+            return history
+        } catch {
+            print("Failed to decode History object: \(error)")
+            let responseText = String(data: data, encoding: .utf8) ?? ""
+            print(responseText)
+            throw NetworkError.decodingError
         }
     }
 

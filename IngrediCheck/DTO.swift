@@ -62,7 +62,19 @@ class DTO {
         }
     }
     
+    struct HistoryItem: Codable, Hashable, Equatable {
+        let created_at: String
+        let client_activity_id: String
+        let barcode: String?
+        let brand: String?
+        let name: String?
+        let ingredients: [Ingredient]
+        let images: [ImageLocationInfo]
+        let ingredient_recommendations: [IngredientRecommendation]
+    }
+    
     struct Product: Codable, Hashable {
+        let barcode: String?
         let brand: String?
         let name: String?
         let ingredients: [Ingredient]
@@ -168,7 +180,7 @@ class DTO {
         case definitelyUnsafe = "DefinitelyUnsafe"
     }
     
-    struct IngredientRecommendation: Codable {
+    struct IngredientRecommendation: Codable, Equatable, Hashable {
         let ingredientName: String
         let safetyRecommendation: SafetyRecommendation
         let reasoning: String

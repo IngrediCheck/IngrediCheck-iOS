@@ -59,16 +59,24 @@ struct CheckTabState {
     var capturedImages: [ProductImage] = []
 }
 
+struct HistoryTabState {
+    var routes: [DTO.HistoryItem] = []
+    var historyItems: [DTO.HistoryItem] = []
+}
+
 @Observable class AppState {
     var activeSheet: Sheets?
     var activeTab: TabScreen = .home
     var checkTabState = CheckTabState()
+    var historyTabState = HistoryTabState()
 }
 
 struct LoggedInRootView: View {
 
     @State private var userPreferences: UserPreferences = UserPreferences()
     @State private var appState = AppState()
+    
+    @Environment(WebService.self) var webService
 
     var body: some View {
         TabView(selection: selectedTab) {
@@ -103,11 +111,31 @@ struct LoggedInRootView: View {
             return appState.activeTab
         } set: { newValue in
             if newValue == appState.activeTab {
-                if case .check = newValue {
+                switch newValue {
+                case .check:
                     appState.checkTabState.routes = []
+                case .history:
+                    appState.historyTabState.routes = []
+                default:
+                    break
+                }
+            } else {
+                switch newValue {
+                case .history:
+                    refreshHistory()
+                default:
+                    break
                 }
             }
             appState.activeTab = newValue
+        }
+    }
+    
+    private func refreshHistory() {
+        Task {
+            if let history = try? await webService.fetchHistory() {
+                appState.historyTabState.historyItems = history
+            }
         }
     }
 }

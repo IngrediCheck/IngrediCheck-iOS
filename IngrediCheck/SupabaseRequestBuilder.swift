@@ -6,6 +6,7 @@ enum SafeEatsEndpoint: String {
     case analyze = "analyze"
     case extract = "extract"
     case feedback = "feedback"
+    case history = "history"
 }
 
 class SupabaseRequestBuilder {
