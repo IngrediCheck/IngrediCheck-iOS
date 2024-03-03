@@ -159,10 +159,11 @@ struct LabelAnalysisView: View {
                     }
                 }
             } else {
-                Text("")
-                    .onAppear {
-                        viewModel = LabelAnalysisViewModel(productImages, webService, userPreferences)
-                        Task { await viewModel?.analyze() }
+                ProgressView()
+                    .task {
+                        let newViewModel = LabelAnalysisViewModel(productImages, webService, userPreferences)
+                        Task { await newViewModel.analyze() }
+                        DispatchQueue.main.async { self.viewModel = newViewModel }
                     }
             }
         }

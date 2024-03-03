@@ -73,7 +73,7 @@ struct DownvoteButton: View {
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
-    init(barcode: String, webService: WebService, userPreferences: UserPreferences) {
+    init(_ barcode: String, _ webService: WebService, _ userPreferences: UserPreferences) {
         self.barcode = barcode
         self.webService = webService
         self.userPreferences = userPreferences
@@ -299,14 +299,11 @@ struct BarcodeAnalysisView: View {
                     }
                 }
             } else {
-                Text("")
-                    .onAppear {
-                        viewModel = BarcodeAnalysisViewModel(
-                            barcode: barcode!,
-                            webService: webService,
-                            userPreferences: userPreferences
-                        )
-                        Task { await viewModel?.analyze() }
+                ProgressView()
+                    .task {
+                        let newViewModel = BarcodeAnalysisViewModel(barcode!, webService, userPreferences)
+                        Task { await newViewModel.analyze() }
+                        DispatchQueue.main.async { self.viewModel = newViewModel }
                     }
             }
         }
