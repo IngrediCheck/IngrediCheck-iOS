@@ -1,11 +1,14 @@
 import SwiftUI
 
 struct HeaderImage: View {
-    let url: URL
+    let imageLocation: DTO.ImageLocationInfo
+
+    @State private var image: UIImage? = nil
+    @Environment(WebService.self) var webService
 
     var body: some View {
-        AsyncImage(url: url) { image in
-            image
+        if let image {
+            Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -13,10 +16,17 @@ struct HeaderImage: View {
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.paletteSecondary, lineWidth: 0.8)
                 )
-        } placeholder: {
+                .clipped()
+        } else {
             ProgressView()
+                .task {
+                    if let image = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
+                        DispatchQueue.main.async {
+                            self.image = image
+                        }
+                    }
+                }
         }
-        .clipped()
     }
 }
 
@@ -189,10 +199,8 @@ struct BarcodeAnalysisView: View {
                                 ScrollView(.horizontal) {
                                     HStack(spacing: 10) {
                                         ForEach(product.images.indices, id:\.self) { index in
-                                            if case let .url(url) = product.images[index] {
-                                                HeaderImage(url: url)
-                                                    .frame(width: UIScreen.main.bounds.width - 60)
-                                            }
+                                            HeaderImage(imageLocation: product.images[index])
+                                                .frame(width: UIScreen.main.bounds.width - 60)
                                         }
                                         Button(action: {
                                             appState.activeSheet = .feedback(FeedbackConfig(

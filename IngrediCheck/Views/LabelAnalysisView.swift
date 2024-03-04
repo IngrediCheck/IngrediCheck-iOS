@@ -84,18 +84,10 @@ struct LabelAnalysisView: View {
                                     .padding(.horizontal)
                             }
 
-                            // Note: we are not using product.images here.
                             ScrollView(.horizontal) {
                                 HStack(spacing: 10) {
-                                    ForEach(productImages.indices, id: \.self) { index in
-                                        Image(uiImage: productImages[index].image)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .stroke(Color.paletteSecondary, lineWidth: 0.8)
-                                            )
+                                    ForEach(product.images.indices, id:\.self) { index in
+                                        HeaderImage(imageLocation: product.images[index])
                                             .frame(width: UIScreen.main.bounds.width - 60)
                                     }
                                     addImagesButton

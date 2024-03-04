@@ -96,10 +96,42 @@ struct HistoryItemDetailView: View {
                         .truncationMode(.tail)
                         .padding(.horizontal)
                 }
+                if !item.images.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 10) {
+                            ForEach(item.images.indices, id:\.self) { index in
+                                HeaderImage(imageLocation: item.images[index])
+                                    .frame(width: UIScreen.main.bounds.width - 60)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .padding(.leading)
+                    .scrollIndicators(.hidden)
+                    .scrollTargetBehavior(.viewAligned)
+                    .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
+                } else {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.largeTitle)
+                        .padding()
+                }
                 if let brand = item.brand {
                     Text(brand)
                         .lineLimit(1)
                         .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                if !item.ingredients.isEmpty {
+                    let product = DTO.Product(
+                        barcode: item.barcode,
+                        brand: item.brand,
+                        name: item.name,
+                        ingredients: item.ingredients,
+                        images: item.images
+                    )
+                    AnalysisResultView(product: product, ingredientRecommendations: item.ingredient_recommendations)
+                    
+                    Text(product.decoratedIngredientsList(ingredientRecommendations: item.ingredient_recommendations))
                         .padding(.horizontal)
                 }
             }
