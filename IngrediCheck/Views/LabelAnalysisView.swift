@@ -16,10 +16,10 @@ import SwiftUI
         impactFeedback.prepare()
     }
     
-    var product: DTO.Product? = nil
-    var error: Error? = nil
-    var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
-    var feedbackData = FeedbackData()
+    @MainActor var product: DTO.Product? = nil
+    @MainActor var error: Error? = nil
+    @MainActor var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
+    @MainActor var feedbackData = FeedbackData()
     let clientActivityId = UUID().uuidString
 
     func impactOccurred() {
@@ -28,10 +28,18 @@ import SwiftUI
 
     func analyze() async {
         do {
-            product = try await webService.extractProductDetailsFromLabelImages(
-                clientActivityId: clientActivityId,
-                productImages: productImages
-            )
+            let product =
+                try await webService.extractProductDetailsFromLabelImages(
+                    clientActivityId: clientActivityId,
+                    productImages: productImages
+                )
+
+            await MainActor.run {
+                withAnimation {
+                    self.product = product
+                }
+            }
+            
             impactOccurred()
 
             let result =
@@ -39,11 +47,15 @@ import SwiftUI
                     clientActivityId: clientActivityId,
                     userPreferenceText: userPreferences.asString)
 
-            withAnimation {
-                ingredientRecommendations = result
+            await MainActor.run {
+                withAnimation {
+                    ingredientRecommendations = result
+                }
             }
         } catch {
-            self.error = error
+            await MainActor.run {
+                self.error = error
+            }
         }
 
         impactOccurred()
@@ -163,8 +175,10 @@ struct LabelAnalysisView: View {
     
     var addImagesButton: some View {
         Button(action: {
-            appState.checkTabState.capturedImages = productImages
-            _ = appState.checkTabState.routes.popLast()
+            Task { @MainActor in
+                appState.checkTabState.capturedImages = productImages
+                _ = appState.checkTabState.routes.popLast()
+            }
         }, label: {
             Image(systemName: "photo.badge.plus")
                 .font(.largeTitle)

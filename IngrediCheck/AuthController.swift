@@ -7,8 +7,8 @@ let supabaseClient =
     SupabaseClient(supabaseURL: Config.supabaseURL, supabaseKey: Config.supabaseKey)
 
 @Observable final class AuthController {
-    var session: Session?
-    var authEvent: AuthChangeEvent?
+    @MainActor var session: Session?
+    @MainActor var authEvent: AuthChangeEvent?
     let keychain = KeychainSwift()
     
     func initialize() {
@@ -16,8 +16,10 @@ let supabaseClient =
             await createOrRetrieveAnonymousUser()
             for await authStateChange in await supabaseClient.auth.authStateChanges {
                 print("Auth change Event: \(authStateChange.event)")
-                self.authEvent = authStateChange.event
-                self.session = authStateChange.session
+                await MainActor.run {
+                    self.authEvent = authStateChange.event
+                    self.session = authStateChange.session
+                }
             }
         }
     }

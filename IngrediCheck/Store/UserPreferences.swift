@@ -11,21 +11,21 @@ enum OcrModel: String {
 }
 
 @Observable class UserPreferences {
-    var preferences: [String] {
+    @MainActor var preferences: [String] {
         didSet {
             savePreferences()
         }
     }
     
-    var asString: String {
+    @MainActor var asString: String {
         preferences.joined(separator: "\n")
     }
     
-    init() {
+    @MainActor init() {
         preferences = UserDefaults.standard.stringArray(forKey: "userPreferences") ?? []
     }
     
-    private func savePreferences() {
+    @MainActor private func savePreferences() {
         UserDefaults.standard.set(preferences, forKey: "userPreferences")
     }
     
@@ -63,7 +63,7 @@ enum OcrModel: String {
         UserDefaults.standard.set(ocrModel.rawValue, forKey: ocrModelKey)
     }
     
-    var ocrModel: OcrModel = UserPreferences.readOcrModel() {
+    @ObservationIgnored var ocrModel: OcrModel = UserPreferences.readOcrModel() {
         didSet {
             UserPreferences.writeOcrModel(ocrModel: ocrModel)
         }

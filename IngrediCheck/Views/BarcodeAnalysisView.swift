@@ -90,11 +90,11 @@ struct DownvoteButton: View {
         impactFeedback.prepare()
     }
 
-    var product: DTO.Product?
-    var notFound: Bool?
-    var errorMessage: String?
-    var ingredientRecommendations: [DTO.IngredientRecommendation]?
-    var feedbackData = FeedbackData()
+    @MainActor var product: DTO.Product?
+    @MainActor var notFound: Bool?
+    @MainActor var errorMessage: String?
+    @MainActor var ingredientRecommendations: [DTO.IngredientRecommendation]?
+    @MainActor var feedbackData = FeedbackData()
     let clientActivityId = UUID().uuidString
 
     func impactOccurred() {
@@ -107,8 +107,10 @@ struct DownvoteButton: View {
             let product =
                 try await webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
 
-            withAnimation {
-                self.product = product
+            await MainActor.run {
+                withAnimation {
+                    self.product = product
+                }
             }
 
             impactOccurred()
@@ -119,14 +121,20 @@ struct DownvoteButton: View {
                     userPreferenceText: userPreferences.asString,
                     barcode: barcode)
 
-            withAnimation {
-                self.ingredientRecommendations = result
+            await MainActor.run {
+                withAnimation {
+                    self.ingredientRecommendations = result
+                }
             }
             
         } catch NetworkError.notFound {
-            self.notFound = true
+            await MainActor.run {
+                self.notFound = true
+            }
         } catch {
-            errorMessage = error.localizedDescription
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+            }
         }
 
         impactOccurred()

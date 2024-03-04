@@ -65,13 +65,13 @@ struct HistoryTabState {
 }
 
 @Observable class AppState {
-    var activeSheet: Sheets?
-    var activeTab: TabScreen = .home
-    var checkTabState = CheckTabState()
-    var historyTabState = HistoryTabState()
+    @MainActor var activeSheet: Sheets?
+    @MainActor var activeTab: TabScreen = .home
+    @MainActor var checkTabState = CheckTabState()
+    @MainActor var historyTabState = HistoryTabState()
 }
 
-struct LoggedInRootView: View {
+@MainActor struct LoggedInRootView: View {
 
     @State private var userPreferences: UserPreferences = UserPreferences()
     @State private var appState = AppState()
@@ -106,7 +106,7 @@ struct LoggedInRootView: View {
         }
     }
     
-    var selectedTab: Binding<TabScreen> {
+    @MainActor var selectedTab: Binding<TabScreen> {
         return .init {
             return appState.activeTab
         } set: { newValue in
@@ -134,7 +134,9 @@ struct LoggedInRootView: View {
     private func refreshHistory() {
         Task {
             if let history = try? await webService.fetchHistory() {
-                appState.historyTabState.historyItems = history
+                await MainActor.run {
+                    appState.historyTabState.historyItems = history
+                }
             }
         }
     }

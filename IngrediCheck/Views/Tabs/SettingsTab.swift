@@ -41,7 +41,7 @@ struct SettingsTab: View {
     }
 }
 
-struct SettingsTabContainer: View {
+@MainActor struct SettingsTabContainer: View {
     @State private var userPreferences = UserPreferences()
     var body: some View {
         SettingsTab()

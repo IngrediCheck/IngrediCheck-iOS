@@ -2,8 +2,8 @@ import Foundation
 
 @Observable class PreferenceExamples {
 
-    var placeholder: String = examples[0]
-    var preferences: [String] = []
+    @MainActor var placeholder: String = examples[0]
+    @MainActor var preferences: [String] = []
 
     private var exampleIndex = 0
     private var charIndex = 0
@@ -27,9 +27,11 @@ import Foundation
     func stopAnimatingExamples() {
         timer?.invalidate()
         timer = nil
-        placeholder = PreferenceExamples.examples[0]
         exampleIndex = 0
         charIndex = 0
+        Task { @MainActor in
+            placeholder = PreferenceExamples.examples[0]
+        }
     }
 
     private func animateExamples() {
@@ -38,10 +40,12 @@ import Foundation
         }
         
         if charIndex == 0 {
-            if exampleIndex > 1 {
-                preferences.append(PreferenceExamples.examples[exampleIndex-1])
-            } else {
-                preferences = []
+            Task { @MainActor in
+                if exampleIndex > 1 {
+                    preferences.append(PreferenceExamples.examples[exampleIndex-1])
+                } else {
+                    preferences = []
+                }
             }
         }
         
@@ -49,8 +53,10 @@ import Foundation
 
         if charIndex <= example.count {
             let index = example.index(example.startIndex, offsetBy: charIndex)
-            placeholder = String(example[..<index])
             charIndex += 1
+            Task { @MainActor in
+                placeholder = String(example[..<index])
+            }
             timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
                 self?.animateExamples()
             }
