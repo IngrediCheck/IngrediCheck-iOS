@@ -86,7 +86,22 @@ struct HistoryItemCardView: View {
 struct HistoryItemDetailView: View {
     let item: DTO.HistoryItem
     
+    @State private var feedbackData = FeedbackData()
+    @Environment(WebService.self) var webService
+    @Environment(AppState.self) var appState
+    @Environment(UserPreferences.self) var userPreferences
+
+    private func submitFeedback() {
+        Task {
+            try? await webService.submitFeedback(
+                clientActivityId: item.client_activity_id,
+                feedbackData: feedbackData
+            )
+        }
+    }
+    
     var body: some View {
+        @Bindable var userPreferencesBindable = userPreferences
         ScrollView {
             VStack(spacing: 15) {
                 if let name = item.name {
@@ -103,6 +118,17 @@ struct HistoryItemDetailView: View {
                                 HeaderImage(imageLocation: item.images[index])
                                     .frame(width: UIScreen.main.bounds.width - 60)
                             }
+                            Button(action: {
+                                appState.activeSheet = .feedback(FeedbackConfig(
+                                    feedbackData: $feedbackData,
+                                    feedbackCaptureOptions: .imagesOnly,
+                                    onSubmit: { submitFeedback() }
+                                ))
+                            }, label: {
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.largeTitle)
+                                    .padding()
+                            })
                         }
                         .scrollTargetLayout()
                     }
@@ -121,7 +147,22 @@ struct HistoryItemDetailView: View {
                         .truncationMode(.tail)
                         .padding(.horizontal)
                 }
-                if !item.ingredients.isEmpty {
+                if item.ingredients.isEmpty {
+                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                        .font(.subheadline)
+                        .padding()
+                        .multilineTextAlignment(.center)
+                    Button(action: {
+                        userPreferencesBindable.captureType = .ingredients
+                        appState.checkTabState.routes = []
+                        appState.activeTab = .check
+                    }, label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.largeTitle)
+                    })
+                    Text("Product will be analyzed instantly!")
+                        .font(.subheadline)
+                } else {
                     let product = DTO.Product(
                         barcode: item.barcode,
                         brand: item.brand,
@@ -137,5 +178,36 @@ struct HistoryItemDetailView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .onChange(of: feedbackData.rating) { oldRating, newRating in
+            switch newRating {
+            case -1:
+                appState.activeSheet = .feedback(FeedbackConfig(
+                    feedbackData: $feedbackData,
+                    feedbackCaptureOptions: .feedbackAndImages,
+                    onSubmit: { submitFeedback() }
+                ))
+            default:
+                submitFeedback()
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !item.images.isEmpty && !item.ingredients.isEmpty {
+                    Button(action: {
+                        appState.activeSheet = .feedback(FeedbackConfig(
+                            feedbackData: $feedbackData,
+                            feedbackCaptureOptions: .imagesOnly,
+                            onSubmit: { submitFeedback() }
+                        ))
+                    }, label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.subheadline)
+                    })
+                }
+                StarButton()
+                UpvoteButton(rating: $feedbackData.rating)
+                DownvoteButton(rating: $feedbackData.rating)
+            }
+        }
     }
 }
