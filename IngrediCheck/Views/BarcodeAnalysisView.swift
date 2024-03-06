@@ -156,6 +156,37 @@ struct BarcodeAnalysisView: View {
     @Environment(AppState.self) var appState
     
     @State private var viewModel: BarcodeAnalysisViewModel?
+    
+    @MainActor
+    @ViewBuilder
+    var notFoundView: some View {
+        @Bindable var userPreferencesBindable = userPreferences
+        VStack {
+            Spacer()
+            
+            Text("You found a Product that is not in our Database. Submit Product Images and Earn IngrediPoints\u{00A9}!")
+                .padding()
+                .multilineTextAlignment(.center)
+            
+            Button(action: {
+                userPreferencesBindable.captureType = .ingredients
+                _ = appState.checkTabState.routes.popLast()
+            }, label: {
+                Image(systemName: "photo.badge.plus")
+                    .font(.largeTitle)
+                    .padding()
+            })
+            .padding()
+
+            Text("Product will be analyzed instantly!")
+            
+            Spacer()
+            Spacer()
+            Spacer()
+        }
+        .navigationTitle("Congratulations!")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 
     var body: some View {
         @Bindable var userPreferencesBindable = userPreferences
@@ -166,128 +197,48 @@ struct BarcodeAnalysisView: View {
                     Text(errorMessage)
                         .padding()
                 } else if let _ = viewModel.notFound {
-                    VStack {
-                        Spacer()
-                        
-                        Text("You found a Product that is not in our Database. Submit Product Images and Earn IngrediPoints\u{00A9}!")
-                            .padding()
-                            .multilineTextAlignment(.center)
-                        
-                        Button(action: {
-                            userPreferencesBindable.captureType = .ingredients
-                            _ = appState.checkTabState.routes.popLast()
-                        }, label: {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.largeTitle)
-                                .padding()
-                        })
-                        .padding()
-
-                        Text("Product will be analyzed instantly!")
-                        
-                        Spacer()
-                        Spacer()
-                        Spacer()
-                    }
-                    .navigationTitle("Congratulations!")
-                    .navigationBarTitleDisplayMode(.inline)
+                    notFoundView
                 } else if let product = viewModel.product {
-                    ScrollView {
-                        VStack(spacing: 15) {
-
-                            if let name = product.name {
-                                Text(name)
-                                    .font(.headline)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .padding(.horizontal)
-                            }
-
-                            if !product.images.isEmpty {
-                                ScrollView(.horizontal) {
-                                    HStack(spacing: 10) {
-                                        ForEach(product.images.indices, id:\.self) { index in
-                                            HeaderImage(imageLocation: product.images[index])
-                                                .frame(width: UIScreen.main.bounds.width - 60)
-                                        }
-                                        Button(action: {
-                                            appState.activeSheet = .feedback(FeedbackConfig(
-                                                feedbackData: $viewModelBindable.feedbackData,
-                                                feedbackCaptureOptions: .imagesOnly,
-                                                onSubmit: { viewModel.submitFeedback() }
-                                            ))
-                                        }, label: {
-                                            Image(systemName: "photo.badge.plus")
-                                                .font(.largeTitle)
-                                                .padding()
-                                        })
-                                    }
-                                    .scrollTargetLayout()
-                                }
-                                .padding(.leading)
-                                .scrollIndicators(.hidden)
-                                .scrollTargetBehavior(.viewAligned)
-                                .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
-                            } else {
-                                Button(action: {
-                                    appState.activeSheet = .feedback(FeedbackConfig(
-                                        feedbackData: $viewModelBindable.feedbackData,
-                                        feedbackCaptureOptions: .imagesOnly,
-                                        onSubmit: { viewModel.submitFeedback() }
-                                    ))
-                                }, label: {
-                                    Image(systemName: "photo.badge.plus")
-                                        .font(.largeTitle)
-                                        .padding()
-                                })
-                            }
-  
-                            if let brand = product.brand {
-                                Text(brand)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .padding(.horizontal)
-                            }
-                          
-                            if product.ingredients.isEmpty {
-                                Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
-                                    .font(.subheadline)
-                                    .padding()
-                                    .multilineTextAlignment(.center)
-                                Button(action: {
-                                    userPreferencesBindable.captureType = .ingredients
-                                    _ = appState.checkTabState.routes.popLast()
-                                }, label: {
-                                    Image(systemName: "photo.badge.plus")
-                                        .font(.largeTitle)
-                                })
-                                Text("Product will be analyzed instantly!")
-                                    .font(.subheadline)
-                            } else {
-                                AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
+                    if product.images.isEmpty && product.ingredients.isEmpty {
+                        notFoundView
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 15) {
                                 
-                                Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                    .padding(.horizontal)
-                            }
-                        }
-                    }
-                    .scrollIndicators(.hidden)
-                    .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
-                        switch newRating {
-                        case -1:
-                            appState.activeSheet = .feedback(FeedbackConfig(
-                                feedbackData: $viewModelBindable.feedbackData,
-                                feedbackCaptureOptions: .feedbackAndImages,
-                                onSubmit: { viewModel.submitFeedback() }
-                            ))
-                        default:
-                            viewModel.submitFeedback()
-                        }
-                    }
-                    .toolbar {
-                        ToolbarItemGroup(placement: .topBarTrailing) {
-                            if viewModel.ingredientRecommendations != nil {
-                                if !product.images.isEmpty && !product.ingredients.isEmpty {
+                                if let name = product.name {
+                                    Text(name)
+                                        .font(.headline)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                        .padding(.horizontal)
+                                }
+                                
+                                if !product.images.isEmpty {
+                                    ScrollView(.horizontal) {
+                                        HStack(spacing: 10) {
+                                            ForEach(product.images.indices, id:\.self) { index in
+                                                HeaderImage(imageLocation: product.images[index])
+                                                    .frame(width: UIScreen.main.bounds.width - 60)
+                                            }
+                                            Button(action: {
+                                                appState.activeSheet = .feedback(FeedbackConfig(
+                                                    feedbackData: $viewModelBindable.feedbackData,
+                                                    feedbackCaptureOptions: .imagesOnly,
+                                                    onSubmit: { viewModel.submitFeedback() }
+                                                ))
+                                            }, label: {
+                                                Image(systemName: "photo.badge.plus")
+                                                    .font(.largeTitle)
+                                                    .padding()
+                                            })
+                                        }
+                                        .scrollTargetLayout()
+                                    }
+                                    .padding(.leading)
+                                    .scrollIndicators(.hidden)
+                                    .scrollTargetBehavior(.viewAligned)
+                                    .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
+                                } else {
                                     Button(action: {
                                         appState.activeSheet = .feedback(FeedbackConfig(
                                             feedbackData: $viewModelBindable.feedbackData,
@@ -296,12 +247,72 @@ struct BarcodeAnalysisView: View {
                                         ))
                                     }, label: {
                                         Image(systemName: "photo.badge.plus")
-                                            .font(.subheadline)
+                                            .font(.largeTitle)
+                                            .padding()
                                     })
                                 }
-                                StarButton()
-                                UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
-                                DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                
+                                if let brand = product.brand {
+                                    Text(brand)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                        .padding(.horizontal)
+                                }
+                                
+                                if product.ingredients.isEmpty {
+                                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                                        .font(.subheadline)
+                                        .padding()
+                                        .multilineTextAlignment(.center)
+                                    Button(action: {
+                                        userPreferencesBindable.captureType = .ingredients
+                                        _ = appState.checkTabState.routes.popLast()
+                                    }, label: {
+                                        Image(systemName: "photo.badge.plus")
+                                            .font(.largeTitle)
+                                    })
+                                    Text("Product will be analyzed instantly!")
+                                        .font(.subheadline)
+                                } else {
+                                    AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
+                                    
+                                    Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
+                                        .padding(.horizontal)
+                                }
+                            }
+                        }
+                        .scrollIndicators(.hidden)
+                        .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
+                            switch newRating {
+                            case -1:
+                                appState.activeSheet = .feedback(FeedbackConfig(
+                                    feedbackData: $viewModelBindable.feedbackData,
+                                    feedbackCaptureOptions: .feedbackAndImages,
+                                    onSubmit: { viewModel.submitFeedback() }
+                                ))
+                            default:
+                                viewModel.submitFeedback()
+                            }
+                        }
+                        .toolbar {
+                            ToolbarItemGroup(placement: .topBarTrailing) {
+                                if viewModel.ingredientRecommendations != nil {
+                                    if !product.images.isEmpty && !product.ingredients.isEmpty {
+                                        Button(action: {
+                                            appState.activeSheet = .feedback(FeedbackConfig(
+                                                feedbackData: $viewModelBindable.feedbackData,
+                                                feedbackCaptureOptions: .imagesOnly,
+                                                onSubmit: { viewModel.submitFeedback() }
+                                            ))
+                                        }, label: {
+                                            Image(systemName: "photo.badge.plus")
+                                                .font(.subheadline)
+                                        })
+                                    }
+                                    StarButton()
+                                    UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                    DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                }
                             }
                         }
                     }
