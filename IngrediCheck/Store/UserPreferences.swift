@@ -5,6 +5,11 @@ enum CaptureType: String {
     case ingredients = "ingredients"
 }
 
+enum HistoryType: String {
+    case scans = "scans"
+    case favorites = "favorites"
+}
+
 enum OcrModel: String {
     case iOSBuiltIn = "iosbuiltin"
     case googleMLKit = "googlemlkit"
@@ -29,6 +34,8 @@ enum OcrModel: String {
         UserDefaults.standard.set(preferences, forKey: "userPreferences")
     }
     
+    // Capture Type
+    
     private static let captureTypeKey = "config.lastUsedCaptureType"
     
     private static func readLastUsedCaptureType() -> CaptureType {
@@ -48,6 +55,30 @@ enum OcrModel: String {
             UserPreferences.writeLastUsedCaptureType(captureType: captureType)
         }
     }
+    
+    // History Type
+    
+    private static let historyTypeKey = "config.historyType"
+    
+    private static func readLastUsedHistoryType() -> HistoryType {
+        guard let rawValue = UserDefaults.standard.string(forKey: historyTypeKey),
+              let historyType = HistoryType(rawValue: rawValue) else {
+            return .scans
+        }
+        return historyType
+    }
+    
+    private static func writeLastUsedHistoryType(historyType: HistoryType) {
+        UserDefaults.standard.set(historyType.rawValue, forKey: historyTypeKey)
+    }
+    
+    var historyType: HistoryType = UserPreferences.readLastUsedHistoryType() {
+        didSet {
+            UserPreferences.writeLastUsedHistoryType(historyType: historyType)
+        }
+    }
+
+    // OCR Model
     
     private static let ocrModelKey = "config.ocrModel"
     

@@ -21,8 +21,8 @@ struct CheckTab: View {
         NavigationStack(path: $appStateBinding.checkTabState.routes) {
             VStack {
                 CaptureView(barcode: $barcode)
+                Spacer()
                 Divider()
-                    .padding(.bottom, 5)
             }
             .navigationDestination(for: CapturedItem.self) { item in
                 switch item {

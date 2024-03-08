@@ -31,16 +31,31 @@ struct HeaderImage: View {
 }
 
 struct StarButton: View {
-    @State private var starred: Bool = false
+    let clientActivityId: String
+    @State private var favorited: Bool
+    @Environment(WebService.self) var webService
+    
+    init(clientActivityId: String, favorited: Bool) {
+        self.clientActivityId = clientActivityId
+        self.favorited = favorited
+    }
+    
     var body: some View {
         Button(action: {
-            // TODO
-            starred.toggle()
+            favorited.toggle()
         }, label: {
-            Image(systemName: starred ? "star.fill" : "star")
+            Image(systemName: favorited ? "star.fill" : "star")
                 .font(.subheadline)
-
         })
+        .onChange(of: favorited) { oldValue, newValue in
+            Task {
+                if newValue {
+                    try await webService.addToFavorites(clientActivityId: clientActivityId)
+                } else {
+                    try await webService.removeFromFavorites(clientActivityId: clientActivityId)
+                }
+            }
+        }
     }
 }
 
@@ -309,7 +324,7 @@ struct BarcodeAnalysisView: View {
                                                 .font(.subheadline)
                                         })
                                     }
-                                    StarButton()
+                                    StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
                                     UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                     DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 }

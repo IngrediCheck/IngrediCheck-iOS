@@ -147,7 +147,7 @@ struct LabelAnalysisView: View {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.subheadline)
                                 })
-                                StarButton()
+                                StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
                                 UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                             }

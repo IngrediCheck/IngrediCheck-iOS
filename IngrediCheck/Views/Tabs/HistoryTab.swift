@@ -2,16 +2,59 @@ import SwiftUI
 
 struct HistoryTab: View {
     
+    @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
-    @Environment(WebService.self) var webService
 
     var body: some View {
-        @Bindable var appStateBinding = appState
-        NavigationStack(path: $appStateBinding.historyTabState.routes) {
+        @Bindable var appStateBindable = appState
+        @Bindable var userPreferencesBindable = userPreferences
+        NavigationStack(path: $appStateBindable.historyTabState.routes) {
+            VStack {
+                if userPreferences.historyType == .scans {
+                    ScanHistoryView()
+                } else {
+                    FavoritesView()
+                }
+            }
+            .animation(.default, value: userPreferences.historyType)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Options", selection: $userPreferencesBindable.historyType) {
+                        Text("Scans").tag(HistoryType.scans)
+                        Text("Favorites").tag(HistoryType.favorites)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .onAppear {
+                        UISegmentedControl.appearance().selectedSegmentTintColor = .paletteAccent
+                    }
+                    .frame(width: (UIScreen.main.bounds.width * 2) / 3)
+                }
+            }
+            .navigationDestination(for: HistoryRouteItem.self) { item in
+                switch item {
+                case .historyItem(let item):
+                    HistoryItemDetailView(item: item)
+                case .listItem(let item):
+                    FavoriteItemDetailView(item: item)
+                }
+            }
+        }
+    }
+}
+
+struct ScanHistoryView: View {
+    
+    @Environment(AppState.self) var appState
+    @Environment(WebService.self) var webService
+    
+    var body: some View {
+        if let historyItems = appState.historyTabState.historyItems {
             List {
-                ForEach(appState.historyTabState.historyItems, id:\.client_activity_id) { item in
+                ForEach(historyItems, id:\.client_activity_id) { item in
                     Button {
-                        appState.historyTabState.routes.append(item)
+                        appState.historyTabState.routes.append(.historyItem(item))
                     } label: {
                         HistoryItemCardView(item: item)
                     }
@@ -23,11 +66,25 @@ struct HistoryTab: View {
                     appState.historyTabState.historyItems = history
                 }
             }
-            .navigationDestination(for: DTO.HistoryItem.self) { item in
-                HistoryItemDetailView(item: item)
+            .overlay {
+                if historyItems.isEmpty {
+                    VStack {
+                        ContentUnavailableView(
+                            "No History yet",
+                            systemImage: "tray",
+                            description: Text("A list of Packaged Food Items you have Scanned in the past will show up here.")
+                        )
+                        Divider()
+                    }
+                }
             }
-            .navigationTitle("HISTORY")
-            .navigationBarTitleDisplayMode(.inline)
+        } else {
+            VStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+                Divider()
+            }
         }
     }
 }
@@ -60,10 +117,12 @@ struct HistoryItemCardView: View {
 
             VStack(alignment: .leading) {
                 Text(item.brand ?? "Unknown Brand")
+                    .lineLimit(1)
                     .font(.headline)
                     .padding(.top)
                 
                 Text(item.name ?? "Unknown Name")
+                    .lineLimit(1)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
@@ -86,10 +145,16 @@ struct HistoryItemCardView: View {
 struct HistoryItemDetailView: View {
     let item: DTO.HistoryItem
     
-    @State private var feedbackData = FeedbackData()
+    @State private var feedbackData: FeedbackData
+
     @Environment(WebService.self) var webService
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
+    
+    init(item: DTO.HistoryItem) {
+        self.item = item
+        self.feedbackData = FeedbackData(rating: item.rating)
+    }
 
     private func submitFeedback() {
         Task {
@@ -204,9 +269,171 @@ struct HistoryItemDetailView: View {
                             .font(.subheadline)
                     })
                 }
-                StarButton()
+                StarButton(clientActivityId: item.client_activity_id, favorited: item.favorited)
                 UpvoteButton(rating: $feedbackData.rating)
                 DownvoteButton(rating: $feedbackData.rating)
+            }
+        }
+    }
+}
+
+struct FavoritesView: View {
+
+    @Environment(AppState.self) var appState
+    @Environment(WebService.self) var webService
+
+    var body: some View {
+        if let listItems = appState.historyTabState.listItems {
+            List {
+                ForEach(listItems, id:\.list_item_id) { item in
+                    Button {
+                        appState.historyTabState.routes.append(.listItem(item))
+                    } label: {
+                        FavoriteItemCardView(item: item)
+                    }
+                }
+            }
+            .listStyle(.inset)
+            .refreshable {
+                if let listItems = try? await webService.getFavorites() {
+                    appState.historyTabState.listItems = listItems
+                }
+            }
+            .overlay {
+                if listItems.isEmpty {
+                    VStack {
+                        ContentUnavailableView(
+                            "No Favorites yet",
+                            systemImage: "star",
+                            description: Text("You Favorite Packaged Food Items will show up here.")
+                        )
+                        Divider()
+                    }
+                }
+            }
+        } else {
+            VStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+                Divider()
+            }
+        }
+    }
+}
+
+struct FavoriteItemCardView: View {
+    let item: DTO.ListItem
+    
+    @State private var image: UIImage? = nil
+    @Environment(WebService.self) var webService
+    
+    var placeholderImage: some View {
+        Image(systemName: "photo.badge.plus.fill")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 80, height: 80)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    var body: some View {
+        HStack {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                placeholderImage
+            }
+
+            VStack(alignment: .leading) {
+                Text(item.brand ?? "Unknown Brand")
+                    .lineLimit(1)
+                    .font(.headline)
+                    .padding(.top)
+                
+                Text(item.name ?? "Unknown Name")
+                    .lineLimit(1)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+            }
+            
+            Spacer()
+        }
+        .task {
+            if let firstImage = item.images.first,
+               let image = try? await webService.fetchImage(imageLocation: firstImage, imageSize: .small) {
+                DispatchQueue.main.async {
+                    self.image = image
+                }
+            }
+        }
+    }
+}
+
+struct FavoriteItemDetailView: View {
+    let item: DTO.ListItem
+    
+    @Environment(WebService.self) var webService
+    @Environment(AppState.self) var appState
+    @Environment(UserPreferences.self) var userPreferences
+
+    var body: some View {
+        @Bindable var userPreferencesBindable = userPreferences
+        ScrollView {
+            VStack(spacing: 15) {
+                if let name = item.name {
+                    Text(name)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                if !item.images.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 10) {
+                            ForEach(item.images.indices, id:\.self) { index in
+                                HeaderImage(imageLocation: item.images[index])
+                                    .frame(width: UIScreen.main.bounds.width - 60)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .padding(.leading)
+                    .scrollIndicators(.hidden)
+                    .scrollTargetBehavior(.viewAligned)
+                    .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
+                } else {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.largeTitle)
+                        .padding()
+                }
+                if let brand = item.brand {
+                    Text(brand)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                let product = DTO.Product(
+                    barcode: item.barcode,
+                    brand: item.brand,
+                    name: item.name,
+                    ingredients: item.ingredients,
+                    images: item.images
+                )
+                
+                Text(product.ingredientsListAsString)
+                    .padding(.horizontal)
+            }
+        }
+        .scrollIndicators(.hidden)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                StarButton(clientActivityId: item.list_item_id, favorited: true)
             }
         }
     }

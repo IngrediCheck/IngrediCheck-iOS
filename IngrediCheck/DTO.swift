@@ -71,6 +71,19 @@ class DTO {
         let ingredients: [Ingredient]
         let images: [ImageLocationInfo]
         let ingredient_recommendations: [IngredientRecommendation]
+        let rating: Int
+        let favorited: Bool
+    }
+    
+    struct ListItem: Codable, Hashable, Equatable {
+        let created_at: String
+        let list_id: String
+        let list_item_id: String
+        let barcode: String?
+        let brand: String?
+        let name: String?
+        let ingredients: [Ingredient]
+        let images: [ImageLocationInfo]
     }
     
     struct Product: Codable, Hashable {
@@ -111,7 +124,7 @@ class DTO {
             }
         }
         
-        private var ingredientsListAsString: String {
+        public var ingredientsListAsString: String {
             return ingredients.map { ingredient in
                 ingredientToString(ingredient)
             }

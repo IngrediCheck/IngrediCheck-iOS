@@ -7,6 +7,8 @@ enum SafeEatsEndpoint: String {
     case extract = "extract"
     case feedback = "feedback"
     case history = "history"
+    case list_items = "lists/%@"
+    case list_items_item = "lists/%@/%@"
 }
 
 class SupabaseRequestBuilder {

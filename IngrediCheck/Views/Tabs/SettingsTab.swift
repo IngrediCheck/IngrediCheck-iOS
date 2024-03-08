@@ -18,7 +18,6 @@ struct SettingsTab: View {
                     .font(.footnote)
                     .padding(.bottom, 10)
                 Divider()
-                    .padding(.bottom, 5)
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("SETTINGS")

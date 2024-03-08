@@ -59,9 +59,15 @@ struct CheckTabState {
     var capturedImages: [ProductImage] = []
 }
 
+enum HistoryRouteItem: Hashable {
+    case historyItem(DTO.HistoryItem)
+    case listItem(DTO.ListItem)
+}
+
 struct HistoryTabState {
-    var routes: [DTO.HistoryItem] = []
-    var historyItems: [DTO.HistoryItem] = []
+    var routes: [HistoryRouteItem] = []
+    var historyItems: [DTO.HistoryItem]? = nil
+    var listItems: [DTO.ListItem]? = nil
 }
 
 @Observable class AppState {
@@ -136,6 +142,11 @@ struct HistoryTabState {
             if let history = try? await webService.fetchHistory() {
                 await MainActor.run {
                     appState.historyTabState.historyItems = history
+                }
+            }
+            if let listItems = try? await webService.getFavorites() {
+                await MainActor.run {
+                    appState.historyTabState.listItems = listItems
                 }
             }
         }

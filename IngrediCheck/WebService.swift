@@ -329,4 +329,81 @@ enum ImageSize {
     func deleteImages(imageFileNames: [String]) async throws {
         _ = try await supabaseClient.storage.from("productimages").remove(paths: imageFileNames)
     }
+    
+    func addToFavorites(clientActivityId: String) async throws {
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let listId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!.uuidString
+        let request = SupabaseRequestBuilder(endpoint: .list_items, itemId: listId)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setFormData(name: "clientActivityId", value: clientActivityId)
+            .build()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 201 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func removeFromFavorites(clientActivityId: String) async throws {
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let listId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!.uuidString
+        let request = SupabaseRequestBuilder(endpoint: .list_items_item, itemId: listId, subItemId: clientActivityId)
+            .setAuthorization(with: token)
+            .setMethod(to: "DELETE")
+            .build()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func getFavorites() async throws -> [DTO.ListItem] {
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let listId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!.uuidString
+        let request = SupabaseRequestBuilder(endpoint: .list_items, itemId: listId)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        do {
+            let listItems = try JSONDecoder().decode([DTO.ListItem].self, from: data)
+            return listItems
+        } catch {
+            print("Failed to decode ListItem array: \(error)")
+            let responseText = String(data: data, encoding: .utf8) ?? ""
+            print(responseText)
+            throw NetworkError.decodingError
+        }
+    }
 }
