@@ -1,9 +1,11 @@
 import SwiftUI
+import Combine
 
 struct HistoryTab: View {
     
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
+    @Environment(WebService.self) var webService
 
     var body: some View {
         @Bindable var appStateBindable = appState
@@ -11,9 +13,9 @@ struct HistoryTab: View {
         NavigationStack(path: $appStateBindable.historyTabState.routes) {
             VStack {
                 if userPreferences.historyType == .scans {
-                    ScanHistoryView()
+                    ScanHistoryView(webService: webService)
                 } else {
-                    FavoritesView()
+                    FavoritesView(webService: webService)
                 }
             }
             .animation(.default, value: userPreferences.historyType)
@@ -44,46 +46,132 @@ struct HistoryTab: View {
     }
 }
 
-struct ScanHistoryView: View {
+@Observable @MainActor class ScanHistoryViewModel {
+    
+    let webService: WebService
+
+    var searchText: String = "" {
+        didSet {
+            searchTextSubject.send(searchText)
+        }
+    }
+
+    var searchResults: [DTO.HistoryItem] = []
+
+    private var searchTextSubject = PassthroughSubject<String, Never>()
+    private var cancellables = Set<AnyCancellable>()
+
+    init(webService: WebService) {
+        self.webService = webService
+        searchTextSubject
+            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+            .sink { [weak self] text in
+                self?.searchForEntries(searchText: text)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func searchForEntries(searchText: String) {
+        guard !searchText.isEmpty  else {
+            DispatchQueue.main.async {
+                self.searchResults = []
+            }
+            return
+        }
+
+        Task {
+            print("Searching for \(searchText)")
+            let newSearchResults = try await webService.fetchHistory(searchText: searchText)
+            await MainActor.run {
+                self.searchResults = newSearchResults
+            }
+        }
+    }
+    
+    func refreshSearchResults() {
+        searchForEntries(searchText: searchText)
+    }
+}
+
+@MainActor struct ScanHistoryView: View {
+    let webService: WebService
+    @State private var viewModel: ScanHistoryViewModel
+
+    init(webService: WebService) {
+        self.webService = webService
+        _viewModel = State(initialValue: ScanHistoryViewModel(webService: webService))
+    }
+
+    var body: some View {
+        SearchableScanHistoryView(viewModel: viewModel)
+            .searchable(text: $viewModel.searchText, placement: .automatic, prompt: "Type to search")
+    }
+}
+
+struct SearchableScanHistoryView: View {
+    
+    let viewModel: ScanHistoryViewModel
     
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
-    
+    @Environment(\.isSearching) private var isSearching
+
     var body: some View {
-        if let historyItems = appState.historyTabState.historyItems {
+        if isSearching {
             List {
-                ForEach(historyItems, id:\.client_activity_id) { item in
+                ForEach(viewModel.searchResults, id:\.client_activity_id) { item in
                     Button {
                         appState.historyTabState.routes.append(.historyItem(item))
                     } label: {
                         HistoryItemCardView(item: item)
                     }
                 }
-            }
-            .listStyle(.inset)
-            .refreshable {
-                if let history = try? await webService.fetchHistory() {
-                    appState.historyTabState.historyItems = history
+                .listStyle(.inset)
+                .refreshable {
+                    viewModel.refreshSearchResults()
                 }
-            }
-            .overlay {
-                if historyItems.isEmpty {
-                    VStack {
-                        ContentUnavailableView(
-                            "No History yet",
-                            systemImage: "tray",
-                            description: Text("A list of Packaged Food Items you have Scanned in the past will show up here.")
-                        )
-                        Divider()
+                .overlay {
+                    if !viewModel.searchText.isEmpty && viewModel.searchResults.isEmpty {
+                        ContentUnavailableView("No Results", image: "magnifyingglass")
                     }
                 }
             }
         } else {
-            VStack {
-                Spacer()
-                ProgressView()
-                Spacer()
-                Divider()
+            if let historyItems = appState.historyTabState.historyItems {
+                List {
+                    ForEach(historyItems, id:\.client_activity_id) { item in
+                        Button {
+                            appState.historyTabState.routes.append(.historyItem(item))
+                        } label: {
+                            HistoryItemCardView(item: item)
+                        }
+                    }
+                }
+                .listStyle(.inset)
+                .refreshable {
+                    if let history = try? await webService.fetchHistory() {
+                        appState.historyTabState.historyItems = history
+                    }
+                }
+                .overlay {
+                    if historyItems.isEmpty {
+                        VStack {
+                            ContentUnavailableView(
+                                "No History yet",
+                                systemImage: "tray",
+                                description: Text("A list of Packaged Food Items you have Scanned in the past will show up here.")
+                            )
+                            Divider()
+                        }
+                    }
+                }
+            } else {
+                VStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                    Divider()
+                }
             }
         }
     }
@@ -277,46 +365,131 @@ struct HistoryItemDetailView: View {
     }
 }
 
-struct FavoritesView: View {
+@Observable @MainActor class FavoritesViewModel {
+    let webService: WebService
+    
+    var searchText: String = "" {
+        didSet {
+            searchTextSubject.send(searchText)
+        }
+    }
+
+    var searchResults: [DTO.ListItem] = []
+
+    private var searchTextSubject = PassthroughSubject<String, Never>()
+    private var cancellables = Set<AnyCancellable>()
+
+    init(webService: WebService) {
+        self.webService = webService
+        searchTextSubject
+            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+            .sink { [weak self] text in
+                self?.searchForEntries(searchText: text)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func searchForEntries(searchText: String) {
+        guard !searchText.isEmpty  else {
+            DispatchQueue.main.async {
+                self.searchResults = []
+            }
+            return
+        }
+
+        Task {
+            print("Searching for \(searchText)")
+            let newSearchResults = try await webService.getFavorites(searchText: searchText)
+            await MainActor.run {
+                self.searchResults = newSearchResults
+            }
+        }
+    }
+    
+    func refreshSearchResults() {
+        searchForEntries(searchText: searchText)
+    }
+}
+
+@MainActor struct FavoritesView: View {
+    let webService: WebService
+    @State private var viewModel: FavoritesViewModel
+
+    init(webService: WebService) {
+        self.webService = webService
+        _viewModel = State(initialValue: FavoritesViewModel(webService: webService))
+    }
+
+    var body: some View {
+        SearchableFavoritesView(viewModel: viewModel)
+            .searchable(text: $viewModel.searchText, placement: .automatic, prompt: "Type to search")
+    }
+}
+
+struct SearchableFavoritesView: View {
+
+    let viewModel: FavoritesViewModel
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(\.isSearching) private var isSearching
 
     var body: some View {
-        if let listItems = appState.historyTabState.listItems {
+        if isSearching {
             List {
-                ForEach(listItems, id:\.list_item_id) { item in
+                ForEach(viewModel.searchResults, id:\.list_item_id) { item in
                     Button {
                         appState.historyTabState.routes.append(.listItem(item))
                     } label: {
                         FavoriteItemCardView(item: item)
                     }
                 }
-            }
-            .listStyle(.inset)
-            .refreshable {
-                if let listItems = try? await webService.getFavorites() {
-                    appState.historyTabState.listItems = listItems
+                .listStyle(.inset)
+                .refreshable {
+                    viewModel.refreshSearchResults()
                 }
-            }
-            .overlay {
-                if listItems.isEmpty {
-                    VStack {
-                        ContentUnavailableView(
-                            "No Favorites yet",
-                            systemImage: "star",
-                            description: Text("You Favorite Packaged Food Items will show up here.")
-                        )
-                        Divider()
+                .overlay {
+                    if !viewModel.searchText.isEmpty && viewModel.searchResults.isEmpty {
+                        ContentUnavailableView("No Results", image: "magnifyingglass")
                     }
                 }
             }
         } else {
-            VStack {
-                Spacer()
-                ProgressView()
-                Spacer()
-                Divider()
+            if let listItems = appState.historyTabState.listItems {
+                List {
+                    ForEach(listItems, id:\.list_item_id) { item in
+                        Button {
+                            appState.historyTabState.routes.append(.listItem(item))
+                        } label: {
+                            FavoriteItemCardView(item: item)
+                        }
+                    }
+                }
+                .listStyle(.inset)
+                .refreshable {
+                    if let listItems = try? await webService.getFavorites() {
+                        appState.historyTabState.listItems = listItems
+                    }
+                }
+                .overlay {
+                    if listItems.isEmpty {
+                        VStack {
+                            ContentUnavailableView(
+                                "No Favorites yet",
+                                systemImage: "star",
+                                description: Text("You Favorite Packaged Food Items will show up here.")
+                            )
+                            Divider()
+                        }
+                    }
+                }
+            } else {
+                VStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                    Divider()
+                }
             }
         }
     }

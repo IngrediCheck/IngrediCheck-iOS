@@ -279,16 +279,25 @@ enum ImageSize {
         }
     }
     
-    func fetchHistory() async throws -> [DTO.HistoryItem] {
+    func fetchHistory(searchText: String? = nil) async throws -> [DTO.HistoryItem] {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
 
-        let request = SupabaseRequestBuilder(endpoint: .history)
+        var requestBuilder = SupabaseRequestBuilder(endpoint: .history)
             .setAuthorization(with: token)
             .setMethod(to: "GET")
-            .build()
+
+        if let searchText {
+            requestBuilder =
+                requestBuilder
+                    .setQueryItems(queryItems: [
+                        URLQueryItem(name: "searchText", value: searchText)
+                    ])
+        }
+
+        let request = requestBuilder.build()
 
         print(request)
 
@@ -375,17 +384,27 @@ enum ImageSize {
         }
     }
     
-    func getFavorites() async throws -> [DTO.ListItem] {
+    func getFavorites(searchText: String? = nil) async throws -> [DTO.ListItem] {
 
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
 
         let listId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!.uuidString
-        let request = SupabaseRequestBuilder(endpoint: .list_items, itemId: listId)
+
+        var requestBuilder = SupabaseRequestBuilder(endpoint: .list_items, itemId: listId)
             .setAuthorization(with: token)
             .setMethod(to: "GET")
-            .build()
+
+        if let searchText {
+            requestBuilder =
+                requestBuilder
+                    .setQueryItems(queryItems: [
+                        URLQueryItem(name: "searchText", value: searchText)
+                    ])
+        }
+
+        let request = requestBuilder.build()
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
