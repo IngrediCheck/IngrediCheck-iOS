@@ -7,8 +7,8 @@ struct CapsuleWithDivider<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        HStack(spacing: 0) {
-            line
+//        HStack(spacing: 0) {
+//            line
             content()
                 .frame(minWidth: UIScreen.main.bounds.width *  0.4)
                 .lineLimit(1)
@@ -19,11 +19,11 @@ struct CapsuleWithDivider<Content: View>: View {
                     Capsule()
                         .fill(color.opacity(0.3))
                 )
-                .overlay(
-                    Capsule().stroke(color, lineWidth: 1)
-                )
-            line
-        }
+//                .overlay(
+//                    Capsule().stroke(color, lineWidth: 1)
+//                )
+//            line
+//        }
     }
     
     var line: some View {

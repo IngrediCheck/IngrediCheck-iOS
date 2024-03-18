@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF42B72CB0C00166CF1 /* LoggedInRootView.swift */; };
 		392D9BF72B72CC8A00166CF1 /* HomeTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF62B72CC8A00166CF1 /* HomeTab.swift */; };
 		392D9BF92B72CCA200166CF1 /* CheckTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF82B72CCA200166CF1 /* CheckTab.swift */; };
@@ -78,6 +79,7 @@
 			files = (
 				397C85F52B6B536100FB9DAD /* Supabase in Frameworks */,
 				397C85F32B6B536100FB9DAD /* Storage in Frameworks */,
+				390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */,
 				397C85EF2B6B536100FB9DAD /* PostgREST in Frameworks */,
 				397C85ED2B6B536100FB9DAD /* Functions in Frameworks */,
 				397C85EB2B6B536100FB9DAD /* Auth in Frameworks */,
@@ -215,6 +217,7 @@
 				397C85F22B6B536100FB9DAD /* Storage */,
 				397C85F42B6B536100FB9DAD /* Supabase */,
 				397C85F72B6B537600FB9DAD /* KeychainSwift */,
+				390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -247,6 +250,7 @@
 			packageReferences = (
 				397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */,
+				390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -572,6 +576,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/globulus/swiftui-flow-layout";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.5;
+			};
+		};
 		397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -591,6 +603,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */;
+			productName = SwiftUIFlowLayout;
+		};
 		397C85EA2B6B536100FB9DAD /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */;
