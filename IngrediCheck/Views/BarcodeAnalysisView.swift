@@ -44,8 +44,9 @@ struct StarButton: View {
         Button(action: {
             favorited.toggle()
         }, label: {
-            Image(systemName: favorited ? "star.fill" : "star")
+            Image(systemName: favorited ? "heart.fill" : "heart")
                 .font(.subheadline)
+                .foregroundStyle(favorited ? .red : .paletteAccent)
         })
         .onChange(of: favorited) { oldValue, newValue in
             Task {
@@ -83,7 +84,7 @@ struct DownvoteButton: View {
                 self.rating = (self.rating == -1) ? 0 : -1
             }
         }, label: {
-            Image(systemName: rating == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+            Image(systemName: rating == -1 ? "flag.fill" : "flag")
                 .font(.subheadline)
 
         })
@@ -233,7 +234,7 @@ struct BarcodeAnalysisView: View {
                                         HStack(spacing: 10) {
                                             ForEach(product.images.indices, id:\.self) { index in
                                                 HeaderImage(imageLocation: product.images[index])
-                                                    .frame(width: UIScreen.main.bounds.width - 60)
+                                                    .frame(width: UIScreen.main.bounds.width - 110)
                                             }
                                             Button(action: {
                                                 appState.activeSheet = .feedback(FeedbackConfig(
@@ -242,9 +243,20 @@ struct BarcodeAnalysisView: View {
                                                     onSubmit: { viewModel.submitFeedback() }
                                                 ))
                                             }, label: {
-                                                Image(systemName: "photo.badge.plus")
-                                                    .font(.largeTitle)
-                                                    .padding()
+                                                VStack {
+                                                    Image(systemName: "photo.badge.plus")
+                                                        .font(.largeTitle)
+                                                        .padding()
+                                                    Text("Upload a photo")
+                                                        .foregroundStyle(.paletteAccent)
+                                                        .font(.headline)
+                                                }
+                                                .frame(width: UIScreen.main.bounds.width - 110)
+                                                .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
+                                                .background {
+                                                    RoundedRectangle(cornerRadius: 5)
+                                                        .fill(.gray.opacity(0.1))
+                                                }
                                             })
                                         }
                                         .scrollTargetLayout()
@@ -252,7 +264,7 @@ struct BarcodeAnalysisView: View {
                                     .padding(.leading)
                                     .scrollIndicators(.hidden)
                                     .scrollTargetBehavior(.viewAligned)
-                                    .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
+                                    .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
                                 } else {
                                     Button(action: {
                                         appState.activeSheet = .feedback(FeedbackConfig(
@@ -261,18 +273,29 @@ struct BarcodeAnalysisView: View {
                                             onSubmit: { viewModel.submitFeedback() }
                                         ))
                                     }, label: {
-                                        Image(systemName: "photo.badge.plus")
-                                            .font(.largeTitle)
-                                            .padding()
+                                        VStack {
+                                            Image(systemName: "photo.badge.plus")
+                                                .font(.largeTitle)
+                                                .padding()
+                                            Text("Upload a photo")
+                                                .foregroundStyle(.paletteAccent)
+                                                .font(.headline)
+                                        }
+                                        .frame(width: UIScreen.main.bounds.width - 110)
+                                        .frame(height: UIScreen.main.bounds.width - 110)
+                                        .background {
+                                            RoundedRectangle(cornerRadius: 5)
+                                                .fill(.gray.opacity(0.1))
+                                        }
                                     })
                                 }
                                 
-                                if let brand = product.brand {
-                                    Text(brand)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                        .padding(.horizontal)
-                                }
+//                                if let brand = product.brand {
+//                                    Text(brand)
+//                                        .lineLimit(1)
+//                                        .truncationMode(.tail)
+//                                        .padding(.horizontal)
+//                                }
                                 
                                 if product.ingredients.isEmpty {
                                     Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
@@ -290,6 +313,13 @@ struct BarcodeAnalysisView: View {
                                         .font(.subheadline)
                                 } else {
                                     AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
+                                    
+                                    HStack {
+                                        Text("Ingredients")
+                                            .font(.headline)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal)
                                     
                                     Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
                                         .padding(.horizontal)
@@ -325,7 +355,7 @@ struct BarcodeAnalysisView: View {
                                         })
                                     }
                                     StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
-                                    UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
+//                                    UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                     DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
                                 }
                             }

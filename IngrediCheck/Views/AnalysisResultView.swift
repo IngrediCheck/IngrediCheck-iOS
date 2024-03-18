@@ -17,22 +17,31 @@ struct AnalysisResultView: View {
             switch product.calculateMatch(ingredientRecommendations: ingredientRecommendations) {
             case .match:
                 CapsuleWithDivider(color: .green) {
-                    Text("Match!")
+                    HStack(spacing: 15) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Matched")
+                    }
                 }
             case .needsReview:
                 CapsuleWithDivider(color: .yellow) {
-                    Text("Needs Review")
+                    HStack(spacing: 15) {
+                        Image(systemName: "questionmark.circle.fill")
+                        Text("Uncertain")
+                    }
                 }
             case .notMatch:
                 CapsuleWithDivider(color: .red) {
-                    Text("Does not Match :(")
+                    HStack(spacing: 15) {
+                        Image(systemName: "x.circle.fill")
+                        Text("Unmatched")
+                    }
                 }
             }
         } else {
             CapsuleWithDivider(color: .paletteAccent) {
                 HStack(spacing: 25) {
                     ProgressView()
-                    Text("Analyzing...")
+                    Text("Analyzing")
                 }
             }
         }

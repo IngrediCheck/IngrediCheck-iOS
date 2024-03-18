@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct CapsuleWithDivider<Content: View>: View {
@@ -7,49 +6,48 @@ struct CapsuleWithDivider<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-//        HStack(spacing: 0) {
-//            line
+        HStack(spacing: 0) {
+            Spacer()
             content()
-                .frame(minWidth: UIScreen.main.bounds.width *  0.4)
-                .lineLimit(1)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 20)
-                .layoutPriority(1)
-                .background(
-                    Capsule()
-                        .fill(color.opacity(0.3))
-                )
-//                .overlay(
-//                    Capsule().stroke(color, lineWidth: 1)
-//                )
-//            line
-//        }
-    }
-    
-    var line: some View {
-        Rectangle()
-            .fill(color)
-            .frame(height: 1)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(color)
+                .padding(.vertical, 15)
+            Spacer()
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(color.opacity(0.05))
+        )
+        .padding(.horizontal)
     }
 }
-
 
 #Preview {
     VStack {
         CapsuleWithDivider(color: .blue) {
             HStack(spacing: 25) {
-                Text("Analyzing")
                 ProgressView()
+                Text("Analyzing")
             }
         }
         CapsuleWithDivider(color: .green) {
-            Text("Match!")
+            HStack(spacing: 15) {
+                Image(systemName: "checkmark.circle.fill")
+                Text("Matched")
+            }
         }
         CapsuleWithDivider(color: .yellow) {
-            Text("Needs Review")
+            HStack(spacing: 15) {
+                Image(systemName: "questionmark.circle.fill")
+                Text("Uncertain")
+            }
         }
         CapsuleWithDivider(color: .red) {
-            Text("Does not Match :(")
+            HStack(spacing: 15) {
+                Image(systemName: "x.circle.fill")
+                Text("Unmatched")
+            }
         }
     }
 }
