@@ -189,9 +189,20 @@ struct BarcodeAnalysisView: View {
                 userPreferencesBindable.captureType = .ingredients
                 _ = appState.checkTabState.routes.popLast()
             }, label: {
-                Image(systemName: "photo.badge.plus")
-                    .font(.largeTitle)
-                    .padding()
+                VStack {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.largeTitle)
+                        .padding()
+                    Text("Upload a photo")
+                        .foregroundStyle(.paletteAccent)
+                        .font(.headline)
+                }
+                .frame(width: UIScreen.main.bounds.width - 110)
+                .frame(height: UIScreen.main.bounds.width - 110)
+                .background {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(.gray.opacity(0.1))
+                }
             })
             .padding()
 
