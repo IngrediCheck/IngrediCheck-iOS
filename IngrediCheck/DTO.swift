@@ -62,6 +62,21 @@ class DTO {
         }
     }
     
+    struct AnnotatedIngredient {
+        let name: String
+        let safetyRecommendation: SafetyRecommendation
+        let reasoning: String?
+        let preference: String?
+        let ingredient: [AnnotatedIngredient]
+    }
+    
+    struct DecoratedIngredientListFragment {
+        let fragment: String
+        let safetyRecommendation: SafetyRecommendation
+        let reasoning: String?
+        let preference: String?
+    }
+    
     struct HistoryItem: Codable, Hashable, Equatable {
         let created_at: String
         let client_activity_id: String
@@ -94,19 +109,15 @@ class DTO {
         let images: [ImageLocationInfo]
 
         private func productHasIngredient(ingredientName: String) -> Bool {
-            return ingredients.contains { i in
-                if i.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
-                    return true
-                }
-                return i.ingredients.contains { i2 in
-                    if i2.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
+            func inner(ingredients: [Ingredient]) -> Bool {
+                return ingredients.contains { i in
+                    if i.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
                         return true
                     }
-                    return i2.ingredients.contains { i3 in
-                        return i3.name.caseInsensitiveCompare(ingredientName) == .orderedSame
-                    }
+                    return inner(ingredients: i.ingredients)
                 }
             }
+            return inner(ingredients: self.ingredients)
         }
         
         private func ingredientToString(_ ingredient: Ingredient) -> String {
@@ -131,6 +142,124 @@ class DTO {
             .joined(separator: ", ")
             .capitalized
         }
+        
+        func decoratedIngredientsList2(
+            ingredientRecommendations: [IngredientRecommendation]?
+        ) -> [DecoratedIngredientListFragment] {
+            func annotatedIngredients(ingredients: [Ingredient]) -> [AnnotatedIngredient] {
+                return ingredients.map { i in
+                    let recommendation = ingredientRecommendations?.first { r in
+                        return r.ingredientName.caseInsensitiveCompare(i.name) == .orderedSame
+                    }
+                    if let recommendation {
+                        return AnnotatedIngredient(
+                            name: i.name,
+                            safetyRecommendation: recommendation.safetyRecommendation,
+                            reasoning: recommendation.reasoning,
+                            preference: recommendation.preference,
+                            ingredient: annotatedIngredients(ingredients: i.ingredients)
+                        )
+                    } else {
+                        return AnnotatedIngredient(
+                            name: i.name,
+                            safetyRecommendation: .safe,
+                            reasoning: nil,
+                            preference: nil,
+                            ingredient: annotatedIngredients(ingredients: i.ingredients)
+                        )
+                    }
+                }
+            }
+            func decoratedIngredientListFragments(annotatedIngredients: [AnnotatedIngredient]) -> [DecoratedIngredientListFragment] {
+                var result: [DecoratedIngredientListFragment] = []
+                for ai in annotatedIngredients {
+                    if ai.ingredient.isEmpty {
+                        result.append(contentsOf: [
+                            DecoratedIngredientListFragment(
+                                fragment: ai.name.capitalized,
+                                safetyRecommendation: ai.safetyRecommendation,
+                                reasoning: ai.reasoning,
+                                preference: ai.preference
+                            ),
+                            DecoratedIngredientListFragment(
+                                fragment: ",",
+                                safetyRecommendation: .none,
+                                reasoning: nil,
+                                preference: nil
+                            ),
+                            DecoratedIngredientListFragment(
+                                fragment: " ",
+                                safetyRecommendation: .none,
+                                reasoning: nil,
+                                preference: nil
+                            )
+                        ])
+                    } else {
+                        result.append(contentsOf: [
+                            DecoratedIngredientListFragment(
+                                fragment: ai.name.capitalized,
+                                safetyRecommendation: ai.safetyRecommendation,
+                                reasoning: ai.reasoning,
+                                preference: ai.preference
+                            ),
+                            DecoratedIngredientListFragment(
+                                fragment: " ",
+                                safetyRecommendation: .none,
+                                reasoning: nil,
+                                preference: nil
+                            ),
+                            DecoratedIngredientListFragment(
+                                fragment: "(",
+                                safetyRecommendation: .none,
+                                reasoning: nil,
+                                preference: nil
+                            )
+                        ])
+                        result.append(contentsOf: decoratedIngredientListFragments(annotatedIngredients: ai.ingredient))
+                        result.append(contentsOf:
+                            [")", ",", " "].map { c in
+                                DecoratedIngredientListFragment(
+                                    fragment: c,
+                                    safetyRecommendation: .none,
+                                    reasoning: nil,
+                                    preference: nil
+                                )
+                            }
+                        )
+                    }
+                }
+                return result.dropLast(2)
+            }
+            func splitDecoratedFragmentsIfNeeded(decoratedFragments: [DecoratedIngredientListFragment]) -> [DecoratedIngredientListFragment] {
+                var result: [DecoratedIngredientListFragment] = []
+                for fragment in decoratedFragments {
+                    if case .safe = fragment.safetyRecommendation {
+                        let words = fragment.fragment.split(separator: " ").map(String.init)
+                        for word in words {
+                            result.append(DecoratedIngredientListFragment(
+                                fragment: word,
+                                safetyRecommendation: .safe,
+                                reasoning: nil,
+                                preference: nil
+                            ))
+                            result.append(DecoratedIngredientListFragment(
+                                fragment: " ",
+                                safetyRecommendation: .none,
+                                reasoning: nil,
+                                preference: nil
+                            ))
+                        }
+                        result = result.dropLast()
+                    } else {
+                        result.append(fragment)
+                    }
+                }
+                return result
+            }
+            let annotatedIngredients = annotatedIngredients(ingredients: self.ingredients)
+            let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
+            return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
+        }
 
         func decoratedIngredientsList(
             ingredientRecommendations: [IngredientRecommendation]?
@@ -148,6 +277,8 @@ class DTO {
                     color = .orange
                 case .definitelyUnsafe:
                     color = .red
+                default:
+                    color = .black
                 }
                 
                 // Note: I could not find a straightforward Api to find all matches of
@@ -181,6 +312,8 @@ class DTO {
                         if result == .match {
                             result = .needsReview
                         }
+                    default:
+                        break
                     }
                 }
             }
@@ -191,12 +324,15 @@ class DTO {
     enum SafetyRecommendation: String, Codable {
         case maybeUnsafe = "MaybeUnsafe"
         case definitelyUnsafe = "DefinitelyUnsafe"
+        case safe = "Safe"
+        case none = "None"
     }
     
     struct IngredientRecommendation: Codable, Equatable, Hashable {
         let ingredientName: String
         let safetyRecommendation: SafetyRecommendation
         let reasoning: String
+        let preference: String
     }
     
     enum ProductRecommendation {

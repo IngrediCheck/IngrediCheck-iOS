@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftUIFlowLayout
 
 struct HeaderImage: View {
     let imageLocation: DTO.ImageLocationInfo
@@ -321,7 +322,10 @@ struct BarcodeAnalysisView: View {
                                     }
                                     .padding(.horizontal)
                                     
-                                    Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
+//                                    Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
+//                                        .padding(.horizontal)
+//                                    IngredientsText(product.decoratedIngredientsList2(ingredientRecommendations: viewModel.ingredientRecommendations))
+                                    IngredientsText(product: product, viewModel: viewModel)
                                         .padding(.horizontal)
                                 }
                             }
@@ -378,6 +382,71 @@ struct BarcodeAnalysisView: View {
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }
             }
+        }
+    }
+}
+
+struct IngredientsText: View {
+    let product: DTO.Product
+    let viewModel: BarcodeAnalysisViewModel
+    var body: some View {
+        let decoratedFragments = product.decoratedIngredientsList2(ingredientRecommendations: viewModel.ingredientRecommendations)
+        FlowLayout(mode: .scrollable, items: decoratedFragments, itemSpacing: 0) { fragment in
+            TappableTextFragment(fragment: fragment)
+        }
+    }
+}
+
+struct TappableTextFragment: View {
+    let fragment: DTO.DecoratedIngredientListFragment
+    @State private var showPopover = false
+    
+    var body: some View {
+        switch fragment.safetyRecommendation {
+        case .maybeUnsafe:
+            Text(fragment.fragment)
+                .font(.body)
+                .underline(true, pattern: .dot)
+                .background(
+                    .yellow.opacity(0.15)
+                )
+                .onTapGesture {
+                    showPopover = true
+                }
+                .popover(isPresented: $showPopover, content: {
+                    VStack {
+                        Text(fragment.preference!)
+                            .padding()
+                    }
+                    .presentationCompactAdaptation(.popover)
+                })
+        case .definitelyUnsafe:
+            Text(fragment.fragment)
+                .font(.body)
+                .underline(true, pattern: .dot)
+                .background(
+                    .red.opacity(0.15)
+                )
+                .onTapGesture {
+                    showPopover = true
+                }
+                .popover(isPresented: $showPopover, content: {
+                    VStack {
+                        Text(fragment.preference!)
+                            .padding()
+                    }
+                    .presentationCompactAdaptation(.popover)
+                })
+        case .safe, .none:
+            Text(fragment.fragment)
+                .font(.body)
+//        case .none:
+//            Text(fragment.fragment)
+//                .font(.body)
+//                .underline(true, pattern: .dot)
+//                .background(
+//                    .blue.opacity(0.15)
+//                )
         }
     }
 }
