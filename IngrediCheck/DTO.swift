@@ -172,41 +172,25 @@ class DTO {
             }
             func decoratedIngredientListFragments(annotatedIngredients: [AnnotatedIngredient]) -> [DecoratedIngredientListFragment] {
                 var result: [DecoratedIngredientListFragment] = []
-                for ai in annotatedIngredients {
+                for (i, ai) in annotatedIngredients.enumerated() {
                     if ai.ingredient.isEmpty {
-                        result.append(contentsOf: [
-                            DecoratedIngredientListFragment(
-                                fragment: ai.name.capitalized,
-                                safetyRecommendation: ai.safetyRecommendation,
-                                reasoning: ai.reasoning,
-                                preference: ai.preference
-                            ),
-                            DecoratedIngredientListFragment(
-                                fragment: ",",
-                                safetyRecommendation: .none,
-                                reasoning: nil,
-                                preference: nil
-                            ),
-                            DecoratedIngredientListFragment(
-                                fragment: " ",
-                                safetyRecommendation: .none,
-                                reasoning: nil,
-                                preference: nil
-                            )
-                        ])
+                        var fragment = ai.name.capitalized
+                        if i != (annotatedIngredients.count - 1) {
+                            fragment += ", "
+                        }
+                        result.append(DecoratedIngredientListFragment(
+                            fragment: fragment,
+                            safetyRecommendation: ai.safetyRecommendation,
+                            reasoning: ai.reasoning,
+                            preference: ai.preference
+                        ))
                     } else {
                         result.append(contentsOf: [
                             DecoratedIngredientListFragment(
-                                fragment: ai.name.capitalized,
+                                fragment: ai.name.capitalized + " ",
                                 safetyRecommendation: ai.safetyRecommendation,
                                 reasoning: ai.reasoning,
                                 preference: ai.preference
-                            ),
-                            DecoratedIngredientListFragment(
-                                fragment: " ",
-                                safetyRecommendation: .none,
-                                reasoning: nil,
-                                preference: nil
                             ),
                             DecoratedIngredientListFragment(
                                 fragment: "(",
@@ -215,41 +199,41 @@ class DTO {
                                 preference: nil
                             )
                         ])
-                        result.append(contentsOf: decoratedIngredientListFragments(annotatedIngredients: ai.ingredient))
-                        result.append(contentsOf:
-                            [")", ",", " "].map { c in
-                                DecoratedIngredientListFragment(
-                                    fragment: c,
-                                    safetyRecommendation: .none,
-                                    reasoning: nil,
-                                    preference: nil
-                                )
-                            }
+                        var subFragments = decoratedIngredientListFragments(annotatedIngredients: ai.ingredient)
+                        let suffix = (i == annotatedIngredients.count - 1) ? ")" : "), "
+                        let lastFragment = DecoratedIngredientListFragment(
+                            fragment: subFragments.last!.fragment + suffix,
+                            safetyRecommendation: subFragments.last!.safetyRecommendation,
+                            reasoning: subFragments.last?.reasoning,
+                            preference: subFragments.last?.preference
                         )
+                        subFragments[subFragments.count - 1] = lastFragment
+                        result.append(contentsOf: subFragments)
                     }
                 }
-                return result.dropLast(2)
+                return result
+            }
+            func splitStringPreservingSpaces(_ input: String) -> [String] {
+                var result = input.split(separator: " ", omittingEmptySubsequences: true).map { String($0) + " " }
+
+                if let last = result.last, input.last != " " {
+                    result[result.count - 1] = last.trimmingCharacters(in: .whitespaces)
+                }
+
+                return result
             }
             func splitDecoratedFragmentsIfNeeded(decoratedFragments: [DecoratedIngredientListFragment]) -> [DecoratedIngredientListFragment] {
                 var result: [DecoratedIngredientListFragment] = []
                 for fragment in decoratedFragments {
                     if case .safe = fragment.safetyRecommendation {
-                        let words = fragment.fragment.split(separator: " ").map(String.init)
-                        for word in words {
+                        for word in splitStringPreservingSpaces(fragment.fragment) {
                             result.append(DecoratedIngredientListFragment(
                                 fragment: word,
                                 safetyRecommendation: .safe,
                                 reasoning: nil,
                                 preference: nil
                             ))
-                            result.append(DecoratedIngredientListFragment(
-                                fragment: " ",
-                                safetyRecommendation: .none,
-                                reasoning: nil,
-                                preference: nil
-                            ))
                         }
-                        result = result.dropLast()
                     } else {
                         result.append(fragment)
                     }
