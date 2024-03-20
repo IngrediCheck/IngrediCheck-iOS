@@ -25,7 +25,9 @@ struct HomeTab: View {
                         if newValue {
                             preferenceExamples.stopAnimatingExamples()
                         } else {
-                            preferenceExamples.startAnimatingExamples()
+                            if userPreferences.preferences.isEmpty {
+                                preferenceExamples.startAnimatingExamples()
+                            }
                         }
                     }
                 List {
