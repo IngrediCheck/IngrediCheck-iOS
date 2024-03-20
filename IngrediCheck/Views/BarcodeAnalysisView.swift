@@ -167,6 +167,7 @@ struct BarcodeAnalysisView: View {
     @Environment(AppState.self) var appState
     
     @State private var viewModel: BarcodeAnalysisViewModel?
+    @State private var currentTabViewIndex = 0
     
     @MainActor
     @ViewBuilder
@@ -236,7 +237,7 @@ struct BarcodeAnalysisView: View {
                                 }
                                 
                                 if !product.images.isEmpty {
-                                    TabView {
+                                    TabView(selection: $currentTabViewIndex.animation()) {
                                         ForEach(product.images.indices, id:\.self) { index in
                                             HeaderImage(imageLocation: product.images[index])
                                                 .frame(width: UIScreen.main.bounds.width - 110)
@@ -266,8 +267,8 @@ struct BarcodeAnalysisView: View {
                                     }
                                     .background(.paletteBackground)
                                     .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
-                                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-                                    .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+                                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                                    Fancy3DotsIndexView(numberOfPages: product.images.count, currentIndex: currentTabViewIndex)
                                 } else {
                                     Button(action: {
                                         appState.activeSheet = .feedback(FeedbackConfig(
