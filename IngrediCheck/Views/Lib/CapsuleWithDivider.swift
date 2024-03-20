@@ -16,10 +16,8 @@ struct CapsuleWithDivider<Content: View>: View {
             Spacer()
         }
         .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(color.opacity(0.05))
+            color.opacity(0.05)
         )
-        .padding(.horizontal)
     }
 }
 

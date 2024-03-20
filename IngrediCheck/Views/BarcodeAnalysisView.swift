@@ -12,12 +12,6 @@ struct HeaderImage: View {
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.paletteSecondary, lineWidth: 0.8)
-                )
-                .clipped()
         } else {
             ProgressView()
                 .task {
@@ -242,41 +236,37 @@ struct BarcodeAnalysisView: View {
                                 }
                                 
                                 if !product.images.isEmpty {
-                                    ScrollView(.horizontal) {
-                                        HStack(spacing: 10) {
-                                            ForEach(product.images.indices, id:\.self) { index in
-                                                HeaderImage(imageLocation: product.images[index])
-                                                    .frame(width: UIScreen.main.bounds.width - 110)
-                                            }
-                                            Button(action: {
-                                                appState.activeSheet = .feedback(FeedbackConfig(
-                                                    feedbackData: $viewModelBindable.feedbackData,
-                                                    feedbackCaptureOptions: .imagesOnly,
-                                                    onSubmit: { viewModel.submitFeedback() }
-                                                ))
-                                            }, label: {
-                                                VStack {
-                                                    Image(systemName: "photo.badge.plus")
-                                                        .font(.largeTitle)
-                                                        .padding()
-                                                    Text("Upload a photo")
-                                                        .foregroundStyle(.paletteAccent)
-                                                        .font(.headline)
-                                                }
+                                    TabView {
+                                        ForEach(product.images.indices, id:\.self) { index in
+                                            HeaderImage(imageLocation: product.images[index])
                                                 .frame(width: UIScreen.main.bounds.width - 110)
-                                                .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
-                                                .background {
-                                                    RoundedRectangle(cornerRadius: 5)
-                                                        .fill(.gray.opacity(0.1))
-                                                }
-                                            })
                                         }
-                                        .scrollTargetLayout()
+                                        Button(action: {
+                                            appState.activeSheet = .feedback(FeedbackConfig(
+                                                feedbackData: $viewModelBindable.feedbackData,
+                                                feedbackCaptureOptions: .imagesOnly,
+                                                onSubmit: { viewModel.submitFeedback() }
+                                            ))
+                                        }, label: {
+                                            VStack {
+                                                Image(systemName: "photo.badge.plus")
+                                                    .font(.largeTitle)
+                                                    .padding()
+                                                Text("Upload a photo")
+                                                    .foregroundStyle(.paletteAccent)
+                                                    .font(.headline)
+                                            }
+                                            .frame(width: UIScreen.main.bounds.width - 110)
+                                            .frame(height: UIScreen.main.bounds.width - 110)
+                                            .background {
+                                                RoundedRectangle(cornerRadius: 5)
+                                                    .fill(.paletteBackground)
+                                            }
+                                        })
                                     }
-                                    .padding(.leading)
-                                    .scrollIndicators(.hidden)
-                                    .scrollTargetBehavior(.viewAligned)
+                                    .background(.paletteBackground)
                                     .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
+                                    .tabViewStyle(PageTabViewStyle())
                                 } else {
                                     Button(action: {
                                         appState.activeSheet = .feedback(FeedbackConfig(
@@ -297,7 +287,7 @@ struct BarcodeAnalysisView: View {
                                         .frame(height: UIScreen.main.bounds.width - 110)
                                         .background {
                                             RoundedRectangle(cornerRadius: 5)
-                                                .fill(.gray.opacity(0.1))
+                                                .fill(.paletteBackground)
                                         }
                                     })
                                 }
