@@ -266,7 +266,8 @@ struct BarcodeAnalysisView: View {
                                     }
                                     .background(.paletteBackground)
                                     .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
-                                    .tabViewStyle(PageTabViewStyle())
+                                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+                                    .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
                                 } else {
                                     Button(action: {
                                         appState.activeSheet = .feedback(FeedbackConfig(
