@@ -21,21 +21,25 @@ struct HomeTab: View {
             VStack {
                 TextField(preferenceExamples.placeholder, text: $newPreference)
                     .padding()
-                    .background(.ultraThinMaterial, in: .capsule)
+                    .background(.ultraThinMaterial, in: .rect(cornerRadius: 10))
                     .padding()
                     .focused(self.$isFocused)
                     .onSubmit {
                         if !newPreference.isEmpty {
-                            userPreferences.preferences.insert(newPreference, at: 0)
+                            withAnimation {
+                                userPreferences.preferences.insert(newPreference, at: 0)
+                            }
                             newPreference = ""
                         }
                     }
                     .onChange(of: isFocused) { oldValue, newValue in
                         if newValue {
-                            preferenceExamples.stopAnimatingExamples()
+                            preferenceExamples.stopAnimatingExamples(isFocused: true)
                         } else {
                             if userPreferences.preferences.isEmpty {
                                 preferenceExamples.startAnimatingExamples()
+                            } else {
+                                preferenceExamples.stopAnimatingExamples(isFocused: false)
                             }
                         }
                     }
@@ -66,6 +70,7 @@ struct HomeTab: View {
                 .listStyle(.plain)
                 Divider()
             }
+            .animation(.linear, value: isFocused)
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Your Dietary Preferences")
             .gesture(TapGesture().onEnded {
@@ -77,7 +82,7 @@ struct HomeTab: View {
                 }
             }
             .onDisappear {
-                preferenceExamples.stopAnimatingExamples()
+                preferenceExamples.stopAnimatingExamples(isFocused: false)
             }
         }
     }

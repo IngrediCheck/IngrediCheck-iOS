@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 @Observable class PreferenceExamples {
 
@@ -9,8 +10,10 @@ import Foundation
     private var charIndex = 0
     private var timer: Timer?
     
+    private static let inputPrompt = "Input your preference here"
+    
     private static let examples = [
-        "Add your preferences here",
+        "Tap here to add your preferences",
         "Avoid Gluten",
         "No Palm oil for me",
         "No animal products, but eggs & dairy are ok",
@@ -20,18 +23,16 @@ import Foundation
     ]
 
     func startAnimatingExamples() {
-        stopAnimatingExamples()
+        stopAnimatingExamples(isFocused: false)
         animateExamples()
     }
 
-    func stopAnimatingExamples() {
+    func stopAnimatingExamples(isFocused: Bool) {
         timer?.invalidate()
         timer = nil
         exampleIndex = 0
         charIndex = 0
-        Task { @MainActor in
-            placeholder = PreferenceExamples.examples[0]
-        }
+        updatePlaceholder(to: isFocused ? PreferenceExamples.inputPrompt : PreferenceExamples.examples[0])
     }
 
     private func animateExamples() {
@@ -54,9 +55,7 @@ import Foundation
         if charIndex <= example.count {
             let index = example.index(example.startIndex, offsetBy: charIndex)
             charIndex += 1
-            Task { @MainActor in
-                placeholder = String(example[..<index])
-            }
+            updatePlaceholder(to: String(example[..<index]))
             timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
                 self?.animateExamples()
             }
@@ -66,6 +65,12 @@ import Foundation
             timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
                 self?.animateExamples()
             }
+        }
+    }
+    
+    private func updatePlaceholder(to newPlaceholder: String) {
+        Task { @MainActor in
+            placeholder = newPlaceholder
         }
     }
 }
