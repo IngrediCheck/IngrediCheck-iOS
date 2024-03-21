@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
+		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
+		390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CAE2BACC50D009081AD /* ProductImagesView.swift */; };
 		392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF42B72CB0C00166CF1 /* LoggedInRootView.swift */; };
 		392D9BF72B72CC8A00166CF1 /* HomeTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF62B72CC8A00166CF1 /* HomeTab.swift */; };
 		392D9BF92B72CCA200166CF1 /* CheckTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF82B72CCA200166CF1 /* CheckTab.swift */; };
@@ -45,6 +47,7 @@
 /* Begin PBXFileReference section */
 		038BC3CAB05638A45E54E91B /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
+		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
 		392D9BF42B72CB0C00166CF1 /* LoggedInRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggedInRootView.swift; sourceTree = "<group>"; };
 		392D9BF62B72CC8A00166CF1 /* HomeTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTab.swift; sourceTree = "<group>"; };
 		392D9BF82B72CCA200166CF1 /* CheckTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckTab.swift; sourceTree = "<group>"; };
@@ -83,6 +86,7 @@
 				397C85F32B6B536100FB9DAD /* Storage in Frameworks */,
 				390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */,
 				397C85EF2B6B536100FB9DAD /* PostgREST in Frameworks */,
+				390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */,
 				397C85ED2B6B536100FB9DAD /* Functions in Frameworks */,
 				397C85EB2B6B536100FB9DAD /* Auth in Frameworks */,
 				397C85F12B6B536100FB9DAD /* Realtime in Frameworks */,
@@ -137,6 +141,7 @@
 				397C86052B6C22B900FB9DAD /* BarcodeAnalysisView.swift */,
 				3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */,
 				392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */,
+				390F0CAE2BACC50D009081AD /* ProductImagesView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -221,6 +226,7 @@
 				397C85F42B6B536100FB9DAD /* Supabase */,
 				397C85F72B6B537600FB9DAD /* KeychainSwift */,
 				390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */,
+				390F0CAC2BACBF14009081AD /* SimpleToast */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -254,6 +260,7 @@
 				397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */,
 				390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */,
+				390F0CAB2BACBF14009081AD /* XCRemoteSwiftPackageReference "SimpleToast" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -351,6 +358,7 @@
 				392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,
+				390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */,
 				392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */,
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
@@ -588,6 +596,14 @@
 				minimumVersion = 1.0.5;
 			};
 		};
+		390F0CAB2BACBF14009081AD /* XCRemoteSwiftPackageReference "SimpleToast" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sanzaru/SimpleToast.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.8.1;
+			};
+		};
 		397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -611,6 +627,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */;
 			productName = SwiftUIFlowLayout;
+		};
+		390F0CAC2BACBF14009081AD /* SimpleToast */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 390F0CAB2BACBF14009081AD /* XCRemoteSwiftPackageReference "SimpleToast" */;
+			productName = SimpleToast;
 		};
 		397C85EA2B6B536100FB9DAD /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;

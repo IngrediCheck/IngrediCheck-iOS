@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftUIFlowLayout
+import SimpleToast
 
 struct HeaderImage: View {
     let imageLocation: DTO.ImageLocationInfo
@@ -55,22 +56,7 @@ struct StarButton: View {
     }
 }
 
-struct UpvoteButton: View {
-    @Binding var rating: Int
-
-    var body: some View {
-        Button(action: {
-            withAnimation {
-                self.rating = (self.rating == 1) ? 0 : 1
-            }
-        }, label: {
-            Image(systemName: rating == 1 ? "hand.thumbsup.fill" : "hand.thumbsup")
-                .font(.subheadline)
-        })
-    }
-}
-
-struct DownvoteButton: View {
+struct FlagButton: View {
     @Binding var rating: Int
 
     var body: some View {
@@ -167,8 +153,12 @@ struct BarcodeAnalysisView: View {
     @Environment(AppState.self) var appState
     
     @State private var viewModel: BarcodeAnalysisViewModel?
-    @State private var currentTabViewIndex = 0
-    
+    @State private var showToast: Bool = false
+
+    private let toastOptions = SimpleToastOptions(
+        hideAfter: 2
+    )
+
     @MainActor
     @ViewBuilder
     var notFoundView: some View {
@@ -235,71 +225,24 @@ struct BarcodeAnalysisView: View {
                                         .truncationMode(.tail)
                                         .padding(.horizontal)
                                 }
-                                
-                                if !product.images.isEmpty {
-                                    TabView(selection: $currentTabViewIndex.animation()) {
-                                        ForEach(product.images.indices, id:\.self) { index in
-                                            HeaderImage(imageLocation: product.images[index])
-                                                .frame(width: UIScreen.main.bounds.width - 110)
-                                        }
-                                        Button(action: {
-                                            appState.activeSheet = .feedback(FeedbackConfig(
-                                                feedbackData: $viewModelBindable.feedbackData,
-                                                feedbackCaptureOptions: .imagesOnly,
-                                                onSubmit: { viewModel.submitFeedback() }
-                                            ))
-                                        }, label: {
-                                            VStack {
-                                                Image(systemName: "photo.badge.plus")
-                                                    .font(.largeTitle)
-                                                    .padding()
-                                                Text("Upload a photo")
-                                                    .foregroundStyle(.paletteAccent)
-                                                    .font(.headline)
-                                            }
-                                            .frame(width: UIScreen.main.bounds.width - 110)
-                                            .frame(height: UIScreen.main.bounds.width - 110)
-                                            .background {
-                                                RoundedRectangle(cornerRadius: 5)
-                                                    .fill(.paletteBackground)
-                                            }
-                                        })
-                                    }
-                                    .background(.paletteBackground)
-                                    .frame(height: (UIScreen.main.bounds.width - 110) * (4/3))
-                                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                                    Fancy3DotsIndexView(numberOfPages: product.images.count, currentIndex: currentTabViewIndex)
-                                } else {
-                                    Button(action: {
-                                        appState.activeSheet = .feedback(FeedbackConfig(
-                                            feedbackData: $viewModelBindable.feedbackData,
-                                            feedbackCaptureOptions: .imagesOnly,
-                                            onSubmit: { viewModel.submitFeedback() }
-                                        ))
-                                    }, label: {
-                                        VStack {
-                                            Image(systemName: "photo.badge.plus")
-                                                .font(.largeTitle)
-                                                .padding()
-                                            Text("Upload a photo")
-                                                .foregroundStyle(.paletteAccent)
-                                                .font(.headline)
-                                        }
-                                        .frame(width: UIScreen.main.bounds.width - 110)
-                                        .frame(height: UIScreen.main.bounds.width - 110)
-                                        .background {
-                                            RoundedRectangle(cornerRadius: 5)
-                                                .fill(.paletteBackground)
-                                        }
-                                    })
+                                                                
+                                if let brand = product.brand {
+                                    Text(brand)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                        .padding(.horizontal)
                                 }
-                                
-//                                if let brand = product.brand {
-//                                    Text(brand)
-//                                        .lineLimit(1)
-//                                        .truncationMode(.tail)
-//                                        .padding(.horizontal)
-//                                }
+
+                                ProductImagesView(images: product.images) {
+                                    appState.activeSheet = .feedback(FeedbackConfig(
+                                        feedbackData: $viewModelBindable.feedbackData,
+                                        feedbackCaptureOptions: .imagesOnly,
+                                        onSubmit: {
+                                            showToast.toggle()
+                                            viewModel.submitFeedback()
+                                        }
+                                    ))
+                                }
                                 
                                 if product.ingredients.isEmpty {
                                     Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
@@ -319,21 +262,26 @@ struct BarcodeAnalysisView: View {
                                     AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
                                     
                                     HStack {
-                                        Text("Ingredients")
-                                            .font(.headline)
+                                        Text("Ingredients") .font(.headline)
                                         Spacer()
                                     }
                                     .padding(.horizontal)
                                     
-//                                    Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
-//                                        .padding(.horizontal)
-//                                    IngredientsText(product.decoratedIngredientsList2(ingredientRecommendations: viewModel.ingredientRecommendations))
-                                    IngredientsText(product: product, viewModel: viewModel)
+                                    IngredientsText(ingredients: product.ingredients, ingredientRecommendations: viewModel.ingredientRecommendations)
                                         .padding(.horizontal)
                                 }
                             }
                         }
                         .scrollIndicators(.hidden)
+                        .simpleToast(isPresented: $showToast, options: toastOptions) {
+                            Text("Thank you! 🙏")
+                            .padding()
+                            .padding(.horizontal)
+                            .background(Color.green.opacity(0.6))
+                            .foregroundColor(Color.white)
+                            .cornerRadius(10)
+                            .padding(.top)
+                        }
                         .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
                             switch newRating {
                             case -1:
@@ -363,7 +311,7 @@ struct BarcodeAnalysisView: View {
                                     }
                                     StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
 //                                    UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
-                                    DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                    FlagButton(rating: $viewModelBindable.feedbackData.rating)
                                 }
                             }
                         }
@@ -390,10 +338,14 @@ struct BarcodeAnalysisView: View {
 }
 
 struct IngredientsText: View {
-    let product: DTO.Product
-    let viewModel: BarcodeAnalysisViewModel
+    let ingredients: [DTO.Ingredient]
+    let ingredientRecommendations: [DTO.IngredientRecommendation]?
     var body: some View {
-        let decoratedFragments = product.decoratedIngredientsList2(ingredientRecommendations: viewModel.ingredientRecommendations)
+        let decoratedFragments =
+            DTO.decoratedIngredientsList(
+                ingredients: ingredients,
+                ingredientRecommendations: ingredientRecommendations
+            )
         FlowLayout(mode: .scrollable, items: decoratedFragments, itemSpacing: 0) { fragment in
             TappableTextFragment(fragment: fragment)
         }

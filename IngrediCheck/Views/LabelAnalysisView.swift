@@ -96,20 +96,12 @@ struct LabelAnalysisView: View {
                                     .padding(.horizontal)
                             }
 
-                            ScrollView(.horizontal) {
-                                HStack(spacing: 10) {
-                                    ForEach(product.images.indices, id:\.self) { index in
-                                        HeaderImage(imageLocation: product.images[index])
-                                            .frame(width: UIScreen.main.bounds.width - 60)
-                                    }
-                                    addImagesButton
+                            ProductImagesView(images: product.images) {
+                                Task { @MainActor in
+                                    appState.checkTabState.capturedImages = productImages
+                                    _ = appState.checkTabState.routes.popLast()
                                 }
-                                .scrollTargetLayout()
                             }
-                            .padding(.leading)
-                            .scrollIndicators(.hidden)
-                            .scrollTargetBehavior(.viewAligned)
-                            .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
 
                             if let brand = product.brand {
                                 Text(brand)
@@ -120,7 +112,13 @@ struct LabelAnalysisView: View {
                             
                             AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
                             
-                            Text(product.decoratedIngredientsList(ingredientRecommendations: viewModel.ingredientRecommendations))
+                            HStack {
+                                Text("Ingredients").font(.headline)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+
+                            IngredientsText(ingredients: product.ingredients, ingredientRecommendations: viewModel.ingredientRecommendations)
                                 .padding(.horizontal)
                         }
                     }
@@ -148,8 +146,7 @@ struct LabelAnalysisView: View {
                                         .font(.subheadline)
                                 })
                                 StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
-                                UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
-                                DownvoteButton(rating: $viewModelBindable.feedbackData.rating)
+                                FlagButton(rating: $viewModelBindable.feedbackData.rating)
                             }
                         }
                     }
@@ -171,18 +168,5 @@ struct LabelAnalysisView: View {
                     }
             }
         }
-    }
-    
-    var addImagesButton: some View {
-        Button(action: {
-            Task { @MainActor in
-                appState.checkTabState.capturedImages = productImages
-                _ = appState.checkTabState.routes.popLast()
-            }
-        }, label: {
-            Image(systemName: "photo.badge.plus")
-                .font(.largeTitle)
-                .padding()
-        })
     }
 }

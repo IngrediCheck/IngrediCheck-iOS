@@ -264,41 +264,18 @@ struct HistoryItemDetailView: View {
                         .truncationMode(.tail)
                         .padding(.horizontal)
                 }
-                if !item.images.isEmpty {
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 10) {
-                            ForEach(item.images.indices, id:\.self) { index in
-                                HeaderImage(imageLocation: item.images[index])
-                                    .frame(width: UIScreen.main.bounds.width - 60)
-                            }
-                            Button(action: {
-                                appState.activeSheet = .feedback(FeedbackConfig(
-                                    feedbackData: $feedbackData,
-                                    feedbackCaptureOptions: .imagesOnly,
-                                    onSubmit: { submitFeedback() }
-                                ))
-                            }, label: {
-                                Image(systemName: "photo.badge.plus")
-                                    .font(.largeTitle)
-                                    .padding()
-                            })
-                        }
-                        .scrollTargetLayout()
-                    }
-                    .padding(.leading)
-                    .scrollIndicators(.hidden)
-                    .scrollTargetBehavior(.viewAligned)
-                    .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
-                } else {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.largeTitle)
-                        .padding()
-                }
                 if let brand = item.brand {
                     Text(brand)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .padding(.horizontal)
+                }
+                ProductImagesView(images: item.images) {
+                    appState.activeSheet = .feedback(FeedbackConfig(
+                        feedbackData: $feedbackData,
+                        feedbackCaptureOptions: .imagesOnly,
+                        onSubmit: { submitFeedback() }
+                    ))
                 }
                 if item.ingredients.isEmpty {
                     Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
@@ -325,7 +302,13 @@ struct HistoryItemDetailView: View {
                     )
                     AnalysisResultView(product: product, ingredientRecommendations: item.ingredient_recommendations)
                     
-                    Text(product.decoratedIngredientsList(ingredientRecommendations: item.ingredient_recommendations))
+                    HStack {
+                        Text("Ingredients").font(.headline)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+
+                    IngredientsText(ingredients: product.ingredients, ingredientRecommendations: item.ingredient_recommendations)
                         .padding(.horizontal)
                 }
             }
@@ -358,8 +341,7 @@ struct HistoryItemDetailView: View {
                     })
                 }
                 StarButton(clientActivityId: item.client_activity_id, favorited: item.favorited)
-                UpvoteButton(rating: $feedbackData.rating)
-                DownvoteButton(rating: $feedbackData.rating)
+                FlagButton(rating: $feedbackData.rating)
             }
         }
     }
@@ -566,30 +548,14 @@ struct FavoriteItemDetailView: View {
                         .truncationMode(.tail)
                         .padding(.horizontal)
                 }
-                if !item.images.isEmpty {
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 10) {
-                            ForEach(item.images.indices, id:\.self) { index in
-                                HeaderImage(imageLocation: item.images[index])
-                                    .frame(width: UIScreen.main.bounds.width - 60)
-                            }
-                        }
-                        .scrollTargetLayout()
-                    }
-                    .padding(.leading)
-                    .scrollIndicators(.hidden)
-                    .scrollTargetBehavior(.viewAligned)
-                    .frame(height: (UIScreen.main.bounds.width - 60) * (4/3))
-                } else {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.largeTitle)
-                        .padding()
-                }
                 if let brand = item.brand {
                     Text(brand)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .padding(.horizontal)
+                }
+                ProductImagesView(images: item.images) {
+                    // TODO: What does it mean to contribute images to a Favorite item?
                 }
                 let product = DTO.Product(
                     barcode: item.barcode,
@@ -599,6 +565,12 @@ struct FavoriteItemDetailView: View {
                     images: item.images
                 )
                 
+                HStack {
+                    Text("Ingredients").font(.headline)
+                    Spacer()
+                }
+                .padding(.horizontal)
+
                 Text(product.ingredientsListAsString)
                     .padding(.horizontal)
             }

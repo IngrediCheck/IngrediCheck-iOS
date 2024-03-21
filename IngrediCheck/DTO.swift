@@ -142,146 +142,6 @@ class DTO {
             .joined(separator: ", ")
             .capitalized
         }
-        
-        func decoratedIngredientsList2(
-            ingredientRecommendations: [IngredientRecommendation]?
-        ) -> [DecoratedIngredientListFragment] {
-            func annotatedIngredients(ingredients: [Ingredient]) -> [AnnotatedIngredient] {
-                return ingredients.map { i in
-                    let recommendation = ingredientRecommendations?.first { r in
-                        return r.ingredientName.caseInsensitiveCompare(i.name) == .orderedSame
-                    }
-                    if let recommendation {
-                        return AnnotatedIngredient(
-                            name: i.name,
-                            safetyRecommendation: recommendation.safetyRecommendation,
-                            reasoning: recommendation.reasoning,
-                            preference: recommendation.preference,
-                            ingredient: annotatedIngredients(ingredients: i.ingredients)
-                        )
-                    } else {
-                        return AnnotatedIngredient(
-                            name: i.name,
-                            safetyRecommendation: .safe,
-                            reasoning: nil,
-                            preference: nil,
-                            ingredient: annotatedIngredients(ingredients: i.ingredients)
-                        )
-                    }
-                }
-            }
-            func decoratedIngredientListFragments(annotatedIngredients: [AnnotatedIngredient]) -> [DecoratedIngredientListFragment] {
-                var result: [DecoratedIngredientListFragment] = []
-                for (i, ai) in annotatedIngredients.enumerated() {
-                    if ai.ingredient.isEmpty {
-                        var fragment = ai.name.capitalized
-                        if i != (annotatedIngredients.count - 1) {
-                            fragment += ", "
-                        }
-                        result.append(DecoratedIngredientListFragment(
-                            fragment: fragment,
-                            safetyRecommendation: ai.safetyRecommendation,
-                            reasoning: ai.reasoning,
-                            preference: ai.preference
-                        ))
-                    } else {
-                        result.append(contentsOf: [
-                            DecoratedIngredientListFragment(
-                                fragment: ai.name.capitalized + " ",
-                                safetyRecommendation: ai.safetyRecommendation,
-                                reasoning: ai.reasoning,
-                                preference: ai.preference
-                            ),
-                            DecoratedIngredientListFragment(
-                                fragment: "(",
-                                safetyRecommendation: .none,
-                                reasoning: nil,
-                                preference: nil
-                            )
-                        ])
-                        var subFragments = decoratedIngredientListFragments(annotatedIngredients: ai.ingredient)
-                        let suffix = (i == annotatedIngredients.count - 1) ? ")" : "), "
-                        let lastFragment = DecoratedIngredientListFragment(
-                            fragment: subFragments.last!.fragment + suffix,
-                            safetyRecommendation: subFragments.last!.safetyRecommendation,
-                            reasoning: subFragments.last?.reasoning,
-                            preference: subFragments.last?.preference
-                        )
-                        subFragments[subFragments.count - 1] = lastFragment
-                        result.append(contentsOf: subFragments)
-                    }
-                }
-                return result
-            }
-            func splitStringPreservingSpaces(_ input: String) -> [String] {
-                var result = input.split(separator: " ", omittingEmptySubsequences: true).map { String($0) + " " }
-
-                if let last = result.last, input.last != " " {
-                    result[result.count - 1] = last.trimmingCharacters(in: .whitespaces)
-                }
-
-                return result
-            }
-            func splitDecoratedFragmentsIfNeeded(decoratedFragments: [DecoratedIngredientListFragment]) -> [DecoratedIngredientListFragment] {
-                var result: [DecoratedIngredientListFragment] = []
-                for fragment in decoratedFragments {
-                    if case .safe = fragment.safetyRecommendation {
-                        for word in splitStringPreservingSpaces(fragment.fragment) {
-                            result.append(DecoratedIngredientListFragment(
-                                fragment: word,
-                                safetyRecommendation: .safe,
-                                reasoning: nil,
-                                preference: nil
-                            ))
-                        }
-                    } else {
-                        result.append(fragment)
-                    }
-                }
-                return result
-            }
-            let annotatedIngredients = annotatedIngredients(ingredients: self.ingredients)
-            let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
-            return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
-        }
-
-        func decoratedIngredientsList(
-            ingredientRecommendations: [IngredientRecommendation]?
-        ) -> AttributedString {
-            var attributedString = AttributedString(ingredientsListAsString)
-            
-            guard let ingredientRecommendations = ingredientRecommendations else {
-                return attributedString
-            }
-            
-            for recommendation in ingredientRecommendations {
-                let color: Color
-                switch recommendation.safetyRecommendation {
-                case .maybeUnsafe:
-                    color = .orange
-                case .definitelyUnsafe:
-                    color = .red
-                default:
-                    color = .black
-                }
-                
-                // Note: I could not find a straightforward Api to find all matches of
-                // a substring in an AttributedString, so using this convoluted approach.
-                var tempAttributedString = AttributedString()
-                while let range = attributedString.range(of: recommendation.ingredientName, options: .caseInsensitive) {
-                    let prefix = attributedString[..<range.lowerBound]
-                    var ingredientName = attributedString[range]
-                    ingredientName.foregroundColor = color
-                    tempAttributedString.append(prefix)
-                    tempAttributedString.append(ingredientName)
-                    attributedString = AttributedString(attributedString[range.upperBound...])
-                }
-                tempAttributedString.append(attributedString)
-                attributedString = tempAttributedString
-            }
-            
-            return attributedString
-        }
 
         func calculateMatch(
             ingredientRecommendations: [IngredientRecommendation]
@@ -336,5 +196,108 @@ class DTO {
         var reasons: [String]?
         var note: String?
         var images: [ImageInfo]?
+    }
+            
+    static func decoratedIngredientsList(
+        ingredients: [Ingredient],
+        ingredientRecommendations: [IngredientRecommendation]?
+    ) -> [DecoratedIngredientListFragment] {
+        func annotatedIngredients(ingredients: [Ingredient]) -> [AnnotatedIngredient] {
+            return ingredients.map { i in
+                let recommendation = ingredientRecommendations?.first { r in
+                    return r.ingredientName.caseInsensitiveCompare(i.name) == .orderedSame
+                }
+                if let recommendation {
+                    return AnnotatedIngredient(
+                        name: i.name,
+                        safetyRecommendation: recommendation.safetyRecommendation,
+                        reasoning: recommendation.reasoning,
+                        preference: recommendation.preference,
+                        ingredient: annotatedIngredients(ingredients: i.ingredients)
+                    )
+                } else {
+                    return AnnotatedIngredient(
+                        name: i.name,
+                        safetyRecommendation: .safe,
+                        reasoning: nil,
+                        preference: nil,
+                        ingredient: annotatedIngredients(ingredients: i.ingredients)
+                    )
+                }
+            }
+        }
+        func decoratedIngredientListFragments(annotatedIngredients: [AnnotatedIngredient]) -> [DecoratedIngredientListFragment] {
+            var result: [DecoratedIngredientListFragment] = []
+            for (i, ai) in annotatedIngredients.enumerated() {
+                if ai.ingredient.isEmpty {
+                    var fragment = ai.name.capitalized
+                    if i != (annotatedIngredients.count - 1) {
+                        fragment += ", "
+                    }
+                    result.append(DecoratedIngredientListFragment(
+                        fragment: fragment,
+                        safetyRecommendation: ai.safetyRecommendation,
+                        reasoning: ai.reasoning,
+                        preference: ai.preference
+                    ))
+                } else {
+                    result.append(contentsOf: [
+                        DecoratedIngredientListFragment(
+                            fragment: ai.name.capitalized + " ",
+                            safetyRecommendation: ai.safetyRecommendation,
+                            reasoning: ai.reasoning,
+                            preference: ai.preference
+                        ),
+                        DecoratedIngredientListFragment(
+                            fragment: "(",
+                            safetyRecommendation: .none,
+                            reasoning: nil,
+                            preference: nil
+                        )
+                    ])
+                    var subFragments = decoratedIngredientListFragments(annotatedIngredients: ai.ingredient)
+                    let suffix = (i == annotatedIngredients.count - 1) ? ")" : "), "
+                    let lastFragment = DecoratedIngredientListFragment(
+                        fragment: subFragments.last!.fragment + suffix,
+                        safetyRecommendation: subFragments.last!.safetyRecommendation,
+                        reasoning: subFragments.last?.reasoning,
+                        preference: subFragments.last?.preference
+                    )
+                    subFragments[subFragments.count - 1] = lastFragment
+                    result.append(contentsOf: subFragments)
+                }
+            }
+            return result
+        }
+        func splitStringPreservingSpaces(_ input: String) -> [String] {
+            var result = input.split(separator: " ", omittingEmptySubsequences: true).map { String($0) + " " }
+
+            if let last = result.last, input.last != " " {
+                result[result.count - 1] = last.trimmingCharacters(in: .whitespaces)
+            }
+
+            return result
+        }
+        func splitDecoratedFragmentsIfNeeded(decoratedFragments: [DecoratedIngredientListFragment]) -> [DecoratedIngredientListFragment] {
+            var result: [DecoratedIngredientListFragment] = []
+            for fragment in decoratedFragments {
+                if case .safe = fragment.safetyRecommendation {
+                    for word in splitStringPreservingSpaces(fragment.fragment) {
+                        result.append(DecoratedIngredientListFragment(
+                            fragment: word,
+                            safetyRecommendation: .safe,
+                            reasoning: nil,
+                            preference: nil
+                        ))
+                    }
+                } else {
+                    result.append(fragment)
+                }
+            }
+            return result
+        }
+        let annotatedIngredients = annotatedIngredients(ingredients: ingredients)
+        let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
+        return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
     }
 }
