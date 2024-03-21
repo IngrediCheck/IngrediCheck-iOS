@@ -1,5 +1,14 @@
 import SwiftUI
 
+struct BulletView: View {
+    var body: some View {
+        Image(systemName: "circle.fill")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 10, height: 10)
+    }
+}
+
 struct HomeTab: View {
     @Environment(UserPreferences.self) var userPreferences
     @State private var newPreference: String = ""
@@ -33,12 +42,21 @@ struct HomeTab: View {
                 List {
                     if userPreferences.preferences.isEmpty && !isFocused {
                         ForEach(preferenceExamples.preferences, id: \.self) { preference in
-                            Label(preference, systemImage: "hand.point.right")
-                                .foregroundStyle(.secondary)
+                            Label {
+                                Text(preference)
+                            } icon: {
+                                BulletView()
+                            }
+                            .foregroundStyle(.secondary)
                         }
                     } else {
                         ForEach(userPreferences.preferences, id: \.self) { preference in
-                            Label(preference, systemImage: "hand.point.right")
+                            Label {
+                                Text(preference)
+                            } icon: {
+                                BulletView()
+                                .foregroundStyle(.paletteAccent)
+                            }
                         }
                         .onDelete { offsets in
                             userPreferences.preferences.remove(atOffsets: offsets)
