@@ -11,6 +11,7 @@
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
 		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
 		390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CAE2BACC50D009081AD /* ProductImagesView.swift */; };
+		390F0D442BAE0D44009081AD /* SwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0D432BAE0D44009081AD /* SwiftUIView.swift */; };
 		392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF42B72CB0C00166CF1 /* LoggedInRootView.swift */; };
 		392D9BF72B72CC8A00166CF1 /* HomeTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF62B72CC8A00166CF1 /* HomeTab.swift */; };
 		392D9BF92B72CCA200166CF1 /* CheckTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF82B72CCA200166CF1 /* CheckTab.swift */; };
@@ -48,6 +49,7 @@
 		038BC3CAB05638A45E54E91B /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
+		390F0D432BAE0D44009081AD /* SwiftUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIView.swift; sourceTree = "<group>"; };
 		392D9BF42B72CB0C00166CF1 /* LoggedInRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggedInRootView.swift; sourceTree = "<group>"; };
 		392D9BF62B72CC8A00166CF1 /* HomeTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTab.swift; sourceTree = "<group>"; };
 		392D9BF82B72CCA200166CF1 /* CheckTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckTab.swift; sourceTree = "<group>"; };
@@ -126,6 +128,7 @@
 				392D9C0B2B75500000166CF1 /* CapsuleWithDivider.swift */,
 				397DA1D82B7C153100BFB26F /* FeedbackView.swift */,
 				390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */,
+				390F0D432BAE0D44009081AD /* SwiftUIView.swift */,
 			);
 			path = Lib;
 			sourceTree = "<group>";
@@ -365,6 +368,7 @@
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
 				392D9BFD2B72CCD300166CF1 /* SettingsTab.swift in Sources */,
+				390F0D442BAE0D44009081AD /* SwiftUIView.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,

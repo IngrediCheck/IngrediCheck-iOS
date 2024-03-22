@@ -19,12 +19,12 @@ struct HomeTab: View {
     var body: some View {
         NavigationStack {
             VStack {
-                TextField(preferenceExamples.placeholder, text: $newPreference)
+                TextField(preferenceExamples.placeholder, text: $newPreference, axis: .vertical)
                     .padding()
                     .background(.ultraThinMaterial, in: .rect(cornerRadius: 10))
                     .padding()
                     .focused(self.$isFocused)
-                    .onSubmit {
+                    .onEnter($of: $newPreference) {
                         if !newPreference.isEmpty {
                             withAnimation {
                                 userPreferences.preferences.insert(newPreference, at: 0)
