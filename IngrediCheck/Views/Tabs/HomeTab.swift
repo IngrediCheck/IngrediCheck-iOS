@@ -12,24 +12,63 @@ struct BulletView: View {
 struct HomeTab: View {
     @Environment(UserPreferences.self) var userPreferences
     @State private var newPreference: String = ""
+    @State private var inEditPreference: String? = nil
     @State private var placeholder: String = "Add your preference here"
     @State private var preferenceExamples = PreferenceExamples()
     @FocusState var isFocused: Bool
+    @State private var indexOfCurrentlyEditedPreference: Int = 0
 
     var body: some View {
         NavigationStack {
             VStack {
                 TextField(preferenceExamples.placeholder, text: $newPreference, axis: .vertical)
                     .padding()
+                    .padding(.trailing)
                     .background(.ultraThinMaterial, in: .rect(cornerRadius: 10))
                     .padding()
                     .focused(self.$isFocused)
-                    .onEnter($of: $newPreference) {
+                    .overlay(
+                        HStack {
+                            if !newPreference.isEmpty {
+                                Button(action: {
+                                    newPreference = ""
+                                }) {
+                                    Image(systemName: "multiply.circle.fill")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                        .padding()
+                        .padding(.vertical)
+                        .padding(.horizontal, 7)
+                        ,
+                        alignment: .topTrailing
+                    )
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button(action: {
+                                if let inEditPreference {
+                                    userPreferences.preferences.insert(inEditPreference, at: indexOfCurrentlyEditedPreference)
+                                    newPreference = ""
+                                }
+                                inEditPreference = nil
+                                indexOfCurrentlyEditedPreference = 0
+                                isFocused = false
+                            }, label: {
+                                Text("Cancel")
+                                    .fontWeight(.bold)
+                            })
+                        }
+                    }
+                    .onEnter($of: $newPreference, isFocused: $isFocused) {
                         if !newPreference.isEmpty {
                             withAnimation {
-                                userPreferences.preferences.insert(newPreference, at: 0)
+                                userPreferences.preferences.insert(newPreference, at: indexOfCurrentlyEditedPreference)
+                                newPreference = ""
                             }
-                            newPreference = ""
+                            indexOfCurrentlyEditedPreference = 0
+                            inEditPreference = nil
                         }
                     }
                     .onChange(of: isFocused) { oldValue, newValue in
@@ -61,9 +100,30 @@ struct HomeTab: View {
                                 BulletView()
                                 .foregroundStyle(.paletteAccent)
                             }
-                        }
-                        .onDelete { offsets in
-                            userPreferences.preferences.remove(atOffsets: offsets)
+                            .contextMenu {
+                                Button(action: {
+                                    UIPasteboard.general.string = preference
+                                }) {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                }
+                                Button {
+                                    print("edit tapped")
+                                    indexOfCurrentlyEditedPreference =
+                                        userPreferences.preferences.firstIndex(of: preference)!
+                                    userPreferences.preferences.remove(at: indexOfCurrentlyEditedPreference)
+                                    inEditPreference = preference
+                                    newPreference = preference
+                                    isFocused = true
+                                } label: {
+                                    Label("Edit", systemImage: "square.and.pencil")
+                                }
+                                Button(role: .destructive) {
+                                    print("delete tapped")
+                                    userPreferences.preferences.removeAll { $0 == preference }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -73,9 +133,6 @@ struct HomeTab: View {
             .animation(.linear, value: isFocused)
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Your Dietary Preferences")
-            .gesture(TapGesture().onEnded {
-                isFocused = false
-            })
             .onAppear {
                 if userPreferences.preferences.isEmpty {
                     preferenceExamples.startAnimatingExamples()
