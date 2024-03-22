@@ -13,7 +13,7 @@ import SwiftUI
     private static let inputPrompt = "Input your preference here"
     
     private static let examples = [
-        "Tap here to add your preferences",
+        "Tap here to add a preference",
         "Avoid Gluten",
         "No Palm oil for me",
         "No animal products, but eggs & dairy are ok",
