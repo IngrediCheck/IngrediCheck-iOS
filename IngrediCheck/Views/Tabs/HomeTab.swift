@@ -100,6 +100,7 @@ struct HomeTab: View {
                                 BulletView()
                                 .foregroundStyle(.paletteAccent)
                             }
+                            .listRowSeparatorTint(.paletteAccent)
                             .contextMenu {
                                 Button(action: {
                                     UIPasteboard.general.string = preference
