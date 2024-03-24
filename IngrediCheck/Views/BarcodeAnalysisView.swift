@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftUIFlowLayout
 import SimpleToast
+import BackgroundRemoval
 
 struct HeaderImage: View {
     let imageLocation: DTO.ImageLocationInfo
@@ -16,13 +17,19 @@ struct HeaderImage: View {
         } else {
             ProgressView()
                 .task {
-                    if let image = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
+                    if let image = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium),
+                        let processedImage = removeBackground(image: image) {
                         DispatchQueue.main.async {
-                            self.image = image
+                            self.image = processedImage
                         }
                     }
                 }
         }
+    }
+    
+    private func removeBackground(image: UIImage) -> UIImage? {
+        let backgroundRemoval = BackgroundRemoval()
+        return try? backgroundRemoval.removeBackground(image: image)
     }
 }
 

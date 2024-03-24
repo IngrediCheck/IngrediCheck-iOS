@@ -23,6 +23,7 @@
 		392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */; };
 		393461CE2B93777200695FE5 /* FileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393461CD2B93777200695FE5 /* FileCache.swift */; };
 		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
+		395C2AA02BB09616005FE0BD /* BackgroundRemoval in Frameworks */ = {isa = PBXBuildFile; productRef = 395C2A9F2BB09616005FE0BD /* BackgroundRemoval */; };
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
 		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
 		397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */; };
@@ -84,6 +85,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				395C2AA02BB09616005FE0BD /* BackgroundRemoval in Frameworks */,
 				397C85F52B6B536100FB9DAD /* Supabase in Frameworks */,
 				397C85F32B6B536100FB9DAD /* Storage in Frameworks */,
 				390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */,
@@ -230,6 +232,7 @@
 				397C85F72B6B537600FB9DAD /* KeychainSwift */,
 				390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */,
 				390F0CAC2BACBF14009081AD /* SimpleToast */,
+				395C2A9F2BB09616005FE0BD /* BackgroundRemoval */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -264,6 +267,7 @@
 				397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */,
 				390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */,
 				390F0CAB2BACBF14009081AD /* XCRemoteSwiftPackageReference "SimpleToast" */,
+				395C2A9E2BB09616005FE0BD /* XCRemoteSwiftPackageReference "BackgroundRemoval" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -608,6 +612,14 @@
 				minimumVersion = 0.8.1;
 			};
 		};
+		395C2A9E2BB09616005FE0BD /* XCRemoteSwiftPackageReference "BackgroundRemoval" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Ezaldeen99/BackgroundRemoval.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		397C85E92B6B536100FB9DAD /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -636,6 +648,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 390F0CAB2BACBF14009081AD /* XCRemoteSwiftPackageReference "SimpleToast" */;
 			productName = SimpleToast;
+		};
+		395C2A9F2BB09616005FE0BD /* BackgroundRemoval */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 395C2A9E2BB09616005FE0BD /* XCRemoteSwiftPackageReference "BackgroundRemoval" */;
+			productName = BackgroundRemoval;
 		};
 		397C85EA2B6B536100FB9DAD /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
