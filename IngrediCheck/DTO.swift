@@ -111,7 +111,7 @@ class DTO {
         private func productHasIngredient(ingredientName: String) -> Bool {
             func inner(ingredients: [Ingredient]) -> Bool {
                 return ingredients.contains { i in
-                    if i.name.caseInsensitiveCompare(ingredientName) == .orderedSame {
+                    if i.name.localizedCaseInsensitiveContains(ingredientName) {
                         return true
                     }
                     return inner(ingredients: i.ingredients)
@@ -205,7 +205,7 @@ class DTO {
         func annotatedIngredients(ingredients: [Ingredient]) -> [AnnotatedIngredient] {
             return ingredients.map { i in
                 let recommendation = ingredientRecommendations?.first { r in
-                    return r.ingredientName.caseInsensitiveCompare(i.name) == .orderedSame
+                    return i.name.localizedCaseInsensitiveContains(r.ingredientName)
                 }
                 if let recommendation {
                     return AnnotatedIngredient(
