@@ -1,25 +1,65 @@
 import SwiftUI
 
 struct SettingsSheet: View {
+    
     @Environment(UserPreferences.self) var userPreferences
     @Environment(\.dismiss) var dismiss
+    @Environment(AppState.self) var appState
+    
     var body: some View {
         @Bindable var userPreferences = userPreferences
         NavigationStack {
-            VStack {
-                Form {
-                    Section {
-                        Picker("OCR Engine", selection: $userPreferences.ocrModel) {
-                            Text("iOS").tag(OcrModel.iOSBuiltIn)
-                            Text("Google").tag(OcrModel.googleMLKit)
-                        }
+            Form {
+                /*
+                Section {
+                    Picker("OCR Engine", selection: $userPreferences.ocrModel) {
+                        Text("iOS").tag(OcrModel.iOSBuiltIn)
+                        Text("Google").tag(OcrModel.googleMLKit)
                     }
                 }
-                Text("App Version \(appVersion).(\(buildNumber))")
-                    .font(.footnote)
-                    .padding(.bottom, 10)
-                Divider()
+                */
+                Section("About") {
+                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                        Label {
+                            Text("About me")
+                        } icon: {
+                            Image(systemName: "person.circle")
+                        }
+                    }
+                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                        Label {
+                            Text("Help")
+                            // todo
+                        } icon: {
+                            Image(systemName: "questionmark.circle")
+                        }
+                    }
+                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                        Label {
+                            Text("Terms of Use")
+                            // todo
+                        } icon: {
+                            Image(systemName: "book.pages")
+                        }
+                    }
+                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                        Label {
+                            Text("Privacy Policy")
+                            // todo
+                        } icon: {
+                            Image(systemName: "lock")
+                        }
+                    }
+                    Label {
+                        Text("IngrediCheck for iOS \(appVersion).(\(buildNumber))")
+                    } icon: {
+                        Image(systemName: "app")
+                    }
+                }
             }
+            .navigationDestination(for: URL.self, destination: { url in
+                WebView(url: url)
+            })
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("SETTINGS")
             .toolbar {
