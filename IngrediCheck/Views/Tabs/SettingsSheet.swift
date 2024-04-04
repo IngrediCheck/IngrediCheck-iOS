@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SettingsTab: View {
+struct SettingsSheet: View {
     @Environment(UserPreferences.self) var userPreferences
     var body: some View {
         @Bindable var userPreferences = userPreferences
@@ -43,7 +43,7 @@ struct SettingsTab: View {
 @MainActor struct SettingsTabContainer: View {
     @State private var userPreferences = UserPreferences()
     var body: some View {
-        SettingsTab()
+        SettingsSheet()
             .environment(userPreferences)
     }
 }

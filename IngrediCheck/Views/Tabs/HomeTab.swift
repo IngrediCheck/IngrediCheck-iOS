@@ -11,6 +11,7 @@ struct BulletView: View {
 
 struct HomeTab: View {
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(AppState.self) var appState
     @State private var newPreference: String = ""
     @State private var inEditPreference: String? = nil
     @State private var placeholder: String = "Add your preference here"
@@ -145,8 +146,9 @@ struct HomeTab: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        // TODO
+                        appState.activeSheet = .settings
                     }, label: {
+//                        Image(systemName: appState.activeSheet == .settings ? "gearshape.fill" : "gearshape")
                         Image(systemName: "gearshape")
                     })
                 }

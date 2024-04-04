@@ -6,7 +6,6 @@ enum TabScreen: Hashable, Identifiable, CaseIterable {
     case home
     case check
     case history
-    case settings
 
     var id: TabScreen { self }
 }
@@ -22,8 +21,6 @@ extension TabScreen {
             Label("Check", systemImage: "barcode.viewfinder")
         case .history:
             Label("History", systemImage: "clock.arrow.circlepath")
-        case .settings:
-            Label("Settings", systemImage: "gearshape.fill")
         }
     }
     
@@ -36,8 +33,6 @@ extension TabScreen {
             CheckTab()
         case .history:
             HistoryTab()
-        case .settings:
-            SettingsTab()
         }
     }
 }
@@ -45,11 +40,14 @@ extension TabScreen {
 enum Sheets: Identifiable {
 
     case feedback(FeedbackConfig)
+    case settings
 
     var id: String {
         switch self {
         case .feedback:
             return "feedback"
+        case .settings:
+            return "settings"
         }
     }
 }
@@ -108,6 +106,9 @@ struct HistoryTabState {
                     onSubmit: feedbackConfig.onSubmit
                 )
                 .environment(userPreferences)
+            case .settings:
+                SettingsSheet()
+                    .environment(userPreferences)
             }
         }
     }
