@@ -22,11 +22,22 @@ struct HomeTab: View {
         NavigationStack {
             VStack {
                 TextField(preferenceExamples.placeholder, text: $newPreference, axis: .vertical)
+                    .focused(self.$isFocused)
                     .padding()
                     .padding(.trailing)
-                    .background(.ultraThinMaterial, in: .rect(cornerRadius: 10))
-                    .padding()
-                    .focused(self.$isFocused)
+                    .background {
+                        Group {
+                            if isFocused {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.clear)
+                                    .stroke(Color.paletteAccent, lineWidth: 0.75)
+                                    .shadow(color: Color.paletteAccent.opacity(1), radius: 20)
+                            } else {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Material.ultraThin)
+                            }
+                        }
+                    }
                     .overlay(
                         HStack {
                             if !newPreference.isEmpty {
@@ -38,12 +49,12 @@ struct HomeTab: View {
                                 }
                             }
                         }
-                        .padding()
                         .padding(.vertical)
                         .padding(.horizontal, 7)
                         ,
                         alignment: .topTrailing
                     )
+                    .padding()
                     .toolbar {
                         ToolbarItemGroup(placement: .keyboard) {
                             Spacer()
@@ -130,6 +141,15 @@ struct HomeTab: View {
                 }
                 .listStyle(.plain)
                 Divider()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        // TODO
+                    }, label: {
+                        Image(systemName: "gearshape")
+                    })
+                }
             }
             .animation(.linear, value: isFocused)
             .navigationBarTitleDisplayMode(.inline)
