@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsSheet: View {
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(\.dismiss) var dismiss
     var body: some View {
         @Bindable var userPreferences = userPreferences
         NavigationStack {
@@ -21,6 +22,17 @@ struct SettingsSheet: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("SETTINGS")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.gray)
+                    }
+
+                }
+            }
         }
     }
     
