@@ -161,7 +161,6 @@ struct SearchableScanHistoryView: View {
                                 systemImage: "tray",
                                 description: Text("A list of Packaged Food Items you have Scanned in the past will show up here.")
                             )
-                            Divider()
                         }
                     }
                 }
@@ -170,7 +169,6 @@ struct SearchableScanHistoryView: View {
                     Spacer()
                     ProgressView()
                     Spacer()
-                    Divider()
                 }
             }
         }
@@ -460,7 +458,6 @@ struct SearchableFavoritesView: View {
                                 systemImage: "star",
                                 description: Text("You Favorite Packaged Food Items will show up here.")
                             )
-                            Divider()
                         }
                     }
                 }
@@ -469,7 +466,6 @@ struct SearchableFavoritesView: View {
                     Spacer()
                     ProgressView()
                     Spacer()
-                    Divider()
                 }
             }
         }
