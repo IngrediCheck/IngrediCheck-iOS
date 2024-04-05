@@ -25,6 +25,7 @@
 		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
 		3976C41B2BBEE1750026991A /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C41A2BBEE1750026991A /* SafariView.swift */; };
 		3976C41D2BBF12250026991A /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C41C2BBF12250026991A /* WebView.swift */; };
+		3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */; };
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
 		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
 		397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */; };
@@ -66,6 +67,7 @@
 		3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelAnalysisView.swift; sourceTree = "<group>"; };
 		3976C41A2BBEE1750026991A /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		3976C41C2BBF12250026991A /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreeDotsIndexView.swift; sourceTree = "<group>"; };
 		397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView.swift; sourceTree = "<group>"; };
 		397C85DA2B686DF000FB9DAD /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				390F0D432BAE0D44009081AD /* View+Extensions.swift */,
 				3976C41A2BBEE1750026991A /* SafariView.swift */,
 				3976C41C2BBF12250026991A /* WebView.swift */,
+				3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */,
 			);
 			path = Lib;
 			sourceTree = "<group>";
@@ -367,6 +370,7 @@
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */,
+				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,
 				390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */,
 				392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */,

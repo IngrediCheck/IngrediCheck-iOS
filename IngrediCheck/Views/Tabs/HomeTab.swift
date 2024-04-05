@@ -25,7 +25,7 @@ struct BulletView: View {
             VStack {
                 textInputField
                 if userPreferences.preferences.isEmpty && !isFocused {
-                    preferenceExamplesView
+                    emptyView
                 } else {
                     preferenceListView
                 }
@@ -38,6 +38,50 @@ struct BulletView: View {
             .animation(.linear, value: isFocused)
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Your Dietary Preferences")
+        }
+    }
+
+    @State private var currentTabViewIndex = 0
+
+    private var emptyView: some View {
+        VStack {
+            VStack {
+                Image("EmptyPreferenceList")
+                    .resizable()
+                    .scaledToFit()
+                Text("You don't have any dietary preferences entered yet")
+                    .font(.subheadline)
+                    .fontWeight(.light)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.gray)
+                    .padding(.top)
+            }
+            .frame(width: UIScreen.main.bounds.width / 2)
+            Spacer()
+            VStack(spacing: 8) {
+                Text("Try the following")
+                    .foregroundStyle(.gray)
+                TabView(selection: $currentTabViewIndex.animation()) {
+                    ForEach(0 ..< PreferenceExamples.examples.count, id:\.self) { index in
+                        Text("\"" + PreferenceExamples.examples[index] + ".\"")
+                            .multilineTextAlignment(.leading)
+                            .foregroundStyle(.paletteAccent)
+                    }
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .frame(height: UIScreen.main.bounds.width / 3)
+                .background {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.paletteAccent.opacity(0.1))
+                }
+                .padding(.horizontal)
+                
+                ThreeDotsIndexView(
+                    numberOfPages: PreferenceExamples.examples.count,
+                    currentIndex: currentTabViewIndex
+                )
+            }
+            Spacer()
         }
     }
     
@@ -59,7 +103,7 @@ struct BulletView: View {
                     if isFocused {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.clear)
-                            .stroke(Color.paletteAccent, lineWidth: 0.75)
+                            .stroke(Color.paletteAccent, lineWidth: 1)
                             .shadow(color: Color.paletteAccent.opacity(1), radius: 20)
                     } else {
                         RoundedRectangle(cornerRadius: 8)
