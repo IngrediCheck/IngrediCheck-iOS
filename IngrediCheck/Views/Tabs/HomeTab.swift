@@ -61,12 +61,12 @@ struct BulletView: View {
             .background {
                 Group {
                     if isFocused {
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 8)
                             .fill(Color.clear)
                             .stroke(Color.paletteAccent, lineWidth: 0.75)
                             .shadow(color: Color.paletteAccent.opacity(1), radius: 20)
                     } else {
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 8)
                             .fill(Material.ultraThin)
                     }
                 }
