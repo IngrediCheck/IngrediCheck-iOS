@@ -151,6 +151,7 @@ struct BarcodeAnalysisView: View {
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
+    @Environment(CheckTabState.self) var checkTabState
     
     @State private var viewModel: BarcodeAnalysisViewModel?
     @State private var showToast: Bool = false
@@ -172,7 +173,7 @@ struct BarcodeAnalysisView: View {
             
             Button(action: {
                 userPreferencesBindable.captureType = .ingredients
-                _ = appState.checkTabState.routes.popLast()
+                _ = checkTabState.routes.popLast()
             }, label: {
                 VStack {
                     Image(systemName: "photo.badge.plus")
@@ -234,14 +235,14 @@ struct BarcodeAnalysisView: View {
                                 }
 
                                 ProductImagesView(images: product.images) {
-                                    appState.activeSheet = .feedback(FeedbackConfig(
+                                    checkTabState.feedbackConfig = FeedbackConfig(
                                         feedbackData: $viewModelBindable.feedbackData,
                                         feedbackCaptureOptions: .imagesOnly,
                                         onSubmit: {
                                             showToast.toggle()
                                             viewModel.submitFeedback()
                                         }
-                                    ))
+                                    )
                                 }
                                 
                                 if product.ingredients.isEmpty {
@@ -251,7 +252,7 @@ struct BarcodeAnalysisView: View {
                                         .multilineTextAlignment(.center)
                                     Button(action: {
                                         userPreferencesBindable.captureType = .ingredients
-                                        _ = appState.checkTabState.routes.popLast()
+                                        _ = checkTabState.routes.popLast()
                                     }, label: {
                                         Image(systemName: "photo.badge.plus")
                                             .font(.largeTitle)
@@ -285,11 +286,11 @@ struct BarcodeAnalysisView: View {
                         .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
                             switch newRating {
                             case -1:
-                                appState.activeSheet = .feedback(FeedbackConfig(
+                                checkTabState.feedbackConfig = FeedbackConfig(
                                     feedbackData: $viewModelBindable.feedbackData,
                                     feedbackCaptureOptions: .feedbackAndImages,
                                     onSubmit: { viewModel.submitFeedback() }
-                                ))
+                                )
                             default:
                                 viewModel.submitFeedback()
                             }
@@ -299,11 +300,11 @@ struct BarcodeAnalysisView: View {
                                 if viewModel.ingredientRecommendations != nil {
                                     if !product.images.isEmpty && !product.ingredients.isEmpty {
                                         Button(action: {
-                                            appState.activeSheet = .feedback(FeedbackConfig(
+                                            checkTabState.feedbackConfig = FeedbackConfig(
                                                 feedbackData: $viewModelBindable.feedbackData,
                                                 feedbackCaptureOptions: .imagesOnly,
                                                 onSubmit: { viewModel.submitFeedback() }
-                                            ))
+                                            )
                                         }, label: {
                                             Image(systemName: "photo.badge.plus")
                                                 .font(.subheadline)

@@ -17,7 +17,7 @@ enum DataScannerAccessStatusType {
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
     @State private var showScanner = true
 
-    @Environment(AppState.self) var appState
+    @Environment(CheckTabState.self) var checkTabState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,8 +67,8 @@ enum DataScannerAccessStatusType {
     }
     
     private var mainView: some View {
-        @Bindable var appStateBindable = appState
-        return DataScannerView(routes: $appStateBindable.checkTabState.routes, barcode: $barcode)
+        @Bindable var checkTabState = checkTabState
+        return DataScannerView(routes: $checkTabState.routes, barcode: $barcode)
             .aspectRatio(3/4, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(

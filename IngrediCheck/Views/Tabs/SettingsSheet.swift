@@ -18,6 +18,9 @@ struct SettingsSheet: View {
                     }
                 }
                 */
+                Section("Settings") {
+                    Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
+                }
                 Section("About") {
                     NavigationLink(value: URL(string: "https://wikipedia.org")!) {
                         Label {

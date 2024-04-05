@@ -271,11 +271,11 @@ struct HistoryItemDetailView: View {
                         .padding(.horizontal)
                 }
                 ProductImagesView(images: item.images) {
-                    appState.activeSheet = .feedback(FeedbackConfig(
+                    appState.feedbackConfig = FeedbackConfig(
                         feedbackData: $feedbackData,
                         feedbackCaptureOptions: .imagesOnly,
                         onSubmit: { submitFeedback() }
-                    ))
+                    )
                 }
                 if item.ingredients.isEmpty {
                     Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
@@ -284,8 +284,7 @@ struct HistoryItemDetailView: View {
                         .multilineTextAlignment(.center)
                     Button(action: {
                         userPreferencesBindable.captureType = .ingredients
-                        appState.checkTabState.routes = []
-                        appState.activeTab = .check
+                        appState.activeSheet = .scan
                     }, label: {
                         Image(systemName: "photo.badge.plus")
                             .font(.largeTitle)
@@ -317,11 +316,11 @@ struct HistoryItemDetailView: View {
         .onChange(of: feedbackData.rating) { oldRating, newRating in
             switch newRating {
             case -1:
-                appState.activeSheet = .feedback(FeedbackConfig(
+                appState.feedbackConfig = FeedbackConfig(
                     feedbackData: $feedbackData,
                     feedbackCaptureOptions: .feedbackAndImages,
                     onSubmit: { submitFeedback() }
-                ))
+                )
             default:
                 submitFeedback()
             }
@@ -330,11 +329,11 @@ struct HistoryItemDetailView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if !item.images.isEmpty && !item.ingredients.isEmpty {
                     Button(action: {
-                        appState.activeSheet = .feedback(FeedbackConfig(
+                        appState.feedbackConfig = FeedbackConfig(
                             feedbackData: $feedbackData,
                             feedbackCaptureOptions: .imagesOnly,
                             onSubmit: { submitFeedback() }
-                        ))
+                        )
                     }, label: {
                         Image(systemName: "photo.badge.plus")
                             .font(.subheadline)

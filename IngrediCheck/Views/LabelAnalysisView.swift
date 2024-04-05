@@ -75,6 +75,7 @@ struct LabelAnalysisView: View {
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
+    @Environment(CheckTabState.self) var checkTabState
 
     @State private var viewModel: LabelAnalysisViewModel?
 
@@ -98,8 +99,8 @@ struct LabelAnalysisView: View {
 
                             ProductImagesView(images: product.images) {
                                 Task { @MainActor in
-                                    appState.checkTabState.capturedImages = productImages
-                                    _ = appState.checkTabState.routes.popLast()
+                                    checkTabState.capturedImages = productImages
+                                    _ = checkTabState.routes.popLast()
                                 }
                             }
 
@@ -126,11 +127,11 @@ struct LabelAnalysisView: View {
                     .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
                         switch newRating {
                         case -1:
-                            appState.activeSheet = .feedback(FeedbackConfig(
+                            checkTabState.feedbackConfig = FeedbackConfig(
                                 feedbackData: $viewModelBindable.feedbackData,
                                 feedbackCaptureOptions: .feedbackOnly,
                                 onSubmit: { viewModel.submitFeedback() }
-                            ))
+                            )
                         default:
                             viewModel.submitFeedback()
                         }
@@ -139,8 +140,8 @@ struct LabelAnalysisView: View {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
                                 Button(action: {
-                                    appState.checkTabState.capturedImages = productImages
-                                    _ = appState.checkTabState.routes.popLast()
+                                    checkTabState.capturedImages = productImages
+                                    _ = checkTabState.routes.popLast()
                                 }, label: {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.subheadline)

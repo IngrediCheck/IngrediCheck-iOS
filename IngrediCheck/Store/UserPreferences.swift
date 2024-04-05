@@ -99,4 +99,27 @@ enum OcrModel: String {
             UserPreferences.writeOcrModel(ocrModel: ocrModel)
         }
     }
+    
+    // StartScanningOnAppStart
+    
+    public static let startScanningOnAppStartKey = "config.startScanningOnAppStart"
+    
+    private static func readStartScanningOnAppStart() -> Bool {
+        // Note: UserDefaults.standard.bool returns false if value does not exist,
+        // which is not what we want here.
+        guard let value = UserDefaults.standard.value(forKey: UserPreferences.startScanningOnAppStartKey) else {
+            return true
+        }
+        return value as? Bool ?? true
+    }
+    
+    @ObservationIgnored var startScanningOnAppStart: Bool =
+        UserPreferences.readStartScanningOnAppStart() {
+            didSet {
+                UserDefaults.standard.setValue(
+                    startScanningOnAppStart,
+                    forKey: UserPreferences.startScanningOnAppStartKey
+                )
+            }
+        }
 }

@@ -141,7 +141,6 @@ struct HomeTab: View {
                     }
                 }
                 .listStyle(.plain)
-                Divider()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

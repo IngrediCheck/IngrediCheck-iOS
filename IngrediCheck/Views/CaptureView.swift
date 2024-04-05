@@ -4,19 +4,19 @@ struct CaptureView: View {
     
     @Binding var barcode: String?
     @Environment(UserPreferences.self) var userPreferences
-    @Environment(AppState.self) var appState
+    @Environment(CheckTabState.self) var checkTabState
 
     var body: some View {
         @Bindable var userPreferencesBindable = userPreferences
-        @Bindable var appStateBindable = appState
+        @Bindable var checkTabState = checkTabState
         VStack {
             if userPreferences.captureType == .barcode {
                 BarcodeScannerView(barcode: $barcode)
             } else {
                 ImageCaptureView(
-                    capturedImages: $appStateBindable.checkTabState.capturedImages,
+                    capturedImages: $checkTabState.capturedImages,
                     onSubmit: {
-                        appState.checkTabState.routes.append(.productImages(appState.checkTabState.capturedImages))
+                        checkTabState.routes.append(.productImages(checkTabState.capturedImages))
                     },
                     showClearButton: true,
                     showTitle: false,

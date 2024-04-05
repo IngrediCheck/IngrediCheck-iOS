@@ -21,10 +21,11 @@ enum FeedbackCaptureOptions {
     case imagesOnly
 }
 
-struct FeedbackConfig {
+struct FeedbackConfig : Identifiable {
     let feedbackData: Binding<FeedbackData>
     let feedbackCaptureOptions: FeedbackCaptureOptions
     let onSubmit: () -> Void
+    let id = UUID()
 }
 
 struct FeedbackView: View {

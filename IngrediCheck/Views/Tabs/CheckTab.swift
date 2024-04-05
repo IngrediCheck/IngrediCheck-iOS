@@ -14,22 +14,31 @@ enum CapturedItem: Hashable {
 
 struct CheckTab: View {
     @State private var barcode: String?
-    @Environment(AppState.self) var appState
+    @State private var checkTabState = CheckTabState()
 
     var body: some View {
-        @Bindable var appStateBinding = appState
-        NavigationStack(path: $appStateBinding.checkTabState.routes) {
+        NavigationStack(path: $checkTabState.routes) {
             VStack {
                 CaptureView(barcode: $barcode)
                 Spacer()
-                Divider()
             }
+            .sheet(item: $checkTabState.feedbackConfig) { feedbackConfig in
+                let _ = print("Activating feedback sheet")
+                FeedbackView(
+                    feedbackData: feedbackConfig.feedbackData,
+                    feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
+                    onSubmit: feedbackConfig.onSubmit
+                )
+            }
+            .environment(checkTabState)
             .navigationDestination(for: CapturedItem.self) { item in
                 switch item {
                     case .productImages(let productImages):
                         LabelAnalysisView(productImages: productImages)
+                            .environment(checkTabState)
                     case .barcode:
                         BarcodeAnalysisView(barcode: $barcode)
+                            .environment(checkTabState)
                 }
             }
         }
