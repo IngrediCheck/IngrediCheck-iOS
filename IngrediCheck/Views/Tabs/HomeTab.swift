@@ -32,25 +32,21 @@ struct BulletView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        appState.activeSheet = .settings
-                    }, label: {
-                        Image(systemName: "gearshape")
-                    })
+                    settingsButton
                 }
             }
             .animation(.linear, value: isFocused)
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Your Dietary Preferences")
-            .onAppear {
-                if userPreferences.preferences.isEmpty {
-                    preferenceExamples.startAnimatingExamples()
-                }
-            }
-            .onDisappear {
-                preferenceExamples.stopAnimatingExamples(isFocused: false)
-            }
         }
+    }
+    
+    private var settingsButton: some View {
+        Button(action: {
+            appState.activeSheet = .settings
+        }, label: {
+            Image(systemName: "gearshape")
+        })
     }
     
     private var textInputField: some View {
@@ -115,17 +111,6 @@ struct BulletView: View {
                     inEditPreference = nil
                 }
             }
-            .onChange(of: isFocused) { oldValue, newValue in
-                if newValue {
-                    preferenceExamples.stopAnimatingExamples(isFocused: true)
-                } else {
-                    if userPreferences.preferences.isEmpty {
-                        preferenceExamples.startAnimatingExamples()
-                    } else {
-                        preferenceExamples.stopAnimatingExamples(isFocused: false)
-                    }
-                }
-            }
     }
     
     private var preferenceListView: some View {
@@ -179,6 +164,23 @@ struct BulletView: View {
             }
         }
         .listStyle(.plain)
+        .onAppear {
+            preferenceExamples.startAnimatingExamples()
+        }
+        .onDisappear {
+            preferenceExamples.stopAnimatingExamples(isFocused: false)
+        }
+        .onChange(of: isFocused) { oldValue, newValue in
+            if newValue {
+                preferenceExamples.stopAnimatingExamples(isFocused: true)
+            } else {
+                if userPreferences.preferences.isEmpty {
+                    preferenceExamples.startAnimatingExamples()
+                } else {
+                    preferenceExamples.stopAnimatingExamples(isFocused: false)
+                }
+            }
+        }
     }
 }
 

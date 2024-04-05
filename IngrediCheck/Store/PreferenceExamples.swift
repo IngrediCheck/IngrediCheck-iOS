@@ -3,17 +3,17 @@ import SwiftUI
 
 @Observable class PreferenceExamples {
 
-    @MainActor var placeholder: String = examples[0]
+    @MainActor var placeholder: String = inputPrompt
     @MainActor var preferences: [String] = []
 
     private var exampleIndex = 0
     private var charIndex = 0
     private var timer: Timer?
     
-    private static let inputPrompt = "Input your preference here"
-    
-    private static let examples = [
-        "Tap here to add a preference",
+    public static let inputPrompt =
+        "Enter dietary preference here"
+
+    public static let examples = [
         "Avoid Gluten",
         "No Palm oil for me",
         "No animal products, but eggs & dairy are ok",
@@ -32,30 +32,37 @@ import SwiftUI
         timer = nil
         exampleIndex = 0
         charIndex = 0
-        updatePlaceholder(to: isFocused ? PreferenceExamples.inputPrompt : PreferenceExamples.examples[0])
+        updatePlaceholder(to: PreferenceExamples.inputPrompt)
     }
 
     private func animateExamples() {
-        if exampleIndex >= PreferenceExamples.examples.count {
-            exampleIndex = 0
+
+        var currentExample: String
+
+        if exampleIndex == PreferenceExamples.examples.count {
+            exampleIndex = -1
         }
         
+        if exampleIndex == -1 {
+            currentExample = PreferenceExamples.inputPrompt
+        } else {
+            currentExample = PreferenceExamples.examples[exampleIndex]
+        }
+
         if charIndex == 0 {
             Task { @MainActor in
-                if exampleIndex > 1 {
+                if exampleIndex > 0 {
                     preferences.append(PreferenceExamples.examples[exampleIndex-1])
                 } else {
                     preferences = []
                 }
             }
         }
-        
-        let example = PreferenceExamples.examples[exampleIndex]
 
-        if charIndex <= example.count {
-            let index = example.index(example.startIndex, offsetBy: charIndex)
+        if charIndex <= currentExample.count {
+            let index = currentExample.index(currentExample.startIndex, offsetBy: charIndex)
             charIndex += 1
-            updatePlaceholder(to: String(example[..<index]))
+            updatePlaceholder(to: String(currentExample[..<index]))
             timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
                 self?.animateExamples()
             }
