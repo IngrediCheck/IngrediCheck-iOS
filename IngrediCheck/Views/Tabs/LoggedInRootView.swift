@@ -84,55 +84,8 @@ struct HistoryTabState {
         }
         .tabViewStyle(PageTabViewStyle())
         .toolbar {
-            ToolbarItem(placement: .bottomBar) {
-                HStack {
-                    Spacer()
-
-                    Button(action: {
-                        withAnimation {
-                            appState.activeTab = .home
-                        }
-                    }) {
-                        TabScreen.home.label
-                    }
-                    .foregroundStyle(appState.activeTab == .home ? .paletteAccent : .gray)
-
-                    Spacer()
-                    Spacer()
-
-                    Button(action: {
-                        appState.activeSheet = .scan
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(.paletteAccent)
-                                .frame(width: 60, height: 60)
-
-                            Image(systemName: "barcode.viewfinder")
-                                .resizable()
-                                .scaledToFit()
-                                .padding()
-                                .frame(width: 60, height: 60)
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .offset(y: 8)
-
-                    Spacer()
-                    Spacer()
-
-                    Button(action: {
-                        refreshHistory()
-                        withAnimation {
-                            appState.activeTab = .history
-                        }
-                    }) {
-                        TabScreen.history.label
-                    }
-                    .foregroundStyle(appState.activeTab == .history ? .paletteAccent : .gray)
-                    
-                    Spacer()
-                }
+            ToolbarItemGroup(placement: .bottomBar) {
+                tabButtons
             }
         }
         .onAppear {
@@ -163,6 +116,60 @@ struct HistoryTabState {
         }
     }
     
+    @ViewBuilder
+    private var tabButtons: some View {
+        Spacer()
+        Button(action: {
+            withAnimation {
+                appState.activeTab = .home
+            }
+        }) {
+            Circle()
+                .fill(appState.activeTab == .home ? .paletteAccent.opacity(0.1) : .clear)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: "house")
+                        .foregroundStyle(appState.activeTab == .home ? .paletteAccent : .gray)
+                }
+        }
+        Spacer()
+        Spacer()
+        Button(action: {
+            appState.activeSheet = .scan
+        }) {
+            ZStack {
+                Circle()
+                    .fill(.paletteAccent)
+                    .frame(width: 50, height: 50)
+
+                Image(systemName: "barcode.viewfinder")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(10)
+                    .frame(width: 50, height: 50)
+                    .foregroundColor(.white)
+            }
+        }
+        .offset(y: 5)
+        Spacer()
+        Spacer()
+        Button(action: {
+            refreshHistory()
+            withAnimation {
+                appState.activeTab = .history
+            }
+        }) {
+            Circle()
+                .fill(appState.activeTab == .history ? .paletteAccent.opacity(0.1) : .clear)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: "list.bullet")
+                        .foregroundStyle(appState.activeTab == .history ? .paletteAccent : .gray)
+                }
+        }
+        Spacer()
+    }
+
     private func refreshHistory() {
         Task {
             if let history = try? await webService.fetchHistory() {
