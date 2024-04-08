@@ -54,7 +54,7 @@ enum ValidationResult {
             Spacer()
             switch dp.validationResult {
             case .validating:
-                Text("Validating")
+                Text("Thinking")
                     .foregroundStyle(.paletteAccent)
                 ProgressView()
             case .failure(let string):
@@ -181,7 +181,7 @@ enum ValidationResult {
         }
         .listStyle(.plain)
         .refreshable {
-            dp.populatePreferences()
+            dp.refreshPreferences()
         }
     }
     

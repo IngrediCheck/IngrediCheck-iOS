@@ -1,6 +1,26 @@
 import SwiftUI
 import Foundation
 
+extension UserDefaults {
+
+    static func setDietaryPreferences(_ preferences: [DTO.DietaryPreference]) {
+        let encoder = JSONEncoder()
+        if let encoded = try? encoder.encode(preferences) {
+            UserDefaults.standard.set(encoded, forKey: "DietaryPreferences")
+        }
+    }
+
+    static func restoreDietaryPreferences() -> [DTO.DietaryPreference] {
+        if let savedPreferences = UserDefaults.standard.object(forKey: "DietaryPreferences") as? Data {
+            let decoder = JSONDecoder()
+            if let loadedPreferences = try? decoder.decode([DTO.DietaryPreference].self, from: savedPreferences) {
+                return loadedPreferences
+            }
+        }
+        return []
+    }
+}
+
 @Observable class DietaryPreferences {
 
     @MainActor var preferences: [DTO.DietaryPreference] = []
@@ -16,7 +36,7 @@ import Foundation
     private var task: Task<(), Never>? = nil
 
     init() {
-        populatePreferences()
+        loadPreferences()
     }
     
     @MainActor var asString: String {
@@ -27,14 +47,22 @@ import Foundation
             .joined(separator: "\n")
     }
     
-    public func populatePreferences() {
+    private func loadPreferences() {
+        DispatchQueue.main.async {
+            self.preferences = UserDefaults.restoreDietaryPreferences()
+            self.refreshPreferences()
+        }
+    }
+
+    public func refreshPreferences() {
         Task {
-            await uploadGrandFatheredPreferences()
-            let newPreferences = try? await webService.getDietaryPreferences()
+            await self.uploadGrandFatheredPreferences()
+            let newPreferences = try? await self.webService.getDietaryPreferences()
             if let newPreferences {
                 await MainActor.run {
                     self.preferences = newPreferences
                 }
+                UserDefaults.setDietaryPreferences(newPreferences)
             }
         }
     }
@@ -43,7 +71,7 @@ import Foundation
         let preferencesKey = "userPreferences"
         let preferences = UserDefaults.standard.stringArray(forKey: preferencesKey) ?? []
         do {
-            try await webService.uploadGrandFatheredPreferences(preferences)
+            try await webService.uploadGrandFatheredPreferences(preferences.reversed())
             UserDefaults.standard.removeObject(forKey: preferencesKey)
         } catch {
             // ??
@@ -67,6 +95,7 @@ import Foundation
                     preferences.removeAll { $0 == preference }
                     clientActivityId = UUID().uuidString
                 }
+                UserDefaults.setDietaryPreferences(await preferences)
             } catch {
                 // ??
             }
@@ -79,6 +108,9 @@ import Foundation
         preferences.remove(at: indexOfCurrentlyEditedPreference)
         inEditPreference = preference
         newPreferenceText = preference.text
+        Task {
+            UserDefaults.setDietaryPreferences(preferences)
+        }
     }
     
     @MainActor public func cancelInEditPreference() {
@@ -88,6 +120,9 @@ import Foundation
             indexOfCurrentlyEditedPreference = 0
             self.inEditPreference = nil
             clientActivityId = UUID().uuidString
+            Task {
+                UserDefaults.setDietaryPreferences(preferences)
+            }
         }
     }
     
@@ -132,6 +167,9 @@ import Foundation
                     self.indexOfCurrentlyEditedPreference = 0
                     self.inEditPreference = nil
                     self.clientActivityId = UUID().uuidString
+                    Task {
+                        UserDefaults.setDietaryPreferences(self.preferences)
+                    }
                 }
             }
         } catch {
