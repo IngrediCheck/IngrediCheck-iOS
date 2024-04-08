@@ -76,14 +76,14 @@ struct FlagButton: View {
 
     let barcode: String
     let webService: WebService
-    let userPreferences: UserPreferences
+    let dietaryPreferences: DietaryPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
-    init(_ barcode: String, _ webService: WebService, _ userPreferences: UserPreferences) {
+    init(_ barcode: String, _ webService: WebService, _ dietaryPreferences: DietaryPreferences) {
         self.barcode = barcode
         self.webService = webService
-        self.userPreferences = userPreferences
+        self.dietaryPreferences = dietaryPreferences
         impactFeedback.prepare()
     }
 
@@ -115,7 +115,7 @@ struct FlagButton: View {
             let result =
                 try await webService.fetchIngredientRecommendations(
                     clientActivityId: clientActivityId,
-                    userPreferenceText: userPreferences.asString,
+                    userPreferenceText: dietaryPreferences.asString,
                     barcode: barcode)
 
             await MainActor.run {
@@ -150,6 +150,7 @@ struct BarcodeAnalysisView: View {
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(AppState.self) var appState
     @Environment(CheckTabState.self) var checkTabState
     
@@ -329,7 +330,7 @@ struct BarcodeAnalysisView: View {
             } else {
                 ProgressView()
                     .task {
-                        let newViewModel = BarcodeAnalysisViewModel(barcode!, webService, userPreferences)
+                        let newViewModel = BarcodeAnalysisViewModel(barcode!, webService, dietaryPreferences)
                         Task { await newViewModel.analyze() }
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }

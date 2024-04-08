@@ -26,6 +26,7 @@
 		3976C41B2BBEE1750026991A /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C41A2BBEE1750026991A /* SafariView.swift */; };
 		3976C41D2BBF12250026991A /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C41C2BBF12250026991A /* WebView.swift */; };
 		3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */; };
+		3976C4232BC32ED50026991A /* DietaryPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C4222BC32ED50026991A /* DietaryPreferences.swift */; };
 		397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */; };
 		397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DA2B686DF000FB9DAD /* CaptureView.swift */; };
 		397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */; };
@@ -68,6 +69,7 @@
 		3976C41A2BBEE1750026991A /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		3976C41C2BBF12250026991A /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreeDotsIndexView.swift; sourceTree = "<group>"; };
+		3976C4222BC32ED50026991A /* DietaryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferences.swift; sourceTree = "<group>"; };
 		397C85D82B6858AC00FB9DAD /* ImageCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCaptureView.swift; sourceTree = "<group>"; };
 		397C85DA2B686DF000FB9DAD /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		397C85DC2B687FF700FB9DAD /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
@@ -124,6 +126,7 @@
 				392D9C052B72D58400166CF1 /* UserPreferences.swift */,
 				397DA1D62B7A9BB000BFB26F /* PreferenceExamples.swift */,
 				393461CD2B93777200695FE5 /* FileCache.swift */,
+				3976C4222BC32ED50026991A /* DietaryPreferences.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -379,6 +382,7 @@
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
 				392D9BFD2B72CCD300166CF1 /* SettingsSheet.swift in Sources */,
+				3976C4232BC32ED50026991A /* DietaryPreferences.swift in Sources */,
 				390F0D442BAE0D44009081AD /* View+Extensions.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,

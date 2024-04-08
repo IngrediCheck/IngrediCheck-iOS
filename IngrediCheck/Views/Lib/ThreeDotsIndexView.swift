@@ -27,7 +27,6 @@ struct ThreeDotsIndexView: View {
     }
     
     private func isCurrent(_ dotIndex: Int) -> Bool {
-        let _ = print("CurrentIndex (\(currentIndex)), DotIndex (\(dotIndex))")
         if currentIndex == 0 {
             return dotIndex == 0
         } else if currentIndex == (numberOfPages - 1) {

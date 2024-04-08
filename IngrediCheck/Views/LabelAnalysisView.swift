@@ -5,14 +5,14 @@ import SwiftUI
     
     let productImages: [ProductImage]
     let webService: WebService
-    let userPreferences: UserPreferences
+    let dietaryPreferences: DietaryPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
-    init(_ productImages: [ProductImage], _ webService: WebService, _ userPreferences: UserPreferences) {
+    init(_ productImages: [ProductImage], _ webService: WebService, _ dietaryPreferences: DietaryPreferences) {
         self.productImages = productImages
         self.webService = webService
-        self.userPreferences = userPreferences
+        self.dietaryPreferences = dietaryPreferences
         impactFeedback.prepare()
     }
     
@@ -45,7 +45,7 @@ import SwiftUI
             let result =
                 try await webService.fetchIngredientRecommendations(
                     clientActivityId: clientActivityId,
-                    userPreferenceText: userPreferences.asString)
+                    userPreferenceText: dietaryPreferences.asString)
 
             await MainActor.run {
                 withAnimation {
@@ -74,6 +74,7 @@ struct LabelAnalysisView: View {
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(AppState.self) var appState
     @Environment(CheckTabState.self) var checkTabState
 
@@ -163,7 +164,7 @@ struct LabelAnalysisView: View {
             } else {
                 ProgressView()
                     .task {
-                        let newViewModel = LabelAnalysisViewModel(productImages, webService, userPreferences)
+                        let newViewModel = LabelAnalysisViewModel(productImages, webService, dietaryPreferences)
                         Task { await newViewModel.analyze() }
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }

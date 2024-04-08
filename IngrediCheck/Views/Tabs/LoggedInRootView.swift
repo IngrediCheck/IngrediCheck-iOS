@@ -1,35 +1,9 @@
 
 import SwiftUI
 
-enum TabScreen: Hashable, Identifiable, CaseIterable {
-    
+enum TabScreen {
     case home
     case history
-
-    var id: TabScreen { self }
-}
-
-extension TabScreen {
-    
-    @ViewBuilder
-    var label: some View {
-        switch self {
-        case .home:
-            Label("Home", systemImage: "house")
-        case .history:
-            Label("History", systemImage: "list.bullet")
-        }
-    }
-    
-    @MainActor @ViewBuilder
-    var destination: some View {
-        switch self {
-        case .home:
-            HomeTab()
-        case .history:
-            HistoryTab()
-        }
-    }
 }
 
 enum Sheets: Identifiable {
@@ -76,11 +50,17 @@ struct HistoryTabState {
     @Environment(WebService.self) var webService
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
 
     var body: some View {
         @Bindable var appState = appState
         VStack {
-            appState.activeTab.destination
+            switch (appState.activeTab) {
+            case .home:
+                HomeTab()
+            case .history:
+                HistoryTab()
+            }
         }
         .tabViewStyle(PageTabViewStyle())
         .toolbar {
@@ -91,7 +71,8 @@ struct HistoryTabState {
         .onAppear {
             if userPreferences.startScanningOnAppStart
                &&
-               !userPreferences.preferences.isEmpty {
+                // TODO: preferences may not be updated before onAppear here.
+               !dietaryPreferences.preferences.isEmpty {
                 appState.activeSheet = .scan
             }
         }

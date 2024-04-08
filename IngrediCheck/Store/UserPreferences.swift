@@ -16,24 +16,7 @@ enum OcrModel: String {
 }
 
 @Observable class UserPreferences {
-    @MainActor var preferences: [String] {
-        didSet {
-            savePreferences()
-        }
-    }
-    
-    @MainActor var asString: String {
-        preferences.joined(separator: "\n")
-    }
-    
-    @MainActor init() {
-        preferences = UserDefaults.standard.stringArray(forKey: "userPreferences") ?? []
-    }
-    
-    @MainActor private func savePreferences() {
-        UserDefaults.standard.set(preferences, forKey: "userPreferences")
-    }
-    
+
     // Capture Type
     
     private static let captureTypeKey = "config.lastUsedCaptureType"

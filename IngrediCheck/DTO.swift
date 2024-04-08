@@ -197,7 +197,51 @@ class DTO {
         var note: String?
         var images: [ImageInfo]?
     }
+
+    struct DietaryPreference: Codable, Identifiable, Equatable {
+        let text: String
+        let annotatedText: String
+        let id: Int
+    }
+
+    enum PreferenceValidationResult: Codable {
+
+        case success(DietaryPreference)
+        case failure(explanation: String)
+        
+        enum CodingKeys: String, CodingKey {
+            case result, explanation
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let result = try container.decode(String.self, forKey: .result)
             
+            switch result {
+            case "success":
+                let dietaryPreference = try DietaryPreference(from: decoder)
+                self = .success(dietaryPreference)
+            case "failure":
+                let explanation = try container.decode(String.self, forKey: .explanation)
+                self = .failure(explanation: explanation)
+            default:
+                throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unexpected result value")
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            switch self {
+            case .success(let dietaryPreference):
+                try container.encode("success", forKey: .result)
+                try container.encode(dietaryPreference, forKey: .result)
+            case .failure(let explanation):
+                try container.encode("failure", forKey: .result)
+                try container.encode(explanation, forKey: .explanation)
+            }
+        }
+    }
+
     static func decoratedIngredientsList(
         ingredients: [Ingredient],
         ingredientRecommendations: [IngredientRecommendation]?

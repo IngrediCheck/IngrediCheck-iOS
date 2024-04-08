@@ -14,12 +14,12 @@ import SwiftUI
         "Enter dietary preference here"
 
     public static let examples = [
-        "Avoid Gluten",
-        "No Palm oil for me",
-        "No animal products, but eggs & dairy are ok",
-        "No peanuts but other nuts are ok",
-        "I don't like pine nuts",
-        "I can't stand garlic"
+        "Avoid **Gluten**",
+        "No **Palm oil** for me",
+        "No **animal products**, but **eggs** & **dairy** are ok",
+        "No **peanuts** but other **nuts** are ok",
+        "I don't like **pine nuts**",
+        "I can't stand **garlic**"
     ]
 
     func startAnimatingExamples() {

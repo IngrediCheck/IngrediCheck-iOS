@@ -1,8 +1,9 @@
 import SwiftUI
 
-@main @MainActor
+@main
 struct IngrediCheckApp: App {
-    @State var webService = WebService()
+    @State private var webService = WebService()
+    @State private var dietaryPreferences = DietaryPreferences()
     @State private var userPreferences: UserPreferences = UserPreferences()
     @State private var appState = AppState()
 
@@ -16,6 +17,7 @@ struct IngrediCheckApp: App {
                         .environment(webService)
                         .environment(userPreferences)
                         .environment(appState)
+                        .environment(dietaryPreferences)
                         .tint(.paletteAccent)
                 } else {
                     Text("Sign-in failed")

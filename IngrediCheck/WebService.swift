@@ -425,4 +425,104 @@ enum ImageSize {
             throw NetworkError.decodingError
         }
     }
+
+    func addOrEditDietaryPreference(
+        clientActivityId: String,
+        preferenceText: String,
+        id: Int?
+    ) async throws -> DTO.PreferenceValidationResult {
+        
+        func buildRequest(_ token: String) -> URLRequest {
+            if let id {
+                SupabaseRequestBuilder(endpoint: .preference_lists_default_items, itemId: String(id))
+                    .setAuthorization(with: token)
+                    .setMethod(to: "PUT")
+                    .setFormData(name: "clientActivityId", value: clientActivityId)
+                    .setFormData(name: "preference", value: preferenceText)
+                    .build()
+            } else {
+                SupabaseRequestBuilder(endpoint: .preference_lists_default)
+                    .setAuthorization(with: token)
+                    .setMethod(to: "POST")
+                    .setFormData(name: "clientActivityId", value: clientActivityId)
+                    .setFormData(name: "preference", value: preferenceText)
+                    .build()
+            }
+        }
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request = buildRequest(token)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+
+        guard ([200, 201, 204, 422].contains(httpResponse.statusCode)) else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        do {
+            return try JSONDecoder().decode(DTO.PreferenceValidationResult.self, from: data)
+        } catch {
+            print("Failed to decode PreferenceValidationResult object: \(error)")
+            let responseText = String(data: data, encoding: .utf8) ?? ""
+            print(responseText)
+            throw NetworkError.decodingError
+        }
+    }
+    
+    func getDietaryPreferences() async throws -> [DTO.DietaryPreference] {
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request = SupabaseRequestBuilder(endpoint: .preference_lists_default)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+
+        do {
+            return try JSONDecoder().decode([DTO.DietaryPreference].self, from: data)
+        } catch {
+            print("Failed to decode [DTO.DietaryPreference] object: \(error)")
+            let responseText = String(data: data, encoding: .utf8) ?? ""
+            print(responseText)
+            throw NetworkError.decodingError
+        }
+    }
+
+    func deleteDietaryPreference(
+        clientActivityId: String,
+        id: Int
+    ) async throws -> Void {
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request =
+            SupabaseRequestBuilder(endpoint: .preference_lists_default_items, itemId: String(id))
+                .setAuthorization(with: token)
+                .setMethod(to: "DELETE")
+                .setFormData(name: "clientActivityId", value: clientActivityId)
+                .build()
+        let (_, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 204 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
 }

@@ -9,23 +9,31 @@ struct BulletView: View {
     }
 }
 
-@MainActor struct HomeTab: View {
-    @State private var newPreference: String = ""
-    @State private var inEditPreference: String? = nil
-    @State private var placeholder: String = "Add your preference here"
-    @State private var preferenceExamples = PreferenceExamples()
-    @FocusState var isFocused: Bool
-    @State private var indexOfCurrentlyEditedPreference: Int = 0
+enum ValidationResult {
+    case idle
+    case validating
+    case success
+    case failure(String)
+}
 
+@MainActor struct HomeTab: View {
+
+    @FocusState var isFocused: Bool
+    @State private var preferenceExamples = PreferenceExamples()
+
+    // TODO: remove this
     @Environment(UserPreferences.self) var userPreferences
+
     @Environment(AppState.self) var appState
+    @Environment(WebService.self) var webService
+    @Environment(DietaryPreferences.self) var dp
 
     var body: some View {
         NavigationStack {
             VStack {
                 textInputField
-                if userPreferences.preferences.isEmpty && !isFocused {
-                    emptyView
+                if dp.preferences.isEmpty && !isFocused {
+                    EmptyPreferencesView()
                 } else {
                     preferenceListView
                 }
@@ -40,49 +48,24 @@ struct BulletView: View {
             .navigationTitle("Your Dietary Preferences")
         }
     }
-
-    @State private var currentTabViewIndex = 0
-
-    private var emptyView: some View {
-        VStack {
-            VStack {
-                Image("EmptyPreferenceList")
-                    .resizable()
-                    .scaledToFit()
-                Text("You don't have any dietary preferences entered yet")
-                    .font(.subheadline)
-                    .fontWeight(.light)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.gray)
-                    .padding(.top)
-            }
-            .frame(width: UIScreen.main.bounds.width / 2)
+    
+    private var validationStatus: some View {
+        HStack(spacing: 5) {
             Spacer()
-            VStack(spacing: 8) {
-                Text("Try the following")
-                    .foregroundStyle(.gray)
-                TabView(selection: $currentTabViewIndex.animation()) {
-                    ForEach(0 ..< PreferenceExamples.examples.count, id:\.self) { index in
-                        Text("\"" + PreferenceExamples.examples[index] + ".\"")
-                            .multilineTextAlignment(.leading)
-                            .foregroundStyle(.paletteAccent)
-                    }
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .frame(height: UIScreen.main.bounds.width / 3)
-                .background {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.paletteAccent.opacity(0.1))
-                }
-                .padding(.horizontal)
-                
-                ThreeDotsIndexView(
-                    numberOfPages: PreferenceExamples.examples.count,
-                    currentIndex: currentTabViewIndex
-                )
+            switch dp.validationResult {
+            case .validating:
+                Text("Validating")
+                    .foregroundStyle(.paletteAccent)
+                ProgressView()
+            case .failure(let string):
+                Text(string)
+                    .foregroundStyle(.red)
+            case .idle, .success:
+                EmptyView()
             }
-            Spacer()
         }
+        .font(.subheadline)
+        .padding(.horizontal)
     }
     
     private var settingsButton: some View {
@@ -94,74 +77,83 @@ struct BulletView: View {
     }
     
     private var textInputField: some View {
-        TextField(preferenceExamples.placeholder, text: $newPreference, axis: .vertical)
-            .focused(self.$isFocused)
-            .padding()
-            .padding(.trailing)
-            .background {
-                Group {
-                    if isFocused {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.clear)
-                            .stroke(Color.paletteAccent, lineWidth: 1)
-                            .shadow(color: Color.paletteAccent.opacity(1), radius: 20)
-                    } else {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Material.ultraThin)
+        @Bindable var dp = dp
+        func borderColor(for result: ValidationResult) -> Color {
+            switch result {
+            case .validating:
+                return .paletteAccent
+            case .failure:
+                return .red
+            case .success, .idle:
+                return .clear
+            }
+        }
+        return VStack(spacing: 5) {
+            TextField(preferenceExamples.placeholder, text: $dp.newPreferenceText, axis: .vertical)
+                .focused($isFocused)
+                .padding()
+                .padding(.trailing)
+                .background {
+                    Group {
+                        if isFocused {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.clear)
+                                .stroke(Color.paletteAccent, lineWidth: 1)
+                                .shadow(color: Color.paletteAccent.opacity(1), radius: 20)
+                        } else {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Material.ultraThin)
+                                .stroke(borderColor(for: dp.validationResult), lineWidth: 1)
+                        }
                     }
                 }
-            }
-            .overlay(
-                HStack {
-                    if !newPreference.isEmpty {
+                .overlay(
+                    HStack {
+                        if !dp.newPreferenceText.isEmpty {
+                            Button(action: {
+                                dp.clearNewPreferenceText()
+                            }) {
+                                Image(systemName: "multiply.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                        .padding(.vertical)
+                        .padding(.horizontal, 7)
+                    ,
+                    alignment: .topTrailing
+                )
+                .padding(.horizontal)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
                         Button(action: {
-                            newPreference = ""
-                        }) {
-                            Image(systemName: "multiply.circle.fill")
-                                .foregroundColor(.gray)
-                        }
+                            dp.cancelInEditPreference()
+                            isFocused = false
+                        }, label: {
+                            Text("Cancel")
+                                .fontWeight(.bold)
+                        })
                     }
                 }
-                .padding(.vertical)
-                .padding(.horizontal, 7)
-                ,
-                alignment: .topTrailing
-            )
-            .padding()
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(action: {
-                        if let inEditPreference {
-                            userPreferences.preferences.insert(inEditPreference, at: indexOfCurrentlyEditedPreference)
-                            newPreference = ""
-                        }
-                        inEditPreference = nil
-                        indexOfCurrentlyEditedPreference = 0
-                        isFocused = false
-                    }, label: {
-                        Text("Cancel")
-                            .fontWeight(.bold)
-                    })
-                }
-            }
-            .onEnter($of: $newPreference, isFocused: $isFocused) {
-                if !newPreference.isEmpty {
-                    withAnimation {
-                        userPreferences.preferences.insert(newPreference, at: indexOfCurrentlyEditedPreference)
-                        newPreference = ""
+                .onChange(of: isFocused) { oldValue, newValue in
+                    if newValue {
+                        dp.inputActive()
                     }
-                    indexOfCurrentlyEditedPreference = 0
-                    inEditPreference = nil
                 }
-            }
+                .onEnter($of: $dp.newPreferenceText, isFocused: $isFocused) {
+                    dp.inputComplete()
+                }
+            validationStatus
+        }
+        .padding(.vertical)
     }
-    
+
     private var preferenceListView: some View {
         List {
-            ForEach(userPreferences.preferences, id: \.self) { preference in
+            ForEach(dp.preferences) { preference in
                 Label {
-                    Text(preference)
+                    Text(LocalizedStringKey(preference.annotatedText))
                 } icon: {
                     BulletView()
                         .foregroundStyle(.paletteAccent)
@@ -169,24 +161,18 @@ struct BulletView: View {
                 .listRowSeparatorTint(.paletteAccent)
                 .contextMenu {
                     Button(action: {
-                        UIPasteboard.general.string = preference
+                        UIPasteboard.general.string = preference.text
                     }) {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
                     Button {
-                        print("edit tapped")
-                        indexOfCurrentlyEditedPreference =
-                        userPreferences.preferences.firstIndex(of: preference)!
-                        userPreferences.preferences.remove(at: indexOfCurrentlyEditedPreference)
-                        inEditPreference = preference
-                        newPreference = preference
+                        dp.startEditPreference(preference: preference)
                         isFocused = true
                     } label: {
                         Label("Edit", systemImage: "square.and.pencil")
                     }
                     Button(role: .destructive) {
-                        print("delete tapped")
-                        userPreferences.preferences.removeAll { $0 == preference }
+                        dp.deletePreference(preference: preference)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -218,7 +204,7 @@ struct BulletView: View {
             if newValue {
                 preferenceExamples.stopAnimatingExamples(isFocused: true)
             } else {
-                if userPreferences.preferences.isEmpty {
+                if dp.preferences.isEmpty {
                     preferenceExamples.startAnimatingExamples()
                 } else {
                     preferenceExamples.stopAnimatingExamples(isFocused: false)
@@ -228,6 +214,49 @@ struct BulletView: View {
     }
 }
 
-#Preview {
-    HomeTab()
+struct EmptyPreferencesView: View {
+        
+    @State private var currentTabViewIndex = 0
+
+    var body: some View {
+        VStack {
+            VStack {
+                Image("EmptyPreferenceList")
+                    .resizable()
+                    .scaledToFit()
+                Text("You don't have any dietary preferences entered yet")
+                    .font(.subheadline)
+                    .fontWeight(.light)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.gray)
+                    .padding(.top)
+            }
+            .frame(width: UIScreen.main.bounds.width / 2)
+            Spacer()
+            VStack(spacing: 8) {
+                Text("Try the following")
+                    .foregroundStyle(.gray)
+                TabView(selection: $currentTabViewIndex.animation()) {
+                    ForEach(0 ..< PreferenceExamples.examples.count, id:\.self) { index in
+                        Text(LocalizedStringKey("\"" + PreferenceExamples.examples[index] + ".\""))
+                            .multilineTextAlignment(.leading)
+                            .foregroundStyle(.paletteAccent)
+                    }
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .frame(height: UIScreen.main.bounds.width / 3)
+                .background {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.paletteAccent.opacity(0.1))
+                }
+                .padding(.horizontal)
+                
+                ThreeDotsIndexView(
+                    numberOfPages: PreferenceExamples.examples.count,
+                    currentIndex: currentTabViewIndex
+                )
+            }
+            Spacer()
+        }
+    }
 }
