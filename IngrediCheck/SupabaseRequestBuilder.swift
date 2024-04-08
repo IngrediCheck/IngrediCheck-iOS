@@ -9,6 +9,7 @@ enum SafeEatsEndpoint: String {
     case history = "history"
     case list_items = "lists/%@"
     case list_items_item = "lists/%@/%@"
+    case preference_lists_grandfathered = "preferencelists/grandfathered"
     case preference_lists_default = "preferencelists/default"
     case preference_lists_default_items = "preferencelists/default/%@"
 }
@@ -55,6 +56,12 @@ class SupabaseRequestBuilder {
 
     func setMethod(to method: String) -> SupabaseRequestBuilder {
         request.httpMethod = method
+        return self
+    }
+    
+    func setJsonBody(to body: Data) -> SupabaseRequestBuilder {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
         return self
     }
 

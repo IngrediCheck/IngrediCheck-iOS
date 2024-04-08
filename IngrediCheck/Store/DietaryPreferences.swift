@@ -16,9 +16,7 @@ import Foundation
     private var task: Task<(), Never>? = nil
 
     init() {
-        Task {
-            await populatePreferences()
-        }
+        populatePreferences()
     }
     
     @MainActor var asString: String {
@@ -29,12 +27,26 @@ import Foundation
             .joined(separator: "\n")
     }
     
-    private func populatePreferences() async {
-        let newPreferences = try? await webService.getDietaryPreferences()
-        if let newPreferences {
-            await MainActor.run {
-                self.preferences = newPreferences
+    public func populatePreferences() {
+        Task {
+            await uploadGrandFatheredPreferences()
+            let newPreferences = try? await webService.getDietaryPreferences()
+            if let newPreferences {
+                await MainActor.run {
+                    self.preferences = newPreferences
+                }
             }
+        }
+    }
+    
+    private func uploadGrandFatheredPreferences() async {
+        let preferencesKey = "userPreferences"
+        let preferences = UserDefaults.standard.stringArray(forKey: preferencesKey) ?? []
+        do {
+            try await webService.uploadGrandFatheredPreferences(preferences)
+            UserDefaults.standard.removeObject(forKey: preferencesKey)
+        } catch {
+            // ??
         }
     }
     

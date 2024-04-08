@@ -525,4 +525,27 @@ enum ImageSize {
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
+    
+    func uploadGrandFatheredPreferences(_ preferences: [String]) async throws -> Void {
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request =
+            SupabaseRequestBuilder(endpoint: .preference_lists_grandfathered)
+                .setAuthorization(with: token)
+                .setMethod(to: "POST")
+                .setJsonBody(
+                    to: try! JSONSerialization.data(withJSONObject: preferences, options: [])
+                )
+                .build()
+        let (_, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 201 else {
+            print("Bad response from server: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
 }

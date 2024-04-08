@@ -180,6 +180,9 @@ enum ValidationResult {
             }
         }
         .listStyle(.plain)
+        .refreshable {
+            dp.populatePreferences()
+        }
     }
     
     private var preferenceExamplesView: some View {
