@@ -16,34 +16,14 @@ struct AnalysisResultView: View {
         if let ingredientRecommendations {
             switch product.calculateMatch(ingredientRecommendations: ingredientRecommendations) {
             case .match:
-                CapsuleWithDivider(color: .green) {
-                    HStack(spacing: 15) {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text("Matched")
-                    }
-                }
+                CapsuleWithDivider(state: .success)
             case .needsReview:
-                CapsuleWithDivider(color: .yellow) {
-                    HStack(spacing: 15) {
-                        Image(systemName: "questionmark.circle.fill")
-                        Text("Uncertain")
-                    }
-                }
+                CapsuleWithDivider(state: .warning)
             case .notMatch:
-                CapsuleWithDivider(color: .red) {
-                    HStack(spacing: 15) {
-                        Image(systemName: "x.circle.fill")
-                        Text("Unmatched")
-                    }
-                }
+                CapsuleWithDivider(state: .fail)
             }
         } else {
-            CapsuleWithDivider(color: .paletteAccent) {
-                HStack(spacing: 25) {
-                    ProgressView()
-                    Text("Analyzing")
-                }
-            }
+            CapsuleWithDivider(state: .analyzing)
         }
     }
 }
