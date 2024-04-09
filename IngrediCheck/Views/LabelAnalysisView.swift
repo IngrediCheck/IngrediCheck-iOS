@@ -1,5 +1,6 @@
 
 import SwiftUI
+import SimpleToast
 
 @Observable class LabelAnalysisViewModel {
     
@@ -79,6 +80,7 @@ struct LabelAnalysisView: View {
     @Environment(CheckTabState.self) var checkTabState
 
     @State private var viewModel: LabelAnalysisViewModel?
+    @State private var showToast: Bool = false
 
     var body: some View {
         Group {
@@ -124,6 +126,9 @@ struct LabelAnalysisView: View {
                                 .padding(.horizontal)
                         }
                     }
+                    .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
+                        FeedbackSuccessToastView()
+                    }
                     .scrollIndicators(.hidden)
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
@@ -140,7 +145,10 @@ struct LabelAnalysisView: View {
                                     checkTabState.feedbackConfig = FeedbackConfig(
                                         feedbackData: $viewModelBindable.feedbackData,
                                         feedbackCaptureOptions: .feedbackOnly,
-                                        onSubmit: { viewModel.submitFeedback() }
+                                        onSubmit: {
+                                            showToast.toggle()
+                                            viewModel.submitFeedback()
+                                        }
                                     )
                                 }, label: {
                                     Image(systemName: "flag")

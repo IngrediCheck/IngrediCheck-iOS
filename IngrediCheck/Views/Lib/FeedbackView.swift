@@ -167,6 +167,22 @@ struct FeedbackView: View {
     }
 }
 
+struct FeedbackSuccessToastView: View {
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "checkmark.circle")
+                .foregroundStyle(Color.success100)
+            Text("Feedback recorded. Thank you!")
+        }
+        .frame(minWidth: UIScreen.main.bounds.width * 3 / 4)
+        .padding()
+        .background(Color.success50)
+        .foregroundColor(Color.primary)
+        .cornerRadius(10)
+    }
+}
+
 struct FeedbackViewPreview: View {
     @State private var feedbackData = FeedbackData()
     

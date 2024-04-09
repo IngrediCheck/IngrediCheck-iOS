@@ -141,10 +141,6 @@ struct BarcodeAnalysisView: View {
     @State private var viewModel: BarcodeAnalysisViewModel?
     @State private var showToast: Bool = false
 
-    private let toastOptions = SimpleToastOptions(
-        hideAfter: 2
-    )
-
     @MainActor
     @ViewBuilder
     var notFoundView: some View {
@@ -259,14 +255,8 @@ struct BarcodeAnalysisView: View {
                             }
                         }
                         .scrollIndicators(.hidden)
-                        .simpleToast(isPresented: $showToast, options: toastOptions) {
-                            Text("Thank you! 🙏")
-                            .padding()
-                            .padding(.horizontal)
-                            .background(Color.green.opacity(0.6))
-                            .foregroundColor(Color.white)
-                            .cornerRadius(10)
-                            .padding(.top)
+                        .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
+                            FeedbackSuccessToastView()
                         }
                         .toolbar {
                             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -276,7 +266,10 @@ struct BarcodeAnalysisView: View {
                                             checkTabState.feedbackConfig = FeedbackConfig(
                                                 feedbackData: $viewModelBindable.feedbackData,
                                                 feedbackCaptureOptions: .imagesOnly,
-                                                onSubmit: { viewModel.submitFeedback() }
+                                                onSubmit: {
+                                                    showToast.toggle()
+                                                    viewModel.submitFeedback()
+                                                }
                                             )
                                         }, label: {
                                             Image(systemName: "photo.badge.plus")
@@ -288,7 +281,10 @@ struct BarcodeAnalysisView: View {
                                         checkTabState.feedbackConfig = FeedbackConfig(
                                             feedbackData: $viewModelBindable.feedbackData,
                                             feedbackCaptureOptions: .feedbackAndImages,
-                                            onSubmit: { viewModel.submitFeedback() }
+                                            onSubmit: {
+                                                showToast.toggle()
+                                                viewModel.submitFeedback()
+                                            }
                                         )
                                     }, label: {
                                         Image(systemName: "flag")

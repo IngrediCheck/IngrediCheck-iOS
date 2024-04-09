@@ -1,8 +1,9 @@
 import SwiftUI
 import Combine
+import SimpleToast
 
 struct HistoryTab: View {
-    
+
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
@@ -232,6 +233,7 @@ struct HistoryItemDetailView: View {
     let item: DTO.HistoryItem
     
     @State private var feedbackData: FeedbackData
+    @State private var showToast: Bool = false
 
     @Environment(WebService.self) var webService
     @Environment(AppState.self) var appState
@@ -272,7 +274,10 @@ struct HistoryItemDetailView: View {
                     appState.feedbackConfig = FeedbackConfig(
                         feedbackData: $feedbackData,
                         feedbackCaptureOptions: .imagesOnly,
-                        onSubmit: { submitFeedback() }
+                        onSubmit: {
+                            showToast.toggle()
+                            submitFeedback()
+                        }
                     )
                 }
                 if item.ingredients.isEmpty {
@@ -311,6 +316,9 @@ struct HistoryItemDetailView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
+            FeedbackSuccessToastView()
+        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if !item.images.isEmpty && !item.ingredients.isEmpty {
@@ -318,7 +326,10 @@ struct HistoryItemDetailView: View {
                         appState.feedbackConfig = FeedbackConfig(
                             feedbackData: $feedbackData,
                             feedbackCaptureOptions: .imagesOnly,
-                            onSubmit: { submitFeedback() }
+                            onSubmit: {
+                                showToast.toggle()
+                                submitFeedback()
+                            }
                         )
                     }, label: {
                         Image(systemName: "photo.badge.plus")
@@ -330,7 +341,10 @@ struct HistoryItemDetailView: View {
                     appState.feedbackConfig = FeedbackConfig(
                         feedbackData: $feedbackData,
                         feedbackCaptureOptions: .feedbackAndImages,
-                        onSubmit: { submitFeedback() }
+                        onSubmit: {
+                            showToast.toggle()
+                            submitFeedback()
+                        }
                     )
                 }, label: {
                     Image(systemName: "flag")
