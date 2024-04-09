@@ -50,7 +50,6 @@ extension UserDefaults {
     private func loadPreferences() {
         DispatchQueue.main.async {
             self.preferences = UserDefaults.restoreDietaryPreferences()
-            self.refreshPreferences()
         }
     }
 

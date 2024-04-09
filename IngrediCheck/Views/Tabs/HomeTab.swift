@@ -38,6 +38,9 @@ enum ValidationResult {
                     preferenceListView
                 }
             }
+            .onAppear {
+                dp.refreshPreferences()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     settingsButton
