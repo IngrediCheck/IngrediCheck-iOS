@@ -125,18 +125,6 @@ struct LabelAnalysisView: View {
                         }
                     }
                     .scrollIndicators(.hidden)
-                    .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
-                        switch newRating {
-                        case -1:
-                            checkTabState.feedbackConfig = FeedbackConfig(
-                                feedbackData: $viewModelBindable.feedbackData,
-                                feedbackCaptureOptions: .feedbackOnly,
-                                onSubmit: { viewModel.submitFeedback() }
-                            )
-                        default:
-                            viewModel.submitFeedback()
-                        }
-                    }
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
@@ -148,7 +136,16 @@ struct LabelAnalysisView: View {
                                         .font(.subheadline)
                                 })
                                 StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
-                                FlagButton(rating: $viewModelBindable.feedbackData.rating)
+                                Button(action: {
+                                    checkTabState.feedbackConfig = FeedbackConfig(
+                                        feedbackData: $viewModelBindable.feedbackData,
+                                        feedbackCaptureOptions: .feedbackOnly,
+                                        onSubmit: { viewModel.submitFeedback() }
+                                    )
+                                }, label: {
+                                    Image(systemName: "flag")
+                                        .font(.subheadline)
+                                })
                             }
                         }
                     }

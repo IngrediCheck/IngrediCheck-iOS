@@ -311,18 +311,6 @@ struct HistoryItemDetailView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .onChange(of: feedbackData.rating) { oldRating, newRating in
-            switch newRating {
-            case -1:
-                appState.feedbackConfig = FeedbackConfig(
-                    feedbackData: $feedbackData,
-                    feedbackCaptureOptions: .feedbackAndImages,
-                    onSubmit: { submitFeedback() }
-                )
-            default:
-                submitFeedback()
-            }
-        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if !item.images.isEmpty && !item.ingredients.isEmpty {
@@ -338,7 +326,16 @@ struct HistoryItemDetailView: View {
                     })
                 }
                 StarButton(clientActivityId: item.client_activity_id, favorited: item.favorited)
-                FlagButton(rating: $feedbackData.rating)
+                Button(action: {
+                    appState.feedbackConfig = FeedbackConfig(
+                        feedbackData: $feedbackData,
+                        feedbackCaptureOptions: .feedbackAndImages,
+                        onSubmit: { submitFeedback() }
+                    )
+                }, label: {
+                    Image(systemName: "flag")
+                        .font(.subheadline)
+                })
             }
         }
     }

@@ -9,10 +9,12 @@ enum FeedbackReason: String, CaseIterable, Identifiable {
 }
 
 struct FeedbackData {
-    var rating: Int = 0
     var reasons: Set<FeedbackReason> = []
     var note: String = ""
     var images: [ProductImage] = []
+    
+    // This is not used anymore, since we are not showing a downvote button anymore.
+    var rating: Int = 0
 }
 
 enum FeedbackCaptureOptions {

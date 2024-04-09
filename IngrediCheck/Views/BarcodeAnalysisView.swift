@@ -56,22 +56,6 @@ struct StarButton: View {
     }
 }
 
-struct FlagButton: View {
-    @Binding var rating: Int
-
-    var body: some View {
-        Button(action: {
-            withAnimation {
-                self.rating = (self.rating == -1) ? 0 : -1
-            }
-        }, label: {
-            Image(systemName: rating == -1 ? "flag.fill" : "flag")
-                .font(.subheadline)
-
-        })
-    }
-}
-
 @Observable class BarcodeAnalysisViewModel {
 
     let barcode: String
@@ -284,18 +268,6 @@ struct BarcodeAnalysisView: View {
                             .cornerRadius(10)
                             .padding(.top)
                         }
-                        .onChange(of: viewModelBindable.feedbackData.rating) { oldRating, newRating in
-                            switch newRating {
-                            case -1:
-                                checkTabState.feedbackConfig = FeedbackConfig(
-                                    feedbackData: $viewModelBindable.feedbackData,
-                                    feedbackCaptureOptions: .feedbackAndImages,
-                                    onSubmit: { viewModel.submitFeedback() }
-                                )
-                            default:
-                                viewModel.submitFeedback()
-                            }
-                        }
                         .toolbar {
                             ToolbarItemGroup(placement: .topBarTrailing) {
                                 if viewModel.ingredientRecommendations != nil {
@@ -312,8 +284,16 @@ struct BarcodeAnalysisView: View {
                                         })
                                     }
                                     StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
-//                                    UpvoteButton(rating: $viewModelBindable.feedbackData.rating)
-                                    FlagButton(rating: $viewModelBindable.feedbackData.rating)
+                                    Button(action: {
+                                        checkTabState.feedbackConfig = FeedbackConfig(
+                                            feedbackData: $viewModelBindable.feedbackData,
+                                            feedbackCaptureOptions: .feedbackAndImages,
+                                            onSubmit: { viewModel.submitFeedback() }
+                                        )
+                                    }, label: {
+                                        Image(systemName: "flag")
+                                            .font(.subheadline)
+                                    })
                                 }
                             }
                         }
