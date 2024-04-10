@@ -106,7 +106,7 @@ struct HistoryTabState {
             }
         }) {
             Circle()
-                .fill(appState.activeTab == .home ? .paletteAccent.opacity(0.1) : .clear)
+                .fill(appState.activeTab == .home ? .paletteAccent.opacity(0.2) : .clear)
                 .frame(width: 40, height: 40)
                 .overlay {
                     Image(systemName: "house")
@@ -141,7 +141,7 @@ struct HistoryTabState {
             }
         }) {
             Circle()
-                .fill(appState.activeTab == .history ? .paletteAccent.opacity(0.1) : .clear)
+                .fill(appState.activeTab == .history ? .paletteAccent.opacity(0.2) : .clear)
                 .frame(width: 40, height: 40)
                 .overlay {
                     Image(systemName: "list.bullet")
