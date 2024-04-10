@@ -215,7 +215,12 @@ struct HistoryItemCardView: View {
                 
                 Spacer()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
+            Circle()
+                .fill(item.toColor())
+                .frame(width: 10, height: 10)
+
             Spacer()
         }
         .task {

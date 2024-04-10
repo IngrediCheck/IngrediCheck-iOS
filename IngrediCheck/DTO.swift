@@ -88,6 +88,34 @@ class DTO {
         let ingredient_recommendations: [IngredientRecommendation]
         let rating: Int
         let favorited: Bool
+
+        func calculateMatch() -> ProductRecommendation {
+            var result: ProductRecommendation = .match
+            for recommendation in ingredient_recommendations {
+                switch recommendation.safetyRecommendation {
+                case .definitelyUnsafe:
+                    result = .notMatch
+                case .maybeUnsafe:
+                    if result == .match {
+                        result = .needsReview
+                    }
+                default:
+                    break
+                }
+            }
+            return result
+        }
+        
+        func toColor() -> Color {
+            switch calculateMatch() {
+            case .match:
+                Color.success100
+            case .notMatch:
+                Color.fail100
+            case .needsReview:
+                Color.warning100
+            }
+        }
     }
     
     struct ListItem: Codable, Hashable, Equatable {
