@@ -63,6 +63,7 @@ enum ValidationResult {
             case .failure(let string):
                 Text(string)
                     .foregroundStyle(.red)
+                    .multilineTextAlignment(.trailing)
             case .idle, .success:
                 EmptyView()
             }
