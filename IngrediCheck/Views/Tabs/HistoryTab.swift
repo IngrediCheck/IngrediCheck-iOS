@@ -183,7 +183,7 @@ struct HistoryItemCardView: View {
     @Environment(WebService.self) var webService
     
     var placeholderImage: some View {
-        Image(systemName: "photo.badge.plus.fill")
+        Image("EmptyList")
             .resizable()
             .scaledToFit()
             .frame(width: 80, height: 80)
@@ -490,7 +490,7 @@ struct FavoriteItemCardView: View {
     @Environment(WebService.self) var webService
     
     var placeholderImage: some View {
-        Image(systemName: "photo.badge.plus.fill")
+        Image("EmptyList")
             .resizable()
             .scaledToFit()
             .frame(width: 80, height: 80)
