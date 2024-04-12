@@ -339,10 +339,9 @@ struct TappableTextFragment: View {
         case .maybeUnsafe:
             Text(fragment.fragment)
                 .font(.body)
+                .foregroundStyle(.warning200)
                 .underline(true, pattern: .dot)
-                .background(
-                    .yellow.opacity(0.15)
-                )
+                .background(Color.warning25)
                 .onTapGesture {
                     showPopover = true
                 }
@@ -356,10 +355,9 @@ struct TappableTextFragment: View {
         case .definitelyUnsafe:
             Text(fragment.fragment)
                 .font(.body)
+                .foregroundStyle(.fail200)
                 .underline(true, pattern: .dot)
-                .background(
-                    .red.opacity(0.15)
-                )
+                .background(Color.fail25)
                 .onTapGesture {
                     showPopover = true
                 }
