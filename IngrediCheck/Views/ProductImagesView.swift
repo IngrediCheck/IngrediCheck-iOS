@@ -41,7 +41,7 @@ struct ProductImagesView: View {
                 Image(systemName: "photo.badge.plus")
                     .font(.largeTitle)
                     .padding()
-                Text("Upload a photo")
+                Text("Upload photos")
                     .foregroundStyle(.primary100)
                     .font(.headline)
             }

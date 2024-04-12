@@ -160,15 +160,15 @@ struct BarcodeAnalysisView: View {
                     Image(systemName: "photo.badge.plus")
                         .font(.largeTitle)
                         .padding()
-                    Text("Upload a photo")
-                        .foregroundStyle(.paletteAccent)
+                    Text("Upload photos")
+                        .foregroundStyle(.primary100)
                         .font(.headline)
                 }
-                .frame(width: UIScreen.main.bounds.width - 110)
-                .frame(height: UIScreen.main.bounds.width - 110)
+                .frame(width: UIScreen.main.bounds.width / 2)
+                .frame(height: UIScreen.main.bounds.width / 2)
                 .background {
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(.gray.opacity(0.1))
+                        .fill(.primary50)
                 }
             })
             .padding()
