@@ -116,6 +116,23 @@ class DTO {
                 Color.warning100
             }
         }
+        
+        func convertISODateToLocalDateString() -> String? {
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            guard let date = isoFormatter.date(from: created_at) else {
+                print("Invalid date string")
+                return nil
+            }
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM dd yyyy"
+            dateFormatter.timeZone = TimeZone.current
+
+            let localDateString = dateFormatter.string(from: date)
+            return localDateString
+        }
     }
     
     struct ListItem: Codable, Hashable, Equatable {
@@ -127,6 +144,23 @@ class DTO {
         let name: String?
         let ingredients: [Ingredient]
         let images: [ImageLocationInfo]
+        
+        func convertISODateToLocalDateString() -> String? {
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            guard let date = isoFormatter.date(from: created_at) else {
+                print("Invalid date string")
+                return nil
+            }
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM dd yyyy"
+            dateFormatter.timeZone = TimeZone.current
+
+            let localDateString = dateFormatter.string(from: date)
+            return localDateString
+        }
     }
     
     struct Product: Codable, Hashable {

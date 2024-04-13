@@ -38,28 +38,6 @@ enum OcrModel: String {
             UserPreferences.writeLastUsedCaptureType(captureType: captureType)
         }
     }
-    
-    // History Type
-    
-    private static let historyTypeKey = "config.historyType"
-    
-    private static func readLastUsedHistoryType() -> HistoryType {
-        guard let rawValue = UserDefaults.standard.string(forKey: historyTypeKey),
-              let historyType = HistoryType(rawValue: rawValue) else {
-            return .scans
-        }
-        return historyType
-    }
-    
-    private static func writeLastUsedHistoryType(historyType: HistoryType) {
-        UserDefaults.standard.set(historyType.rawValue, forKey: historyTypeKey)
-    }
-    
-    var historyType: HistoryType = UserPreferences.readLastUsedHistoryType() {
-        didSet {
-            UserPreferences.writeLastUsedHistoryType(historyType: historyType)
-        }
-    }
 
     // OCR Model
     

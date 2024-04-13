@@ -3,7 +3,7 @@ import SwiftUI
 
 enum TabScreen {
     case home
-    case history
+    case lists
 }
 
 enum Sheets: Identifiable {
@@ -30,9 +30,11 @@ enum Sheets: Identifiable {
 enum HistoryRouteItem: Hashable {
     case historyItem(DTO.HistoryItem)
     case listItem(DTO.ListItem)
+    case favoritesAll
+    case recentScansAll
 }
 
-struct HistoryTabState {
+struct ListsTabState {
     var routes: [HistoryRouteItem] = []
     var historyItems: [DTO.HistoryItem]? = nil
     var listItems: [DTO.ListItem]? = nil
@@ -41,7 +43,7 @@ struct HistoryTabState {
 @Observable class AppState {
     @MainActor var activeSheet: Sheets?
     @MainActor var activeTab: TabScreen = .home
-    @MainActor var historyTabState = HistoryTabState()
+    @MainActor var listsTabState = ListsTabState()
     @MainActor var feedbackConfig: FeedbackConfig?
 }
 
@@ -58,8 +60,8 @@ struct HistoryTabState {
             switch (appState.activeTab) {
             case .home:
                 HomeTab()
-            case .history:
-                HistoryTab()
+            case .lists:
+                ListsTab()
             }
         }
         .tabViewStyle(PageTabViewStyle())
@@ -137,15 +139,15 @@ struct HistoryTabState {
         Button(action: {
             refreshHistory()
             withAnimation {
-                appState.activeTab = .history
+                appState.activeTab = .lists
             }
         }) {
             Circle()
-                .fill(appState.activeTab == .history ? .paletteAccent.opacity(0.2) : .clear)
+                .fill(appState.activeTab == .lists ? .paletteAccent.opacity(0.2) : .clear)
                 .frame(width: 40, height: 40)
                 .overlay {
                     Image(systemName: "list.bullet")
-                        .foregroundStyle(appState.activeTab == .history ? .paletteAccent : .gray)
+                        .foregroundStyle(appState.activeTab == .lists ? .paletteAccent : .gray)
                 }
         }
         Spacer()
@@ -155,12 +157,12 @@ struct HistoryTabState {
         Task {
             if let history = try? await webService.fetchHistory() {
                 await MainActor.run {
-                    appState.historyTabState.historyItems = history
+                    appState.listsTabState.historyItems = history
                 }
             }
             if let listItems = try? await webService.getFavorites() {
                 await MainActor.run {
-                    appState.historyTabState.listItems = listItems
+                    appState.listsTabState.listItems = listItems
                 }
             }
         }
