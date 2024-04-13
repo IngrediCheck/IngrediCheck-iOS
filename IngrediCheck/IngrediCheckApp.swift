@@ -23,11 +23,21 @@ struct IngrediCheckApp: App {
                     Text("Sign-in failed")
                 }
             } else {
-                ProgressView()
+                SplashScreen()
                     .onAppear {
-                        authController.initialize()
+                        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+                            authController.initialize()
+                        }
                     }
             }
         }
+    }
+}
+
+struct SplashScreen: View {
+    var body: some View {
+        Image("SplashScreen")
+            .resizable()
+            .scaledToFill()
     }
 }
