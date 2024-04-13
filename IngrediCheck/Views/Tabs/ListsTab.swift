@@ -83,6 +83,11 @@ import SimpleToast
                 .scrollIndicators(.hidden)
                 .padding(.horizontal)
                 .padding(.top)
+                .refreshable {
+                    if let listItems = try? await webService.getFavorites() {
+                        appState.listsTabState.listItems = listItems
+                    }
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -93,6 +98,7 @@ import SimpleToast
 @MainActor struct FavoritesView: View {
 
     @Environment(AppState.self) var appState
+    @Environment(WebService.self) var webService
 
     var body: some View {
         
@@ -119,6 +125,11 @@ import SimpleToast
                 }
                 .frame(minHeight: 130)
                 .scrollIndicators(.hidden)
+                .refreshable {
+                    if let listItems = try? await webService.getFavorites() {
+                        appState.listsTabState.listItems = listItems
+                    }
+                }
                 .overlay  {
                     if favoriteItems.isEmpty {
                         HStack {
