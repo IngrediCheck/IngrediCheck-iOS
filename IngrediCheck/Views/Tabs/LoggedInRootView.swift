@@ -139,7 +139,11 @@ struct ListsTabState {
         Button(action: {
             refreshHistory()
             withAnimation {
-                appState.activeTab = .lists
+                if appState.activeTab == .lists {
+                    appState.listsTabState.routes = []
+                } else {
+                    appState.activeTab = .lists
+                }
             }
         }) {
             Circle()
