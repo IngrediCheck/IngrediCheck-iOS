@@ -21,9 +21,6 @@ enum ValidationResult {
     @FocusState var isFocused: Bool
     @State private var preferenceExamples = PreferenceExamples()
 
-    // TODO: remove this
-    @Environment(UserPreferences.self) var userPreferences
-
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
     @Environment(DietaryPreferences.self) var dp
@@ -54,7 +51,6 @@ enum ValidationResult {
     
     private var validationStatus: some View {
         HStack(spacing: 5) {
-            Spacer()
             switch dp.validationResult {
             case .validating:
                 Text("Thinking")
@@ -63,10 +59,11 @@ enum ValidationResult {
             case .failure(let string):
                 Text(string)
                     .foregroundStyle(.red)
-                    .multilineTextAlignment(.trailing)
+                    .multilineTextAlignment(.leading)
             case .idle, .success:
                 EmptyView()
             }
+            Spacer()
         }
         .font(.subheadline)
         .padding(.horizontal)

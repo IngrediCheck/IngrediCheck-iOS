@@ -73,7 +73,6 @@ struct ListsTabState {
         .onAppear {
             if userPreferences.startScanningOnAppStart
                &&
-                // TODO: preferences may not be updated before onAppear here.
                !dietaryPreferences.preferences.isEmpty {
                 appState.activeSheet = .scan
             }
