@@ -19,10 +19,10 @@ struct Splash<Splash: View, Content: View>: View {
             if showingSplash {
                 splash
                     .onAppear { scheduleHideSplash() }
-                    .transition(.opacity.animation(.default))
+                    .transition(.opacity.animation(.easeInOut))
             } else {
                 content
-                    .transition(.opacity.animation(.default))
+                    .transition(.opacity.animation(.easeInOut))
             }
         }
     }
