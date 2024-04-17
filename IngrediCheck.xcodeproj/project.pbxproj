@@ -637,7 +637,7 @@
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.3.0;
+				minimumVersion = 2.7.0;
 			};
 		};
 		397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */ = {

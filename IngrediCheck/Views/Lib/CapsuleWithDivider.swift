@@ -75,3 +75,7 @@ struct CapsuleWithDivider: View {
         .background(state.background)
     }
 }
+
+#Preview {
+    CapsuleWithDivider(state: .analyzing)
+}
