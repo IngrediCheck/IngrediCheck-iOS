@@ -69,7 +69,6 @@ Config.swift
 
 # CocoaPods
 Pods/
-Podfile.lock
 
 # Xcode
 *.xcworkspace
