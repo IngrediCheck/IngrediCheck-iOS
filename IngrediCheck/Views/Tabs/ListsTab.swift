@@ -433,6 +433,7 @@ struct HistoryItemCardView: View {
             Circle()
                 .fill(item.toColor())
                 .frame(width: 10, height: 10)
+                .padding(.leading)
         }
         .task {
             if let firstImage = item.images.first,
