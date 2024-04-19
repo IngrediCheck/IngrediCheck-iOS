@@ -15,9 +15,6 @@ struct IngrediCheckApp: App {
                 Image("SplashScreen")
                     .resizable()
                     .scaledToFill()
-                    .onAppear {
-                        authController.initialize()
-                    }
             } content: {
                 if let _ = authController.authEvent {
                     if let _ = authController.session {
@@ -28,7 +25,7 @@ struct IngrediCheckApp: App {
                             .environment(dietaryPreferences)
                             .tint(.paletteAccent)
                     } else {
-                        Text("Sign-in failed")
+                        ContentUnavailableView("Network seems Offline", systemImage: "wifi.slash")
                     }
                 } else {
                     ProgressView()
