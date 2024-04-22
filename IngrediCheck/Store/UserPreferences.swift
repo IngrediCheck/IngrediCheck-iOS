@@ -16,6 +16,12 @@ enum OcrModel: String {
 }
 
 @Observable class UserPreferences {
+    
+    public func clearAll() {
+        UserDefaults.standard.removeObject(forKey: UserPreferences.captureTypeKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.ocrModelKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.startScanningOnAppStartKey)
+    }
 
     // Capture Type
     

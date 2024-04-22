@@ -6,7 +6,7 @@ struct SettingsSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(AppState.self) var appState
     @Environment(AuthController.self) var authController
-    
+
     var body: some View {
         @Bindable var userPreferences = userPreferences
         NavigationStack {
@@ -22,17 +22,14 @@ struct SettingsSheet: View {
                 Section("Settings") {
                     Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
                 }
-                if authController.signedInWithApple {
-                    Section("Account") {
-                        Button {
-                            Task { await authController.signOut() }
-                        } label: {
-                            Label {
-                                Text("Sign out")
-                            } icon: {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
-                            }
-                        }
+                Section("Account") {
+                    if authController.signedInWithApple {
+                        SignoutButton()
+                        DeleteAccountView(labelText: "Delete Data & Account")
+
+                    }
+                    if authController.signedInAsGuest {
+                        DeleteAccountView(labelText: "Reset App State")
                     }
                 }
                 Section("About") {
@@ -106,6 +103,62 @@ struct SettingsSheet: View {
             return "00"
         }
         return buildNumber
+    }
+}
+
+struct DeleteAccountView: View {
+    
+    let labelText: String
+
+    @Environment(AuthController.self) var authController
+    @Environment(OnboardingState.self) var onboardingState
+    @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
+
+    @State private var confirmationShown = false
+
+    var body: some View {
+        Button {
+            confirmationShown = true
+        } label: {
+            Label {
+                Text(labelText)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
+            .foregroundStyle(.red)
+        }
+        .confirmationDialog(
+            "Your Data cannot be recovered",
+            isPresented: $confirmationShown,
+            titleVisibility: .visible
+        ) {
+            Button("I Understand") {
+                Task {
+                    await authController.deleteAccount()
+                    onboardingState.clearAll()
+                    userPreferences.clearAll()
+                    dietaryPreferences.clearAll()
+                }
+            }
+        }
+    }
+}
+
+struct SignoutButton: View {
+
+    @Environment(AuthController.self) var authController
+
+    var body: some View {
+        Button {
+            Task { await authController.signOut() }
+        } label: {
+            Label {
+                Text("Sign out")
+            } icon: {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+            }
+        }
     }
 }
 

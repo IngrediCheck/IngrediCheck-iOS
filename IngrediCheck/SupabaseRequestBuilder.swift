@@ -2,6 +2,7 @@
 import Foundation
 
 enum SafeEatsEndpoint: String {
+    case deleteme = "deleteme"
     case inventory = "inventory/%@"
     case analyze = "analyze"
     case extract = "extract"

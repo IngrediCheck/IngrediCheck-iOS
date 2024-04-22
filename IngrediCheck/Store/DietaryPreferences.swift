@@ -1,23 +1,29 @@
 import SwiftUI
 import Foundation
 
+fileprivate let DietaryPreferencesKey = "DietaryPreferences"
+
 extension UserDefaults {
 
     static func setDietaryPreferences(_ preferences: [DTO.DietaryPreference]) {
         let encoder = JSONEncoder()
         if let encoded = try? encoder.encode(preferences) {
-            UserDefaults.standard.set(encoded, forKey: "DietaryPreferences")
+            UserDefaults.standard.set(encoded, forKey: DietaryPreferencesKey)
         }
     }
 
     static func restoreDietaryPreferences() -> [DTO.DietaryPreference] {
-        if let savedPreferences = UserDefaults.standard.object(forKey: "DietaryPreferences") as? Data {
+        if let savedPreferences = UserDefaults.standard.object(forKey: DietaryPreferencesKey) as? Data {
             let decoder = JSONDecoder()
             if let loadedPreferences = try? decoder.decode([DTO.DietaryPreference].self, from: savedPreferences) {
                 return loadedPreferences
             }
         }
         return []
+    }
+    
+    static func deleteDietaryPreferences() {
+        UserDefaults.standard.removeObject(forKey: DietaryPreferencesKey)
     }
 }
 
@@ -99,6 +105,10 @@ extension UserDefaults {
                 // ??
             }
         }
+    }
+    
+    public func clearAll() {
+        UserDefaults.deleteDietaryPreferences()
     }
     
     @MainActor public func startEditPreference(preference: DTO.DietaryPreference) {

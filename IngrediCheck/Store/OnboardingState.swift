@@ -62,4 +62,8 @@ import Foundation
             data.disclaimerShown = newValue
         }
     }
+    
+    public func clearAll() {
+        UserDefaults.standard.removeObject(forKey: OnboardingState.userDefaultsKey)
+    }
 }
