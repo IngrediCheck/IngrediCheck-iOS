@@ -25,6 +25,11 @@
 		39397AED2BC6DA320096C5E3 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39397AEC2BC6DA320096C5E3 /* SearchBar.swift */; };
 		39397AF32BCB39EA0096C5E3 /* Splash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39397AF22BCB39EA0096C5E3 /* Splash.swift */; };
 		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
+		39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AE92BD47DEB000E487D /* OnboardingState.swift */; };
+		39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AEB2BD48E2C000E487D /* UseCasesView.swift */; };
+		39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AEE2BD490D0000E487D /* DisclaimerView.swift */; };
+		39705AF12BD490DA000E487D /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AF02BD490DA000E487D /* SignInView.swift */; };
+		39705AF32BD49794000E487D /* NetworkState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AF22BD49794000E487D /* NetworkState.swift */; };
 		3976C41B2BBEE1750026991A /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C41A2BBEE1750026991A /* SafariView.swift */; };
 		3976C41D2BBF12250026991A /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C41C2BBF12250026991A /* WebView.swift */; };
 		3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */; };
@@ -71,6 +76,12 @@
 		39397AEC2BC6DA320096C5E3 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		39397AF22BCB39EA0096C5E3 /* Splash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splash.swift; sourceTree = "<group>"; };
 		3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelAnalysisView.swift; sourceTree = "<group>"; };
+		39705AE92BD47DEB000E487D /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
+		39705AEB2BD48E2C000E487D /* UseCasesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UseCasesView.swift; sourceTree = "<group>"; };
+		39705AEE2BD490D0000E487D /* DisclaimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerView.swift; sourceTree = "<group>"; };
+		39705AF02BD490DA000E487D /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		39705AF22BD49794000E487D /* NetworkState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkState.swift; sourceTree = "<group>"; };
+		39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IngrediCheck.entitlements; sourceTree = "<group>"; };
 		3976C41A2BBEE1750026991A /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		3976C41C2BBF12250026991A /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		3976C4202BC0B6AF0026991A /* ThreeDotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreeDotsIndexView.swift; sourceTree = "<group>"; };
@@ -127,10 +138,13 @@
 		392D9C042B72D56700166CF1 /* Store */ = {
 			isa = PBXGroup;
 			children = (
+				397C85F92B6B538500FB9DAD /* AuthController.swift */,
 				392D9C052B72D58400166CF1 /* UserPreferences.swift */,
 				397DA1D62B7A9BB000BFB26F /* PreferenceExamples.swift */,
 				393461CD2B93777200695FE5 /* FileCache.swift */,
 				3976C4222BC32ED50026991A /* DietaryPreferences.swift */,
+				39705AE92BD47DEB000E487D /* OnboardingState.swift */,
+				39705AF22BD49794000E487D /* NetworkState.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -151,9 +165,20 @@
 			path = Lib;
 			sourceTree = "<group>";
 		};
+		39705AED2BD490BC000E487D /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				39705AEB2BD48E2C000E487D /* UseCasesView.swift */,
+				39705AEE2BD490D0000E487D /* DisclaimerView.swift */,
+				39705AF02BD490DA000E487D /* SignInView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				39705AED2BD490BC000E487D /* Onboarding */,
 				392D9C0A2B754FDA00166CF1 /* Lib */,
 				392D9BF32B72CB0100166CF1 /* Tabs */,
 				397C85DA2B686DF000FB9DAD /* CaptureView.swift */,
@@ -188,12 +213,12 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */,
 				392D9C072B73665500166CF1 /* Info.plist */,
 				392D9C042B72D56700166CF1 /* Store */,
 				397C86022B6C16F500FB9DAD /* Views */,
 				39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */,
 				39F2A8812A9D3974004EBB9A /* Assets.xcassets */,
-				397C85F92B6B538500FB9DAD /* AuthController.swift */,
 				397C85FE2B6C08FE00FB9DAD /* DTO.swift */,
 				397C86002B6C090B00FB9DAD /* WebService.swift */,
 				397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */,
@@ -387,17 +412,22 @@
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
+				39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */,
+				39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
 				392D9BFD2B72CCD300166CF1 /* SettingsSheet.swift in Sources */,
+				39705AF32BD49794000E487D /* NetworkState.swift in Sources */,
 				3976C4232BC32ED50026991A /* DietaryPreferences.swift in Sources */,
 				390F0D442BAE0D44009081AD /* View+Extensions.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				39397AE92BC64A200096C5E3 /* ListsTab.swift in Sources */,
+				39705AF12BD490DA000E487D /* SignInView.swift in Sources */,
 				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,
 				3976C41D2BBF12250026991A /* WebView.swift in Sources */,
 				3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
+				39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -527,6 +557,7 @@
 			baseConfigurationReference = D0E5B60D0A7B55350F0AE895 /* Pods-IngrediCheck.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
@@ -563,6 +594,7 @@
 			baseConfigurationReference = 00C3CB2168DB5D0B155BBA8A /* Pods-IngrediCheck.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 58MYNHGN72;

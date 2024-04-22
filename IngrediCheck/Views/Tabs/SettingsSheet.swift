@@ -5,6 +5,7 @@ struct SettingsSheet: View {
     @Environment(UserPreferences.self) var userPreferences
     @Environment(\.dismiss) var dismiss
     @Environment(AppState.self) var appState
+    @Environment(AuthController.self) var authController
     
     var body: some View {
         @Bindable var userPreferences = userPreferences
@@ -20,6 +21,19 @@ struct SettingsSheet: View {
                 */
                 Section("Settings") {
                     Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
+                }
+                if authController.signedInWithApple {
+                    Section("Account") {
+                        Button {
+                            Task { await authController.signOut() }
+                        } label: {
+                            Label {
+                                Text("Sign out")
+                            } icon: {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                            }
+                        }
+                    }
                 }
                 Section("About") {
                     NavigationLink(value: URL(string: "https://wikipedia.org")!) {

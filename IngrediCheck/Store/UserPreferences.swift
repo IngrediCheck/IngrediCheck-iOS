@@ -69,9 +69,9 @@ enum OcrModel: String {
         // Note: UserDefaults.standard.bool returns false if value does not exist,
         // which is not what we want here.
         guard let value = UserDefaults.standard.value(forKey: UserPreferences.startScanningOnAppStartKey) else {
-            return true
+            return false
         }
-        return value as? Bool ?? true
+        return value as? Bool ?? false
     }
     
     @ObservationIgnored var startScanningOnAppStart: Bool =

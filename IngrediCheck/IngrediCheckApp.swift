@@ -6,8 +6,8 @@ struct IngrediCheckApp: App {
     @State private var dietaryPreferences = DietaryPreferences()
     @State private var userPreferences: UserPreferences = UserPreferences()
     @State private var appState = AppState()
-
-    let authController = AuthController()
+    @State private var onboardingState = OnboardingState()
+    @State private var authController = AuthController()
 
     var body: some Scene {
         WindowGroup {
@@ -16,20 +16,48 @@ struct IngrediCheckApp: App {
                     .resizable()
                     .scaledToFill()
             } content: {
-                if let _ = authController.authEvent {
-                    if let _ = authController.session {
+                MainView()
+                    .environment(authController)
+                    .environment(webService)
+                    .environment(userPreferences)
+                    .environment(appState)
+                    .environment(dietaryPreferences)
+                    .environment(onboardingState)
+            }
+        }
+    }
+}
+
+struct MainView: View {
+
+    @State private var networkState = NetworkState()
+
+    @Environment(AuthController.self) var authController
+    @Environment(OnboardingState.self) var onboardingState
+
+    var body: some View {
+        Group {
+            if onboardingState.useCasesShown {
+                switch authController.signInState {
+                case .signedIn:
+                    if onboardingState.disclaimerShown {
                         LoggedInRootView()
-                            .environment(webService)
-                            .environment(userPreferences)
-                            .environment(appState)
-                            .environment(dietaryPreferences)
                             .tint(.paletteAccent)
                     } else {
-                        ContentUnavailableView("Network seems Offline", systemImage: "wifi.slash")
+                        DisclaimerView()
                     }
-                } else {
+                case .signedOut:
+                    SignInView()
+                case .signingIn:
                     ProgressView()
                 }
+            } else {
+                UseCasesView()
+            }
+        }
+        .overlay {
+            if !networkState.connected {
+                ContentUnavailableView("Network seems Offline", systemImage: "wifi.slash")
             }
         }
     }
