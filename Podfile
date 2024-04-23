@@ -6,7 +6,7 @@ target 'IngrediCheck' do
   use_frameworks!
 
   # Pods for IngrediCheck
-  pod 'GoogleMLKit/TextRecognition', '4.0.0'
+  pod 'GoogleMLKit/TextRecognition', '6.0.0'
 
 end
 
