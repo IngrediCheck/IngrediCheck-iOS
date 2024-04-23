@@ -46,11 +46,15 @@ extension UserDefaults {
     }
     
     @MainActor var asString: String {
-        preferences
-            .map { preference in
-                preference.text
-            }
-            .joined(separator: "\n")
+        preferences.isEmpty
+        ?
+        "None"
+        :
+            preferences
+                .map { preference in
+                    preference.text
+                }
+                .joined(separator: "\n")
     }
     
     private func loadPreferences() {
