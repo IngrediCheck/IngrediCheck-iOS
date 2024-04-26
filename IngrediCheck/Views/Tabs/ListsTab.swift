@@ -47,12 +47,17 @@ import SimpleToast
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitle("Lists")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    isSearching = true
-                }, label: {
-                    Image(systemName: "magnifyingglass")
-                })
+            Group {
+                if let historyItems = appState.listsTabState.historyItems,
+                   historyItems.count > 4 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: {
+                            isSearching = true
+                        }, label: {
+                            Image(systemName: "magnifyingglass")
+                        })
+                    }
+                }
             }
         }
     }
@@ -107,8 +112,11 @@ import SimpleToast
                 Text("Favorites")
                     .font(.headline)
                 Spacer()
-                NavigationLink(value: HistoryRouteItem.favoritesAll) {
-                    Text("View all")
+                if let favoriteItems = appState.listsTabState.listItems,
+                   !favoriteItems.isEmpty {
+                    NavigationLink(value: HistoryRouteItem.favoritesAll) {
+                        Text("View all")
+                    }
                 }
             }
             .padding(.bottom)
@@ -134,11 +142,15 @@ import SimpleToast
                     if favoriteItems.isEmpty {
                         HStack {
                             VStack(alignment: .leading) {
-                                Image("EmptyList")
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 120, height: 120)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                HStack {
+                                    ForEach (0..<1) { index in
+                                        Image("EmptyList")
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 120, height: 120)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    }
+                                }
                                 Text("No Favorite products yet")
                                     .font(.subheadline)
                                     .fontWeight(.light)

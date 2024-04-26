@@ -46,7 +46,6 @@ enum SignInState {
                 await MainActor.run {
                     print("Auth change Event: \(authStateChange.event)")
                     self.session = authStateChange.session
-                    print("Session: \(session)")
                     if authStateChange.session == nil {
                         signInState = .signedOut
                     } else {
