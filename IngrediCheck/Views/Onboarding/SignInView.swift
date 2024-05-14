@@ -43,7 +43,7 @@ struct SignInView: View {
                 }
                 .padding(.horizontal)
 
-                Text("By continuing, you are agreeing to my **[Terms of Use](https://www.example.com/tos)** and **[Privacy Policy](https://www.example.com/privacy)**.")
+                Text("By continuing, you are agreeing to my **[Terms of Use](https://www.ingredicheck.app/terms-conditions)** and **[Privacy Policy](https://www.ingredicheck.app/privacy-policy)**.")
                     .multilineTextAlignment(.center)
                     .font(.footnote)
                     .tint(.paletteAccent)
