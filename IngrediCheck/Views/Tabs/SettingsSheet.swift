@@ -33,33 +33,30 @@ struct SettingsSheet: View {
                     }
                 }
                 Section("About") {
-                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                    NavigationLink(value: URL(string: "https://www.ingredicheck.app/about")!) {
                         Label {
                             Text("About me")
                         } icon: {
                             Image(systemName: "person.circle")
                         }
                     }
-                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                    NavigationLink(value: URL(string: "https://www.ingredicheck.app/about")!) {
                         Label {
                             Text("Help")
-                            // todo
                         } icon: {
                             Image(systemName: "questionmark.circle")
                         }
                     }
-                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                    NavigationLink(value: URL(string: "https://www.ingredicheck.app/terms-conditions")!) {
                         Label {
                             Text("Terms of Use")
-                            // todo
                         } icon: {
                             Image(systemName: "book.pages")
                         }
                     }
-                    NavigationLink(value: URL(string: "https://wikipedia.org")!) {
+                    NavigationLink(value: URL(string: "https://www.ingredicheck.app/privacy-policy")!) {
                         Label {
                             Text("Privacy Policy")
-                            // todo
                         } icon: {
                             Image(systemName: "lock")
                         }
