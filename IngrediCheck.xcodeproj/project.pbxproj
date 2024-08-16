@@ -17,7 +17,6 @@
 		392D9BF92B72CCA200166CF1 /* CheckTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BF82B72CCA200166CF1 /* CheckTab.swift */; };
 		392D9BFD2B72CCD300166CF1 /* SettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9BFC2B72CCD300166CF1 /* SettingsSheet.swift */; };
 		392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C052B72D58400166CF1 /* UserPreferences.swift */; };
-		392D9C092B743B5300166CF1 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C082B743B5300166CF1 /* Config.swift */; };
 		392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C0B2B75500000166CF1 /* CapsuleWithDivider.swift */; };
 		392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */; };
 		393461CE2B93777200695FE5 /* FileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393461CD2B93777200695FE5 /* FileCache.swift */; };
@@ -25,6 +24,7 @@
 		39397AED2BC6DA320096C5E3 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39397AEC2BC6DA320096C5E3 /* SearchBar.swift */; };
 		39397AF32BCB39EA0096C5E3 /* Splash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39397AF22BCB39EA0096C5E3 /* Splash.swift */; };
 		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
+		39498BF42C6CF2D70030FDE4 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39498BF32C6CF2D70030FDE4 /* Config.swift */; };
 		39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AE92BD47DEB000E487D /* OnboardingState.swift */; };
 		39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AEB2BD48E2C000E487D /* UseCasesView.swift */; };
 		39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AEE2BD490D0000E487D /* DisclaimerView.swift */; };
@@ -68,7 +68,6 @@
 		392D9BFC2B72CCD300166CF1 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
 		392D9C052B72D58400166CF1 /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
 		392D9C072B73665500166CF1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		392D9C082B743B5300166CF1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		392D9C0B2B75500000166CF1 /* CapsuleWithDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapsuleWithDivider.swift; sourceTree = "<group>"; };
 		392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisResultView.swift; sourceTree = "<group>"; };
 		393461CD2B93777200695FE5 /* FileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCache.swift; sourceTree = "<group>"; };
@@ -76,6 +75,7 @@
 		39397AEC2BC6DA320096C5E3 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		39397AF22BCB39EA0096C5E3 /* Splash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splash.swift; sourceTree = "<group>"; };
 		3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelAnalysisView.swift; sourceTree = "<group>"; };
+		39498BF32C6CF2D70030FDE4 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		39705AE92BD47DEB000E487D /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		39705AEB2BD48E2C000E487D /* UseCasesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UseCasesView.swift; sourceTree = "<group>"; };
 		39705AEE2BD490D0000E487D /* DisclaimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerView.swift; sourceTree = "<group>"; };
@@ -222,7 +222,7 @@
 				397C85FE2B6C08FE00FB9DAD /* DTO.swift */,
 				397C86002B6C090B00FB9DAD /* WebService.swift */,
 				397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */,
-				392D9C082B743B5300166CF1 /* Config.swift */,
+				39498BF32C6CF2D70030FDE4 /* Config.swift */,
 			);
 			path = IngrediCheck;
 			sourceTree = "<group>";
@@ -399,7 +399,6 @@
 				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
 				39397AED2BC6DA320096C5E3 /* SearchBar.swift in Sources */,
 				390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */,
-				392D9C092B743B5300166CF1 /* Config.swift in Sources */,
 				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				39397AF32BCB39EA0096C5E3 /* Splash.swift in Sources */,
@@ -422,6 +421,7 @@
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				39397AE92BC64A200096C5E3 /* ListsTab.swift in Sources */,
+				39498BF42C6CF2D70030FDE4 /* Config.swift in Sources */,
 				39705AF12BD490DA000E487D /* SignInView.swift in Sources */,
 				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,
 				3976C41D2BBF12250026991A /* WebView.swift in Sources */,
@@ -576,7 +576,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -613,7 +613,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
