@@ -31,6 +31,11 @@ struct SettingsSheet: View {
                     if authController.signedInAsGuest {
                         DeleteAccountView(labelText: "Reset App State")
                     }
+                    
+                    if authController.signedInWithGoogle {
+                        SignoutButton()
+                        DeleteAccountView(labelText: "Delete Data & Account")
+                    }
                 }
                 Section("About") {
                     NavigationLink(value: URL(string: "https://www.ingredicheck.app/about")!) {

@@ -2,9 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>UIUserInterfaceStyle</key>
-	<string>Light</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.478832614549-fun4u6ep0fcv0dp8on6pd73fnaagdal5</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>478832614549-fun4u6ep0fcv0dp8on6pd73fnaagdal5.apps.googleusercontent.com</string>
 </dict>
 </plist>

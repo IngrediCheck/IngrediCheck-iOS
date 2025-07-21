@@ -1,5 +1,7 @@
 import SwiftUI
 import AuthenticationServices
+import GoogleSignIn
+import GoogleSignInSwift
 
 struct SignInView: View {
 
@@ -29,6 +31,42 @@ struct SignInView: View {
                     )
                     .signInWithAppleButtonStyle(.black)
                     .frame(height: 45)
+
+                    // Custom Google Sign-In Button
+                    Button(action: {
+                        authController.signInWithGoogle { result in
+                            switch result {
+                            case .success:
+                                onboardingState.useCasesShown = true
+                            case .failure(let error):
+                                // TODO: Show an alert to the user
+                                print("Google Sign-In failed: \(error.localizedDescription)")
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            // For brand compliance, you should download the official "G" logo
+                            // from Google's branding guidelines and add it to your assets.
+                            // Then uncomment the following lines:
+                             Image("google_logo")
+                                 .resizable()
+                                 .aspectRatio(contentMode: .fit)
+                                 .frame(width: 16, height: 16)
+
+                            Text("Continue with Google")
+                                .font(.system(size: 16))
+                                .fontWeight(.medium)
+                                .foregroundColor(.black.opacity(0.85))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 45)
+                        .background(Color.white)
+                        .cornerRadius(8) // You can adjust this value
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.4), lineWidth: 1)
+                        )
+                    }
                     
                     Button {
                         onboardingState.useCasesShown = true

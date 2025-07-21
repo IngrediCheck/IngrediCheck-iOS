@@ -2,6 +2,26 @@ import SwiftUI
 import AuthenticationServices
 import Supabase
 import KeychainSwift
+import GoogleSignIn
+import GoogleSignInSwift
+import CryptoKit
+
+enum AuthControllerError: Error, LocalizedError {
+    case rootViewControllerNotFound
+    case signInResultIsNil
+    case idTokenIsNil
+
+    var errorDescription: String? {
+        switch self {
+        case .rootViewControllerNotFound:
+            return "Failed to locate root View Controller."
+        case .signInResultIsNil:
+            return "Google sign in result is nil."
+        case .idTokenIsNil:
+            return "Failed to get ID token from Google sign in result."
+        }
+    }
+}
 
 let supabaseClient =
     SupabaseClient(supabaseURL: Config.supabaseURL, supabaseKey: Config.supabaseKey)
@@ -36,6 +56,13 @@ enum SignInState {
     @MainActor var signedInAsGuest: Bool {
         if let provider = self.session?.user.appMetadata["provider"] {
             return provider == "email"
+        }
+        return false
+    }
+    
+    @MainActor var signedInWithGoogle: Bool {
+        if let provider = self.session?.user.appMetadata["provider"] {
+            return provider == "google"
         }
         return false
     }
@@ -147,5 +174,95 @@ enum SignInState {
             case .failure(let error):
                 print(error.localizedDescription)
         }
+    }
+
+    // Utility function to generate a random nonce
+    func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] =
+            Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0 ..< 16).map { _ in
+                var random: UInt8 = 0
+                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                if errorCode != errSecSuccess {
+                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+                }
+                return random
+            }
+
+            randoms.forEach { random in
+                if remainingLength == 0 {
+                    return
+                }
+
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+
+        return result
+    }
+
+    public func signInWithGoogle(completion: ((Result<Void, Error>) -> Void)? = nil) {
+        let nonce = randomNonceString()
+        guard let rootViewController = UIApplication.shared.connectedScenes
+            .filter({ $0.activationState == .foregroundActive })
+            .compactMap({ $0 as? UIWindowScene })
+            .compactMap({ $0.keyWindow })
+            .first?.rootViewController else {
+                print("Failed to locate root View Controller")
+                completion?(.failure(AuthControllerError.rootViewControllerNotFound))
+                return
+            }
+
+        GIDSignIn.sharedInstance.signIn(
+            withPresenting: rootViewController,
+            hint: nil,
+            additionalScopes: [],
+            nonce: nonce, // Pass the nonce here
+            completion: { signInResult, error in
+                if let error = error {
+                    print("Error signing in with Google: \(error)")
+                    completion?(.failure(error))
+                    return
+                }
+
+                guard let result = signInResult else {
+                    print("Google sign in result is nil")
+                    completion?(.failure(AuthControllerError.signInResultIsNil))
+                    return
+                }
+
+                if let idToken = result.user.idToken {
+                    Task {
+                        do {
+                            let credentials = OpenIDConnectCredentials(
+                                provider: .google,
+                                idToken: idToken.tokenString,
+                                nonce: nonce // Pass the same nonce to Supabase
+                            )
+                            let session = try await supabaseClient.auth.signInWithIdToken(credentials: credentials)
+                            print("Google sign in successful: \(session)")
+                            await MainActor.run {
+                                self.session = session
+                                completion?(.success(()))
+                            }
+                        } catch {
+                            print("Supabase sign-in error: \(error)")
+                            completion?(.failure(error))
+                        }
+                    }
+                } else {
+                    print("Failed to get ID token")
+                    completion?(.failure(AuthControllerError.idTokenIsNil))
+                }
+            }
+        )
     }
 }
