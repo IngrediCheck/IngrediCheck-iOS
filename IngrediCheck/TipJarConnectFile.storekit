@@ -1,0 +1,135 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "DD7C9974",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "C947745E",
+      "localizations" : [
+        {
+          "description" : "🙂 Kind Tip",
+          "displayName" : "Kind Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "llc.fungee.IngrediCheck.tip099",
+      "referenceName" : "Kind Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "EE33C59A",
+      "localizations" : [
+        {
+          "description" : "🙃 Great Tip",
+          "displayName" : "Great Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "llc.fungee.IngrediCheck.tip199",
+      "referenceName" : "Great Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "1C981FFB",
+      "localizations" : [
+        {
+          "description" : "🤩 Amazing Tip",
+          "displayName" : "Amazing Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "llc.fungee.IngrediCheck.tip399",
+      "referenceName" : "Amazing Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "7.99",
+      "familyShareable" : false,
+      "internalID" : "1196F7AE",
+      "localizations" : [
+        {
+          "description" : "🤯 Outrageous Tip",
+          "displayName" : "Outrageous Tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "llc.fungee.IngrediCheck.tip799",
+      "referenceName" : "Outrageous Tip",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
