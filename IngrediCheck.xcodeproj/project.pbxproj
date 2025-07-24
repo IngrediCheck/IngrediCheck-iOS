@@ -11,7 +11,7 @@
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
 		1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F5987B52E30E6DA00381E32 /* StoreKit.framework */; };
 		1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */; };
-		1F5987BA2E30E80C00381E32 /* TipJarIdentifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987B92E30E80300381E32 /* TipJarIdentifiers.swift */; };
+		1FF63CC82E3201DB005BEDF1 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF63CC72E3201DB005BEDF1 /* Constants.swift */; };
 		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
 		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
@@ -66,7 +66,7 @@
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarViewModel.swift; sourceTree = "<group>"; };
-		1F5987B92E30E80300381E32 /* TipJarIdentifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarIdentifiers.swift; sourceTree = "<group>"; };
+		1FF63CC72E3201DB005BEDF1 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
@@ -135,11 +135,18 @@
 		1F5987782E30C4F200381E32 /* TipJar */ = {
 			isa = PBXGroup;
 			children = (
-				1F5987B92E30E80300381E32 /* TipJarIdentifiers.swift */,
 				1F5987792E30C51E00381E32 /* TipJarView.swift */,
 				1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */,
 			);
 			path = TipJar;
+			sourceTree = "<group>";
+		};
+		1FF63CC92E32020C005BEDF1 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				1FF63CC72E3201DB005BEDF1 /* Constants.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 		392D9BF32B72CB0100166CF1 /* Tabs */ = {
@@ -233,6 +240,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				1FF63CC92E32020C005BEDF1 /* Utilities */,
 				39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */,
 				392D9C072B73665500166CF1 /* Info.plist */,
 				392D9C042B72D56700166CF1 /* Store */,
@@ -438,6 +446,7 @@
 				1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */,
 				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,
+				1FF63CC82E3201DB005BEDF1 /* Constants.swift in Sources */,
 				390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */,
 				392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */,
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
@@ -446,7 +455,6 @@
 				39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */,
 				39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
-				1F5987BA2E30E80C00381E32 /* TipJarIdentifiers.swift in Sources */,
 				392D9BFD2B72CCD300166CF1 /* SettingsSheet.swift in Sources */,
 				39705AF32BD49794000E487D /* NetworkState.swift in Sources */,
 				3976C4232BC32ED50026991A /* DietaryPreferences.swift in Sources */,
