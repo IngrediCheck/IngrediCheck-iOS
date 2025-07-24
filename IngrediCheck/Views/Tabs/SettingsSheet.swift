@@ -45,6 +45,18 @@ struct SettingsSheet: View {
                             Image(systemName: "person.circle")
                         }
                     }
+                    
+                    NavigationLink {
+                        TipJarView()
+                    } label: {
+                        Label {
+                            Text("Tip Jar")
+                        } icon: {
+                            Image(systemName: "heart")
+                        }
+                    }
+
+                    
                     NavigationLink(value: URL(string: "https://www.ingredicheck.app/about")!) {
                         Label {
                             Text("Help")
