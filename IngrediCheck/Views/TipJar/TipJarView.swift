@@ -14,7 +14,7 @@ struct TipJarView: View {
     var body: some View {
         ZStack {
             
-            Color("PaletteAccent").opacity(0.15).ignoresSafeArea()
+            Color.paletteAccent.opacity(0.15).ignoresSafeArea()
             
             VStack {
                 Text("Support IngrediCheck")
