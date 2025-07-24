@@ -34,7 +34,7 @@ class TipJarViewModel: ObservableObject {
     
     func retriveProducts() async {
         do {
-            let products = try await Product.products(for: tipJarIdentifiers).sorted(by: { $0.price < $1.price })
+            let products = try await Product.products(for: Constants.tipJarIdentifiers).sorted(by: { $0.price < $1.price })
             productsArr = products
         } catch {
             print("Error while fetching products from connect file: \(error)")
