@@ -11,7 +11,6 @@
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
 		1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F5987B52E30E6DA00381E32 /* StoreKit.framework */; };
 		1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */; };
-		1FF63CC32E31FBED005BEDF1 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF63CC22E31FBED005BEDF1 /* Constants.swift */; };
 		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
 		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
@@ -53,6 +52,7 @@
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
 		6DE200116213B24E1C560F3D /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */; };
+		D333A2712E3379F400E31F66 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D333A2702E3379F400E31F66 /* Constants.swift */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
@@ -66,7 +66,6 @@
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarViewModel.swift; sourceTree = "<group>"; };
-		1FF63CC22E31FBED005BEDF1 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
@@ -109,6 +108,7 @@
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D0E5B60D0A7B55350F0AE895 /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
+		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,7 +144,7 @@
 		1FF63CC92E32020C005BEDF1 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				1FF63CC72E3201DB005BEDF1 /* Constants.swift */,
+				D333A2702E3379F400E31F66 /* Constants.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -446,12 +446,12 @@
 				1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */,
 				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,
-				1FF63CC82E3201DB005BEDF1 /* Constants.swift in Sources */,
 				390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */,
 				392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */,
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
+				D333A2712E3379F400E31F66 /* Constants.swift in Sources */,
 				39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */,
 				39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
