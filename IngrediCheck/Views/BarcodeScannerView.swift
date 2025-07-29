@@ -2,7 +2,6 @@ import AVKit
 import Foundation
 import SwiftUI
 import VisionKit
-import PostHog
 
 enum DataScannerAccessStatusType {
     case notDetermined
@@ -11,8 +10,6 @@ enum DataScannerAccessStatusType {
     case scannerAvailable
     case scannerNotAvailable
 }
-
-var startTime = Date().timeIntervalSince1970
 
 @MainActor struct BarcodeScannerView: View {
     
@@ -88,13 +85,6 @@ var startTime = Date().timeIntervalSince1970
     }
 
     func requestDataScannerAccessStatus() async {
-        
-        startTime = Date().timeIntervalSince1970
-        
-        PostHogSDK.shared.capture("Barcode Started Scanning", properties: [
-            "start_time": Date().timeIntervalSince1970
-        ])
-        
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
             dataScannerAccessStatus = .cameraNotAvailable
             return
@@ -173,11 +163,6 @@ struct DataScannerView: UIViewControllerRepresentable {
                let barcodeString = barcodeItem.payloadStringValue {
                 self.barcode = barcodeString
                 self.routes.append(.barcode)
-                
-                PostHogSDK.shared.capture("Barcode Scanning Completed", properties: [
-                    "latency_ms": (Date().timeIntervalSince1970 * 1000) - (startTime * 1000),
-                    "barcode_number": barcodeString
-                ])
             }
         }
         

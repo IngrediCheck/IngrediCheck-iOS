@@ -2,7 +2,6 @@ import Foundation
 import SwiftUI
 import CryptoKit
 import Supabase
-import PostHog
 
 enum NetworkError: Error {
     case invalidResponse(Int)
@@ -174,10 +173,6 @@ enum ImageSize {
         
         do {
             let product = try JSONDecoder().decode(DTO.Product.self, from: data)
-            PostHogSDK.shared.capture("Extracted product details", properties: [
-                "clientActivityId": clientActivityId,
-                "product_name": product.name ?? "No Name Found"
-            ])
             print(product)
             return product
         } catch {
@@ -437,39 +432,16 @@ enum ImageSize {
         id: Int?
     ) async throws -> DTO.PreferenceValidationResult {
         
-        let requestId: String = UUID().uuidString
-        let startTime = Date().timeIntervalSince1970
-        
         func buildRequest(_ token: String) -> URLRequest {
             if let id {
-                PostHogSDK.shared.capture("User Inputed Preference", properties: [
-                    "request_id": requestId,
-                    "endpoint": SafeEatsEndpoint.preference_lists_default_items.rawValue,
-                    "client_activity_id": clientActivityId,
-                    "item_id": String(id),
-                    "preference_text": preferenceText,
-                    "method": "PUT",
-                    "start_time": String(startTime)
-                ])
-                
-                return SupabaseRequestBuilder(endpoint: .preference_lists_default_items, itemId: String(id))
+                SupabaseRequestBuilder(endpoint: .preference_lists_default_items, itemId: String(id))
                     .setAuthorization(with: token)
                     .setMethod(to: "PUT")
                     .setFormData(name: "clientActivityId", value: clientActivityId)
                     .setFormData(name: "preference", value: preferenceText)
                     .build()
-                
             } else {
-                PostHogSDK.shared.capture("User Inputed Preference", properties: [
-                    "request_id": requestId,
-                    "endpoint": SafeEatsEndpoint.preference_lists_default.rawValue,
-                    "client_activity_id": clientActivityId,
-                    "preference_text": preferenceText,
-                    "method": "POST",
-                    "start_time": String(startTime)
-                ])
-                
-                return SupabaseRequestBuilder(endpoint: .preference_lists_default)
+                SupabaseRequestBuilder(endpoint: .preference_lists_default)
                     .setAuthorization(with: token)
                     .setMethod(to: "POST")
                     .setFormData(name: "clientActivityId", value: clientActivityId)
@@ -484,41 +456,16 @@ enum ImageSize {
 
         let request = buildRequest(token)
         let (data, response) = try await URLSession.shared.data(for: request)
-        
         let httpResponse = response as! HTTPURLResponse
 
         guard ([200, 201, 204, 422].contains(httpResponse.statusCode)) else {
-            
-            PostHogSDK.shared.capture("User Input Validation: Bad response from the server", properties: [
-                "request_id": requestId,
-                "client_activity_id": clientActivityId,
-                "preference_text": preferenceText,
-                "status_code": httpResponse.statusCode,
-                "latency_ms": Date().timeIntervalSince1970 * 1000 - startTime * 1000
-            ])
-            
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
         do {
-            PostHogSDK.shared.capture("User Input Validation Successful", properties: [
-                "request_id": requestId,
-                "client_activity_id": clientActivityId,
-                "preference_text": preferenceText,
-                "latency_ms": Date().timeIntervalSince1970 * 1000 - startTime * 1000
-            ])
-            
             return try JSONDecoder().decode(DTO.PreferenceValidationResult.self, from: data)
         } catch {
-            PostHogSDK.shared.capture("User Input Validation Error", properties: [
-                "request_id": requestId,
-                "client_activity_id": clientActivityId,
-                "preference_text": preferenceText,
-                "latency_ms": Date().timeIntervalSince1970 * 1000 - startTime * 1000,
-                "error": error.localizedDescription
-            ])
-            
             print("Failed to decode PreferenceValidationResult object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
