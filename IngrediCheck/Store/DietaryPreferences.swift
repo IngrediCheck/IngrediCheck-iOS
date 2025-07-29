@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import PostHog
 
 fileprivate let DietaryPreferencesKey = "DietaryPreferences"
 
@@ -148,7 +149,16 @@ extension UserDefaults {
         if !newPreferenceText.isEmpty {
             validationResult = .validating
             task = Task {
+                let startTime = Int(Date().timeIntervalSince1970 * 1000)
                 await validateInput(newPreferenceText)
+                let endTime = Int(Date().timeIntervalSince1970 * 1000) - startTime
+                
+                PostHogSDK.shared.capture("Input Validate", properties: [
+                    "duration_ms": endTime
+                ])
+                
+                PostHogSDK.shared.flush()
+                
             }
         }
     }
