@@ -3,7 +3,6 @@ import AVFoundation
 import Vision
 import MLKitTextRecognition
 import MLKitVision
-import PostHog
 
 extension View {
     @ViewBuilder
@@ -339,10 +338,6 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
     }
     
     func capturePhoto(completion: @escaping (UIImage?) -> Void) {
-        PostHogSDK.shared.capture("Image Captured", properties: [
-            "time": Date().timeIntervalSince1970
-        ])
-        
         self.completion = completion
         let settings = AVCapturePhotoSettings()
         self.photoOutput.capturePhoto(with: settings, delegate: self)
