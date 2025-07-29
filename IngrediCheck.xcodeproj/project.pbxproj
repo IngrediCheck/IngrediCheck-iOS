@@ -54,6 +54,7 @@
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
 		6DE200116213B24E1C560F3D /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */; };
+		D333A2712E3379F400E31F66 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D333A2702E3379F400E31F66 /* Constants.swift */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
@@ -110,6 +111,7 @@
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D0E5B60D0A7B55350F0AE895 /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
+		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,7 +148,8 @@
 		1FF63CC92E32020C005BEDF1 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				0C51E2ED2E335B7300A3E3A9 /* Constants.swift */,
+
+				0C51E2ED2E335B7300A3E3A9 /* Constants.swift */
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -455,6 +458,7 @@
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
+				D333A2712E3379F400E31F66 /* Constants.swift in Sources */,
 				39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */,
 				39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
