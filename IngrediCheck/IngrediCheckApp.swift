@@ -24,6 +24,8 @@ struct IngrediCheckApp: App {
                     .environment(dietaryPreferences)
                     .environment(onboardingState)
             }
+            
+//            PreferenceList()
         }
     }
 }

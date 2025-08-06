@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0C06A3642E4317F300FD9BDC /* temp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C06A3632E4317F300FD9BDC /* temp.swift */; };
+		0C55B6E92E41D766005D8355 /* PreferenceList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6E82E41D766005D8355 /* PreferenceList.swift */; };
+		0C55B6FA2E41E0DA005D8355 /* PreferenceListTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6F92E41E0DA005D8355 /* PreferenceListTextField.swift */; };
+		0C55B6FC2E41FEC1005D8355 /* ColaboratorCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6FB2E41FEC1005D8355 /* ColaboratorCard.swift */; };
+		0C55B6FE2E42271B005D8355 /* PreferenceListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6FD2E42270E005D8355 /* PreferenceListViewModel.swift */; };
 		1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987792E30C51E00381E32 /* TipJarView.swift */; };
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
 		1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F5987B52E30E6DA00381E32 /* StoreKit.framework */; };
@@ -62,6 +67,11 @@
 
 /* Begin PBXFileReference section */
 		00C3CB2168DB5D0B155BBA8A /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
+		0C06A3632E4317F300FD9BDC /* temp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = temp.swift; sourceTree = "<group>"; };
+		0C55B6E82E41D766005D8355 /* PreferenceList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceList.swift; sourceTree = "<group>"; };
+		0C55B6F92E41E0DA005D8355 /* PreferenceListTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceListTextField.swift; sourceTree = "<group>"; };
+		0C55B6FB2E41FEC1005D8355 /* ColaboratorCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColaboratorCard.swift; sourceTree = "<group>"; };
+		0C55B6FD2E42270E005D8355 /* PreferenceListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceListViewModel.swift; sourceTree = "<group>"; };
 		1F5987792E30C51E00381E32 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -132,6 +142,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0C55B6E72E41D5BB005D8355 /* PreferenceListLinkShare */ = {
+			isa = PBXGroup;
+			children = (
+				0C55B6FD2E42270E005D8355 /* PreferenceListViewModel.swift */,
+				0C55B6E82E41D766005D8355 /* PreferenceList.swift */,
+				0C06A3632E4317F300FD9BDC /* temp.swift */,
+			);
+			path = PreferenceListLinkShare;
+			sourceTree = "<group>";
+		};
+		0C55B6F82E41E0AB005D8355 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				0C55B6F92E41E0DA005D8355 /* PreferenceListTextField.swift */,
+				0C55B6FB2E41FEC1005D8355 /* ColaboratorCard.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		1F5987782E30C4F200381E32 /* TipJar */ = {
 			isa = PBXGroup;
 			children = (
@@ -204,6 +233,7 @@
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				0C55B6E72E41D5BB005D8355 /* PreferenceListLinkShare */,
 				1F5987782E30C4F200381E32 /* TipJar */,
 				39705AED2BD490BC000E487D /* Onboarding */,
 				392D9C0A2B754FDA00166CF1 /* Lib */,
@@ -240,6 +270,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				0C55B6F82E41E0AB005D8355 /* Components */,
 				1FF63CC92E32020C005BEDF1 /* Utilities */,
 				39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */,
 				392D9C072B73665500166CF1 /* Info.plist */,
@@ -441,13 +472,16 @@
 				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				39397AF32BCB39EA0096C5E3 /* Splash.swift in Sources */,
+				0C55B6E92E41D766005D8355 /* PreferenceList.swift in Sources */,
 				392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */,
 				1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */,
+				0C55B6FC2E41FEC1005D8355 /* ColaboratorCard.swift in Sources */,
 				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,
 				390F0CAF2BACC50D009081AD /* ProductImagesView.swift in Sources */,
 				392D9BF52B72CB0C00166CF1 /* LoggedInRootView.swift in Sources */,
+				0C55B6FA2E41E0DA005D8355 /* PreferenceListTextField.swift in Sources */,
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
@@ -459,6 +493,7 @@
 				39705AF32BD49794000E487D /* NetworkState.swift in Sources */,
 				3976C4232BC32ED50026991A /* DietaryPreferences.swift in Sources */,
 				390F0D442BAE0D44009081AD /* View+Extensions.swift in Sources */,
+				0C06A3642E4317F300FD9BDC /* temp.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				39397AE92BC64A200096C5E3 /* ListsTab.swift in Sources */,
@@ -468,6 +503,7 @@
 				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,
 				3976C41D2BBF12250026991A /* WebView.swift in Sources */,
 				3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */,
+				0C55B6FE2E42271B005D8355 /* PreferenceListViewModel.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
 				39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */,
 			);

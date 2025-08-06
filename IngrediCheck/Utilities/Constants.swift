@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct Constants {
     static let tipJarIdentifiers = [
@@ -14,4 +15,7 @@ struct Constants {
         "llc.fungee.IngrediCheck.tip399",
         "llc.fungee.IngrediCheck.tip799",
     ]
+    
+    static let ScreenWidth = UIScreen.main.bounds.width
+    static let ScreenHeight = UIScreen.main.bounds.height
 }
