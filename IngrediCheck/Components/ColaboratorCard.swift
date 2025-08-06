@@ -13,7 +13,8 @@ struct ColaboratorCard: View {
     var body: some View {
         VStack(alignment: .leading) {
             HStack(alignment: .center, spacing: 5) {
-                Circle()
+                Image("Ellipse-image")
+                    .resizable()
                     .frame(width: 24, height: 24)
                 
                 Text("Collaborator")
@@ -31,6 +32,7 @@ struct ColaboratorCard: View {
             
             if showDetails {
                 Text("Despite its importance, the ocean faces increasing threats from pollution, overfishing, and climate change. Protecting this vital resource is essential not just for marine life, but for the health and survival of all life on Earth.")
+                    .font(.callout)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             

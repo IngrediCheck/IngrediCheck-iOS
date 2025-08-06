@@ -11,21 +11,22 @@ struct IngrediCheckApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Splash {
-                Image("SplashScreen")
-                    .resizable()
-                    .scaledToFill()
-            } content: {
-                MainView()
-                    .environment(authController)
-                    .environment(webService)
-                    .environment(userPreferences)
-                    .environment(appState)
-                    .environment(dietaryPreferences)
-                    .environment(onboardingState)
-            }
+//            Splash {
+//                Image("SplashScreen")
+//                    .resizable()
+//                    .scaledToFill()
+//            } content: {
+//                MainView()
+//                    .environment(authController)
+//                    .environment(webService)
+//                    .environment(userPreferences)
+//                    .environment(appState)
+//                    .environment(dietaryPreferences)
+//                    .environment(onboardingState)
+//            }
             
-//            PreferenceList()
+            PreferenceList()
+                .environment(dietaryPreferences)
         }
     }
 }

@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0C06A3642E4317F300FD9BDC /* temp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C06A3632E4317F300FD9BDC /* temp.swift */; };
 		0C55B6E92E41D766005D8355 /* PreferenceList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6E82E41D766005D8355 /* PreferenceList.swift */; };
 		0C55B6FA2E41E0DA005D8355 /* PreferenceListTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6F92E41E0DA005D8355 /* PreferenceListTextField.swift */; };
 		0C55B6FC2E41FEC1005D8355 /* ColaboratorCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C55B6FB2E41FEC1005D8355 /* ColaboratorCard.swift */; };
@@ -67,7 +66,6 @@
 
 /* Begin PBXFileReference section */
 		00C3CB2168DB5D0B155BBA8A /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
-		0C06A3632E4317F300FD9BDC /* temp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = temp.swift; sourceTree = "<group>"; };
 		0C55B6E82E41D766005D8355 /* PreferenceList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceList.swift; sourceTree = "<group>"; };
 		0C55B6F92E41E0DA005D8355 /* PreferenceListTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceListTextField.swift; sourceTree = "<group>"; };
 		0C55B6FB2E41FEC1005D8355 /* ColaboratorCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColaboratorCard.swift; sourceTree = "<group>"; };
@@ -147,7 +145,6 @@
 			children = (
 				0C55B6FD2E42270E005D8355 /* PreferenceListViewModel.swift */,
 				0C55B6E82E41D766005D8355 /* PreferenceList.swift */,
-				0C06A3632E4317F300FD9BDC /* temp.swift */,
 			);
 			path = PreferenceListLinkShare;
 			sourceTree = "<group>";
@@ -493,7 +490,6 @@
 				39705AF32BD49794000E487D /* NetworkState.swift in Sources */,
 				3976C4232BC32ED50026991A /* DietaryPreferences.swift in Sources */,
 				390F0D442BAE0D44009081AD /* View+Extensions.swift in Sources */,
-				0C06A3642E4317F300FD9BDC /* temp.swift in Sources */,
 				397C86042B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift in Sources */,
 				397C85D92B6858AC00FB9DAD /* ImageCaptureView.swift in Sources */,
 				39397AE92BC64A200096C5E3 /* ListsTab.swift in Sources */,
