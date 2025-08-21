@@ -13,6 +13,7 @@
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
 		1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F5987B52E30E6DA00381E32 /* StoreKit.framework */; };
 		1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */; };
+		20AB3B30C01EE217AB675B0B /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */; };
 		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
 		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
@@ -30,7 +31,6 @@
 		39397AED2BC6DA320096C5E3 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39397AEC2BC6DA320096C5E3 /* SearchBar.swift */; };
 		39397AF32BCB39EA0096C5E3 /* Splash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39397AF22BCB39EA0096C5E3 /* Splash.swift */; };
 		3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */; };
-		39498BF42C6CF2D70030FDE4 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39498BF32C6CF2D70030FDE4 /* Config.swift */; };
 		39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AE92BD47DEB000E487D /* OnboardingState.swift */; };
 		39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AEB2BD48E2C000E487D /* UseCasesView.swift */; };
 		39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705AEE2BD490D0000E487D /* DisclaimerView.swift */; };
@@ -53,23 +53,20 @@
 		397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397DA1D82B7C153100BFB26F /* FeedbackView.swift */; };
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
-		6DE200116213B24E1C560F3D /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */; };
-		D333A2712E3379F400E31F66 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D333A2702E3379F400E31F66 /* Constants.swift */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
 		D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = D35F3C232E2A25FB0002CDE7 /* GoogleSignIn */; };
 		D35F3C262E2A25FB0002CDE7 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */; };
+		D35FB7F22E56E85C009A5AA1 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35FB7F12E56E859009A5AA1 /* Config.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		00C3CB2168DB5D0B155BBA8A /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		1F5987792E30C51E00381E32 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarViewModel.swift; sourceTree = "<group>"; };
-		34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
 		390F0D432BAE0D44009081AD /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
@@ -86,7 +83,6 @@
 		39397AEC2BC6DA320096C5E3 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		39397AF22BCB39EA0096C5E3 /* Splash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splash.swift; sourceTree = "<group>"; };
 		3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelAnalysisView.swift; sourceTree = "<group>"; };
-		39498BF32C6CF2D70030FDE4 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		39705AE92BD47DEB000E487D /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		39705AEB2BD48E2C000E487D /* UseCasesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UseCasesView.swift; sourceTree = "<group>"; };
 		39705AEE2BD490D0000E487D /* DisclaimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerView.swift; sourceTree = "<group>"; };
@@ -110,8 +106,11 @@
 		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		D0E5B60D0A7B55350F0AE895 /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
+		733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
+		C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		D35FB7F12E56E859009A5AA1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,7 +128,7 @@
 				397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */,
 				1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */,
 				D35BCF262E27D5B600125580 /* Auth in Frameworks */,
-				6DE200116213B24E1C560F3D /* Pods_IngrediCheck.framework in Frameworks */,
+				20AB3B30C01EE217AB675B0B /* Pods_IngrediCheck.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -148,8 +147,7 @@
 		1FF63CC92E32020C005BEDF1 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-
-				0C51E2ED2E335B7300A3E3A9 /* Constants.swift */
+				0C51E2ED2E335B7300A3E3A9 /* Constants.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -231,6 +229,7 @@
 				39F2A87B2A9D3972004EBB9A /* Products */,
 				6129BCCF6EBB4E1C75C2304C /* Pods */,
 				693CA082C10D7643322619FF /* Frameworks */,
+				D35FB7F02E56E704009A5AA1 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -245,6 +244,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				D35FB7F12E56E859009A5AA1 /* Config.swift */,
 				1FF63CC92E32020C005BEDF1 /* Utilities */,
 				39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */,
 				392D9C072B73665500166CF1 /* Info.plist */,
@@ -255,7 +255,6 @@
 				397C85FE2B6C08FE00FB9DAD /* DTO.swift */,
 				397C86002B6C090B00FB9DAD /* WebService.swift */,
 				397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */,
-				39498BF32C6CF2D70030FDE4 /* Config.swift */,
 				1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */,
 			);
 			path = IngrediCheck;
@@ -264,8 +263,8 @@
 		6129BCCF6EBB4E1C75C2304C /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				D0E5B60D0A7B55350F0AE895 /* Pods-IngrediCheck.debug.xcconfig */,
-				00C3CB2168DB5D0B155BBA8A /* Pods-IngrediCheck.release.xcconfig */,
+				733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */,
+				EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -274,9 +273,17 @@
 			isa = PBXGroup;
 			children = (
 				1F5987B52E30E6DA00381E32 /* StoreKit.framework */,
-				34F508537B7942B4595A4776 /* Pods_IngrediCheck.framework */,
+				C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D35FB7F02E56E704009A5AA1 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				D333A2702E3379F400E31F66 /* Constants.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -286,12 +293,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */;
 			buildPhases = (
-				D06D95DDB92A7BAB8D7F9758 /* [CP] Check Pods Manifest.lock */,
+				2B3F5050AAE8282CCCD8EF0D /* [CP] Check Pods Manifest.lock */,
 				39F2A8762A9D3972004EBB9A /* Sources */,
 				39F2A8772A9D3972004EBB9A /* Frameworks */,
 				39F2A8782A9D3972004EBB9A /* Resources */,
-				E77981D4ED072D0D1B2296BE /* [CP] Embed Pods Frameworks */,
-				8AB723D58DA0419B2D523289 /* [CP] Copy Pods Resources */,
+				38035A4FFCF1BA707C9F799F /* [CP] Embed Pods Frameworks */,
+				D05D09911B5EB911156EBF36 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -367,28 +374,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		8AB723D58DA0419B2D523289 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D06D95DDB92A7BAB8D7F9758 /* [CP] Check Pods Manifest.lock */ = {
+		2B3F5050AAE8282CCCD8EF0D /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -410,7 +396,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		E77981D4ED072D0D1B2296BE /* [CP] Embed Pods Frameworks */ = {
+		38035A4FFCF1BA707C9F799F /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -429,6 +415,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D05D09911B5EB911156EBF36 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -458,7 +465,6 @@
 				397C86012B6C090B00FB9DAD /* WebService.swift in Sources */,
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
-				D333A2712E3379F400E31F66 /* Constants.swift in Sources */,
 				39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */,
 				39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
@@ -471,7 +477,7 @@
 				39397AE92BC64A200096C5E3 /* ListsTab.swift in Sources */,
 				0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */,
 				1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */,
-				39498BF42C6CF2D70030FDE4 /* Config.swift in Sources */,
+				D35FB7F22E56E85C009A5AA1 /* Config.swift in Sources */,
 				39705AF12BD490DA000E487D /* SignInView.swift in Sources */,
 				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,
 				3976C41D2BBF12250026991A /* WebView.swift in Sources */,
@@ -604,16 +610,17 @@
 		};
 		39F2A8892A9D3974004EBB9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0E5B60D0A7B55350F0AE895 /* Pods-IngrediCheck.debug.xcconfig */;
+			baseConfigurationReference = 733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1.0;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IngrediCheck/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IngrediCheck;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used to Scan Barcodes or take Photos of Packaged Food Products";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -627,6 +634,61 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-l\"c++\"",
+					"-l\"sqlite3\"",
+					"-l\"z\"",
+					"-framework",
+					"\"AVFoundation\"",
+					"-framework",
+					"\"Accelerate\"",
+					"-framework",
+					"\"CoreGraphics\"",
+					"-framework",
+					"\"CoreImage\"",
+					"-framework",
+					"\"CoreLocation\"",
+					"-framework",
+					"\"CoreMedia\"",
+					"-framework",
+					"\"CoreTelephony\"",
+					"-framework",
+					"\"CoreVideo\"",
+					"-framework",
+					"\"Foundation\"",
+					"-framework",
+					"\"GTMSessionFetcher\"",
+					"-framework",
+					"\"GoogleDataTransport\"",
+					"-framework",
+					"\"GoogleToolboxForMac\"",
+					"-framework",
+					"\"GoogleUtilities\"",
+					"-framework",
+					"\"LocalAuthentication\"",
+					"-framework",
+					"\"MLImage\"",
+					"-framework",
+					"\"MLKitCommon\"",
+					"-framework",
+					"\"MLKitTextRecognition\"",
+					"-framework",
+					"\"MLKitTextRecognitionCommon\"",
+					"-framework",
+					"\"MLKitVision\"",
+					"-framework",
+					"\"Security\"",
+					"-framework",
+					"\"SystemConfiguration\"",
+					"-framework",
+					"\"UIKit\"",
+					"-framework",
+					"\"nanopb\"",
+					"-framework",
+					"\"FBLPromises\"",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -641,16 +703,17 @@
 		};
 		39F2A88A2A9D3974004EBB9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00C3CB2168DB5D0B155BBA8A /* Pods-IngrediCheck.release.xcconfig */;
+			baseConfigurationReference = EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1.0;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IngrediCheck/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = IngrediCheck;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used to Scan Barcodes or take Photos of Packaged Food Products";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -664,6 +727,61 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-l\"c++\"",
+					"-l\"sqlite3\"",
+					"-l\"z\"",
+					"-framework",
+					"\"AVFoundation\"",
+					"-framework",
+					"\"Accelerate\"",
+					"-framework",
+					"\"CoreGraphics\"",
+					"-framework",
+					"\"CoreImage\"",
+					"-framework",
+					"\"CoreLocation\"",
+					"-framework",
+					"\"CoreMedia\"",
+					"-framework",
+					"\"CoreTelephony\"",
+					"-framework",
+					"\"CoreVideo\"",
+					"-framework",
+					"\"Foundation\"",
+					"-framework",
+					"\"GTMSessionFetcher\"",
+					"-framework",
+					"\"GoogleDataTransport\"",
+					"-framework",
+					"\"GoogleToolboxForMac\"",
+					"-framework",
+					"\"GoogleUtilities\"",
+					"-framework",
+					"\"LocalAuthentication\"",
+					"-framework",
+					"\"MLImage\"",
+					"-framework",
+					"\"MLKitCommon\"",
+					"-framework",
+					"\"MLKitTextRecognition\"",
+					"-framework",
+					"\"MLKitTextRecognitionCommon\"",
+					"-framework",
+					"\"MLKitVision\"",
+					"-framework",
+					"\"Security\"",
+					"-framework",
+					"\"SystemConfiguration\"",
+					"-framework",
+					"\"UIKit\"",
+					"-framework",
+					"\"nanopb\"",
+					"-framework",
+					"\"FBLPromises\"",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
