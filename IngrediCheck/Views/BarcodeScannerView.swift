@@ -9,7 +9,7 @@ enum DataScannerAccessStatusType {
     case cameraAccessNotGranted
     case cameraNotAvailable
     case scannerAvailable
-    case scannerNotAvailable
+    case scannerNotAvailable  
 }
 
 var startTime = Date().timeIntervalSince1970
