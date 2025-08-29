@@ -14,4 +14,6 @@ struct Constants {
         "llc.fungee.IngrediCheck.tip399",
         "llc.fungee.IngrediCheck.tip799",
     ]
+    
+    static let test = ""
 }
