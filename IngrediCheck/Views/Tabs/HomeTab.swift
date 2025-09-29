@@ -1,5 +1,4 @@
 import SwiftUI
-import PostHog
 
 struct BulletView: View {
     var body: some View {
@@ -38,8 +37,6 @@ enum ValidationResult {
             }
             .onAppear {
                 dp.refreshPreferences()
-                
-                PostHogSDK.shared.capture("Home View Appeared")
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -74,9 +71,6 @@ enum ValidationResult {
     
     private var settingsButton: some View {
         Button(action: {
-            PostHogSDK.shared.capture("Button Tapped", properties: [
-                "Button Type": "Settings"
-            ])
             appState.activeSheet = .settings
         }, label: {
             Image(systemName: "gearshape")
