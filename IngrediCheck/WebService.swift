@@ -92,7 +92,10 @@ enum ImageSize {
         clientActivityId: String,
         barcode: String
     ) async throws -> DTO.Product {
-        
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -104,7 +107,7 @@ enum ImageSize {
             .setAuthorization(with: token)
             .setMethod(to: "GET")
             .build()
-        
+
         print(request)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -113,6 +116,15 @@ enum ImageSize {
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+
+            PostHogSDK.shared.capture("Barcode Lookup Failed", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             if httpResponse.statusCode == 404 {
                 print("Not found")
                 throw NetworkError.notFound("Product with barcode \(barcode) not found in Inventory")
@@ -120,14 +132,32 @@ enum ImageSize {
                 throw NetworkError.invalidResponse(httpResponse.statusCode)
             }
         }
-        
+
         do {
             let product = try JSONDecoder().decode(DTO.Product.self, from: data)
+
+            PostHogSDK.shared.capture("Barcode Lookup Successful", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "product_name": product.name ?? "Unknown",
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             return product
         } catch {
             print("Failed to decode Product object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
+
+            PostHogSDK.shared.capture("Barcode Lookup Decode Error", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.decodingError
         }
     }
@@ -136,6 +166,9 @@ enum ImageSize {
         clientActivityId: String,
         productImages: [ProductImage]
     ) async throws -> DTO.Product {
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
 
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
@@ -151,7 +184,7 @@ enum ImageSize {
 
         let productImagesJsonData = try JSONEncoder().encode(productImagesDTO)
         let productImagesJsonString = String(data: productImagesJsonData, encoding: .utf8)!
-        
+
         print(productImagesJsonString)
 
         let request = SupabaseRequestBuilder(endpoint: .extract)
@@ -169,21 +202,44 @@ enum ImageSize {
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+
+            PostHogSDK.shared.capture("Label Extraction Failed", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "image_count": productImages.count,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         do {
             let product = try JSONDecoder().decode(DTO.Product.self, from: data)
-            PostHogSDK.shared.capture("Extracted product details", properties: [
-                "clientActivityId": clientActivityId,
-                "product_name": product.name ?? "No Name Found"
+
+            PostHogSDK.shared.capture("Label Extraction Successful", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "image_count": productImages.count,
+                "product_name": product.name ?? "Unknown",
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
+
             print(product)
             return product
         } catch {
             print("Failed to decode Product object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
+
+            PostHogSDK.shared.capture("Label Extraction Decode Error", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "image_count": productImages.count,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.decodingError
         }
     }
@@ -193,17 +249,20 @@ enum ImageSize {
         userPreferenceText: String,
         barcode: String? = nil
     ) async throws -> [DTO.IngredientRecommendation] {
-        
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
-        
+
         var requestBuilder = SupabaseRequestBuilder(endpoint: .analyze)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
             .setFormData(name: "clientActivityId", value: clientActivityId)
             .setFormData(name: "userPreferenceText", value: userPreferenceText)
-        
+
         if let barcode = barcode {
             requestBuilder = requestBuilder.setFormData(name: "barcode", value: barcode)
         }
@@ -217,17 +276,47 @@ enum ImageSize {
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+
+            PostHogSDK.shared.capture("Ingredient Analysis Failed", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "has_barcode": barcode != nil,
+                "preference_length": userPreferenceText.count,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
         do {
             let ingredientRecommendations = try JSONDecoder().decode([DTO.IngredientRecommendation].self, from: data)
+
+            PostHogSDK.shared.capture("Ingredient Analysis Successful", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "has_barcode": barcode != nil,
+                "preference_length": userPreferenceText.count,
+                "recommendations_count": ingredientRecommendations.count,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             print(ingredientRecommendations)
             return ingredientRecommendations
         } catch {
             print("Failed to decode IngredientRecommendation array: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
+
+            PostHogSDK.shared.capture("Ingredient Analysis Decode Error", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "has_barcode": barcode != nil,
+                "preference_length": userPreferenceText.count,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.decodingError
         }
     }
@@ -285,7 +374,10 @@ enum ImageSize {
     }
     
     func fetchHistory(searchText: String? = nil) async throws -> [DTO.HistoryItem] {
-        
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -312,16 +404,43 @@ enum ImageSize {
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+
+            PostHogSDK.shared.capture("History Fetch Failed", properties: [
+                "request_id": requestId,
+                "has_search_text": searchText != nil,
+                "search_length": searchText?.count ?? 0,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
         do {
             let history = try JSONDecoder().decode([DTO.HistoryItem].self, from: data)
+
+            PostHogSDK.shared.capture("History Fetch Successful", properties: [
+                "request_id": requestId,
+                "has_search_text": searchText != nil,
+                "search_length": searchText?.count ?? 0,
+                "history_count": history.count,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             return history
         } catch {
             print("Failed to decode History object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
+
+            PostHogSDK.shared.capture("History Fetch Decode Error", properties: [
+                "request_id": requestId,
+                "has_search_text": searchText != nil,
+                "search_length": searchText?.count ?? 0,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.decodingError
         }
     }
@@ -391,6 +510,9 @@ enum ImageSize {
     
     func getFavorites(searchText: String? = nil) async throws -> [DTO.ListItem] {
 
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -417,16 +539,43 @@ enum ImageSize {
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+
+            PostHogSDK.shared.capture("Favorites Fetch Failed", properties: [
+                "request_id": requestId,
+                "has_search_text": searchText != nil,
+                "search_length": searchText?.count ?? 0,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         do {
             let listItems = try JSONDecoder().decode([DTO.ListItem].self, from: data)
+
+            PostHogSDK.shared.capture("Favorites Fetch Successful", properties: [
+                "request_id": requestId,
+                "has_search_text": searchText != nil,
+                "search_length": searchText?.count ?? 0,
+                "favorites_count": listItems.count,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             return listItems
         } catch {
             print("Failed to decode ListItem array: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
+
+            PostHogSDK.shared.capture("Favorites Fetch Decode Error", properties: [
+                "request_id": requestId,
+                "has_search_text": searchText != nil,
+                "search_length": searchText?.count ?? 0,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
             throw NetworkError.decodingError
         }
     }
