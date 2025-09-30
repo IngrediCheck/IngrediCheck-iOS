@@ -5,6 +5,7 @@ enum SafeEatsEndpoint: String {
     case deleteme = "deleteme"
     case inventory = "inventory/%@"
     case analyze = "analyze"
+    case inventory_analyze_stream = "inventory/%@/analyze-stream"
     case extract = "extract"
     case feedback = "feedback"
     case history = "history"

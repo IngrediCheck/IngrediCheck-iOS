@@ -321,6 +321,208 @@ enum ImageSize {
         }
     }
 
+    func streamInventoryAndAnalysis(
+        clientActivityId: String,
+        barcode: String,
+        userPreferenceText: String,
+        onProduct: @escaping (DTO.Product) -> Void,
+        onAnalysis: @escaping ([DTO.IngredientRecommendation]) -> Void,
+        onError: @escaping (String) -> Void
+    ) async throws {
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        var productReceivedTime: TimeInterval?
+        var analysisReceivedTime: TimeInterval?
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        var queryItems = [URLQueryItem(name: "clientActivityId", value: clientActivityId)]
+
+        if !userPreferenceText.isEmpty && userPreferenceText.lowercased() != "none" {
+            queryItems.append(URLQueryItem(name: "userPreferenceText", value: userPreferenceText))
+        }
+
+        let request = SupabaseRequestBuilder(endpoint: .inventory_analyze_stream, itemId: barcode)
+            .setQueryItems(queryItems: queryItems)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+
+        PostHogSDK.shared.capture("Stream Analysis Started", properties: [
+            "request_id": requestId,
+            "client_activity_id": clientActivityId,
+            "barcode": barcode,
+            "has_preferences": !userPreferenceText.isEmpty && userPreferenceText.lowercased() != "none"
+        ])
+
+        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            PostHogSDK.shared.capture("Stream Analysis Failed", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+
+        var buffer = Data()
+        var totalBytesReceived = 0
+
+        do {
+            for try await byte in asyncBytes {
+                buffer.append(byte)
+                totalBytesReceived += 1
+
+                // Convert buffer to string to check for SSE event boundaries
+                if let currentString = String(data: buffer, encoding: .utf8),
+                   currentString.hasSuffix("\n\n") {
+                    let lines = currentString.components(separatedBy: "\n").filter { !$0.isEmpty }
+                    buffer = Data()
+
+                    // Skip comment lines (lines starting with ":")
+                    let dataLines = lines.filter { !$0.hasPrefix(":") }
+
+                    for line in dataLines {
+                        if line.hasPrefix("data:") {
+                            let eventDataString = String(line.dropFirst(5).trimmingCharacters(in: .whitespaces))
+
+                            // Parse the nested JSON structure
+                            if let eventJsonData = eventDataString.data(using: .utf8),
+                               let eventWrapper = try? JSONDecoder().decode([String: String].self, from: eventJsonData),
+                               let eventType = eventWrapper["event"],
+                               let eventDataJson = eventWrapper["data"] {
+
+                                switch eventType {
+                                case "product":
+                                    productReceivedTime = Date().timeIntervalSince1970
+                                    let productLatency = (productReceivedTime! - startTime) * 1000
+
+                                    if let jsonData = eventDataJson.data(using: .utf8),
+                                       let product = try? JSONDecoder().decode(DTO.Product.self, from: jsonData) {
+
+                                        PostHogSDK.shared.capture("Stream Product Received", properties: [
+                                            "request_id": requestId,
+                                            "client_activity_id": clientActivityId,
+                                            "barcode": barcode,
+                                            "product_name": product.name ?? "Unknown",
+                                            "product_latency_ms": productLatency
+                                        ])
+
+                                        onProduct(product)
+                                    }
+                                case "analysis":
+                                    analysisReceivedTime = Date().timeIntervalSince1970
+                                    let totalLatency = (analysisReceivedTime! - startTime) * 1000
+                                    let analysisLatency = productReceivedTime != nil ? (analysisReceivedTime! - productReceivedTime!) * 1000 : totalLatency
+
+                                    if let jsonData = eventDataJson.data(using: .utf8),
+                                       let analysis = try? JSONDecoder().decode([DTO.IngredientRecommendation].self, from: jsonData) {
+
+                                        PostHogSDK.shared.capture("Stream Analysis Received", properties: [
+                                            "request_id": requestId,
+                                            "client_activity_id": clientActivityId,
+                                            "barcode": barcode,
+                                            "recommendations_count": analysis.count,
+                                            "analysis_latency_ms": analysisLatency,
+                                            "total_latency_ms": totalLatency,
+                                            "product_latency_ms": productReceivedTime != nil ? (productReceivedTime! - startTime) * 1000 : nil
+                                        ])
+
+                                        onAnalysis(analysis)
+                                    }
+                                case "error":
+                                    // Define simple error response structure
+                                    struct ErrorResponse: Codable {
+                                        let message: String
+                                        let status: Int?
+                                    }
+
+                                    if let jsonData = eventDataJson.data(using: .utf8),
+                                       let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: jsonData) {
+
+                                        PostHogSDK.shared.capture("Stream Analysis Server Error", properties: [
+                                            "request_id": requestId,
+                                            "client_activity_id": clientActivityId,
+                                            "barcode": barcode,
+                                            "error_message": errorResponse.message,
+                                            "error_status": errorResponse.status ?? 0,
+                                            "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                                        ])
+
+                                        onError(errorResponse.message)
+                                        return
+                                    } else {
+                                        // Fallback: try to extract message directly from the raw string
+                                        if eventDataJson.contains("not found") {
+                                            onError("Product not found.")
+                                        } else {
+                                            // If we can't parse the error, still notify the UI with a generic message
+                                            onError("Server error occurred.")
+
+                                            PostHogSDK.shared.capture("Stream Analysis Unparseable Error", properties: [
+                                                "request_id": requestId,
+                                                "client_activity_id": clientActivityId,
+                                                "barcode": barcode,
+                                                "raw_error_data": eventDataJson,
+                                                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                                            ])
+                                        }
+                                        return
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let endTime = Date().timeIntervalSince1970
+            let finalTotalLatency = (endTime - startTime) * 1000
+
+            // Final summary event with all latency metrics
+            var completionProperties: [String: Any] = [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "total_latency_ms": finalTotalLatency,
+                "bytes_received": totalBytesReceived
+            ]
+
+            if let productTime = productReceivedTime {
+                completionProperties["product_latency_ms"] = (productTime - startTime) * 1000
+            }
+
+            if let analysisTime = analysisReceivedTime, let productTime = productReceivedTime {
+                completionProperties["analysis_latency_ms"] = (analysisTime - productTime) * 1000
+                completionProperties["analysis_total_latency_ms"] = (analysisTime - startTime) * 1000
+            }
+
+            PostHogSDK.shared.capture("Stream Analysis Completed", properties: completionProperties)
+
+        } catch {
+            PostHogSDK.shared.capture("Stream Analysis Connection Error", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
+            throw error
+        }
+    }
+
     func submitFeedback(
         clientActivityId: String,
         feedbackData: FeedbackData
