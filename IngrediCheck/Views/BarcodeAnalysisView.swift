@@ -144,7 +144,7 @@ struct StarButton: View {
 
 struct BarcodeAnalysisView: View {
     
-    @Binding var barcode: String?
+    let barcode: String
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
@@ -311,7 +311,7 @@ struct BarcodeAnalysisView: View {
                 } else {
                     VStack {
                         Spacer()
-                        Text("Looking up \(barcode!)")
+                        Text("Looking up \(barcode)")
                         Spacer()
                         ProgressView()
                         Spacer()
@@ -320,7 +320,7 @@ struct BarcodeAnalysisView: View {
             } else {
                 ProgressView()
                     .task {
-                        let newViewModel = BarcodeAnalysisViewModel(barcode!, webService, dietaryPreferences)
+                        let newViewModel = BarcodeAnalysisViewModel(barcode, webService, dietaryPreferences)
                         Task { await newViewModel.analyze() }
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }
