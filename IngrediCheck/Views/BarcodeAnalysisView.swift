@@ -83,42 +83,73 @@ struct StarButton: View {
     }
 
     func analyze() async {
-        
+
+        print("🚀 [ViewModel] Starting analysis for barcode: \(barcode)")
+        print("🏷️ [ViewModel] Client activity ID: \(clientActivityId)")
+
+        let userPreferenceText = await dietaryPreferences.asString
+        print("🥗 [ViewModel] User preferences: '\(userPreferenceText)'")
+
         do {
-            let product =
-                try await webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
-
-            await MainActor.run {
-                withAnimation {
-                    self.product = product
+            try await webService.streamInventoryAndAnalysis(
+                clientActivityId: clientActivityId,
+                barcode: barcode,
+                userPreferenceText: userPreferenceText,
+                onProduct: { [weak self] product in
+                    print("📦 [ViewModel] Received product callback: \(product.name ?? "unnamed")")
+                    Task { @MainActor in
+                        guard let self = self else { return }
+                        print("✅ [ViewModel] Setting product on main actor")
+                        withAnimation {
+                            self.product = product
+                        }
+                        self.impactOccurred()
+                    }
+                },
+                onAnalysis: { [weak self] analysis in
+                    print("🧪 [ViewModel] Received analysis callback with \(analysis.count) recommendations")
+                    Task { @MainActor in
+                        guard let self = self else { return }
+                        print("✅ [ViewModel] Setting analysis on main actor")
+                        withAnimation {
+                            self.ingredientRecommendations = analysis
+                        }
+                        self.impactOccurred()
+                    }
+                },
+                onError: { [weak self] errorMessage in
+                    print("💥 [ViewModel] Received error callback: '\(errorMessage)'")
+                    print("🔍 [ViewModel] Checking if message contains 'not found': \(errorMessage.lowercased().contains("not found"))")
+                    Task { @MainActor in
+                        guard let self = self else { return }
+                        print("❌ [ViewModel] Setting error on main actor")
+                        if errorMessage.lowercased().contains("not found") {
+                            print("✅ [ViewModel] Setting notFound = true")
+                            self.notFound = true
+                        } else {
+                            print("⚠️ [ViewModel] Setting errorMessage: \(errorMessage)")
+                            self.errorMessage = errorMessage
+                        }
+                        self.impactOccurred()
+                    }
                 }
-            }
+            )
 
-            impactOccurred()
+            print("✅ [ViewModel] Stream completed successfully")
 
-            let result =
-                try await webService.fetchIngredientRecommendations(
-                    clientActivityId: clientActivityId,
-                    userPreferenceText: dietaryPreferences.asString,
-                    barcode: barcode)
-
-            await MainActor.run {
-                withAnimation {
-                    self.ingredientRecommendations = result
-                }
-            }
-            
         } catch NetworkError.notFound {
+            print("🔍 [ViewModel] Caught NetworkError.notFound")
             await MainActor.run {
                 self.notFound = true
             }
+            impactOccurred()
         } catch {
+            print("💥 [ViewModel] Caught error: \(error.localizedDescription)")
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
             }
+            impactOccurred()
         }
-
-        impactOccurred()
     }
 
     func submitFeedback() {
