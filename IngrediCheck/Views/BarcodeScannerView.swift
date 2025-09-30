@@ -16,7 +16,6 @@ var startTime = Date().timeIntervalSince1970
 
 @MainActor struct BarcodeScannerView: View {
     
-    @Binding var barcode: String?
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
     @State private var showScanner = true
 
@@ -71,7 +70,7 @@ var startTime = Date().timeIntervalSince1970
     
     private var mainView: some View {
         @Bindable var checkTabState = checkTabState
-        return DataScannerView(routes: $checkTabState.routes, barcode: $barcode)
+        return DataScannerView(routes: $checkTabState.routes)
             .aspectRatio(3/4, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
@@ -126,7 +125,6 @@ var startTime = Date().timeIntervalSince1970
 struct DataScannerView: UIViewControllerRepresentable {
     
     @Binding var routes: [CapturedItem]
-    @Binding var barcode: String?
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let uiViewController = DataScannerViewController(
@@ -146,7 +144,7 @@ struct DataScannerView: UIViewControllerRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        return Coordinator(routes: $routes, barcode: $barcode)
+        return Coordinator(routes: $routes)
     }
     
     static func dismantleUIViewController(_ uiViewController: DataScannerViewController, coordinator: Coordinator) {
@@ -156,24 +154,24 @@ struct DataScannerView: UIViewControllerRepresentable {
     class Coordinator: NSObject, DataScannerViewControllerDelegate {
         
         @Binding var routes: [CapturedItem]
-        @Binding var barcode: String?
 
-        init(routes: Binding<[CapturedItem]>, barcode: Binding<String?>) {
+        init(routes: Binding<[CapturedItem]>) {
             self._routes = routes
-            self._barcode = barcode
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
             if let firstItem = addedItems.first,
                case let .barcode(barcodeItem) = firstItem,
                let barcodeString = barcodeItem.payloadStringValue {
-                self.barcode = barcodeString
-                self.routes.append(.barcode)
-                
+                if case .barcode(let lastBarcode) = routes.last, lastBarcode == barcodeString {
+                    return
+                }
+                routes.append(.barcode(barcodeString))
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+
                 PostHogSDK.shared.capture("Barcode Scanning Completed", properties: [
                     "latency_ms": (Date().timeIntervalSince1970 * 1000) - (startTime * 1000),
                     "barcode_number": barcodeString

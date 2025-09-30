@@ -8,18 +8,17 @@ struct ProductImage: Hashable {
 }
 
 enum CapturedItem: Hashable {
-    case barcode
+    case barcode(String)
     case productImages([ProductImage])
 }
 
 struct CheckTab: View {
-    @State private var barcode: String?
     @State private var checkTabState = CheckTabState()
 
     var body: some View {
         NavigationStack(path: $checkTabState.routes) {
             VStack {
-                CaptureView(barcode: $barcode)
+                CaptureView()
                 Spacer()
             }
             .sheet(item: $checkTabState.feedbackConfig) { feedbackConfig in
@@ -36,8 +35,8 @@ struct CheckTab: View {
                     case .productImages(let productImages):
                         LabelAnalysisView(productImages: productImages)
                             .environment(checkTabState)
-                    case .barcode:
-                        BarcodeAnalysisView(barcode: $barcode)
+                    case .barcode(let barcode):
+                        BarcodeAnalysisView(barcode: barcode)
                             .environment(checkTabState)
                 }
             }

@@ -2,7 +2,6 @@ import SwiftUI
 
 struct CaptureView: View {
     
-    @Binding var barcode: String?
     @Environment(UserPreferences.self) var userPreferences
     @Environment(CheckTabState.self) var checkTabState
 
@@ -11,7 +10,7 @@ struct CaptureView: View {
         @Bindable var checkTabState = checkTabState
         VStack {
             if userPreferences.captureType == .barcode {
-                BarcodeScannerView(barcode: $barcode)
+                BarcodeScannerView()
             } else {
                 ImageCaptureView(
                     capturedImages: $checkTabState.capturedImages,
