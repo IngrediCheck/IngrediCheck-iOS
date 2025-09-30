@@ -163,7 +163,6 @@ struct DataScannerView: UIViewControllerRepresentable {
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
             if let firstItem = addedItems.first,
                case let .barcode(barcodeItem) = firstItem,
                let barcodeString = barcodeItem.payloadStringValue {
@@ -171,6 +170,7 @@ struct DataScannerView: UIViewControllerRepresentable {
                     return
                 }
                 routes.append(.barcode(barcodeString))
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
 
                 PostHogSDK.shared.capture("Barcode Scanning Completed", properties: [
                     "latency_ms": (Date().timeIntervalSince1970 * 1000) - (startTime * 1000),
