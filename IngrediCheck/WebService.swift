@@ -374,19 +374,19 @@ enum ImageSize {
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
-        var buffer = ""
-        var byteCount = 0
+        var buffer = Data()
+        var totalBytesReceived = 0
 
         do {
             for try await byte in asyncBytes {
-                byteCount += 1
-                let scalar = UnicodeScalar(byte)
-                let character = Character(scalar)
-                buffer.append(character)
+                buffer.append(byte)
+                totalBytesReceived += 1
 
-                if buffer.hasSuffix("\n\n") {
-                    let lines = buffer.components(separatedBy: "\n").filter { !$0.isEmpty }
-                    buffer = ""
+                // Convert buffer to string to check for SSE event boundaries
+                if let currentString = String(data: buffer, encoding: .utf8),
+                   currentString.hasSuffix("\n\n") {
+                    let lines = currentString.components(separatedBy: "\n").filter { !$0.isEmpty }
+                    buffer = Data()
 
                     // Skip comment lines (lines starting with ":")
                     let dataLines = lines.filter { !$0.hasPrefix(":") }
@@ -464,8 +464,19 @@ enum ImageSize {
                                         // Fallback: try to extract message directly from the raw string
                                         if eventDataJson.contains("not found") {
                                             onError("Product not found.")
-                                            return
+                                        } else {
+                                            // If we can't parse the error, still notify the UI with a generic message
+                                            onError("Server error occurred.")
+
+                                            PostHogSDK.shared.capture("Stream Analysis Unparseable Error", properties: [
+                                                "request_id": requestId,
+                                                "client_activity_id": clientActivityId,
+                                                "barcode": barcode,
+                                                "raw_error_data": eventDataJson,
+                                                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                                            ])
                                         }
+                                        return
                                     }
                                 default:
                                     break
@@ -485,7 +496,7 @@ enum ImageSize {
                 "client_activity_id": clientActivityId,
                 "barcode": barcode,
                 "total_latency_ms": finalTotalLatency,
-                "bytes_received": byteCount
+                "bytes_received": totalBytesReceived
             ]
 
             if let productTime = productReceivedTime {
