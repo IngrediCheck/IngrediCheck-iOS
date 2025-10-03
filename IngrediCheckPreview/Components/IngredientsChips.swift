@@ -13,8 +13,9 @@ struct IngredientsChips: View {
     var fontColor: String = "000000"
     var fontSize: CGFloat = 12
     var fontWeight: Font.Weight = .regular
-    var onClick: (() -> Void)? = nil
     var image: String? = nil
+    var familyList: [String] = []
+    var onClick: (() -> Void)? = nil
     
     var body: some View {
         Button {
@@ -30,12 +31,34 @@ struct IngredientsChips: View {
                 Text(title)
                     .font(.system(size: fontSize, weight: fontWeight))
                     .foregroundStyle(Color(hex: fontColor))
+                
+                if !familyList.isEmpty {
+                    HStack(spacing: -7) {
+                        ForEach(familyList.prefix(4), id: \.self) { image in
+                            familyIcon(image: image)
+                        }
+                    }
+                }
             }
             .padding(.vertical, (image != nil) ? 4 : 7.5)
-            .padding(.trailing, 12)
+            .padding(.trailing, !familyList.isEmpty ? 8 : 12)
             .padding(.leading, (image != nil) ? 8 : 12)
             .background(Color(hex: bgColor), in: .capsule)
         }
+    }
+    
+    @ViewBuilder
+    func familyIcon(image: String) -> some View {
+        Circle()
+            .stroke(lineWidth: 1)
+            .frame(width: 24, height: 24)
+            .foregroundStyle(Color(hex: "#B6B6B6"))
+            .background(Color(hex: "#D9D9D9"))
+            .overlay(
+                Image(image)
+                    .resizable()
+                    .frame(width: 24, height: 24)
+            )
     }
 
 }
@@ -59,6 +82,11 @@ struct IngredientsChips: View {
             image: "sesame"
         )
         IngredientsChips(title: "India & South Asia")
+        IngredientsChips(
+            title: "Peanuts",
+            image: "peanut",
+            familyList: ["image 1", "image 2", "image 3"]
+        )
     }
     
 }

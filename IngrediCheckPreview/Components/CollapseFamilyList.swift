@@ -10,29 +10,24 @@ import SwiftUI
 struct CollapseFamilyList: View {
     
     @State var collapsed: Bool = false
-    @State var familyNames: [String] = [
-        "father",
-        "mother",
-        "elder",
-        "younger",
-        "brother",
-        "sister",
-        "neighbour",
-        "nepew",
-        "grandmother",
-        "grandfather"
+    @State var familyNames: [FamilyMemberModel] = [
+        FamilyMemberModel(familyMemberName: "father", familyMemberImage: "Father"),
+        FamilyMemberModel(familyMemberName: "mother", familyMemberImage: "Mother"),
+        FamilyMemberModel(familyMemberName: "son", familyMemberImage: "Son"),
+        FamilyMemberModel(familyMemberName: "daughter", familyMemberImage: "Daughter"),
+        FamilyMemberModel(familyMemberName: "grandmother", familyMemberImage: "Grandmother")
     ]
-    @State var selectedItem: String = ""
+    @State var selectedItem: FamilyMemberModel? = nil
     
     var body: some View {
         ScrollView {
             ZStack {
                 ZStack {
-                    ForEach(Array(familyNames.reversed().enumerated()), id: \.element) { idx, ele in
+                    ForEach(Array(familyNames.reversed().enumerated()), id: \.element.id) { idx, ele in
                         let correctIdx = (idx - familyNames.count + 1) * -1
                         
                         if correctIdx < 3 {
-                            nameRow(name: "\(ele): \(idx)")
+                            nameRow(name: ele)
                                 .offset(y: collapsed ? CGFloat(correctIdx) * 60 : CGFloat(correctIdx * 8))
                                 .opacity(collapsed ? 1 : 1.0 - Double(correctIdx + 1) * 0.2)
                                 .padding(.horizontal, collapsed ? 0 : CGFloat(correctIdx + 1) * 10)
@@ -45,10 +40,10 @@ struct CollapseFamilyList: View {
                                     }
                                 }
                         } else {
-                            nameRow(name: "\(ele): \(idx)")
+                            nameRow(name: ele)
                                 .offset(y: collapsed ? CGFloat(correctIdx) * 60 : 0)
                                 .opacity(collapsed ? 1 : 0)
-                                .padding(.horizontal, collapsed ? 0 : CGFloat(correctIdx) * 10)
+                                .padding(.horizontal, collapsed ? 0 : CGFloat(correctIdx + 1) * 10)
                                 .onTapGesture {
                                     if collapsed {
                                         selectedItemPressed(item: ele)
@@ -62,47 +57,66 @@ struct CollapseFamilyList: View {
                 }
                 .offset(y: collapsed ? 60 : 10)
                 
-                nameRow(name: "selected: \(selectedItem)")
-                    .onTapGesture {
-                        withAnimation(.spring(dampingFraction: 0.7)) {
-                            collapsed.toggle()
+                if let selectedItem {
+                    nameRow(name: selectedItem)
+                        .onTapGesture {
+                            withAnimation(.spring(dampingFraction: 0.7)) {
+                                collapsed.toggle()
+                            }
                         }
-                    }
+                }
             }
             .padding(.horizontal)
         }
         .onAppear() {
-            selectedItemPressed(item: familyNames.first!)
+            if let first = familyNames.first {
+                selectedItemPressed(item: first)
+            }
         }
     }
     
-    func selectedItemPressed(item: String) {
+    func selectedItemPressed(item: FamilyMemberModel) {
         let temp = selectedItem
         selectedItem = item
-        familyNames.removeAll { $0 == item } // removes matching value
-        if !temp.isEmpty {
+        familyNames.removeAll { $0.familyMemberName == item.familyMemberName } // removes matching value
+        if let temp {
             familyNames.append(temp)
         }
     }
     
     @ViewBuilder
-    func nameRow(name: String) -> some View {
+    func nameRow(name: FamilyMemberModel) -> some View {
         HStack {
-            Text(name.capitalized)
+            Image(name.familyMemberImage)
+                .resizable()
+                .frame(width: 33, height: 33)
+            
+            Text(name.familyMemberName.capitalized)
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(Color(hex: "#2E2E2E"))
             
             Spacer()
             
             Circle()
-                .frame(width: 20, height: 20)
+                .fill(.white)
+                .frame(width: 14, height: 14)
+                .padding(3)
+                .background(
+                    Circle()
+                        .stroke(lineWidth: 0.5)
+                        .foregroundStyle(Color(hex: "#B6B6B6"))
+                )
         }
-        .padding()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(lineWidth: 1)
+                .stroke(lineWidth: 0.5)
+                .foregroundStyle(Color(hex: "#BAB8B8"))
         )
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.red)
+                .fill(Color(hex: "#EBEBEB"))
         )
     }
 }
