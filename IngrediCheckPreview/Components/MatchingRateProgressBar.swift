@@ -80,9 +80,9 @@ struct TaperedBar: Shape {
     }
 }
 
-struct TaperedGaugeView: View {
+struct MatchingRateProgressBar: View {
     let totalSegments = 12
-    let filledSegments = 7
+    var filledSegments = 7
     let innerRadius: CGFloat = 74
     let outerRadius: CGFloat = 130
     let segmentWidthFactor: Double = 0.88 // 0..1 of the per-segment angle
@@ -102,7 +102,7 @@ struct TaperedGaugeView: View {
                            innerRadius: innerRadius,
                            outerRadius: outerRadius,
                            cornerRadius: 4)
-                .fill(isFilled ? .secondary800 : Color.gray.opacity(0.18))
+                .fill(isFilled ? .secondary800 : .grayScale30)
             }
         }
         .frame(width: 360, height: 220)
@@ -112,7 +112,7 @@ struct TaperedGaugeView: View {
 
 struct PreviewProvider_Previews: PreviewProvider {
     static var previews: some View {
-        TaperedGaugeView()
+        MatchingRateProgressBar()
     }
 }
 
