@@ -114,8 +114,18 @@
 		EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0CDD1DA92E93A60700DFAB1C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1FF49D402E8BAF6D0072B3F6 /* IngrediCheckPreview */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1FF49D422E8BAF6D0072B3F6 /* IngrediCheckPreview */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = IngrediCheckPreview; sourceTree = "<group>"; };
+		1FF49D422E8BAF6D0072B3F6 /* IngrediCheckPreview */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (0CDD1DA92E93A60700DFAB1C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = IngrediCheckPreview; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -556,6 +566,8 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IngrediCheckPreview/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "\"\"";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -593,6 +605,8 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IngrediCheckPreview/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "\"\"";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
