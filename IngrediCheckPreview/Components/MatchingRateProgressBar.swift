@@ -15,6 +15,20 @@ struct TaperedBar: Shape {
     var halfWidth: Double
     var innerRadius: CGFloat
     var outerRadius: CGFloat
+    var cornerRadius: CGFloat = 4
+
+    // Convenience init to specify full angular width (in radians)
+    init(angle: Double,
+         width: Double,
+         innerRadius: CGFloat,
+         outerRadius: CGFloat,
+         cornerRadius: CGFloat = 4) {
+        self.angle = angle
+        self.halfWidth = width / 2
+        self.innerRadius = innerRadius
+        self.outerRadius = outerRadius
+        self.cornerRadius = cornerRadius
+    }
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -41,10 +55,25 @@ struct TaperedBar: Shape {
             y: center.y + CGFloat(sin(end)) * outerRadius
         )
 
+        // Helper to ensure radius fits available edge lengths
+        func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+            let dx = a.x - b.x
+            let dy = a.y - b.y
+            return sqrt(dx * dx + dy * dy)
+        }
+
+        // Clamp per-corner radius to avoid self-intersection on very small sides
+        let r1 = min(cornerRadius, 0.5 * min(distance(innerLeft, outerLeft), distance(outerLeft, outerRight))) // at outerLeft
+        let r2 = min(cornerRadius, 0.5 * min(distance(outerLeft, outerRight), distance(outerRight, innerRight))) // at outerRight
+        let r3 = min(cornerRadius, 0.5 * min(distance(outerRight, innerRight), distance(innerRight, innerLeft))) // at innerRight
+        let r4 = min(cornerRadius, 0.5 * min(distance(innerRight, innerLeft), distance(innerLeft, outerLeft))) // at innerLeft
+
+        // Draw rounded quadrilateral using tangent arcs at each corner
         path.move(to: innerLeft)
-        path.addLine(to: outerLeft)
-        path.addLine(to: outerRight)
-        path.addLine(to: innerRight)
+        path.addArc(tangent1End: outerLeft, tangent2End: outerRight, radius: r4)
+        path.addArc(tangent1End: outerRight, tangent2End: innerRight, radius: r1)
+        path.addArc(tangent1End: innerRight, tangent2End: innerLeft, radius: r2)
+        path.addArc(tangent1End: innerLeft, tangent2End: outerLeft, radius: r3)
         path.closeSubpath()
 
         return path
@@ -53,38 +82,31 @@ struct TaperedBar: Shape {
 
 struct TaperedGaugeView: View {
     let totalSegments = 12
-    let filledSegments = 1
-    let innerRadius: CGFloat = 60
-    let outerRadius: CGFloat = 120
+    let filledSegments = 7
+    let innerRadius: CGFloat = 74
+    let outerRadius: CGFloat = 130
+    let segmentWidthFactor: Double = 0.88 // 0..1 of the per-segment angle
 
     var body: some View {
         ZStack {
             ForEach(0..<totalSegments, id: \.self) { i in
                 // compute center angle for this segment across 180 degrees
                 let angle = Double(i) * Double.pi / Double(totalSegments - 1) - Double.pi / 2
-                // halfWidth controls how wide the wedge is; tweak multiplier for spacing
-                let halfWidth = (Double.pi / Double(totalSegments - 1)) * 0.4
+                // fullWidth controls how wide the wedge is; tweak factor for spacing
+                let fullWidth = (Double.pi / Double(totalSegments - 1)) * segmentWidthFactor
 
                 let isFilled = i < filledSegments
 
                 TaperedBar(angle: angle,
-                           halfWidth: halfWidth,
+                           width: fullWidth,
                            innerRadius: innerRadius,
-                           outerRadius: outerRadius
-                )
-                    .fill(isFilled ? Color.orange : Color.gray.opacity(0.18))
+                           outerRadius: outerRadius,
+                           cornerRadius: 4)
+                .fill(isFilled ? .secondary800 : Color.gray.opacity(0.18))
             }
-
-            VStack(spacing: 4) {
-                Text("140%")
-                    .font(.system(size: 44, weight: .bold))
-                Text("Matched")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 18, weight: .medium))
-            }
-            .offset(y: 30)
         }
         .frame(width: 360, height: 220)
+        .rotationEffect(.degrees(-90))
     }
 }
 
