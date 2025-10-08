@@ -15,9 +15,11 @@ struct AskIngrediBotButton: View {
                 .offset(x: -4)
                 .zIndex(1)
             
-            ZStack {
+            
+            Button {
                 
-                HStack {
+            } label: {
+                HStack(spacing: 4) {
                     Image("ai-stars")
                         .resizable()
                         .frame(width: 18, height: 18)
