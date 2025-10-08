@@ -9,7 +9,7 @@ import SwiftUI
 
 struct RecentScansRow: View {
     
-    @State var feedback: Bool? = true
+    @State var feedback: Bool? = nil
     
     var body: some View {
         HStack(spacing: 12) {
@@ -31,20 +31,18 @@ struct RecentScansRow: View {
             
             Spacer()
             
-            if let feedback {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(.primary600)
-                        .frame(width: 10, height: 10)
-                    
-                    Text("Matched")
-                        .font(ManropeFont.semiBold.size(10))
-                        .foregroundStyle(.primary600)
-                }
-                .padding(.vertical, 5)
-                .padding(.horizontal, 8)
-                .background(.primary300, in: RoundedRectangle(cornerRadius: 12))
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                    .frame(width: 10, height: 10)
+                
+                Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
             }
+            .padding(.vertical, 5)
+            .padding(.horizontal, 8)
+            .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 }

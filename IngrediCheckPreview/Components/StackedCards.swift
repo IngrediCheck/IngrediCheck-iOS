@@ -15,8 +15,8 @@ struct StackedCards: View {
     
     @State var chips: [ChipsModel] = [
         ChipsModel(name: "High Protein", icon: "chicken"),
-        ChipsModel(name: "Low Carb", icon: "cucumber"),
-        ChipsModel(name: "Low Fat", icon: "avacardo"),
+        ChipsModel(name: "Low Carb", icon: "Cucumber"),
+        ChipsModel(name: "Low Fat", icon: "Avacardo"),
         ChipsModel(name: "Balanced Marcos", icon: "weight-machine")
     ]
     

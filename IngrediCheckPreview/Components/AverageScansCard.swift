@@ -85,8 +85,14 @@ struct AverageScansCard: View {
 
             
         }
+        
         .padding(.vertical, 12)
-        .background(.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .foregroundStyle(.white)
+                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+        )
+        
         .overlay(
             Image("avg-scanner")
                 .resizable()
@@ -98,12 +104,17 @@ struct AverageScansCard: View {
             // calculates the weekly avg from the array values
             weeklyAverage = avgArray.map { $0.value }.reduce(0, +) / avgArray.count
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(lineWidth: 0.25)
+                .foregroundStyle(.grayScale60)
+        )
     }
 }
 
 #Preview {
     ZStack {
-        Color.gray.opacity(0.1).ignoresSafeArea()
+//        Color.gray.opacity(0.1).ignoresSafeArea()
         AverageScansCard()
     }
 }
