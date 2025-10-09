@@ -89,7 +89,7 @@ struct StarButton: View {
         let startTime = Date().timeIntervalSince1970
         let userPreferenceText = await dietaryPreferences.asString
         
-        PostHogSDK.shared.capture("Analysis Started", properties: [
+        PostHogSDK.shared.capture("Barcode Analysis Started", properties: [
             "request_id": requestId,
             "client_activity_id": clientActivityId,
             "barcode": barcode,
@@ -97,8 +97,15 @@ struct StarButton: View {
         ])
         
         do {
-            let product =
-                try await webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
+            // Start both API calls concurrently
+            async let productTask = webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
+            async let analysisTask = webService.fetchIngredientRecommendations(
+                clientActivityId: clientActivityId,
+                userPreferenceText: userPreferenceText,
+                barcode: barcode)
+
+            // Wait for product first and update UI
+            let product = try await productTask
 
             await MainActor.run {
                 withAnimation {
@@ -108,11 +115,8 @@ struct StarButton: View {
 
             impactOccurred()
 
-            let result =
-                try await webService.fetchIngredientRecommendations(
-                    clientActivityId: clientActivityId,
-                    userPreferenceText: userPreferenceText,
-                    barcode: barcode)
+            // Wait for analysis and update UI
+            let result = try await analysisTask
 
             await MainActor.run {
                 withAnimation {
@@ -123,7 +127,7 @@ struct StarButton: View {
             let endTime = Date().timeIntervalSince1970
             let totalLatency = (endTime - startTime) * 1000
             
-            PostHogSDK.shared.capture("Analysis Completed", properties: [
+            PostHogSDK.shared.capture("Barcode Analysis Completed", properties: [
                 "request_id": requestId,
                 "client_activity_id": clientActivityId,
                 "barcode": barcode,
@@ -140,7 +144,7 @@ struct StarButton: View {
             let endTime = Date().timeIntervalSince1970
             let totalLatency = (endTime - startTime) * 1000
             
-            PostHogSDK.shared.capture("Analysis Failed - Product Not Found", properties: [
+            PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
                 "request_id": requestId,
                 "client_activity_id": clientActivityId,
                 "barcode": barcode,
