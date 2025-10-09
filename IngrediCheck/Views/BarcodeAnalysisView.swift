@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftUIFlowLayout
 import SimpleToast
+import PostHog
 
 struct HeaderImage: View {
     let imageLocation: DTO.ImageLocationInfo
@@ -83,56 +84,87 @@ struct StarButton: View {
     }
 
     func analyze() async {
-
+        
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
         let userPreferenceText = await dietaryPreferences.asString
-
+        
+        PostHogSDK.shared.capture("Analysis Started", properties: [
+            "request_id": requestId,
+            "client_activity_id": clientActivityId,
+            "barcode": barcode,
+            "has_preferences": !userPreferenceText.isEmpty && userPreferenceText.lowercased() != "none"
+        ])
+        
         do {
-            try await webService.streamInventoryAndAnalysis(
-                clientActivityId: clientActivityId,
-                barcode: barcode,
-                userPreferenceText: userPreferenceText,
-                onProduct: { [weak self] product in
-                    Task { @MainActor in
-                        guard let self = self else { return }
-                        withAnimation {
-                            self.product = product
-                        }
-                        self.impactOccurred()
-                    }
-                },
-                onAnalysis: { [weak self] analysis in
-                    Task { @MainActor in
-                        guard let self = self else { return }
-                        withAnimation {
-                            self.ingredientRecommendations = analysis
-                        }
-                        self.impactOccurred()
-                    }
-                },
-                onError: { [weak self] errorMessage in
-                    Task { @MainActor in
-                        guard let self = self else { return }
-                        if errorMessage.lowercased().contains("not found") {
-                            self.notFound = true
-                        } else {
-                            self.errorMessage = errorMessage
-                        }
-                        self.impactOccurred()
-                    }
-                }
-            )
+            let product =
+                try await webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
 
+            await MainActor.run {
+                withAnimation {
+                    self.product = product
+                }
+            }
+
+            impactOccurred()
+
+            let result =
+                try await webService.fetchIngredientRecommendations(
+                    clientActivityId: clientActivityId,
+                    userPreferenceText: userPreferenceText,
+                    barcode: barcode)
+
+            await MainActor.run {
+                withAnimation {
+                    self.ingredientRecommendations = result
+                }
+            }
+            
+            let endTime = Date().timeIntervalSince1970
+            let totalLatency = (endTime - startTime) * 1000
+            
+            PostHogSDK.shared.capture("Analysis Completed", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "product_name": product.name ?? "Unknown",
+                "recommendations_count": result.count,
+                "total_latency_ms": totalLatency
+            ])
+            
         } catch NetworkError.notFound {
             await MainActor.run {
                 self.notFound = true
             }
-            impactOccurred()
+            
+            let endTime = Date().timeIntervalSince1970
+            let totalLatency = (endTime - startTime) * 1000
+            
+            PostHogSDK.shared.capture("Analysis Failed - Product Not Found", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "total_latency_ms": totalLatency
+            ])
+            
         } catch {
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
             }
-            impactOccurred()
+            
+            let endTime = Date().timeIntervalSince1970
+            let totalLatency = (endTime - startTime) * 1000
+            
+            PostHogSDK.shared.capture("Analysis Failed - Error", properties: [
+                "request_id": requestId,
+                "client_activity_id": clientActivityId,
+                "barcode": barcode,
+                "error": error.localizedDescription,
+                "total_latency_ms": totalLatency
+            ])
         }
+
+        impactOccurred()
     }
 
     func submitFeedback() {
