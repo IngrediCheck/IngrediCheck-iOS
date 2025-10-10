@@ -10,58 +10,76 @@ import SwiftUI
 struct FamilyCarouselView: View {
     
     @State var familyMembersList: [FamilyMemberModel] = [
-        FamilyMemberModel(familyMemberName: "Everyone", familyMemberImage: "Everyone"),
-        FamilyMemberModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj"),
-        FamilyMemberModel(familyMemberName: "Neha", familyMemberImage: "Neha"),
-        FamilyMemberModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav"),
-        FamilyMemberModel(familyMemberName: "Harsh", familyMemberImage: "Harsh"),
-        FamilyMemberModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa"),
-        FamilyMemberModel(familyMemberName: "Grandma", familyMemberImage: "Grandma")
+        
+        FamilyMemberModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj", backgroundColor: Color(hex: "DCC7F6")),
+        FamilyMemberModel(familyMemberName: "Neha", familyMemberImage: "Neha", backgroundColor: Color(hex: "F9C6D0")),
+        FamilyMemberModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav", backgroundColor: Color(hex: "FFF6B3")),
+        FamilyMemberModel(familyMemberName: "Harsh", familyMemberImage: "Harsh", backgroundColor: Color(hex: "FFD9B5")),
+        FamilyMemberModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa", backgroundColor: Color(hex: "BFF0D4")),
+        FamilyMemberModel(familyMemberName: "Grandma", familyMemberImage: "Grandma", backgroundColor: Color(hex: "A7D8F0"))
     ]
     
-    @State var selectedFamilyMember: FamilyMemberModel? = nil
+    @State var selectedFamilyMember: FamilyMemberModel? = FamilyMemberModel(familyMemberName: "Everyone", familyMemberImage: "Everyone", backgroundColor: .clear)
     
     var body: some View {
-        ZStack(alignment: .trailing) {
-            Image("familyCarouselBackground")
-                .resizable()
-                .frame(height: 79)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 24) {
-                    ForEach(familyMembersList) { ele in
-                        Button {
-                            selectFamilyMember(ele: ele)
-                        } label: {
-                            circleImage(image: ele.familyMemberImage, name: ele.familyMemberName)
-                        }
-                    }
-                }
-                .padding(.trailing, 12)
-            }
-            .background(Color(hex: "#ECECEC"), in: RoundedRectangle(cornerRadius: 16))
-            .frame(height: 79)
-            .frame(width: UIScreen.main.bounds.width * 0.69)
-            .padding(.trailing, 2)
-            
-            HStack {
+        HStack(spacing: 0) {
+            VStack {
                 ZStack {
-                    Circle()
-                        .stroke(lineWidth: 3)
-                        .foregroundColor(Color(hex: "#ECECEC"))
-                        .frame(width: 54, height: 54)
                     
-                    if let selectedFamilyMember {
-                        Image(selectedFamilyMember.familyMemberImage)
+                    if selectedFamilyMember?.familyMemberName == "Everyone" {
+                        Circle()
+                            .stroke(lineWidth: 2)
+                            .foregroundStyle(Color(hex: "91B640"))
+                            .frame(width: 46, height: 46)
+                        
+                        Circle()
+                            .frame(width: 40, height: 40)
+                            .foregroundStyle(
+                                LinearGradient(colors: [Color(hex: "FFC552"), Color(hex: "FFAA28")], startPoint: .top, endPoint: .bottom)
+                            )
+                        
+                        Image("Everyone")
                             .resizable()
-                            .frame(width: 44, height: 44)
+                            .frame(width: 26, height: 26)
+                    } else {
+                        Circle()
+                            .stroke(lineWidth: 2)
+                            .foregroundStyle(Color(hex: "91B640"))
+                            .frame(width: 46, height: 46)
+                        
+                        Circle()
+                            .frame(width: 40, height: 40)
+                            .foregroundStyle(selectedFamilyMember?.backgroundColor ?? .gray)
+                        
+                        Image(selectedFamilyMember?.familyMemberImage ?? "Everyone")
+                            .resizable()
+                            .frame(width: 40, height: 40)
                     }
                 }
                 
-                Spacer()
+                Text(selectedFamilyMember?.familyMemberName ?? "")
+                    .font(ManropeFont.semiBold.size(10))
+                    .foregroundStyle(.primary700)
             }
-            .padding(.top, 4)
-            .frame(height: 79, alignment: .top)
+            
+            RoundedRectangle(cornerRadius: 20)
+                .frame(width: 1, height: 62)
+                .foregroundStyle(
+                    LinearGradient(colors: [Color(hex: "E3E3E3").opacity(0.2), Color(hex: "E6E6E6"), Color(hex: "E3E3E3").opacity(0.2)], startPoint: .top, endPoint: .bottom)
+                )
+                .padding(.leading, 11)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 18) {
+                    ForEach(familyMembersList, id: \.id) { ele in
+                        circleImage(image: ele.familyMemberImage, name: ele.familyMemberName, color: ele.backgroundColor ?? .clear)
+                            .onTapGesture {
+                                selectFamilyMember(ele: ele)
+                            }
+                    }
+                }
+                .padding(.horizontal, 11)
+            }
         }
     }
     
@@ -78,27 +96,49 @@ struct FamilyCarouselView: View {
         }
     }
     
-    @ViewBuilder
-    func circleImage(image: String, name: String) -> some View {
-        VStack(spacing: 4) {
-            Circle()
-                .frame(width: 46, height: 46)
-                .foregroundStyle(Color(hex: "#D9D9D9"))
-                .overlay(
-                    Image(image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 36, height: 36)
-                )
-            
-            Text(name)
-                .font(.system(size: 10, weight: .regular))
-                .foregroundStyle(Color(hex: "#898A8D"))
+    
+    struct circleImage: View {
+
+        let image: String
+        let name: String
+        let color: Color
+        
+        var body: some View {
+            VStack(spacing: 4) {
+                if name == "Everyone" {
+                    Circle()
+                        .frame(width: 46, height: 46)
+                        .foregroundStyle(
+                            LinearGradient(colors: [Color(hex: "FFC552"), Color(hex: "FFAA28")], startPoint: .top, endPoint: .bottom)
+                        )
+                        .overlay(
+                            Image(image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 28, height: 28)
+                        )
+                } else {
+                    Circle()
+                        .frame(width: 46, height: 46)
+                        .foregroundStyle(color)
+                        .overlay(
+                            Image(image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 46, height: 46)
+                        )
+                }
+                
+                
+                Text(name)
+                    .font(ManropeFont.regular.size(10))
+                    .foregroundStyle(.grayScale130)
+            }
         }
     }
 }
 
 #Preview {
     FamilyCarouselView()
-        .padding(.horizontal, 25)
+        .padding(.leading, 25)
 }

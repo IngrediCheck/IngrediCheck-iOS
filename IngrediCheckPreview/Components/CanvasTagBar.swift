@@ -26,16 +26,22 @@ struct CanvasTagBar: View {
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: -2) {
+            HStack(spacing: -1) {
                 ForEach(iconsArr) { model in
-                    TagIconCapsule(image: model.icon, title: model.name, isSelected: $selectedTag.name, isFirst: (model.name == iconsArr.first?.name), visited: $visited)
-                        .onTapGesture {
-                            selectedTag = model
-                            
-                            if visited.contains(model.name) == false {
-                                visited.append(model.name)
-                            }
+                    TagIconCapsule(
+                        image: model.icon,
+                        title: model.name,
+                        isSelected: $selectedTag.name,
+                        isFirst: (model.name == iconsArr.first?.name),
+                        visited: $visited
+                    )
+                    .onTapGesture {
+                        selectedTag = model
+                        
+                        if visited.contains(model.name) == false {
+                            visited.append(model.name)
                         }
+                    }
                 }
             }
             .padding(.horizontal, 24)
@@ -56,17 +62,19 @@ struct TagIconCapsule : View {
     @Binding var visited: [String]
     
     var body: some View {
-        HStack(spacing: -2) {
+        HStack(spacing: -1) {
             
             if isFirst == false {
                 Rectangle()
-                    .fill(visited.contains(title) ? Color.green : Color(hex: "#E8E8E8"))
-                    .frame(width: 16, height: 12)   // in figma this rectrangles width is of 12, but due to the capsule shape it looks like the rectangle is not a part of capsule to due to that the width is increased to 16, 2 from leading and trailing and adjust with the spacing.
+                    .fill(visited.contains(title) ? .primary700 : .primary100)
+                    .frame(width: 14, height: 12)   // in figma this rectrangles width is of 12, but due to the capsule shape it looks like the rectangle is not a part of capsule to due to that the width is increased to 14, 1 from leading and trailing and adjust with the spacing.
             }
             
             HStack(spacing: 10) {
                 Image(image)
+                    .renderingMode(.template)
                     .resizable()
+                    .foregroundStyle(visited.contains(title) ? .grayScale10 : .primary500)
                     .frame(width: (isSelected == title) ? 18 : 24, height: (isSelected == title) ? 18 : 24)
                 
                 if isSelected == title {
@@ -74,10 +82,10 @@ struct TagIconCapsule : View {
                         .font(.system(size: 11, weight: .semibold))
                 }
             }
-            .padding(.vertical,(isSelected == title) ? 7 : 4)
-            .padding(.trailing, (isSelected == title) ? 12 : 13)
-            .padding(.leading, (isSelected == title) ? 8 : 13)
-            .background(visited.contains(title) ? Color.green : Color(hex: "#E8E8E8"), in: .capsule)
+            .padding(.vertical,(isSelected == title) ? 11 : 8)
+            .padding(.trailing, (isSelected == title) ? 16 : 20)
+            .padding(.leading, (isSelected == title) ? 12 : 20)
+            .background(visited.contains(title) ? .primary700 : .primary100, in: .capsule)
         }
         .foregroundStyle(visited.contains(title) ? Color.white : Color(hex: "#4A4A4A"))
     }

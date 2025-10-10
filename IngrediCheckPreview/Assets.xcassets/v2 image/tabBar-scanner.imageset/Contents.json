@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "material-symbols_family-home-rounded.png",
+      "filename" : "iconoir_scan-barcode.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "material-symbols_family-home-rounded@2x.png",
+      "filename" : "iconoir_scan-barcode@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "material-symbols_family-home-rounded@3x.png",
+      "filename" : "iconoir_scan-barcode@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

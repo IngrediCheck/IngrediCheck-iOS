@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ChipsModel: Identifiable {
+struct ChipsModel: Identifiable, Equatable {
     let id = UUID().uuidString
     var name: String
     var icon: String

@@ -21,14 +21,14 @@ struct CustomIngrediCheckProgressBar: View {
             
             ZStack(alignment: .trailing) {
                 Capsule()
-                    .fill(Color(hex: "#B6B6B6"))
+                    .fill(.secondary600)
                     .frame(width: (UIScreen.main.bounds.width - 48) * progress / 100, height: 4)
                     .padding(.horizontal, 24)
                 
                 VStack(spacing: 0) {
                     Text("\(Int(progress))%")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color(hex: "#B6B6B6"))
+                        .font(NunitoFont.bold.size(12))
+                        .foregroundStyle(.primary700)
                     
                     ZStack(alignment: .center) {
                         Image("orange")
@@ -46,7 +46,7 @@ struct CustomIngrediCheckProgressBar: View {
                     }
                 }
                 .padding(.trailing, 12)
-                .offset(y: -6)
+                .offset(y: -8)
             }
             
             VStack {
