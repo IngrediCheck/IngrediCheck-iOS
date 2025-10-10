@@ -15,24 +15,22 @@ struct GreenCircle: View {
             .background(
                 Capsule()
                     .foregroundStyle(
-                        LinearGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(
+                            gradient: Gradient(stops: [
+                                .init(color: Color(hex: "91C206"), location: 0.17),   // start color at 20%
+                                .init(color: Color(hex: "6B8E06"), location: 0.73)   // end color at 100%
+                            ]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                             .shadow(
-                                .inner(color: Color(hex: "EDEDED").opacity(0.25), radius: 7.5, x: 2, y: 4)
+                                .inner(color: Color(hex: "99C712"), radius: 2.2, x: 3.5, y: -1)
                             )
                             .shadow(
-                                .inner(color: Color(hex: "72930A"), radius: 5.7, x: 0, y: 4)
-                            )
-                            .shadow(
-                                .drop(color: Color(hex: "C5C5C5").opacity(0.57), radius: 11, x: 0, y: 4)
+                                .drop(color: Color(hex: "606060").opacity(0.28), radius: 2, x: 1, y: 4)
                             )
                     )
-                    
-            )
-            .overlay(
-                Capsule()
-                    .stroke(lineWidth: 1)
-                    .foregroundStyle(.grayScale10)
-                
+                    .rotationEffect(.degrees(17))
             )
     }
 }

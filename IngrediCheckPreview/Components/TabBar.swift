@@ -11,10 +11,10 @@ struct TabBar: View {
     
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
-    @State var isExpanded: Bool = true
+    @Binding var isExpanded: Bool
     
     var body: some View {
-        ZStack {
+//        ZStack {
             ZStack(alignment: .bottom) {
                 HStack(alignment: .center) {
                     Image("tabBar-heart")
@@ -51,14 +51,22 @@ struct TabBar: View {
                     Circle()
                         .frame(width: 60, height: 60)
                         .foregroundStyle(
-                            LinearGradient(colors: [Color(hex: "86AD17"), Color(hex: "688C00")], startPoint: .topTrailing, endPoint: .bottomLeading)
+                            LinearGradient(
+                                gradient: Gradient(stops: [
+                                    .init(color: Color(hex: "91C206"), location: 0.2),   // start color at 20%
+                                    .init(color: Color(hex: "6B8E06"), location: 0.7)   // end color at 100%
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                                 .shadow(
-                                    .inner(color: Color(hex: "DAFF67").opacity(0.5), radius: 4, x: 0, y: 4)
+                                    .inner(color: Color(hex: "99C712"), radius: 2.5, x: 4, y: -2.5)
                                 )
                                 .shadow(
-                                    .drop(color: Color(hex: "DEDEDE"), radius: 5, x: 0, y: 4)
+                                    .drop(color: Color(hex: "606060").opacity(0.35), radius: 3.3, x: 0, y: 4)
                                 )
                         )
+                        .rotationEffect(.degrees(18))
                     
                     
                     Image("tabBar-scanner")
@@ -68,64 +76,74 @@ struct TabBar: View {
                 }
                 .padding(.bottom, 18)
             }
+            .onChange(of: isExpanded) { oldValue, newValue in
+                something()
+            }
             
-            VStack {
-                
-                Spacer()
-                
-                Button {
-                    withAnimation(.smooth) {
-                        
-                        if isExpanded {
-                            withAnimation(.smooth) {
-                                offsetY = 25
-                            }
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                withAnimation(.smooth) {
-                                    scale = 0.1
-                                }
-                            }
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                withAnimation(.smooth) {
-                                    offsetY = 0
-                                }
-                            }
-                            
-                        } else {
-                            withAnimation(.smooth) {
-                                offsetY = 25
-                            }
-                            
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                withAnimation(.smooth) {
-                                    scale = 1
-                                }
-                            }
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                withAnimation(.smooth) {
-                                    offsetY = 0
-                                }
-                            }
-                        }
-                        
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    Text("Toggle")
+//            VStack {
+//                
+//                Spacer()
+//                
+//                Button {
+//                    something()
+//                } label: {
+//                    Text("Toggle")
+//                }
+//                
+//            }
+//        }
+    }
+    
+    
+    func something() {
+        withAnimation(.smooth) {
+            
+            if isExpanded {
+                withAnimation(.smooth) {
+                    offsetY = 25
                 }
                 
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.smooth) {
+                        scale = 0.1
+                    }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation(.smooth) {
+                        offsetY = 0
+                    }
+                }
+                
+            } else {
+                withAnimation(.smooth) {
+                    offsetY = 25
+                }
+                
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.smooth) {
+                        scale = 1
+                    }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation(.smooth) {
+                        offsetY = 0
+                    }
+                }
             }
+            
+            isExpanded.toggle()
         }
+
     }
+    
 }
 
 #Preview {
     ZStack {
         Color.gray.opacity(0.1).ignoresSafeArea()
-        TabBar()
+        TabBar(isExpanded: .constant(true))
     }
 }

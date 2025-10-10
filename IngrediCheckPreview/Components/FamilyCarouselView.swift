@@ -31,12 +31,14 @@ struct FamilyCarouselView: View {
                             .stroke(lineWidth: 2)
                             .foregroundStyle(Color(hex: "91B640"))
                             .frame(width: 46, height: 46)
+                            .shadow(color: Color(hex: "B2B2B2"), radius: 9.6, x: 0, y: 0)
                         
                         Circle()
                             .frame(width: 40, height: 40)
                             .foregroundStyle(
                                 LinearGradient(colors: [Color(hex: "FFC552"), Color(hex: "FFAA28")], startPoint: .top, endPoint: .bottom)
                             )
+                            
                         
                         Image("Everyone")
                             .resizable()
