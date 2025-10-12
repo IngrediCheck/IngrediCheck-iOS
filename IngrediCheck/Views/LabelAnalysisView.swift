@@ -1,8 +1,9 @@
 
 import SwiftUI
 import SimpleToast
+import PostHog
 
-@Observable class LabelAnalysisViewModel {
+@MainActor @Observable class LabelAnalysisViewModel {
     
     let productImages: [ProductImage]
     let webService: WebService
@@ -28,34 +29,78 @@ import SimpleToast
     }
 
     func analyze() async {
+        let userPreferenceText = dietaryPreferences.asString
+        var streamErrorHandled = false
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        let imageCount = productImages.count
+
+        PostHogSDK.shared.capture("Label Analysis Started", properties: [
+            "request_id": requestId,
+            "client_activity_id": clientActivityId,
+            "image_count": imageCount,
+            "has_preferences": !userPreferenceText.isEmpty && userPreferenceText.lowercased() != "none"
+        ])
+
         do {
-            let product =
-                try await webService.extractProductDetailsFromLabelImages(
-                    clientActivityId: clientActivityId,
-                    productImages: productImages
-                )
+            try await webService.streamUnifiedAnalysis(
+                input: .productImages(productImages),
+                clientActivityId: clientActivityId,
+                userPreferenceText: userPreferenceText,
+                onProduct: { product in
+                    withAnimation {
+                        self.product = product
+                    }
+                    self.impactOccurred()
 
-            await MainActor.run {
-                withAnimation {
-                    self.product = product
+                    PostHogSDK.shared.capture("Label Analysis Product Received", properties: [
+                        "request_id": requestId,
+                        "client_activity_id": self.clientActivityId,
+                        "image_count": imageCount,
+                        "product_name": product.name ?? "Unknown",
+                        "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                    ])
+                },
+                onAnalysis: { recommendations in
+                    withAnimation {
+                        self.ingredientRecommendations = recommendations
+                    }
+                    self.impactOccurred()
+
+                    PostHogSDK.shared.capture("Label Analysis Completed", properties: [
+                        "request_id": requestId,
+                        "client_activity_id": self.clientActivityId,
+                        "image_count": imageCount,
+                        "recommendations_count": recommendations.count,
+                        "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                    ])
+                },
+                onError: { streamError in
+                    streamErrorHandled = true
+                    self.error = streamError
+
+                    PostHogSDK.shared.capture("Label Analysis Failed", properties: [
+                        "request_id": requestId,
+                        "client_activity_id": self.clientActivityId,
+                        "image_count": imageCount,
+                        "status_code": streamError.statusCode ?? -1,
+                        "error": streamError.message,
+                        "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                    ])
                 }
-            }
-            
-            impactOccurred()
-
-            let result =
-                try await webService.fetchIngredientRecommendations(
-                    clientActivityId: clientActivityId,
-                    userPreferenceText: dietaryPreferences.asString)
-
-            await MainActor.run {
-                withAnimation {
-                    ingredientRecommendations = result
-                }
-            }
+            )
         } catch {
-            await MainActor.run {
+            if !streamErrorHandled {
                 self.error = error
+
+                PostHogSDK.shared.capture("Label Analysis Failed", properties: [
+                    "request_id": requestId,
+                    "client_activity_id": clientActivityId,
+                    "image_count": imageCount,
+                    "status_code": -1,
+                    "error": error.localizedDescription,
+                    "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                ])
             }
         }
 
