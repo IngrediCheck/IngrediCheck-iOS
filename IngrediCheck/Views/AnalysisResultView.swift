@@ -14,7 +14,6 @@ struct AnalysisResultView: View {
     let ingredientRecommendations: [DTO.IngredientRecommendation]?
     
     @Environment(UserPreferences.self) var userPreferences
-    @Environment(\.requestReview) var requestReview
 
     var body: some View {
         if let ingredientRecommendations {
@@ -45,9 +44,36 @@ struct AnalysisResultView: View {
         if userPreferences.canPromptForRating() {
             // Small delay to ensure the UI is settled before showing the prompt
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                requestReview()
+                // Record that we're showing the prompt
                 userPreferences.recordRatingPrompt()
+                
+                // Use the proper StoreKit API for requesting reviews
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    SKStoreReviewController.requestReview(in: windowScene)
+                } else {
+                    SKStoreReviewController.requestReview()
+                }
+                
+                // Set up dismissal detection after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    // If the app becomes active again within 3 seconds, user likely cancelled
+                    // We'll record dismissal when the view disappears or app becomes active
+                    self.setupDismissalDetection()
+                }
             }
+        }
+    }
+    
+    private func setupDismissalDetection() {
+        // Monitor when the user returns to the app to detect cancellation
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            // User returned to app, likely dismissed the rating prompt
+            userPreferences.recordPromptDismissal()
+            NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
         }
     }
 }

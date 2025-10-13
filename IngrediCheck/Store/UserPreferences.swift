@@ -96,6 +96,8 @@ enum OcrModel: String {
     private static let lastRatingPromptDateKey = "config.lastRatingPromptDate"
     private static let ratingPromptCountKey = "config.ratingPromptCount"
     private static let ratingPromptYearStartKey = "config.ratingPromptYearStart"
+    private static let fibonacciIndexKey = "config.fibonacciIndex"
+    private static let lastPromptDismissTimeKey = "config.lastPromptDismissTime"
     
     private static func readSuccessfulScanCount() -> Int {
         return UserDefaults.standard.integer(forKey: successfulScanCountKey)
@@ -113,10 +115,20 @@ enum OcrModel: String {
         return UserDefaults.standard.object(forKey: ratingPromptYearStartKey) as? Date
     }
     
+    private static func readFibonacciIndex() -> Int {
+        return UserDefaults.standard.integer(forKey: fibonacciIndexKey)
+    }
+    
+    private static func readLastPromptDismissTime() -> Date? {
+        return UserDefaults.standard.object(forKey: lastPromptDismissTimeKey) as? Date
+    }
+    
     @ObservationIgnored private var successfulScanCount: Int = UserPreferences.readSuccessfulScanCount()
     @ObservationIgnored private var lastRatingPromptDate: Date? = UserPreferences.readLastRatingPromptDate()
     @ObservationIgnored private var ratingPromptCount: Int = UserPreferences.readRatingPromptCount()
     @ObservationIgnored private var ratingPromptYearStart: Date? = UserPreferences.readRatingPromptYearStart()
+    @ObservationIgnored private var fibonacciIndex: Int = UserPreferences.readFibonacciIndex()
+    @ObservationIgnored private var lastPromptDismissTime: Date? = UserPreferences.readLastPromptDismissTime()
     
     /// Increment the successful scan counter
     func incrementScanCount() {
@@ -124,17 +136,12 @@ enum OcrModel: String {
         UserDefaults.standard.set(successfulScanCount, forKey: UserPreferences.successfulScanCountKey)
     }
     
-    /// Check if we can prompt for a rating based on Apple's guidelines
-    /// - Minimum 5 successful scans
+    /// Check if we can prompt for a rating based on Apple's guidelines and Fibonacci series
+    /// - Uses Fibonacci series for scan count requirements (3, 5, 8, 13, 21...)
     /// - Maximum 3 prompts per 365-day period
     /// - Minimum 30 days between prompts
     func canPromptForRating() -> Bool {
         let now = Date()
-        
-        // Check if we have enough successful scans
-        guard successfulScanCount >= 5 else {
-            return false
-        }
         
         // Reset yearly counter if needed (365 days have passed)
         if let yearStart = ratingPromptYearStart {
@@ -143,8 +150,10 @@ enum OcrModel: String {
                 // Reset for new year
                 ratingPromptCount = 0
                 ratingPromptYearStart = now
+                fibonacciIndex = 0
                 UserDefaults.standard.set(ratingPromptCount, forKey: UserPreferences.ratingPromptCountKey)
                 UserDefaults.standard.set(ratingPromptYearStart, forKey: UserPreferences.ratingPromptYearStartKey)
+                UserDefaults.standard.set(fibonacciIndex, forKey: UserPreferences.fibonacciIndexKey)
             }
         }
         
@@ -153,15 +162,48 @@ enum OcrModel: String {
             return false
         }
         
-        // Check if 30 days have passed since last prompt
+        // Check if enough time has passed since last prompt (30 days or based on dismissal)
         if let lastPrompt = lastRatingPromptDate {
             let daysSinceLastPrompt = Calendar.current.dateComponents([.day], from: lastPrompt, to: now).day ?? 0
-            guard daysSinceLastPrompt >= 30 else {
-                return false
+            
+            // If user likely cancelled (prompt dismissed quickly), use shorter interval
+            if let dismissTime = lastPromptDismissTime,
+               dismissTime.timeIntervalSince(lastPrompt) < 5.0 {
+                // User cancelled - use shorter interval (7 days instead of 30)
+                guard daysSinceLastPrompt >= 7 else {
+                    return false
+                }
+            } else {
+                // Normal interval (30 days)
+                guard daysSinceLastPrompt >= 30 else {
+                    return false
+                }
             }
         }
         
+        // Check if we have enough scans based on Fibonacci series
+        let requiredScans = fibonacciNumber(at: fibonacciIndex)
+        guard successfulScanCount >= requiredScans else {
+            return false
+        }
+        
         return true
+    }
+    
+    /// Calculate Fibonacci number at given index (starting from 3: 3, 5, 8, 13, 21, 34...)
+    private func fibonacciNumber(at index: Int) -> Int {
+        if index == 0 { return 3 }  // First prompt after 3 scans
+        if index == 1 { return 5 }  // Second prompt after 5 more scans (total 8)
+        if index == 2 { return 8 }  // Third prompt after 8 more scans (total 16)
+        
+        // For higher indices, calculate Fibonacci
+        var a = 3, b = 5
+        for _ in 2...index {
+            let temp = a + b
+            a = b
+            b = temp
+        }
+        return b
     }
     
     /// Record that a rating prompt was shown
@@ -181,8 +223,22 @@ enum OcrModel: String {
         UserDefaults.standard.set(ratingPromptCount, forKey: UserPreferences.ratingPromptCountKey)
         UserDefaults.standard.set(lastRatingPromptDate, forKey: UserPreferences.lastRatingPromptDateKey)
         
+        // Increment Fibonacci index for next prompt
+        fibonacciIndex += 1
+        UserDefaults.standard.set(fibonacciIndex, forKey: UserPreferences.fibonacciIndexKey)
+        
         // Reset scan counter after showing prompt
         successfulScanCount = 0
         UserDefaults.standard.set(successfulScanCount, forKey: UserPreferences.successfulScanCountKey)
+        
+        // Set up dismissal tracking (we'll detect cancellation based on timing)
+        lastPromptDismissTime = nil
+        UserDefaults.standard.removeObject(forKey: UserPreferences.lastPromptDismissTimeKey)
+    }
+    
+    /// Record when the rating prompt was dismissed (to detect cancellation)
+    func recordPromptDismissal() {
+        lastPromptDismissTime = Date()
+        UserDefaults.standard.set(lastPromptDismissTime, forKey: UserPreferences.lastPromptDismissTimeKey)
     }
 }
