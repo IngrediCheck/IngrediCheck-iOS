@@ -63,7 +63,12 @@ import Foundation
         }
     }
     
-    public func clearAll() {
+    @MainActor public func clearAll() {
         UserDefaults.standard.removeObject(forKey: OnboardingState.userDefaultsKey)
+        data = OnboardingData(
+            version: OnboardingState.currentVersion,
+            useCasesShown: false,
+            disclaimerShown: false
+        )
     }
 }

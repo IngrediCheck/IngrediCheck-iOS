@@ -17,10 +17,13 @@ enum OcrModel: String {
 
 @Observable class UserPreferences {
     
-    public func clearAll() {
+    @MainActor public func clearAll() {
         UserDefaults.standard.removeObject(forKey: UserPreferences.captureTypeKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.ocrModelKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.startScanningOnAppStartKey)
+        captureType = .barcode
+        ocrModel = .googleMLKit
+        startScanningOnAppStart = false
     }
 
     // Capture Type
