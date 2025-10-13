@@ -48,10 +48,11 @@ struct AnalysisResultView: View {
                 userPreferences.recordRatingPrompt()
                 
                 // Use the proper StoreKit API for requesting reviews
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                let foregroundScene = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first { $0.activationState == .foregroundActive }
+                if let windowScene = foregroundScene {
                     SKStoreReviewController.requestReview(in: windowScene)
-                } else {
-                    SKStoreReviewController.requestReview()
                 }
                 
                 // Set up dismissal detection after a short delay
@@ -66,14 +67,18 @@ struct AnalysisResultView: View {
     
     private func setupDismissalDetection() {
         // Monitor when the user returns to the app to detect cancellation
-        NotificationCenter.default.addObserver(
+        var observerToken: NSObjectProtocol?
+        observerToken = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { _ in
             // User returned to app, likely dismissed the rating prompt
             userPreferences.recordPromptDismissal()
-            NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+            if let token = observerToken {
+                NotificationCenter.default.removeObserver(token)
+                observerToken = nil
+            }
         }
     }
 }

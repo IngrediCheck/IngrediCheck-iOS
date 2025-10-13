@@ -36,6 +36,7 @@ import PostHog
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
         let imageCount = productImages.count
+        self.error = nil
 
         PostHogSDK.shared.capture("Label Analysis Started", properties: [
             "request_id": requestId,
@@ -93,7 +94,9 @@ import PostHog
             )
             
             // Track successful scan for rating prompt
-            userPreferences.incrementScanCount()
+            if self.error == nil {
+                userPreferences.incrementScanCount()
+            }
         } catch {
             if !streamErrorHandled {
                 self.error = error
