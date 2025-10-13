@@ -54,9 +54,18 @@ enum SignInState {
     }
     
     @MainActor var signedInAsGuest: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] {
+        if let provider = self.session?.user.appMetadata["provider"] as? String {
             return provider == "email" || provider == "anonymous"
         }
+        
+        if self.session?.user.isAnonymous == true {
+            return true
+        }
+        
+        if let email = self.session?.user.email {
+            return email.hasPrefix("anon-") && email.hasSuffix("@example.com")
+        }
+        
         return false
     }
     

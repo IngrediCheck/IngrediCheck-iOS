@@ -169,10 +169,25 @@ struct DeleteAccountView: View {
 struct SignoutButton: View {
 
     @Environment(AuthController.self) var authController
+    @Environment(OnboardingState.self) var onboardingState
+    @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
+    @Environment(AppState.self) var appState
 
     var body: some View {
         Button {
-            Task { await authController.signOut() }
+            Task {
+                await authController.signOut()
+                await MainActor.run {
+                    appState.activeSheet = nil
+                    appState.activeTab = .home
+                    appState.feedbackConfig = nil
+                    appState.listsTabState = ListsTabState()
+                    onboardingState.clearAll()
+                    userPreferences.clearAll()
+                    dietaryPreferences.clearAll()
+                }
+            }
         } label: {
             Label {
                 Text("Sign out")
