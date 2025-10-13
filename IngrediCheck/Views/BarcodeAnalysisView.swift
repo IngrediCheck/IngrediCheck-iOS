@@ -57,7 +57,7 @@ struct StarButton: View {
     }
 }
 
-@Observable class BarcodeAnalysisViewModel {
+@MainActor @Observable class BarcodeAnalysisViewModel {
 
     let barcode: String
     let webService: WebService
@@ -86,91 +86,115 @@ struct StarButton: View {
     }
 
     func analyze() async {
-        
+
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
-        let userPreferenceText = await dietaryPreferences.asString
-        
+        let userPreferenceText = dietaryPreferences.asString
+        var streamErrorHandled = false
+
         PostHogSDK.shared.capture("Barcode Analysis Started", properties: [
             "request_id": requestId,
             "client_activity_id": clientActivityId,
             "barcode": barcode,
             "has_preferences": !userPreferenceText.isEmpty && userPreferenceText.lowercased() != "none"
         ])
-        
+
         do {
-            // Start both API calls concurrently
-            async let productTask = webService.fetchProductDetailsFromBarcode(clientActivityId: clientActivityId, barcode: barcode)
-            async let analysisTask = webService.fetchIngredientRecommendations(
+            try await webService.streamUnifiedAnalysis(
+                input: .barcode(barcode),
                 clientActivityId: clientActivityId,
                 userPreferenceText: userPreferenceText,
-                barcode: barcode)
+                onProduct: { product in
+                    withAnimation {
+                        self.product = product
+                    }
+                    self.impactOccurred()
 
-            // Wait for product first and update UI
-            let product = try await productTask
+                    PostHogSDK.shared.capture("Barcode Analysis Product Received", properties: [
+                        "request_id": requestId,
+                        "client_activity_id": self.clientActivityId,
+                        "barcode": self.barcode,
+                        "product_name": product.name ?? "Unknown",
+                        "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                    ])
+                },
+                onAnalysis: { recommendations in
+                    withAnimation {
+                        self.ingredientRecommendations = recommendations
+                    }
+                    self.impactOccurred()
 
-            await MainActor.run {
-                withAnimation {
-                    self.product = product
+                    let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
+
+                    PostHogSDK.shared.capture("Barcode Analysis Completed", properties: [
+                        "request_id": requestId,
+                        "client_activity_id": self.clientActivityId,
+                        "barcode": self.barcode,
+                        "product_name": self.product?.name ?? "Unknown",
+                        "recommendations_count": recommendations.count,
+                        "total_latency_ms": totalLatency
+                    ])
+                },
+                onError: { streamError in
+                    streamErrorHandled = true
+
+                    if streamError.statusCode == 404 {
+                        self.notFound = true
+                    } else {
+                        self.errorMessage = streamError.message
+                    }
+
+                    let endTime = Date().timeIntervalSince1970
+                    let totalLatency = (endTime - startTime) * 1000
+
+                    if streamError.statusCode == 404 {
+                        PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
+                            "request_id": requestId,
+                            "client_activity_id": self.clientActivityId,
+                            "barcode": self.barcode,
+                            "total_latency_ms": totalLatency
+                        ])
+                    } else {
+                        PostHogSDK.shared.capture("Barcode Analysis Failed - Error", properties: [
+                            "request_id": requestId,
+                            "client_activity_id": self.clientActivityId,
+                            "barcode": self.barcode,
+                            "error": streamError.message,
+                            "total_latency_ms": totalLatency
+                        ])
+                    }
                 }
-            }
-
-            impactOccurred()
-
-            // Wait for analysis and update UI
-            let result = try await analysisTask
-
-            await MainActor.run {
-                withAnimation {
-                    self.ingredientRecommendations = result
-                }
-            }
-            
-            let endTime = Date().timeIntervalSince1970
-            let totalLatency = (endTime - startTime) * 1000
-            
-            PostHogSDK.shared.capture("Barcode Analysis Completed", properties: [
-                "request_id": requestId,
-                "client_activity_id": clientActivityId,
-                "barcode": barcode,
-                "product_name": product.name ?? "Unknown",
-                "recommendations_count": result.count,
-                "total_latency_ms": totalLatency
-            ])
+            )
             
             // Track successful scan for rating prompt
             userPreferences.incrementScanCount()
-            
         } catch NetworkError.notFound {
-            await MainActor.run {
+            if !streamErrorHandled {
                 self.notFound = true
+                let endTime = Date().timeIntervalSince1970
+                let totalLatency = (endTime - startTime) * 1000
+
+                PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
+                    "request_id": requestId,
+                    "client_activity_id": clientActivityId,
+                    "barcode": barcode,
+                    "total_latency_ms": totalLatency
+                ])
             }
-            
-            let endTime = Date().timeIntervalSince1970
-            let totalLatency = (endTime - startTime) * 1000
-            
-            PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
-                "request_id": requestId,
-                "client_activity_id": clientActivityId,
-                "barcode": barcode,
-                "total_latency_ms": totalLatency
-            ])
-            
         } catch {
-            await MainActor.run {
+            if !streamErrorHandled {
                 self.errorMessage = error.localizedDescription
+                let endTime = Date().timeIntervalSince1970
+                let totalLatency = (endTime - startTime) * 1000
+
+                PostHogSDK.shared.capture("Analysis Failed - Error", properties: [
+                    "request_id": requestId,
+                    "client_activity_id": clientActivityId,
+                    "barcode": barcode,
+                    "error": error.localizedDescription,
+                    "total_latency_ms": totalLatency
+                ])
             }
-            
-            let endTime = Date().timeIntervalSince1970
-            let totalLatency = (endTime - startTime) * 1000
-            
-            PostHogSDK.shared.capture("Analysis Failed - Error", properties: [
-                "request_id": requestId,
-                "client_activity_id": clientActivityId,
-                "barcode": barcode,
-                "error": error.localizedDescription,
-                "total_latency_ms": totalLatency
-            ])
         }
 
         impactOccurred()

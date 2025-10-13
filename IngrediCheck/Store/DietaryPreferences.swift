@@ -111,8 +111,16 @@ extension UserDefaults {
         }
     }
     
-    public func clearAll() {
+    @MainActor public func clearAll() {
         UserDefaults.deleteDietaryPreferences()
+        preferences = []
+        newPreferenceText = ""
+        validationResult = .idle
+        task?.cancel()
+        task = nil
+        inEditPreference = nil
+        indexOfCurrentlyEditedPreference = 0
+        clientActivityId = UUID().uuidString
     }
     
     @MainActor public func startEditPreference(preference: DTO.DietaryPreference) {

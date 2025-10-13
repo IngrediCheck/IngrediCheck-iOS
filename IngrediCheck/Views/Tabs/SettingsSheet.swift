@@ -128,6 +128,7 @@ struct DeleteAccountView: View {
     @Environment(OnboardingState.self) var onboardingState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
+    @Environment(AppState.self) var appState
 
     @State private var confirmationShown = false
 
@@ -150,9 +151,15 @@ struct DeleteAccountView: View {
             Button("I Understand") {
                 Task {
                     await authController.deleteAccount()
-                    onboardingState.clearAll()
-                    userPreferences.clearAll()
-                    dietaryPreferences.clearAll()
+                    await MainActor.run {
+                        appState.activeSheet = nil
+                        appState.activeTab = .home
+                        appState.feedbackConfig = nil
+                        appState.listsTabState = ListsTabState()
+                        onboardingState.clearAll()
+                        userPreferences.clearAll()
+                        dietaryPreferences.clearAll()
+                    }
                 }
             }
         }
