@@ -9,13 +9,15 @@ import SwiftUI
 
 struct IngredientsChips: View {
     var title: String = "Peanuts"
-    var bgColor: String = "#DDDDDD"
+    var bgColor: Color? = .white
     var fontColor: String = "000000"
     var fontSize: CGFloat = 12
     var fontWeight: Font.Weight = .regular
     var image: String? = nil
     var familyList: [String] = []
     var onClick: (() -> Void)? = nil
+    var isSelected: Bool = false
+    var outlined: Bool = true
     
     var body: some View {
         Button {
@@ -29,8 +31,8 @@ struct IngredientsChips: View {
                 }
                 
                 Text(title)
-                    .font(.system(size: fontSize, weight: fontWeight))
-                    .foregroundStyle(Color(hex: fontColor))
+                    .font(ManropeFont.medium.size(14))
+                    .foregroundStyle(isSelected ? .primary100 : Color(hex: fontColor))
                 
                 if !familyList.isEmpty {
                     HStack(spacing: -7) {
@@ -40,10 +42,41 @@ struct IngredientsChips: View {
                     }
                 }
             }
-            .padding(.vertical, (image != nil) ? 4 : 7.5)
-            .padding(.trailing, !familyList.isEmpty ? 8 : 12)
-            .padding(.leading, (image != nil) ? 8 : 12)
-            .background(Color(hex: bgColor), in: .capsule)
+            .padding(.vertical, (image != nil) ? 6 : 7.5)
+            .padding(.trailing, !familyList.isEmpty ? 8 : 16)
+            .padding(.leading, (image != nil) ? 12 : 16)
+            .background(
+                (bgColor != nil)
+                ? LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: bgColor ?? .white, location: 1.0)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                : isSelected
+                    ? LinearGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: Color(hex: "9DCF10"), location: 0.0),
+                            .init(color: Color(hex: "6B8E06"), location: 0.87)
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    : LinearGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: .clear, location: 1.0)
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                , in: .capsule
+            )
+            .overlay(
+                Capsule()
+                    .stroke(lineWidth: (isSelected || outlined == false) ? 0 : 1)
+                    .foregroundStyle(.grayScale60)
+            )
         }
     }
     
