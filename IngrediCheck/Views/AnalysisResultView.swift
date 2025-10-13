@@ -86,10 +86,11 @@ struct AnalysisResultView: View {
                 userPreferences.recordRatingPrompt()
                 
                 // Use the proper StoreKit API for requesting reviews
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                let foregroundScene = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first { $0.activationState == .foregroundActive }
+                if let windowScene = foregroundScene {
                     SKStoreReviewController.requestReview(in: windowScene)
-                } else {
-                    SKStoreReviewController.requestReview()
                 }
                 
                 // Set up dismissal detection after a short delay
