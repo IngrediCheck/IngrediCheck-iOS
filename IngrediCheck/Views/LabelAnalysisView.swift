@@ -7,13 +7,15 @@ import SimpleToast
     let productImages: [ProductImage]
     let webService: WebService
     let dietaryPreferences: DietaryPreferences
+    let userPreferences: UserPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
-    init(_ productImages: [ProductImage], _ webService: WebService, _ dietaryPreferences: DietaryPreferences) {
+    init(_ productImages: [ProductImage], _ webService: WebService, _ dietaryPreferences: DietaryPreferences, _ userPreferences: UserPreferences) {
         self.productImages = productImages
         self.webService = webService
         self.dietaryPreferences = dietaryPreferences
+        self.userPreferences = userPreferences
         impactFeedback.prepare()
     }
     
@@ -53,6 +55,9 @@ import SimpleToast
                     ingredientRecommendations = result
                 }
             }
+            
+            // Track successful scan for rating prompt
+            userPreferences.incrementScanCount()
         } catch {
             await MainActor.run {
                 self.error = error
@@ -169,7 +174,7 @@ struct LabelAnalysisView: View {
             } else {
                 ProgressView()
                     .task {
-                        let newViewModel = LabelAnalysisViewModel(productImages, webService, dietaryPreferences)
+                        let newViewModel = LabelAnalysisViewModel(productImages, webService, dietaryPreferences, userPreferences)
                         Task { await newViewModel.analyze() }
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }

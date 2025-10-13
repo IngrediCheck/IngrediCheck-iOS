@@ -18,6 +18,8 @@ var startTime = Date().timeIntervalSince1970
     
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
     @State private var showScanner = true
+    @State private var showSuccessOverlay = false
+    @State private var detectedBarcodeBounds: CGRect = .zero
 
     @Environment(CheckTabState.self) var checkTabState
 
@@ -29,7 +31,14 @@ var startTime = Date().timeIntervalSince1970
                 // This is because the following sequence of actions results in freeze of scanning:
                 // startScanning => stopScanning() => startScanning().
                 if showScanner {
-                    mainView
+                    ZStack {
+                        mainView
+                        
+                        // Success overlay with barcode highlight
+                        if showSuccessOverlay {
+                            BarcodeSuccessOverlay(bounds: detectedBarcodeBounds)
+                        }
+                    }
                     Text("Scan Barcode of a Packaged Food Item.")
                         .padding(.top)
                     Spacer()
@@ -70,14 +79,18 @@ var startTime = Date().timeIntervalSince1970
     
     private var mainView: some View {
         @Bindable var checkTabState = checkTabState
-        return DataScannerView(routes: $checkTabState.routes)
-            .aspectRatio(3/4, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.paletteSecondary, lineWidth: 0.8)
-            )
-            .padding(.top)
+        return DataScannerView(
+            routes: $checkTabState.routes,
+            showSuccessOverlay: $showSuccessOverlay,
+            detectedBarcodeBounds: $detectedBarcodeBounds
+        )
+        .aspectRatio(3/4, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.paletteSecondary, lineWidth: 0.8)
+        )
+        .padding(.top)
     }
     
     private var isScannerAvailable: Bool {
@@ -125,6 +138,8 @@ var startTime = Date().timeIntervalSince1970
 struct DataScannerView: UIViewControllerRepresentable {
     
     @Binding var routes: [CapturedItem]
+    @Binding var showSuccessOverlay: Bool
+    @Binding var detectedBarcodeBounds: CGRect
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let uiViewController = DataScannerViewController(
@@ -144,7 +159,11 @@ struct DataScannerView: UIViewControllerRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        return Coordinator(routes: $routes)
+        return Coordinator(
+            routes: $routes,
+            showSuccessOverlay: $showSuccessOverlay,
+            detectedBarcodeBounds: $detectedBarcodeBounds
+        )
     }
     
     static func dismantleUIViewController(_ uiViewController: DataScannerViewController, coordinator: Coordinator) {
@@ -154,9 +173,13 @@ struct DataScannerView: UIViewControllerRepresentable {
     class Coordinator: NSObject, DataScannerViewControllerDelegate {
         
         @Binding var routes: [CapturedItem]
+        @Binding var showSuccessOverlay: Bool
+        @Binding var detectedBarcodeBounds: CGRect
 
-        init(routes: Binding<[CapturedItem]>) {
+        init(routes: Binding<[CapturedItem]>, showSuccessOverlay: Binding<Bool>, detectedBarcodeBounds: Binding<CGRect>) {
             self._routes = routes
+            self._showSuccessOverlay = showSuccessOverlay
+            self._detectedBarcodeBounds = detectedBarcodeBounds
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
@@ -166,11 +189,40 @@ struct DataScannerView: UIViewControllerRepresentable {
             if let firstItem = addedItems.first,
                case let .barcode(barcodeItem) = firstItem,
                let barcodeString = barcodeItem.payloadStringValue {
+                // Check if we're already showing the overlay for this barcode
+                if showSuccessOverlay {
+                    return
+                }
+                
                 if case .barcode(let lastBarcode) = routes.last, lastBarcode == barcodeString {
                     return
                 }
-                routes.append(.barcode(barcodeString))
+                
+                // Capture barcode bounds for visual feedback
+                // For now, use a default centered rectangle as fallback
+                // TODO: Implement proper bounds detection when VisionKit API is clarified
+                let viewBounds = dataScanner.view.bounds
+                let centerX = viewBounds.width / 2
+                let centerY = viewBounds.height / 2
+                let bounds = CGRect(
+                    x: centerX - 100, // 200pt wide rectangle
+                    y: centerY - 50,  // 100pt tall rectangle
+                    width: 200,
+                    height: 100
+                )
+                detectedBarcodeBounds = bounds
+                
+                // Show success overlay with animation
+                showSuccessOverlay = true
+                
+                // Haptic feedback
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                
+                // Add delay before navigation to show visual feedback
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    self.routes.append(.barcode(barcodeString))
+                    self.showSuccessOverlay = false
+                }
 
                 PostHogSDK.shared.capture("Barcode Scanning Completed", properties: [
                     "latency_ms": (Date().timeIntervalSince1970 * 1000) - (startTime * 1000),
@@ -190,4 +242,38 @@ struct DataScannerView: UIViewControllerRepresentable {
         
     }
     
+}
+
+// MARK: - Barcode Success Overlay
+
+struct BarcodeSuccessOverlay: View {
+    let bounds: CGRect
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Semi-transparent blue overlay over barcode area
+                Rectangle()
+                    .fill(Color.blue.opacity(0.3))
+                    .frame(width: bounds.width, height: bounds.height)
+                    .position(
+                        x: bounds.midX,
+                        y: bounds.midY
+                    )
+                    .animation(.easeInOut(duration: 0.3), value: bounds)
+                
+                // Success checkmark in center of overlay
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(.green)
+                    .position(
+                        x: bounds.midX,
+                        y: bounds.midY
+                    )
+                    .scaleEffect(1.0)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: bounds)
+            }
+        }
+        .allowsHitTesting(false) // Allow touches to pass through
+    }
 }

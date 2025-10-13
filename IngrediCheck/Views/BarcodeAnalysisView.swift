@@ -62,13 +62,15 @@ struct StarButton: View {
     let barcode: String
     let webService: WebService
     let dietaryPreferences: DietaryPreferences
+    let userPreferences: UserPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
-    init(_ barcode: String, _ webService: WebService, _ dietaryPreferences: DietaryPreferences) {
+    init(_ barcode: String, _ webService: WebService, _ dietaryPreferences: DietaryPreferences, _ userPreferences: UserPreferences) {
         self.barcode = barcode
         self.webService = webService
         self.dietaryPreferences = dietaryPreferences
+        self.userPreferences = userPreferences
         impactFeedback.prepare()
     }
 
@@ -135,6 +137,9 @@ struct StarButton: View {
                 "recommendations_count": result.count,
                 "total_latency_ms": totalLatency
             ])
+            
+            // Track successful scan for rating prompt
+            userPreferences.incrementScanCount()
             
         } catch NetworkError.notFound {
             await MainActor.run {
@@ -356,7 +361,7 @@ struct BarcodeAnalysisView: View {
             } else {
                 ProgressView()
                     .task {
-                        let newViewModel = BarcodeAnalysisViewModel(barcode, webService, dietaryPreferences)
+                        let newViewModel = BarcodeAnalysisViewModel(barcode, webService, dietaryPreferences, userPreferences)
                         Task { await newViewModel.analyze() }
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }

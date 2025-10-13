@@ -263,13 +263,19 @@ struct CameraPreview: UIViewRepresentable {
 
 class CameraPreviewUIView: UIView {
     var previewLayer: AVCaptureVideoPreviewLayer
+    var session: AVCaptureSession
     
     init(session: AVCaptureSession) {
+        self.session = session
         self.previewLayer = AVCaptureVideoPreviewLayer(session: session)
         super.init(frame: .zero)
         
         self.previewLayer.videoGravity = .resizeAspectFill
         self.layer.addSublayer(self.previewLayer)
+        
+        // Add tap gesture for tap-to-focus
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapToFocus(_:)))
+        self.addGestureRecognizer(tapGesture)
     }
     
     required init?(coder: NSCoder) {
@@ -279,6 +285,64 @@ class CameraPreviewUIView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         previewLayer.frame = self.bounds
+    }
+    
+    @objc private func handleTapToFocus(_ gesture: UITapGestureRecognizer) {
+        let tapPoint = gesture.location(in: self)
+        
+        // Convert tap point to camera coordinates (0-1 range)
+        let focusPoint = previewLayer.captureDevicePointConverted(fromLayerPoint: tapPoint)
+        
+        // Get the camera device from the session
+        guard let device = session.inputs.first as? AVCaptureDeviceInput else {
+            return
+        }
+        
+        // Apply focus
+        do {
+            try device.device.lockForConfiguration()
+            
+            if device.device.isFocusPointOfInterestSupported && device.device.isFocusModeSupported(.autoFocus) {
+                device.device.focusPointOfInterest = focusPoint
+                device.device.focusMode = .continuousAutoFocus
+            }
+            
+            if device.device.isExposurePointOfInterestSupported && device.device.isExposureModeSupported(.autoExpose) {
+                device.device.exposurePointOfInterest = focusPoint
+                device.device.exposureMode = .continuousAutoExposure
+            }
+            
+            device.device.unlockForConfiguration()
+            
+            // Show visual feedback
+            showFocusIndicator(at: tapPoint)
+        } catch {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
+    private func showFocusIndicator(at point: CGPoint) {
+        // Create a focus indicator view
+        let focusView = UIView(frame: CGRect(x: 0, y: 0, width: 80, height: 80))
+        focusView.center = point
+        focusView.layer.borderColor = UIColor.systemYellow.cgColor
+        focusView.layer.borderWidth = 2.0
+        focusView.layer.cornerRadius = 40
+        focusView.alpha = 0.0
+        
+        self.addSubview(focusView)
+        
+        // Animate the focus indicator
+        UIView.animate(withDuration: 0.3, animations: {
+            focusView.alpha = 1.0
+            focusView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 0.5, animations: {
+                focusView.alpha = 0.0
+            }) { _ in
+                focusView.removeFromSuperview()
+            }
+        }
     }
 }
 
@@ -316,7 +380,8 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
         
         do {
             
-//            focusOnPoint(device: backCamera, point: CGPoint(x: 0.5, y: 0.5))
+            // Enable continuous auto-focus on center point
+            focusOnPoint(device: backCamera, point: CGPoint(x: 0.5, y: 0.5))
 
             let input = try AVCaptureDeviceInput(device: backCamera)
             if session.canAddInput(input) {

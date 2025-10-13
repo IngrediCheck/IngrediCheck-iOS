@@ -89,4 +89,100 @@ enum OcrModel: String {
                 )
             }
         }
+    
+    // MARK: - Rating Prompt Tracking
+    
+    private static let successfulScanCountKey = "config.successfulScanCount"
+    private static let lastRatingPromptDateKey = "config.lastRatingPromptDate"
+    private static let ratingPromptCountKey = "config.ratingPromptCount"
+    private static let ratingPromptYearStartKey = "config.ratingPromptYearStart"
+    
+    private static func readSuccessfulScanCount() -> Int {
+        return UserDefaults.standard.integer(forKey: successfulScanCountKey)
+    }
+    
+    private static func readLastRatingPromptDate() -> Date? {
+        return UserDefaults.standard.object(forKey: lastRatingPromptDateKey) as? Date
+    }
+    
+    private static func readRatingPromptCount() -> Int {
+        return UserDefaults.standard.integer(forKey: ratingPromptCountKey)
+    }
+    
+    private static func readRatingPromptYearStart() -> Date? {
+        return UserDefaults.standard.object(forKey: ratingPromptYearStartKey) as? Date
+    }
+    
+    @ObservationIgnored private var successfulScanCount: Int = UserPreferences.readSuccessfulScanCount()
+    @ObservationIgnored private var lastRatingPromptDate: Date? = UserPreferences.readLastRatingPromptDate()
+    @ObservationIgnored private var ratingPromptCount: Int = UserPreferences.readRatingPromptCount()
+    @ObservationIgnored private var ratingPromptYearStart: Date? = UserPreferences.readRatingPromptYearStart()
+    
+    /// Increment the successful scan counter
+    func incrementScanCount() {
+        successfulScanCount += 1
+        UserDefaults.standard.set(successfulScanCount, forKey: UserPreferences.successfulScanCountKey)
+    }
+    
+    /// Check if we can prompt for a rating based on Apple's guidelines
+    /// - Minimum 5 successful scans
+    /// - Maximum 3 prompts per 365-day period
+    /// - Minimum 30 days between prompts
+    func canPromptForRating() -> Bool {
+        let now = Date()
+        
+        // Check if we have enough successful scans
+        guard successfulScanCount >= 5 else {
+            return false
+        }
+        
+        // Reset yearly counter if needed (365 days have passed)
+        if let yearStart = ratingPromptYearStart {
+            let daysSinceYearStart = Calendar.current.dateComponents([.day], from: yearStart, to: now).day ?? 0
+            if daysSinceYearStart >= 365 {
+                // Reset for new year
+                ratingPromptCount = 0
+                ratingPromptYearStart = now
+                UserDefaults.standard.set(ratingPromptCount, forKey: UserPreferences.ratingPromptCountKey)
+                UserDefaults.standard.set(ratingPromptYearStart, forKey: UserPreferences.ratingPromptYearStartKey)
+            }
+        }
+        
+        // Check if we've already shown 3 prompts this year
+        guard ratingPromptCount < 3 else {
+            return false
+        }
+        
+        // Check if 30 days have passed since last prompt
+        if let lastPrompt = lastRatingPromptDate {
+            let daysSinceLastPrompt = Calendar.current.dateComponents([.day], from: lastPrompt, to: now).day ?? 0
+            guard daysSinceLastPrompt >= 30 else {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    /// Record that a rating prompt was shown
+    func recordRatingPrompt() {
+        let now = Date()
+        
+        // Initialize year start if needed
+        if ratingPromptYearStart == nil {
+            ratingPromptYearStart = now
+            UserDefaults.standard.set(ratingPromptYearStart, forKey: UserPreferences.ratingPromptYearStartKey)
+        }
+        
+        // Update prompt count and date
+        ratingPromptCount += 1
+        lastRatingPromptDate = now
+        
+        UserDefaults.standard.set(ratingPromptCount, forKey: UserPreferences.ratingPromptCountKey)
+        UserDefaults.standard.set(lastRatingPromptDate, forKey: UserPreferences.lastRatingPromptDateKey)
+        
+        // Reset scan counter after showing prompt
+        successfulScanCount = 0
+        UserDefaults.standard.set(successfulScanCount, forKey: UserPreferences.successfulScanCountKey)
+    }
 }
