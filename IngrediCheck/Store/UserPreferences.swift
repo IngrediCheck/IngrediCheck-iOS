@@ -21,9 +21,27 @@ enum OcrModel: String {
         UserDefaults.standard.removeObject(forKey: UserPreferences.captureTypeKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.ocrModelKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.startScanningOnAppStartKey)
+        
+        // Clear rating prompt tracking keys
+        UserDefaults.standard.removeObject(forKey: UserPreferences.successfulScanCountKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.lastRatingPromptDateKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.ratingPromptCountKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.ratingPromptYearStartKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.fibonacciIndexKey)
+        UserDefaults.standard.removeObject(forKey: UserPreferences.lastPromptDismissTimeKey)
+        
+        // Reset properties to default values
         captureType = .barcode
         ocrModel = .googleMLKit
         startScanningOnAppStart = false
+        
+        // Reset rating prompt tracking properties
+        successfulScanCount = 0
+        lastRatingPromptDate = nil
+        ratingPromptCount = 0
+        ratingPromptYearStart = nil
+        fibonacciIndex = 0
+        lastPromptDismissTime = nil
     }
 
     // Capture Type
