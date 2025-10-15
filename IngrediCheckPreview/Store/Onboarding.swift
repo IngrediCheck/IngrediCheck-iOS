@@ -13,12 +13,13 @@ import Combine
 struct ChipsModel: Identifiable, Equatable {
     let id = UUID().uuidString
     var name: String
-    var icon: String
+    var icon: String?
 }
 
 struct SectionedChipModel: Identifiable {
     var id = UUID().uuidString
     var title: String
+    var subtitle: String?
     var chips: [ChipsModel]
 }
 
@@ -115,7 +116,7 @@ struct OnboardingSectionsFactory {
     }
 }
 
-
+@MainActor
 class Onboarding: ObservableObject {
     @Published var isOnboardingCompleted: Bool = false
     @Published var onboardingFlowtype: OnboardingFlowType = .individual
@@ -156,7 +157,9 @@ class Onboarding: ObservableObject {
         if currentScreenIndex < currentSection.screens.count - 1 {
             currentScreenIndex += 1
         } else {
-            sections[currentSectionIndex].isComplete = true
+            var section = sections[currentSectionIndex]
+            section.isComplete = true
+            sections[currentSectionIndex] = section
             if currentSectionIndex < sections.count - 1 {
                 currentSectionIndex += 1
                 currentScreenIndex = 0

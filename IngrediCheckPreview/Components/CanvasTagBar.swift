@@ -29,7 +29,7 @@ struct CanvasTagBar: View {
             HStack(spacing: -1) {
                 ForEach(iconsArr) { model in
                     TagIconCapsule(
-                        image: model.icon,
+                        image: model.icon ?? "",
                         title: model.name,
                         isSelected: $selectedTag.name,
                         isFirst: (model.name == iconsArr.first?.name),
@@ -68,6 +68,7 @@ struct TagIconCapsule : View {
                 Rectangle()
                     .fill(visited.contains(title) ? .primary700 : .primary100)
                     .frame(width: 14, height: 12)   // in figma this rectrangles width is of 12, but due to the capsule shape it looks like the rectangle is not a part of capsule to due to that the width is increased to 14, 1 from leading and trailing and adjust with the spacing.
+                    .zIndex(1)
             }
             
             HStack(spacing: 10) {
@@ -86,6 +87,7 @@ struct TagIconCapsule : View {
             .padding(.trailing, (isSelected == title) ? 16 : 20)
             .padding(.leading, (isSelected == title) ? 12 : 20)
             .background(visited.contains(title) ? .primary700 : .primary100, in: .capsule)
+            .zIndex(10)
         }
         .foregroundStyle(visited.contains(title) ? Color.white : Color(hex: "#4A4A4A"))
     }

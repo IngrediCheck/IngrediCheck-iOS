@@ -30,7 +30,7 @@ struct IngredientsChips: View {
                         .frame(width: 24, height: 24)
                 }
                 
-                Text(String(title.prefix(25)) + (title.count > 25 ? "..." : ""))
+                Text(familyList.isEmpty ? title : String(title.prefix(25)) + (title.count > 25 ? "..." : ""))
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(isSelected ? .primary100 : Color(hex: fontColor))
                 
@@ -100,11 +100,11 @@ struct IngredientsChips: View {
     VStack {
         IngredientsChips(
             title: "Peanuts",
-            image: "peanut"
+            image: "peanuts"
         )
         IngredientsChips(
             title: "Sellfish",
-            image: "sellfish"
+            image: "shellfish"
         )
         IngredientsChips(
             title: "Wheat",
@@ -117,7 +117,7 @@ struct IngredientsChips: View {
         IngredientsChips(title: "India & South Asia")
         IngredientsChips(
             title: "Peanuts",
-            image: "peanut",
+            image: "peanuts",
             familyList: ["image 1", "image 2", "image 3"]
         )
     }

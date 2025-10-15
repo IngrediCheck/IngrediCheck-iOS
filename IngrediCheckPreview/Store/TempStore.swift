@@ -13,6 +13,8 @@ struct TempStore: View {
         VStack {
             store.currentScreen.view
             
+            let _ = print("render")
+            
             Text("Progress: \(store.progress * 100)")
             Text("Tag: \(store.currentScreen.screenId.rawValue)")
             

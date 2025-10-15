@@ -17,80 +17,16 @@ struct Card: Identifiable, Equatable {
 
 struct StackedCards: View {
     
-    @State var cards: [Card] = [
-            Card(
-                title: "one",
-                subTitle: "This is the dummy sub-title, and this is the first text",
-                color: .purple,
-                chips: [ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
-            ),
-            Card(
-                title: "two",
-                subTitle: "This is the dummy sub-title, and this is the first text",
-                color: .yellow,
-                chips: [ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine"),
-                        ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
-            ),
-            Card(
-                title: "three",
-                subTitle: "This is the dummy sub-title, and this is the first text hughwrhugw oighwioghiowhgo woihgiowhgiow oigwhioghwiog owirhgiorwhgiowrh woighiowrhgiowrg oighrwioghiorwhgiohrwg",
-                color: .pink,
-                chips: [ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
-            ),
-            Card(
-                title: "four",
-                subTitle: "This is the dummy sub-title, and this is the first text",
-                color: .orange,
-                chips: [ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
-            ),
-            Card(
-                title: "five",
-                subTitle: "This is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first text",
-                color: .green,
-                chips: [ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
-            ),
-            Card(
-                title: "six",
-                subTitle: "This is the dummy sub-title, and this is the first text",
-                color: .blue,
-                chips: [ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine"),
-                        ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo"),
-                        ChipsModel(name: "Balanced Marcos", icon: "weight-machine"),
-                        ChipsModel(name: "High Protein", icon: "chicken"),
-                        ChipsModel(name: "Low Carb", icon: "Cucumber"),
-                        ChipsModel(name: "Low Fat", icon: "Avacardo")],
-            )
-        ]
+    @State var cards: [Card]
     @State var dragOffset: CGSize = .zero
     @State var dragValue: CGFloat = 0
     @State var tempCard: Card = Card(title: "", subTitle: "", color: .black, chips: [])
     
     var body: some View {
         ZStack {
-            ForEach(Array(cards.enumerated()).prefix(2).reversed(), id: \.element.id) { idx, card in
+            ForEach(Array(cards.enumerated()).prefix(2).reversed(), id: \.element.id) {
+                idx,
+                card in
                 ZStack {
                     VStack(alignment: .leading, spacing: 20) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -105,17 +41,14 @@ struct StackedCards: View {
                         
                         FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
                             ForEach(card.chips, id: \.id) { chip in
-                                HStack {
-                                    Image(chip.icon)
-                                        .resizable()
-                                        .frame(width: 24, height: 24)
-                                    
-                                    Text(chip.name)
-                                        .font(.system(size: 12, weight: .regular))
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Capsule().foregroundStyle(Color(hex: "#ECECEC")))
+                                IngredientsChips(
+                                    title: chip.name,
+                                    bgColor: .grayScale10,
+                                    fontColor: "303030",
+                                    image: chip.icon ?? "",
+                                    isSelected: false,
+                                    outlined: false
+                                )
                             }
                         }
                         .opacity((idx == 0) ? 1 : 0)
@@ -218,6 +151,72 @@ struct StackedCards: View {
 }
 
 #Preview {
-    StackedCards()
+    StackedCards(cards: [
+        Card(
+            title: "one",
+            subTitle: "This is the dummy sub-title, and this is the first text",
+            color: .purple,
+            chips: [ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
+        ),
+        Card(
+            title: "two",
+            subTitle: "This is the dummy sub-title, and this is the first text",
+            color: .yellow,
+            chips: [ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine"),
+                    ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
+        ),
+        Card(
+            title: "three",
+            subTitle: "This is the dummy sub-title, and this is the first text hughwrhugw oighwioghiowhgo woihgiowhgiow oigwhioghwiog owirhgiorwhgiowrh woighiowrhgiowrg oighrwioghiorwhgiohrwg",
+            color: .pink,
+            chips: [ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
+        ),
+        Card(
+            title: "four",
+            subTitle: "This is the dummy sub-title, and this is the first text",
+            color: .orange,
+            chips: [ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
+        ),
+        Card(
+            title: "five",
+            subTitle: "This is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first textThis is the dummy sub-title, and this is the first text",
+            color: .green,
+            chips: [ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine")],
+        ),
+        Card(
+            title: "six",
+            subTitle: "This is the dummy sub-title, and this is the first text",
+            color: .blue,
+            chips: [ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine"),
+                    ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo"),
+                    ChipsModel(name: "Balanced Marcos", icon: "weight-machine"),
+                    ChipsModel(name: "High Protein", icon: "chicken"),
+                    ChipsModel(name: "Low Carb", icon: "Cucumber"),
+                    ChipsModel(name: "Low Fat", icon: "Avacardo")],
+        )
+    ])
         .padding()
 }
