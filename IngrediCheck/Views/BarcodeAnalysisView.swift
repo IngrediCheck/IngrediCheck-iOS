@@ -232,7 +232,7 @@ struct BarcodeAnalysisView: View {
                 .multilineTextAlignment(.center)
             
             Button(action: {
-                userPreferencesBindable.captureType = .ingredients
+                // Navigate back without changing capture type - preserves user's mode selection
                 _ = checkTabState.routes.popLast()
             }, label: {
                 VStack {
@@ -311,7 +311,7 @@ struct BarcodeAnalysisView: View {
                                         .padding()
                                         .multilineTextAlignment(.center)
                                     Button(action: {
-                                        userPreferencesBindable.captureType = .ingredients
+                                        // Navigate back without changing capture type - preserves user's mode selection
                                         _ = checkTabState.routes.popLast()
                                     }, label: {
                                         Image(systemName: "photo.badge.plus")
