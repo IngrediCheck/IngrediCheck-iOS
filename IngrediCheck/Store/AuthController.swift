@@ -54,9 +54,18 @@ enum SignInState {
     }
     
     @MainActor var signedInAsGuest: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] {
-            return provider == "email"
+        if let provider = self.session?.user.appMetadata["provider"] as? String {
+            return provider == "email" || provider == "anonymous"
         }
+        
+        if self.session?.user.isAnonymous == true {
+            return true
+        }
+        
+        if let email = self.session?.user.email {
+            return email.hasPrefix("anon-") && email.hasSuffix("@example.com")
+        }
+        
         return false
     }
     
@@ -87,6 +96,8 @@ enum SignInState {
         do {
             print("Signing Out")
             _ = try await supabaseClient.auth.signOut()
+        } catch AuthError.sessionMissing {
+            print("Already signed out, nothing to revoke.")
         } catch let error as NSError {
             if error.domain == NSURLErrorDomain && error.code == -1009 {
                 print("Internet connection appears to be offline.")
@@ -106,29 +117,12 @@ enum SignInState {
         }
 
         if let anonymousEmail = keychain.get(AuthController.anonUserNameKey),
-           let anonymousPassword = keychain.get(AuthController.anonPasswordKey) {
-            do {
-                _ = try await supabaseClient.auth.signIn(email: anonymousEmail, password: anonymousPassword)
-            } catch {
-                print("Anonymous signin failed: \(error)")
-                return
-            }
-        } else {
-            print("Signing up with new anonymous email and password.")
-            
-            let anonymousEmail = "anon-\(UUID().uuidString)@example.com"
-            let anonymousPassword = UUID().uuidString
-            
-            do {
-                _ = try await supabaseClient.auth.signUp(email: anonymousEmail, password: anonymousPassword)
-                _ = try await supabaseClient.auth.signIn(email: anonymousEmail, password: anonymousPassword)
-                keychain.set(anonymousEmail, forKey: AuthController.anonUserNameKey)
-                keychain.set(anonymousPassword, forKey: AuthController.anonPasswordKey)
-            } catch {
-                print("Anonymous Signup failed: \(error)")
-                return
-            }
+           let anonymousPassword = keychain.get(AuthController.anonPasswordKey),
+           await signInWithLegacyGuest(email: anonymousEmail, password: anonymousPassword) {
+            return
         }
+
+        await signInWithNewAnonymousAccount()
     }
 
     public func deleteAccount() async {
@@ -138,6 +132,26 @@ enum SignInState {
         await self.signOut()
         keychain.delete(AuthController.anonUserNameKey)
         keychain.delete(AuthController.anonPasswordKey)
+    }
+    
+    private func signInWithLegacyGuest(email: String, password: String) async -> Bool {
+        do {
+            _ = try await supabaseClient.auth.signIn(email: email, password: password)
+            return true
+        } catch {
+            print("Anonymous signin failed for stored credentials: \(error)")
+            keychain.delete(AuthController.anonUserNameKey)
+            keychain.delete(AuthController.anonPasswordKey)
+            return false
+        }
+    }
+
+    private func signInWithNewAnonymousAccount() async {
+        do {
+            _ = try await supabaseClient.auth.signInAnonymously()
+        } catch {
+            print("signInAnonymously failed: \(error)")
+        }
     }
     
     public func handleSignInWithAppleCompletion(result: Result<ASAuthorization, Error>) {
