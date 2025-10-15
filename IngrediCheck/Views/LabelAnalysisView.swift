@@ -77,6 +77,8 @@ import PostHog
                         "recommendations_count": recommendations.count,
                         "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
                     ])
+
+                    userPreferences.incrementScanCount()
                 },
                 onError: { streamError in
                     streamErrorHandled = true
@@ -92,11 +94,6 @@ import PostHog
                     ])
                 }
             )
-            
-            // Track successful scan for rating prompt
-            if self.error == nil {
-                userPreferences.incrementScanCount()
-            }
         } catch {
             if !streamErrorHandled {
                 self.error = error

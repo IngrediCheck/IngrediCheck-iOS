@@ -134,6 +134,9 @@ struct StarButton: View {
                         "recommendations_count": recommendations.count,
                         "total_latency_ms": totalLatency
                     ])
+                    
+                    // Track successful scan for rating prompt - only when analysis is fully complete
+                    userPreferences.incrementScanCount()
                 },
                 onError: { streamError in
                     streamErrorHandled = true
@@ -165,9 +168,6 @@ struct StarButton: View {
                     }
                 }
             )
-            
-            // Track successful scan for rating prompt
-            userPreferences.incrementScanCount()
         } catch NetworkError.notFound {
             if !streamErrorHandled {
                 self.notFound = true
