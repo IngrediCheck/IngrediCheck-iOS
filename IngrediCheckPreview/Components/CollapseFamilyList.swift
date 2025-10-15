@@ -10,14 +10,14 @@ import SwiftUI
 struct CollapseFamilyList: View {
     
     @State var collapsed: Bool = false
-    @State var familyNames: [FamilyMemberModel] = [
-        FamilyMemberModel(familyMemberName: "father", familyMemberImage: "Father"),
-        FamilyMemberModel(familyMemberName: "mother", familyMemberImage: "Mother"),
-        FamilyMemberModel(familyMemberName: "son", familyMemberImage: "Son"),
-        FamilyMemberModel(familyMemberName: "daughter", familyMemberImage: "Daughter"),
-        FamilyMemberModel(familyMemberName: "grandmother", familyMemberImage: "Grandmother")
+    @State var familyNames: [UserModel] = [
+        UserModel(familyMemberName: "father", familyMemberImage: "Father"),
+        UserModel(familyMemberName: "mother", familyMemberImage: "Mother"),
+        UserModel(familyMemberName: "son", familyMemberImage: "Son"),
+        UserModel(familyMemberName: "daughter", familyMemberImage: "Daughter"),
+        UserModel(familyMemberName: "grandmother", familyMemberImage: "Grandmother")
     ]
-    @State var selectedItem: FamilyMemberModel? = nil
+    @State var selectedItem: UserModel? = nil
     
     var body: some View {
         ScrollView {
@@ -75,23 +75,23 @@ struct CollapseFamilyList: View {
         }
     }
     
-    func selectedItemPressed(item: FamilyMemberModel) {
+    func selectedItemPressed(item: UserModel) {
         let temp = selectedItem
         selectedItem = item
-        familyNames.removeAll { $0.familyMemberName == item.familyMemberName } // removes matching value
+        familyNames.removeAll { $0.name == item.name } // removes matching value
         if let temp {
             familyNames.append(temp)
         }
     }
     
     @ViewBuilder
-    func nameRow(name: FamilyMemberModel) -> some View {
+    func nameRow(name: UserModel) -> some View {
         HStack {
-            Image(name.familyMemberImage)
+            Image(name.image)
                 .resizable()
                 .frame(width: 33, height: 33)
             
-            Text(name.familyMemberName.capitalized)
+            Text(name.name.capitalized)
                 .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(Color(hex: "#2E2E2E"))
             

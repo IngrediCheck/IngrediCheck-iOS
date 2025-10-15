@@ -9,24 +9,24 @@ import SwiftUI
 
 struct FamilyCarouselView: View {
     
-    @State var familyMembersList: [FamilyMemberModel] = [
+    @State var familyMembersList: [UserModel] = [
         
-        FamilyMemberModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj", backgroundColor: Color(hex: "DCC7F6")),
-        FamilyMemberModel(familyMemberName: "Neha", familyMemberImage: "Neha", backgroundColor: Color(hex: "F9C6D0")),
-        FamilyMemberModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav", backgroundColor: Color(hex: "FFF6B3")),
-        FamilyMemberModel(familyMemberName: "Harsh", familyMemberImage: "Harsh", backgroundColor: Color(hex: "FFD9B5")),
-        FamilyMemberModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa", backgroundColor: Color(hex: "BFF0D4")),
-        FamilyMemberModel(familyMemberName: "Grandma", familyMemberImage: "Grandma", backgroundColor: Color(hex: "A7D8F0"))
+        UserModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj", backgroundColor: Color(hex: "DCC7F6")),
+        UserModel(familyMemberName: "Neha", familyMemberImage: "Neha", backgroundColor: Color(hex: "F9C6D0")),
+        UserModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav", backgroundColor: Color(hex: "FFF6B3")),
+        UserModel(familyMemberName: "Harsh", familyMemberImage: "Harsh", backgroundColor: Color(hex: "FFD9B5")),
+        UserModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa", backgroundColor: Color(hex: "BFF0D4")),
+        UserModel(familyMemberName: "Grandma", familyMemberImage: "Grandma", backgroundColor: Color(hex: "A7D8F0"))
     ]
     
-    @State var selectedFamilyMember: FamilyMemberModel? = FamilyMemberModel(familyMemberName: "Everyone", familyMemberImage: "Everyone", backgroundColor: .clear)
+    @State var selectedFamilyMember: UserModel? = UserModel(familyMemberName: "Everyone", familyMemberImage: "Everyone", backgroundColor: .clear)
     
     var body: some View {
         HStack(spacing: 0) {
             VStack {
                 ZStack {
                     
-                    if selectedFamilyMember?.familyMemberName == "Everyone" {
+                    if selectedFamilyMember?.name == "Everyone" {
                         Circle()
                             .stroke(lineWidth: 2)
                             .foregroundStyle(Color(hex: "91B640"))
@@ -53,13 +53,13 @@ struct FamilyCarouselView: View {
                             .frame(width: 40, height: 40)
                             .foregroundStyle(selectedFamilyMember?.backgroundColor ?? .gray)
                         
-                        Image(selectedFamilyMember?.familyMemberImage ?? "Everyone")
+                        Image(selectedFamilyMember?.image ?? "Everyone")
                             .resizable()
                             .frame(width: 40, height: 40)
                     }
                 }
                 
-                Text(selectedFamilyMember?.familyMemberName ?? "")
+                Text(selectedFamilyMember?.name ?? "")
                     .font(ManropeFont.semiBold.size(10))
                     .foregroundStyle(.primary700)
             }
@@ -74,7 +74,7 @@ struct FamilyCarouselView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 18) {
                     ForEach(familyMembersList, id: \.id) { ele in
-                        circleImage(image: ele.familyMemberImage, name: ele.familyMemberName, color: ele.backgroundColor ?? .clear)
+                        circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
                             .onTapGesture {
                                 selectFamilyMember(ele: ele)
                             }
@@ -85,11 +85,11 @@ struct FamilyCarouselView: View {
         }
     }
     
-    func selectFamilyMember(ele: FamilyMemberModel) {
+    func selectFamilyMember(ele: UserModel) {
         let temp = selectedFamilyMember
         selectedFamilyMember = ele
         withAnimation(.linear) {
-            familyMembersList.removeAll{ $0.familyMemberName == ele.familyMemberName }
+            familyMembersList.removeAll{ $0.name == ele.name }
         }
         if let temp {
             withAnimation(.linear) {

@@ -30,7 +30,7 @@ struct IngredientsChips: View {
                         .frame(width: 24, height: 24)
                 }
                 
-                Text(title)
+                Text(String(title.prefix(25)) + (title.count > 25 ? "..." : ""))
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(isSelected ? .primary100 : Color(hex: fontColor))
                 

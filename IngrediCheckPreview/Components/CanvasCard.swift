@@ -7,13 +7,29 @@
 
 import SwiftUI
 
+
 struct CanvasCard: View {
     
-    @State var chips: [ChipsModel] = [
-        ChipsModel(name: "Peanuts", icon: "peanut"),
-        ChipsModel(name: "Sesame", icon: "sesame"),
-        ChipsModel(name: "Wheat", icon: "wheat"),
-        ChipsModel(name: "Sellfish", icon: "sellfish")
+    @State var chips: [ChipsModel]? = nil
+    
+    @State var sectionedChips: [SectionedChipModel]? = [
+        SectionedChipModel(title: "Animal-Based", chips: [
+            ChipsModel(name: "Peanuts", icon: "peanut"),
+            ChipsModel(name: "Sesame", icon: "sesame"),
+            ChipsModel(name: "Wheat", icon: "wheat"),
+            ChipsModel(name: "Sellfish", icon: "sellfish")
+        ]),
+        SectionedChipModel(title: "Oils & Fats", chips: [
+            ChipsModel(name: "Peanuts", icon: "peanut"),
+            ChipsModel(name: "Sesame with almonds (in moderation) (10g)", icon: "sesame"),
+            ChipsModel(name: "Wheat", icon: "wheat"),
+            ChipsModel(name: "Sellfish", icon: "sellfish")
+        ]),
+        SectionedChipModel(title: "Additives & Sweeteners", chips: [
+            ChipsModel(name: "Peanuts", icon: "peanut"),
+            ChipsModel(name: "Sesame", icon: "sesame"),
+            ChipsModel(name: "Sellfish", icon: "sellfish")
+        ])
     ]
     
     var body: some View {
@@ -31,26 +47,49 @@ struct CanvasCard: View {
             }
             .fontWeight(.semibold)
             
-            VStack {
-                FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                    ForEach(chips, id: \.id) { chip in
-                        IngredientsChips(
-                            title: chip.name,
-                            bgColor: .secondary200,
-                            image: chip.icon,
-                            outlined: false
-                        )
+            VStack(alignment: .leading) {
+                
+                if let sectionedChips = sectionedChips {
+                    ForEach(sectionedChips) { ele in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(ele.title)
+                                .font(ManropeFont.semiBold.size(12))
+                                .foregroundStyle(.grayScale150)
+                            
+                            FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                                ForEach(ele.chips) { chip in
+                                    IngredientsChips(
+                                        title: chip.name,
+                                        bgColor: .secondary200,
+                                        image: chip.icon,
+                                        familyList: ["image 1", "image 2", "image 3"],
+                                        outlined: false
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if let chips = chips {
+                    FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                        ForEach(chips, id: \.id) { chip in
+                            IngredientsChips(
+                                title: chip.name,
+                                bgColor: .secondary200,
+                                image: chip.icon,
+                                outlined: false
+                            )
+                        }
                     }
                 }
             }
             
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 Image("exlamation")
                     .resizable()
-                    .frame(width: 24, height: 24)
+                    .frame(width: 16, height: 16)
                 
                 Text("Something else too, don't worry we'll ask later!")
-                    .font(.system(size: 10))
+                    .font(ManropeFont.regular.size(10))
                     .foregroundStyle(Color(hex: "#7F7F7F"))
                     .italic()
             }
