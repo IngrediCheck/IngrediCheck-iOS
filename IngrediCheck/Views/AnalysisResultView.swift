@@ -8,72 +8,49 @@
 import SwiftUI
 import StoreKit
 
-/// Helper class to manage notification observer lifecycle
-class RatingPromptDismissalObserver {
-    private var observer: NSObjectProtocol?
-    private let userPreferences: UserPreferences
-    
-    init(userPreferences: UserPreferences) {
-        self.userPreferences = userPreferences
-    }
-    
-    func setupObserver() {
-        // Remove any existing observer first
-        removeObserver()
-        
-        // Monitor when the user returns to the app to detect cancellation
-        observer = NotificationCenter.default.addObserver(
-            forName: UIApplication.didBecomeActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            // User returned to app, likely dismissed the rating prompt
-            self?.userPreferences.recordPromptDismissal()
-            self?.removeObserver()
-        }
-    }
-    
-    func removeObserver() {
-        if let observer = observer {
-            NotificationCenter.default.removeObserver(observer)
-            self.observer = nil
-        }
-    }
-    
-    deinit {
-        removeObserver()
-    }
-}
-
 struct AnalysisResultView: View {
 
     let product: DTO.Product
     let ingredientRecommendations: [DTO.IngredientRecommendation]?
-    
+
     @Environment(UserPreferences.self) var userPreferences
-    @State private var dismissalObserver: RatingPromptDismissalObserver?
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var awaitingRatingOutcome = false
+    @State private var ratingPromptPresentedAt: Date?
+    @State private var dismissalFallbackTask: Task<Void, Never>?
 
     var body: some View {
-        if let ingredientRecommendations {
-            switch product.calculateMatch(ingredientRecommendations: ingredientRecommendations) {
-            case .match:
-                CapsuleWithDivider(state: .success)
-                    .onAppear {
-                        checkAndPromptForRating()
-                    }
-            case .needsReview:
-                CapsuleWithDivider(state: .warning)
-                    .onAppear {
-                        checkAndPromptForRating()
-                    }
-            case .notMatch:
-                CapsuleWithDivider(state: .fail)
-                    .onAppear {
-                        checkAndPromptForRating()
-                    }
+        Group {
+            if let ingredientRecommendations {
+                switch product.calculateMatch(ingredientRecommendations: ingredientRecommendations) {
+                case .match:
+                    CapsuleWithDivider(state: .success)
+                        .onAppear {
+                            checkAndPromptForRating()
+                        }
+                case .needsReview:
+                    CapsuleWithDivider(state: .warning)
+                        .onAppear {
+                            checkAndPromptForRating()
+                        }
+                case .notMatch:
+                    CapsuleWithDivider(state: .fail)
+                        .onAppear {
+                            checkAndPromptForRating()
+                        }
+                }
+            } else {
+                CapsuleWithDivider(state: .analyzing)
             }
-        } else {
-            CapsuleWithDivider(state: .analyzing)
+        }
+        .onChange(of: scenePhase) { newPhase in
+            handleScenePhaseChange(newPhase)
+        }
+        .onDisappear {
+            dismissalFallbackTask?.cancel()
+            dismissalFallbackTask = nil
+            awaitingRatingOutcome = false
+            ratingPromptPresentedAt = nil
         }
     }
     
@@ -84,7 +61,10 @@ struct AnalysisResultView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 // Record that we're showing the prompt
                 userPreferences.recordRatingPrompt()
-                
+                ratingPromptPresentedAt = Date()
+                awaitingRatingOutcome = true
+                scheduleDismissalFallback()
+
                 // Use the proper StoreKit API for requesting reviews
                 let foregroundScene = UIApplication.shared.connectedScenes
                     .compactMap { $0 as? UIWindowScene }
@@ -92,15 +72,53 @@ struct AnalysisResultView: View {
                 if let windowScene = foregroundScene {
                     SKStoreReviewController.requestReview(in: windowScene)
                 }
-                
-                // Set up dismissal detection after a short delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    // Create and setup the observer to detect cancellation
-                    let observer = RatingPromptDismissalObserver(userPreferences: userPreferences)
-                    dismissalObserver = observer
-                    observer.setupObserver()
-                }
             }
+        }
+    }
+
+    private func scheduleDismissalFallback() {
+        dismissalFallbackTask?.cancel()
+        dismissalFallbackTask = Task {
+            try? await Task.sleep(nanoseconds: 10 * 1_000_000_000)
+            await MainActor.run {
+                guard awaitingRatingOutcome else { return }
+                guard scenePhase == .active else { return }
+                handleRatingPromptFinished(recordDismissal: true)
+            }
+        }
+    }
+
+    private func handleRatingPromptFinished(recordDismissal: Bool) {
+        dismissalFallbackTask?.cancel()
+        dismissalFallbackTask = nil
+        defer {
+            awaitingRatingOutcome = false
+            ratingPromptPresentedAt = nil
+        }
+        if recordDismissal {
+            userPreferences.recordPromptDismissal()
+        }
+    }
+
+    private func handleScenePhaseChange(_ newPhase: ScenePhase) {
+        guard awaitingRatingOutcome else { return }
+        switch newPhase {
+        case .active:
+            if let start = ratingPromptPresentedAt {
+                let elapsed = Date().timeIntervalSince(start)
+                // Treat quick returns as cancellations so we unlock the 7-day retry.
+                if elapsed < 5.0 {
+                    handleRatingPromptFinished(recordDismissal: true)
+                } else {
+                    handleRatingPromptFinished(recordDismissal: false)
+                }
+            } else {
+                handleRatingPromptFinished(recordDismissal: true)
+            }
+        case .background:
+            handleRatingPromptFinished(recordDismissal: false)
+        default:
+            break
         }
     }
 }
