@@ -31,14 +31,7 @@ var startTime = Date().timeIntervalSince1970
                 // This is because the following sequence of actions results in freeze of scanning:
                 // startScanning => stopScanning() => startScanning().
                 if showScanner {
-                    ZStack {
-                        mainView
-                        
-                        // Success overlay with barcode highlight
-                        if showSuccessOverlay {
-                            BarcodeSuccessOverlay(bounds: detectedBarcodeBounds)
-                        }
-                    }
+                    mainView
                     Text("Scan Barcode of a Packaged Food Item.")
                         .padding(.top)
                     Spacer()
@@ -87,8 +80,13 @@ var startTime = Date().timeIntervalSince1970
         .aspectRatio(3/4, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.paletteSecondary, lineWidth: 0.8)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                if showSuccessOverlay {
+                    BarcodeSuccessOverlay(bounds: detectedBarcodeBounds)
+                }
+            }
         )
         .padding(.top)
     }
@@ -250,29 +248,27 @@ struct BarcodeSuccessOverlay: View {
     let bounds: CGRect
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Semi-transparent blue overlay over barcode area
-                Rectangle()
-                    .fill(Color.blue.opacity(0.3))
-                    .frame(width: bounds.width, height: bounds.height)
-                    .position(
-                        x: bounds.midX,
-                        y: bounds.midY
-                    )
-                    .animation(.easeInOut(duration: 0.3), value: bounds)
-                
-                // Success checkmark in center of overlay
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.green)
-                    .position(
-                        x: bounds.midX,
-                        y: bounds.midY
-                    )
-                    .scaleEffect(1.0)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: bounds)
-            }
+        ZStack {
+            // Semi-transparent blue overlay over barcode area
+            Rectangle()
+                .fill(Color.blue.opacity(0.3))
+                .frame(width: bounds.width, height: bounds.height)
+                .position(
+                    x: bounds.midX,
+                    y: bounds.midY
+                )
+                .animation(.easeInOut(duration: 0.3), value: bounds)
+            
+            // Success checkmark in center of overlay
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 40))
+                .foregroundColor(.green)
+                .position(
+                    x: bounds.midX,
+                    y: bounds.midY
+                )
+                .scaleEffect(1.0)
+                .animation(.spring(response: 0.5, dampingFraction: 0.6), value: bounds)
         }
         .allowsHitTesting(false) // Allow touches to pass through
     }
