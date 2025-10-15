@@ -23,18 +23,25 @@ struct SettingsSheet: View {
                     Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
                 }
                 Section("Account") {
-                    if authController.signedInWithApple {
+                    if authController.signedInWithApple || authController.signedInWithGoogle {
+                        if let providerDisplay = authController.currentSignInProviderDisplay {
+                            Label {
+                                Text(providerDisplay.text)
+                            } icon: {
+                                Image(systemName: providerDisplay.icon)
+                            }
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        }
                         SignoutButton()
                         DeleteAccountView(labelText: "Delete Data & Account")
-
-                    }
-                    if authController.signedInAsGuest {
+                    } else if authController.signedInAsGuest {
+                        AccountUpgradeView()
                         DeleteAccountView(labelText: "Reset App State")
-                    }
-                    
-                    if authController.signedInWithGoogle {
-                        SignoutButton()
-                        DeleteAccountView(labelText: "Delete Data & Account")
+                    } else {
+                        Text("Sign in to manage your account.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Section("About") {
@@ -104,6 +111,70 @@ struct SettingsSheet: View {
         }
     }
     
+    struct AccountUpgradeView: View {
+        @Environment(AuthController.self) var authController
+        @State private var showUpgradeError = false
+        @State private var upgradeErrorMessage = ""
+
+        var body: some View {
+            Group {
+                Text("Sign-in to avoid losing data.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                if authController.isUpgradingAccount {
+                    HStack {
+                        Spacer()
+                        ProgressView("Signing in...")
+                        Spacer()
+                    }
+                }
+
+                Button {
+                    Task {
+                        await authController.upgradeCurrentAccount(to: .apple)
+                    }
+                } label: {
+                    Label {
+                        Text("Sign-in with Apple")
+                    } icon: {
+                        Image(systemName: "applelogo")
+                    }
+                }
+                .disabled(authController.isUpgradingAccount)
+
+                Button {
+                    Task {
+                        await authController.upgradeCurrentAccount(to: .google)
+                    }
+                } label: {
+                    Label {
+                        Text("Sign-in with Google")
+                    } icon: {
+                        Image("google_logo")
+                    }
+                }
+                .disabled(authController.isUpgradingAccount)
+            }
+            .onChange(of: authController.accountUpgradeError?.localizedDescription ?? "", initial: false) { _, message in
+                guard !message.isEmpty else {
+                    return
+                }
+                upgradeErrorMessage = message
+                showUpgradeError = true
+            }
+            .alert("Upgrade Failed", isPresented: $showUpgradeError) {
+                Button("OK", role: .cancel) {
+                    Task { @MainActor in
+                        authController.accountUpgradeError = nil
+                    }
+                }
+            } message: {
+                Text(upgradeErrorMessage)
+            }
+        }
+    }
+    
     
     var appVersion: String {
         guard let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String else {
@@ -169,10 +240,25 @@ struct DeleteAccountView: View {
 struct SignoutButton: View {
 
     @Environment(AuthController.self) var authController
+    @Environment(OnboardingState.self) var onboardingState
+    @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
+    @Environment(AppState.self) var appState
 
     var body: some View {
         Button {
-            Task { await authController.signOut() }
+            Task {
+                await authController.signOut()
+                await MainActor.run {
+                    appState.activeSheet = nil
+                    appState.activeTab = .home
+                    appState.feedbackConfig = nil
+                    appState.listsTabState = ListsTabState()
+                    onboardingState.clearAll()
+                    userPreferences.clearAll()
+                    dietaryPreferences.clearAll()
+                }
+            }
         } label: {
             Label {
                 Text("Sign out")
