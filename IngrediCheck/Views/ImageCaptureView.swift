@@ -28,8 +28,6 @@ struct ImageCaptureView: View {
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(\.dismiss) var dismiss
-    
-    private static let focusToastShownKey = "config.focusToastShown"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -46,7 +44,7 @@ struct ImageCaptureView: View {
                 if showFocusToast {
                     FocusEducationToast()
                         .padding(.top, 8)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .transition(.opacity)
                 }
             }
             .padding(.top)
@@ -108,19 +106,15 @@ struct ImageCaptureView: View {
         .onAppear {
             cameraManager.setupSession()
             
-            // Show focus toast if not shown before
-            let hasShownToast = UserDefaults.standard.bool(forKey: Self.focusToastShownKey)
-            if !hasShownToast {
-                withAnimation {
-                    showFocusToast = true
-                }
-                
-                // Auto-dismiss after 4 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                    withAnimation {
-                        showFocusToast = false
-                    }
-                    UserDefaults.standard.set(true, forKey: Self.focusToastShownKey)
+            // Show focus toast every time camera opens with fade in animation
+            withAnimation(.easeIn(duration: 0.3)) {
+                showFocusToast = true
+            }
+            
+            // Auto-dismiss after 4 seconds with fade out animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    showFocusToast = false
                 }
             }
         }
