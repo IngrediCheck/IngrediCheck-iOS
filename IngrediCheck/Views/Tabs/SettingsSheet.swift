@@ -1,4 +1,5 @@
 import SwiftUI
+import SimpleToast
 
 struct SettingsSheet: View {
     
@@ -6,6 +7,8 @@ struct SettingsSheet: View {
     @Environment(\.dismiss) var dismiss
     @Environment(AppState.self) var appState
     @Environment(AuthController.self) var authController
+    
+    @State private var showInternalModeToast = false
 
     var body: some View {
         @Bindable var userPreferences = userPreferences
@@ -78,10 +81,26 @@ struct SettingsSheet: View {
                             Image(systemName: "lock")
                         }
                     }
+                    if authController.isInternalUser {
+                        Label {
+                            Text("Internal Mode Enabled")
+                                .foregroundStyle(.paletteAccent)
+                        } icon: {
+                            Image(systemName: "hammer")
+                                .foregroundStyle(.paletteAccent)
+                        }
+                    }
                     Label {
                         Text("IngrediCheck for iOS \(appVersion).(\(buildNumber))")
                     } icon: {
                         Image(systemName: "app")
+                    }
+                    .onTapGesture(count: 7) {
+                        let unlocked = authController.enableInternalMode()
+                        if unlocked {
+                            showInternalModeToast = false
+                            showInternalModeToast = true
+                        }
                     }
                 }
             }
@@ -101,6 +120,12 @@ struct SettingsSheet: View {
 
                 }
             }
+        }
+        .simpleToast(
+            isPresented: $showInternalModeToast,
+            options: SimpleToastOptions(alignment: .top, hideAfter: 2)
+        ) {
+            InternalModeUnlockedToastView()
         }
     }
     
@@ -163,6 +188,23 @@ struct DeleteAccountView: View {
                 }
             }
         }
+    }
+}
+
+private struct InternalModeUnlockedToastView: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.paletteAccent)
+            Text("Internal Mode Unlocked")
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground).opacity(0.9))
+        .cornerRadius(12)
+        .shadow(radius: 6, y: 2)
     }
 }
 
