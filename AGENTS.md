@@ -30,3 +30,6 @@
 - Keep commits scoped to a single concern and include rationale in the body when touching config, analytics, or secrets.
 - PRs should summarize functional changes, list test evidence (`xcodebuild build`, `xcodebuild test`), link Supabase/issue tracker tasks, and add screenshots for UI updates.
 - Request at least one review, resolve Xcode warnings before merging, and ensure Pods/ and build settings remain in sync.
+
+## Work Tracking
+We track work in Beads instead of Markdown. Run \`bd quickstart\` to see how.

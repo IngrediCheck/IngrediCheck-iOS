@@ -88,3 +88,5 @@ DerivedData/
 # Thumbnails
 ._*
 
+# beads
+.beads/*.db

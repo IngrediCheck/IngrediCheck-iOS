@@ -8,13 +8,15 @@ import PostHog
     let productImages: [ProductImage]
     let webService: WebService
     let dietaryPreferences: DietaryPreferences
+    let userPreferences: UserPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
-    init(_ productImages: [ProductImage], _ webService: WebService, _ dietaryPreferences: DietaryPreferences) {
+    init(_ productImages: [ProductImage], _ webService: WebService, _ dietaryPreferences: DietaryPreferences, _ userPreferences: UserPreferences) {
         self.productImages = productImages
         self.webService = webService
         self.dietaryPreferences = dietaryPreferences
+        self.userPreferences = userPreferences
         impactFeedback.prepare()
     }
     
@@ -34,6 +36,7 @@ import PostHog
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
         let imageCount = productImages.count
+        self.error = nil
 
         PostHogSDK.shared.capture("Label Analysis Started", properties: [
             "request_id": requestId,
@@ -74,6 +77,8 @@ import PostHog
                         "recommendations_count": recommendations.count,
                         "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
                     ])
+
+                    self.userPreferences.incrementScanCount()
                 },
                 onError: { streamError in
                     streamErrorHandled = true
@@ -214,7 +219,7 @@ struct LabelAnalysisView: View {
             } else {
                 ProgressView()
                     .task {
-                        let newViewModel = LabelAnalysisViewModel(productImages, webService, dietaryPreferences)
+                        let newViewModel = LabelAnalysisViewModel(productImages, webService, dietaryPreferences, userPreferences)
                         Task { await newViewModel.analyze() }
                         DispatchQueue.main.async { self.viewModel = newViewModel }
                     }
