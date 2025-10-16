@@ -27,18 +27,53 @@ struct SettingsSheet: View {
                     Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
                 }
                 Section("Account") {
-                    if authController.signedInWithApple {
-                        SignoutButton()
-                        DeleteAccountView(labelText: "Delete Data & Account")
+                    if authController.signedInWithApple || authController.signedInWithGoogle {
+                        // Provider badge
+                        if let providerDisplay = authController.currentSignInProviderDisplay {
+                            HStack(spacing: 10) {
+                                if authController.signedInWithApple {
+                                    Image(systemName: "applelogo")
+                                        .foregroundStyle(.primary)
+                                } else {
+                                    Image("google_logo")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 18, height: 18)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(providerDisplay.text)
+                                        .font(.footnote)
+                                        .fontWeight(.semibold)
+                                    if let email = authController.displayableEmail, !email.isEmpty {
+                                        Text(email)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                
+                                // Provider-aware Sign out
+                                SignoutButton()
+                            }
+                            .padding(.vertical, 2)
+                        }
 
-                    }
-                    if authController.signedInAsGuest {
+                        // Danger Zone
+                        VStack(spacing: 8) {
+                            Text("Danger Zone")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            DeleteAccountView(labelText: "Delete Data & Account")
+                        }
+                        .padding(.top, 6)
+                    } else if authController.signedInAsGuest {
+                        AccountUpgradeView()
                         DeleteAccountView(labelText: "Reset App State")
-                    }
-                    
-                    if authController.signedInWithGoogle {
-                        SignoutButton()
-                        DeleteAccountView(labelText: "Delete Data & Account")
+                    } else {
+                        Text("Sign in to manage your account.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Section("About") {
@@ -136,6 +171,70 @@ struct SettingsSheet: View {
             options: SimpleToastOptions(alignment: .top, hideAfter: 2)
         ) {
             InternalModeToastView(message: internalModeToastMessage)
+        }
+    }
+    
+    struct AccountUpgradeView: View {
+        @Environment(AuthController.self) var authController
+        @State private var showUpgradeError = false
+        @State private var upgradeErrorMessage = ""
+
+        var body: some View {
+            Group {
+                Text("Sign-in to avoid losing data.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                if authController.isUpgradingAccount {
+                    HStack {
+                        Spacer()
+                        ProgressView("Signing in...")
+                        Spacer()
+                    }
+                }
+
+                Button {
+                    Task {
+                        await authController.upgradeCurrentAccount(to: .apple)
+                    }
+                } label: {
+                    Label {
+                        Text("Sign-in with Apple")
+                    } icon: {
+                        Image(systemName: "applelogo")
+                    }
+                }
+                .disabled(authController.isUpgradingAccount)
+
+                Button {
+                    Task {
+                        await authController.upgradeCurrentAccount(to: .google)
+                    }
+                } label: {
+                    Label {
+                        Text("Sign-in with Google")
+                    } icon: {
+                        Image("google_logo")
+                    }
+                }
+                .disabled(authController.isUpgradingAccount)
+            }
+            .onChange(of: authController.accountUpgradeError?.localizedDescription ?? "", initial: false) { _, message in
+                guard !message.isEmpty else {
+                    return
+                }
+                upgradeErrorMessage = message
+                showUpgradeError = true
+            }
+            .alert("Upgrade Failed", isPresented: $showUpgradeError) {
+                Button("OK", role: .cancel) {
+                    Task { @MainActor in
+                        authController.accountUpgradeError = nil
+                    }
+                }
+            } message: {
+                Text(upgradeErrorMessage)
+            }
         }
     }
     
@@ -243,12 +342,13 @@ struct SignoutButton: View {
                 }
             }
         } label: {
-            Label {
+            HStack(spacing: 8) {
                 Text("Sign out")
-            } icon: {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
             }
         }
+        .buttonStyle(.borderedProminent)
+        .tint(.accentColor)
+        .buttonBorderShape(.capsule)
     }
 }
 
