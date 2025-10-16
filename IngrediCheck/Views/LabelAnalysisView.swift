@@ -78,7 +78,7 @@ import PostHog
                         "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
                     ])
 
-                    userPreferences.incrementScanCount()
+                    self.userPreferences.incrementScanCount()
                 },
                 onError: { streamError in
                     streamErrorHandled = true

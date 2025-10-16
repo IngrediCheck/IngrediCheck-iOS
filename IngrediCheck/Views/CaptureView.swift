@@ -4,13 +4,20 @@ struct CaptureView: View {
     
     @Environment(UserPreferences.self) var userPreferences
     @Environment(CheckTabState.self) var checkTabState
+    @Environment(WebService.self) var webService
+    @Environment(DietaryPreferences.self) var dietaryPreferences
+    @State private var barcodeScanController: BarcodeScanController?
 
     var body: some View {
         @Bindable var userPreferencesBindable = userPreferences
         @Bindable var checkTabState = checkTabState
         VStack {
             if userPreferences.captureType == .barcode {
-                BarcodeScannerView()
+                if let scanController = barcodeScanController {
+                    BarcodeScannerView(scanController: scanController)
+                } else {
+                    ProgressView()
+                }
             } else {
                 ImageCaptureView(
                     capturedImages: $checkTabState.capturedImages,
@@ -26,6 +33,16 @@ struct CaptureView: View {
         .animation(.default, value: userPreferences.captureType)
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if barcodeScanController == nil {
+                barcodeScanController = BarcodeScanController(
+                    checkTabState: checkTabState,
+                    webService: webService,
+                    dietaryPreferences: dietaryPreferences,
+                    userPreferences: userPreferences
+                )
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("Options", selection: $userPreferencesBindable.captureType) {

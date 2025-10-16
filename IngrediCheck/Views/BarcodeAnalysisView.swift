@@ -136,7 +136,7 @@ struct StarButton: View {
                     ])
                     
                     // Track successful scan for rating prompt - only when analysis is fully complete
-                    userPreferences.incrementScanCount()
+                    self.userPreferences.incrementScanCount()
                 },
                 onError: { streamError in
                     streamErrorHandled = true
@@ -210,14 +210,13 @@ struct StarButton: View {
 struct BarcodeAnalysisView: View {
     
     let barcode: String
+    let viewModel: BarcodeAnalysisViewModel
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(AppState.self) var appState
     @Environment(CheckTabState.self) var checkTabState
-    
-    @State private var viewModel: BarcodeAnalysisViewModel?
     @State private var showToast: Bool = false
 
     @MainActor
@@ -264,39 +263,38 @@ struct BarcodeAnalysisView: View {
 
     var body: some View {
         @Bindable var userPreferencesBindable = userPreferences
+        @Bindable var viewModelBindable = viewModel
         Group {
-            if let viewModel {
-                @Bindable var viewModelBindable = viewModel
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .padding()
-                } else if let _ = viewModel.notFound {
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .padding()
+            } else if let _ = viewModel.notFound {
+                notFoundView
+            } else if let product = viewModel.product {
+                if product.images.isEmpty && product.ingredients.isEmpty {
                     notFoundView
-                } else if let product = viewModel.product {
-                    if product.images.isEmpty && product.ingredients.isEmpty {
-                        notFoundView
-                    } else {
-                        ScrollView {
-                            VStack(spacing: 15) {
-                                
-                                if let name = product.name {
-                                    Text(name)
-                                        .font(.headline)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                        .padding(.horizontal)
-                                }
-                                                                
-                                if let brand = product.brand {
-                                    Text(brand)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                        .padding(.horizontal)
-                                }
+                } else {
+                    ScrollView {
+                        VStack(spacing: 15) {
+                            
+                            if let name = product.name {
+                                Text(name)
+                                    .font(.headline)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal)
+                            }
+                                                            
+                            if let brand = product.brand {
+                                Text(brand)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .padding(.horizontal)
+                            }
 
-                                ProductImagesView(images: product.images) {
-                                    checkTabState.feedbackConfig = FeedbackConfig(
-                                        feedbackData: $viewModelBindable.feedbackData,
+                            ProductImagesView(images: product.images) {
+                                checkTabState.feedbackConfig = FeedbackConfig(
+                                    feedbackData: $viewModelBindable.feedbackData,
                                         feedbackCaptureOptions: .imagesOnly,
                                         onSubmit: {
                                             showToast.toggle()
@@ -382,17 +380,9 @@ struct BarcodeAnalysisView: View {
                         Spacer()
                     }
                 }
-            } else {
-                ProgressView()
-                    .task {
-                        let newViewModel = BarcodeAnalysisViewModel(barcode, webService, dietaryPreferences, userPreferences)
-                        Task { await newViewModel.analyze() }
-                        DispatchQueue.main.async { self.viewModel = newViewModel }
-                    }
             }
         }
     }
-}
 
 struct IngredientsText: View {
     let ingredients: [DTO.Ingredient]
