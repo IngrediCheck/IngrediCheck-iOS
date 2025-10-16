@@ -14,12 +14,131 @@ enum DataScannerAccessStatusType {
 
 var startTime = Date().timeIntervalSince1970
 
+@MainActor
+@Observable final class BarcodeScanController {
+
+    private let checkTabState: CheckTabState
+    private let webService: WebService
+    private let dietaryPreferences: DietaryPreferences
+    private let userPreferences: UserPreferences
+
+    var showSuccessOverlay = false
+    var detectedBarcodeBounds: CGRect = .zero
+
+    private var pendingNavigationTask: Task<Void, Never>?
+    private var activeAnalysisTask: Task<Void, Never>?
+    private var isProcessingBarcode = false
+    private let successFeedbackGenerator = UINotificationFeedbackGenerator()
+
+    init(
+        checkTabState: CheckTabState,
+        webService: WebService,
+        dietaryPreferences: DietaryPreferences,
+        userPreferences: UserPreferences
+    ) {
+        self.checkTabState = checkTabState
+        self.webService = webService
+        self.dietaryPreferences = dietaryPreferences
+        self.userPreferences = userPreferences
+        successFeedbackGenerator.prepare()
+    }
+
+    func handleScan(barcodeString: String, viewBounds: CGRect) {
+        guard !isProcessingBarcode else {
+            return
+        }
+
+        if case let .some(.barcode(lastBarcode)) = checkTabState.routes.last,
+           lastBarcode.barcode == barcodeString {
+            return
+        }
+
+        isProcessingBarcode = true
+
+        pendingNavigationTask?.cancel()
+        pendingNavigationTask = nil
+
+        let centerX = viewBounds.width / 2
+        let centerY = viewBounds.height / 2
+        detectedBarcodeBounds = CGRect(
+            x: centerX - 100,
+            y: centerY - 50,
+            width: 200,
+            height: 100
+        )
+
+        showSuccessOverlay = true
+        successFeedbackGenerator.notificationOccurred(.success)
+
+        let viewModel = BarcodeAnalysisViewModel(
+            barcodeString,
+            webService,
+            dietaryPreferences,
+            userPreferences
+        )
+
+        activeAnalysisTask = Task {
+            await viewModel.analyze()
+        }
+
+        pendingNavigationTask = Task { [weak self, viewModel] in
+            guard let self else { return }
+            do {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    guard self.isProcessingBarcode else {
+                        self.activeAnalysisTask?.cancel()
+                        return
+                    }
+
+                    let capturedBarcode = CapturedBarcode(barcode: barcodeString, viewModel: viewModel)
+                    self.checkTabState.routes.append(.barcode(capturedBarcode))
+                    self.showSuccessOverlay = false
+                    self.isProcessingBarcode = false
+                    self.pendingNavigationTask = nil
+                }
+            } catch {
+                await MainActor.run {
+                    self.activeAnalysisTask?.cancel()
+                    self.isProcessingBarcode = false
+                    self.showSuccessOverlay = false
+                    self.pendingNavigationTask = nil
+                }
+            }
+        }
+
+        PostHogSDK.shared.capture("Barcode Scanning Completed", properties: [
+            "latency_ms": (Date().timeIntervalSince1970 * 1000) - (startTime * 1000),
+            "barcode_number": barcodeString
+        ])
+    }
+
+    func cancelPendingOperations() {
+        pendingNavigationTask?.cancel()
+        pendingNavigationTask = nil
+        
+        if isProcessingBarcode {
+            activeAnalysisTask?.cancel()
+            isProcessingBarcode = false
+        }
+        
+        showSuccessOverlay = false
+        detectedBarcodeBounds = .zero
+    }
+}
+
 @MainActor struct BarcodeScannerView: View {
     
     @State private var dataScannerAccessStatus: DataScannerAccessStatusType = .notDetermined
     @State private var showScanner = true
+    let scanController: BarcodeScanController
 
-    @Environment(CheckTabState.self) var checkTabState
+    init(scanController: BarcodeScanController) {
+        self.scanController = scanController
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -69,15 +188,19 @@ var startTime = Date().timeIntervalSince1970
     }
     
     private var mainView: some View {
-        @Bindable var checkTabState = checkTabState
-        return DataScannerView(routes: $checkTabState.routes)
-            .aspectRatio(3/4, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
+        DataScannerView(scanController: scanController)
+        .aspectRatio(3/4, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.paletteSecondary, lineWidth: 0.8)
-            )
-            .padding(.top)
+                if scanController.showSuccessOverlay {
+                    BarcodeSuccessOverlay(bounds: scanController.detectedBarcodeBounds)
+                }
+            }
+        )
+        .padding(.top)
     }
     
     private var isScannerAvailable: Bool {
@@ -124,7 +247,7 @@ var startTime = Date().timeIntervalSince1970
 @MainActor
 struct DataScannerView: UIViewControllerRepresentable {
     
-    @Binding var routes: [CapturedItem]
+    let scanController: BarcodeScanController
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let uiViewController = DataScannerViewController(
@@ -144,39 +267,36 @@ struct DataScannerView: UIViewControllerRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        return Coordinator(routes: $routes)
+        Coordinator(scanController: scanController)
     }
     
     static func dismantleUIViewController(_ uiViewController: DataScannerViewController, coordinator: Coordinator) {
-        //
+        coordinator.scanController.cancelPendingOperations()
     }
     
     class Coordinator: NSObject, DataScannerViewControllerDelegate {
         
-        @Binding var routes: [CapturedItem]
-
-        init(routes: Binding<[CapturedItem]>) {
-            self._routes = routes
+        let scanController: BarcodeScanController
+        
+        init(scanController: BarcodeScanController) {
+            self.scanController = scanController
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
-            if let firstItem = addedItems.first,
-               case let .barcode(barcodeItem) = firstItem,
-               let barcodeString = barcodeItem.payloadStringValue {
-                if case .barcode(let lastBarcode) = routes.last, lastBarcode == barcodeString {
-                    return
-                }
-                routes.append(.barcode(barcodeString))
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-
-                PostHogSDK.shared.capture("Barcode Scanning Completed", properties: [
-                    "latency_ms": (Date().timeIntervalSince1970 * 1000) - (startTime * 1000),
-                    "barcode_number": barcodeString
-                ])
+            guard let firstItem = addedItems.first,
+                  case let .barcode(barcodeItem) = firstItem,
+                  let barcodeString = barcodeItem.payloadStringValue else {
+                return
             }
+            
+            let viewBounds = dataScanner.view.bounds
+            scanController.handleScan(
+                barcodeString: barcodeString,
+                viewBounds: viewBounds
+            )
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didRemove removedItems: [RecognizedItem], allItems: [RecognizedItem]) {
@@ -190,4 +310,36 @@ struct DataScannerView: UIViewControllerRepresentable {
         
     }
     
+}
+
+// MARK: - Barcode Success Overlay
+
+struct BarcodeSuccessOverlay: View {
+    let bounds: CGRect
+    
+    var body: some View {
+        ZStack {
+            // Semi-transparent blue overlay over barcode area
+            Rectangle()
+                .fill(Color.blue.opacity(0.3))
+                .frame(width: bounds.width, height: bounds.height)
+                .position(
+                    x: bounds.midX,
+                    y: bounds.midY
+                )
+                .animation(.easeInOut(duration: 0.3), value: bounds)
+            
+            // Success checkmark in center of overlay
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 40))
+                .foregroundColor(.green)
+                .position(
+                    x: bounds.midX,
+                    y: bounds.midY
+                )
+                .scaleEffect(1.0)
+                .animation(.spring(response: 0.5, dampingFraction: 0.6), value: bounds)
+        }
+        .allowsHitTesting(false) // Allow touches to pass through
+    }
 }

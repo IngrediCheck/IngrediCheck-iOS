@@ -24,20 +24,30 @@ struct ImageCaptureView: View {
     let showCancelButton: Bool
 
     @State private var cameraManager = CameraManager()
+    @State private var showFocusToast = false
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
-            CameraPreview(session: cameraManager.session)
-                .aspectRatio(3/4, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.paletteSecondary, lineWidth: 0.8)
-                )
-                .padding(.top)
+            ZStack(alignment: .top) {
+                CameraPreview(session: cameraManager.session)
+                    .aspectRatio(3/4, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.paletteSecondary, lineWidth: 0.8)
+                    )
+                
+                // Educational toast
+                if showFocusToast {
+                    FocusEducationToast()
+                        .padding(.top, 8)
+                        .transition(.opacity)
+                }
+            }
+            .padding(.top)
             Text("Take photo of an Ingredient Label.")
                 .padding(.top)
             Spacer()
@@ -95,6 +105,18 @@ struct ImageCaptureView: View {
         .conditionalNavigationBarTitle(showTitle, title: "Add Photos")
         .onAppear {
             cameraManager.setupSession()
+            
+            // Show focus toast every time camera opens with fade in animation
+            withAnimation(.easeIn(duration: 0.3)) {
+                showFocusToast = true
+            }
+            
+            // Auto-dismiss after 4 seconds with fade out animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    showFocusToast = false
+                }
+            }
         }
         .onDisappear {
             capturedImages = []
@@ -263,13 +285,26 @@ struct CameraPreview: UIViewRepresentable {
 
 class CameraPreviewUIView: UIView {
     var previewLayer: AVCaptureVideoPreviewLayer
+    var session: AVCaptureSession
+    private var persistentFocusIndicator: UIView?
+    private var focusPoint: CGPoint
     
     init(session: AVCaptureSession) {
+        self.session = session
         self.previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        // Initialize focus point at center (0.5, 0.5)
+        self.focusPoint = CGPoint(x: 0.5, y: 0.5)
         super.init(frame: .zero)
         
         self.previewLayer.videoGravity = .resizeAspectFill
         self.layer.addSublayer(self.previewLayer)
+        
+        // Add tap gesture for tap-to-focus
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapToFocus(_:)))
+        self.addGestureRecognizer(tapGesture)
+        
+        // Setup persistent focus indicator
+        setupPersistentFocusIndicator()
     }
     
     required init?(coder: NSCoder) {
@@ -279,6 +314,117 @@ class CameraPreviewUIView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         previewLayer.frame = self.bounds
+        
+        // Update persistent focus indicator position
+        updatePersistentFocusIndicatorPosition()
+    }
+    
+    private func setupPersistentFocusIndicator() {
+        // Create persistent focus indicator
+        let indicator = UIView(frame: CGRect(x: 0, y: 0, width: 70, height: 70))
+        indicator.layer.borderColor = UIColor.systemYellow.cgColor
+        indicator.layer.borderWidth = 2.0
+        indicator.layer.cornerRadius = 35
+        indicator.alpha = 0.7
+        indicator.backgroundColor = .clear
+        
+        self.addSubview(indicator)
+        self.persistentFocusIndicator = indicator
+        
+        // Add subtle pulse animation
+        addPulseAnimation(to: indicator)
+    }
+    
+    private func addPulseAnimation(to view: UIView) {
+        let pulseAnimation = CABasicAnimation(keyPath: "transform.scale")
+        pulseAnimation.duration = 1.5
+        pulseAnimation.fromValue = 0.95
+        pulseAnimation.toValue = 1.0
+        pulseAnimation.autoreverses = true
+        pulseAnimation.repeatCount = .infinity
+        pulseAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        view.layer.add(pulseAnimation, forKey: "pulse")
+    }
+    
+    private func updatePersistentFocusIndicatorPosition() {
+        guard let indicator = persistentFocusIndicator else { return }
+        
+        // Convert normalized focus point (0-1) to view coordinates
+        let viewPoint = CGPoint(
+            x: focusPoint.x * bounds.width,
+            y: focusPoint.y * bounds.height
+        )
+        
+        indicator.center = viewPoint
+    }
+    
+    @objc private func handleTapToFocus(_ gesture: UITapGestureRecognizer) {
+        let tapPoint = gesture.location(in: self)
+        
+        // Convert tap point to camera coordinates (0-1 range)
+        let cameraFocusPoint = previewLayer.captureDevicePointConverted(fromLayerPoint: tapPoint)
+        
+        // Update persistent indicator position
+        self.focusPoint = CGPoint(
+            x: tapPoint.x / bounds.width,
+            y: tapPoint.y / bounds.height
+        )
+        
+        // Animate persistent indicator to new position
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5) {
+            self.updatePersistentFocusIndicatorPosition()
+        }
+        
+        // Get the camera device from the session
+        guard let device = session.inputs.first as? AVCaptureDeviceInput else {
+            return
+        }
+        
+        // Apply focus
+        do {
+            try device.device.lockForConfiguration()
+            
+            if device.device.isFocusPointOfInterestSupported && device.device.isFocusModeSupported(.autoFocus) {
+                device.device.focusPointOfInterest = cameraFocusPoint
+                device.device.focusMode = .continuousAutoFocus
+            }
+            
+            if device.device.isExposurePointOfInterestSupported && device.device.isExposureModeSupported(.autoExpose) {
+                device.device.exposurePointOfInterest = cameraFocusPoint
+                device.device.exposureMode = .continuousAutoExposure
+            }
+            
+            device.device.unlockForConfiguration()
+            
+            // Show temporary visual feedback (confirmation animation)
+            showFocusIndicator(at: tapPoint)
+        } catch {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
+    private func showFocusIndicator(at point: CGPoint) {
+        // Create a focus indicator view
+        let focusView = UIView(frame: CGRect(x: 0, y: 0, width: 80, height: 80))
+        focusView.center = point
+        focusView.layer.borderColor = UIColor.systemYellow.cgColor
+        focusView.layer.borderWidth = 2.0
+        focusView.layer.cornerRadius = 40
+        focusView.alpha = 0.0
+        
+        self.addSubview(focusView)
+        
+        // Animate the focus indicator
+        UIView.animate(withDuration: 0.3, animations: {
+            focusView.alpha = 1.0
+            focusView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 0.5, animations: {
+                focusView.alpha = 0.0
+            }) { _ in
+                focusView.removeFromSuperview()
+            }
+        }
     }
 }
 
@@ -316,7 +462,8 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
         
         do {
             
-//            focusOnPoint(device: backCamera, point: CGPoint(x: 0.5, y: 0.5))
+            // Enable continuous auto-focus on center point
+            focusOnPoint(device: backCamera, point: CGPoint(x: 0.5, y: 0.5))
 
             let input = try AVCaptureDeviceInput(device: backCamera)
             if session.canAddInput(input) {
@@ -358,5 +505,21 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
                 }
             }
         }
+    }
+}
+
+// MARK: - Focus Education Toast
+
+struct FocusEducationToast: View {
+    var body: some View {
+        Text("Tap somewhere to change the focus")
+            .font(.caption)
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black.opacity(0.6))
+            )
     }
 }

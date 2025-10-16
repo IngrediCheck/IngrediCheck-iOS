@@ -7,8 +7,28 @@ struct ProductImage: Hashable {
     let barcodeDetectionTask: Task<String?, Error>
 }
 
+struct CapturedBarcode: Hashable {
+    let id: UUID
+    let barcode: String
+    let viewModel: BarcodeAnalysisViewModel
+
+    init(barcode: String, viewModel: BarcodeAnalysisViewModel, id: UUID = UUID()) {
+        self.id = id
+        self.barcode = barcode
+        self.viewModel = viewModel
+    }
+
+    static func == (lhs: CapturedBarcode, rhs: CapturedBarcode) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
 enum CapturedItem: Hashable {
-    case barcode(String)
+    case barcode(CapturedBarcode)
     case productImages([ProductImage])
 }
 
@@ -35,8 +55,8 @@ struct CheckTab: View {
                     case .productImages(let productImages):
                         LabelAnalysisView(productImages: productImages)
                             .environment(checkTabState)
-                    case .barcode(let barcode):
-                        BarcodeAnalysisView(barcode: barcode)
+                    case .barcode(let capturedBarcode):
+                        BarcodeAnalysisView(barcode: capturedBarcode.barcode, viewModel: capturedBarcode.viewModel)
                             .environment(checkTabState)
                 }
             }
