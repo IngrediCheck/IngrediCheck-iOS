@@ -9,6 +9,7 @@ struct SettingsSheet: View {
     @Environment(AuthController.self) var authController
     
     @State private var showInternalModeToast = false
+    @State private var internalModeToastMessage = "Internal Mode Unlocked"
 
     var body: some View {
         @Bindable var userPreferences = userPreferences
@@ -89,6 +90,14 @@ struct SettingsSheet: View {
                             Image(systemName: "hammer")
                                 .foregroundStyle(.paletteAccent)
                         }
+                        .onTapGesture(count: 7) {
+                            let disabled = authController.disableInternalMode()
+                            if disabled {
+                                internalModeToastMessage = "Internal Mode Disabled"
+                                showInternalModeToast = false
+                                showInternalModeToast = true
+                            }
+                        }
                     }
                     Label {
                         Text("IngrediCheck for iOS \(appVersion).(\(buildNumber))")
@@ -98,6 +107,7 @@ struct SettingsSheet: View {
                     .onTapGesture(count: 7) {
                         let unlocked = authController.enableInternalMode()
                         if unlocked {
+                            internalModeToastMessage = "Internal Mode Unlocked"
                             showInternalModeToast = false
                             showInternalModeToast = true
                         }
@@ -125,7 +135,7 @@ struct SettingsSheet: View {
             isPresented: $showInternalModeToast,
             options: SimpleToastOptions(alignment: .top, hideAfter: 2)
         ) {
-            InternalModeUnlockedToastView()
+            InternalModeToastView(message: internalModeToastMessage)
         }
     }
     
@@ -191,12 +201,14 @@ struct DeleteAccountView: View {
     }
 }
 
-private struct InternalModeUnlockedToastView: View {
+private struct InternalModeToastView: View {
+    let message: String
+    
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "sparkles")
                 .foregroundStyle(.paletteAccent)
-            Text("Internal Mode Unlocked")
+            Text(message)
                 .font(.subheadline)
                 .foregroundStyle(.primary)
         }

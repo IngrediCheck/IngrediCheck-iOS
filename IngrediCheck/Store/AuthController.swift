@@ -46,10 +46,15 @@ enum SignInState {
     private static let internalFlagKey = "isInternalUser"
     
     @MainActor init() {
-        isInternalUser = keychain.getBool(AuthController.internalFlagKey) ?? false
+        let storedInternalFlag = keychain.getBool(AuthController.internalFlagKey)
+        if let storedInternalFlag {
+            isInternalUser = storedInternalFlag
+        } else {
+            isInternalUser = false
+        }
 #if targetEnvironment(simulator)
         // Treat simulator sessions as internal by default so testers get the full toolset.
-        if !isInternalUser {
+        if storedInternalFlag == nil {
             isInternalUser = true
             keychain.set(true, forKey: AuthController.internalFlagKey)
         }
@@ -308,15 +313,29 @@ enum SignInState {
     }
     
     @MainActor
+    func disableInternalMode() -> Bool {
+        guard isInternalUser else {
+            return false
+        }
+        
+        setInternalMode(false)
+        refreshAnalyticsIdentity(session: session)
+        
+        if let session {
+            syncInternalFlagToSupabaseIfNeeded(session: session)
+        }
+        
+        return true
+    }
+    
+    @MainActor
     func refreshInternalModeFromServer(_ metadata: [String: AnyJSON]) {
         guard let serverFlag = metadata["is_internal"]?.boolValue else {
             return
         }
         
-        if serverFlag {
-            setInternalMode(true)
-            refreshAnalyticsIdentity(session: session)
-        }
+        setInternalMode(serverFlag)
+        refreshAnalyticsIdentity(session: session)
     }
     
     @MainActor
@@ -362,20 +381,30 @@ enum SignInState {
     private func syncInternalFlagToSupabaseIfNeeded(session: Session) {
         let metadataFlag = session.user.userMetadata["is_internal"]?.boolValue
         
-        if isInternalUser {
-            guard metadataFlag != true else { return }
-            Task {
-                do {
-                    _ = try await supabaseClient.auth.update(
-                        user: UserAttributes(data: ["is_internal": .bool(true)])
-                    )
-                } catch {
-                    print("Failed to sync internal mode flag to Supabase: \(error)")
+        Task {
+            do {
+                if isInternalUser {
+                    guard metadataFlag != true else { return }
+                    try await updateSupabaseInternalFlag(true)
+                } else {
+                    guard metadataFlag != false else { return }
+                    try await updateSupabaseInternalFlag(false)
                 }
+            } catch {
+                print("Failed to sync internal mode flag to Supabase: \(error)")
             }
-        } else if metadataFlag == true {
-            setInternalMode(true)
-            refreshAnalyticsIdentity(session: session)
+        }
+    }
+    
+    @MainActor
+    private func updateSupabaseInternalFlag(_ enabled: Bool) async throws {
+        _ = try await supabaseClient.auth.update(
+            user: UserAttributes(data: ["is_internal": .bool(enabled)])
+        )
+        
+        if var currentSession = session {
+            currentSession.user.userMetadata["is_internal"] = .bool(enabled)
+            session = currentSession
         }
     }
 }
