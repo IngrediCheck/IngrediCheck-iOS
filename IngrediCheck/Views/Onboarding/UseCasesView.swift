@@ -92,7 +92,7 @@ struct UseCasesView: View {
                         await authController.signIn()
                     }
                 } label: {
-                    Text("Continue as Guest")
+                    Text("Sign-in later")
                         .fontWeight(.bold)
                 }
                 .foregroundStyle(.paletteAccent)
