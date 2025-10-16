@@ -28,17 +28,45 @@ struct SettingsSheet: View {
                 }
                 Section("Account") {
                     if authController.signedInWithApple || authController.signedInWithGoogle {
+                        // Provider badge
                         if let providerDisplay = authController.currentSignInProviderDisplay {
-                            Label {
-                                Text(providerDisplay.text)
-                            } icon: {
-                                Image(systemName: providerDisplay.icon)
+                            HStack(spacing: 10) {
+                                if authController.signedInWithApple {
+                                    Image(systemName: "applelogo")
+                                        .foregroundStyle(.primary)
+                                } else {
+                                    Image("google_logo")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 18, height: 18)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(providerDisplay.text)
+                                        .font(.footnote)
+                                        .fontWeight(.semibold)
+                                    if let email = authController.displayableEmail, !email.isEmpty {
+                                        Text(email)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                
+                                // Provider-aware Sign out
+                                SignoutButton()
                             }
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 2)
                         }
-                        SignoutButton()
-                        DeleteAccountView(labelText: "Delete Data & Account")
+
+                        // Danger Zone
+                        VStack(spacing: 8) {
+                            Text("Danger Zone")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            DeleteAccountView(labelText: "Delete Data & Account")
+                        }
+                        .padding(.top, 6)
                     } else if authController.signedInAsGuest {
                         AccountUpgradeView()
                         DeleteAccountView(labelText: "Reset App State")
@@ -314,12 +342,13 @@ struct SignoutButton: View {
                 }
             }
         } label: {
-            Label {
+            HStack(spacing: 8) {
                 Text("Sign out")
-            } icon: {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
             }
         }
+        .buttonStyle(.borderedProminent)
+        .tint(.accentColor)
+        .buttonBorderShape(.capsule)
     }
 }
 

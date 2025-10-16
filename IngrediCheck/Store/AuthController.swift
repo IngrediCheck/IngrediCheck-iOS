@@ -183,6 +183,27 @@ private enum AuthFlowMode {
         return false
     }
 
+    @MainActor var currentUserEmail: String? {
+        return session?.user.email
+    }
+
+    // Returns true if the email looks like Apple's private relay address
+    @MainActor private func isAppleRelayEmail(_ email: String) -> Bool {
+        let lowercased = email.lowercased()
+        return lowercased.hasSuffix("@privaterelay.appleid.com") ||
+               lowercased.contains(".privaterelay.appleid.com")
+    }
+
+    // Email to display in UI; hides Apple's private relay emails for better UX
+    @MainActor var displayableEmail: String? {
+        guard let email = session?.user.email, !email.isEmpty else { return nil }
+        if signedInWithApple {
+            // Hide Apple's private relay emails
+            return isAppleRelayEmail(email) ? nil : email
+        }
+        return email
+    }
+
     @MainActor var currentSignInProviderDisplay: (icon: String, text: String)? {
         if signedInWithApple {
             return ("applelogo", "Signed in with Apple")
