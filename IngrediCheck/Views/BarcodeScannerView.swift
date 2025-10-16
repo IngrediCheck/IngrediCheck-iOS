@@ -77,18 +77,13 @@ var startTime = Date().timeIntervalSince1970
             userPreferences
         )
 
-        print("[\(nowMs())][BarcodeScanner] Barcode scanned: \(barcodeString)")
-        print("[\(nowMs())][BarcodeScanner] Analyze kicked off for: \(barcodeString)")
-
         activeAnalysisTask = Task {
             await viewModel.analyze()
-            print("[\(nowMs())][BarcodeScanner] Analysis completed for: \(barcodeString)")
         }
 
         pendingNavigationTask = Task { [weak self, viewModel] in
             guard let self else { return }
             do {
-                print("[\(self.nowMs())][BarcodeScanner] Timer started (1.0s) for: \(barcodeString)")
                 try await Task.sleep(nanoseconds: 1_000_000_000)
 
                 guard !Task.isCancelled else { return }
@@ -100,7 +95,6 @@ var startTime = Date().timeIntervalSince1970
                     }
 
                     let capturedBarcode = CapturedBarcode(barcode: barcodeString, viewModel: viewModel)
-                    print("[\(self.nowMs())][BarcodeScanner] Timer ended; navigating to BarcodeAnalysisView for: \(barcodeString)")
                     self.checkTabState.routes.append(.barcode(capturedBarcode))
                     self.showSuccessOverlay = false
                     self.isProcessingBarcode = false
@@ -133,13 +127,6 @@ var startTime = Date().timeIntervalSince1970
         
         showSuccessOverlay = false
         detectedBarcodeBounds = .zero
-    }
-
-    nonisolated private func nowMs() -> String {
-        let time = Date().timeIntervalSince1970
-        let milliseconds = Int64(time * 1000)
-        let fractionalMs = Int((time * 1000).truncatingRemainder(dividingBy: 1) * 1000)
-        return String(format: "%lld.%03d", milliseconds, fractionalMs)
     }
 }
 
