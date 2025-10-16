@@ -5,6 +5,7 @@ import KeychainSwift
 import GoogleSignIn
 import GoogleSignInSwift
 import CryptoKit
+import PostHog
 
 enum AuthControllerError: Error, LocalizedError {
     case rootViewControllerNotFound
@@ -36,14 +37,30 @@ enum SignInState {
 @Observable final class AuthController {
     @MainActor var session: Session?
     @MainActor var signInState: SignInState = .signingIn
+    @MainActor var isInternalUser: Bool = false
     
     private let keychain = KeychainSwift()
     
     private static let anonUserNameKey = "anonEmail"
     private static let anonPasswordKey = "anonPassword"
+    private static let internalFlagKey = "isInternalUser"
     
-    init() {
+    @MainActor init() {
+        let storedInternalFlag = keychain.getBool(AuthController.internalFlagKey)
+        if let storedInternalFlag {
+            isInternalUser = storedInternalFlag
+        } else {
+            isInternalUser = false
+        }
+#if targetEnvironment(simulator)
+        // Treat simulator sessions as internal by default so testers get the full toolset.
+        if storedInternalFlag == nil {
+            isInternalUser = true
+            keychain.set(true, forKey: AuthController.internalFlagKey)
+        }
+#endif
         authChangeWatcher()
+        refreshAnalyticsIdentity(session: nil)
     }
     
     @MainActor var signedInWithApple: Bool {
@@ -81,12 +98,10 @@ enum SignInState {
             for await authStateChange in supabaseClient.auth.authStateChanges {
                 await MainActor.run {
                     print("Auth change Event: \(authStateChange.event)")
-                    self.session = authStateChange.session
-                    if authStateChange.session == nil {
-                        signInState = .signedOut
-                    } else {
-                        signInState = .signedIn
-                    }
+                    self.handleSessionChange(
+                        event: authStateChange.event,
+                        session: authStateChange.session
+                    )
                 }
             }
         }
@@ -278,5 +293,118 @@ enum SignInState {
                 }
             }
         )
+    }
+    
+    @MainActor
+    func enableInternalMode() -> Bool {
+        guard !isInternalUser else {
+            refreshAnalyticsIdentity(session: session)
+            return false
+        }
+        
+        setInternalMode(true)
+        refreshAnalyticsIdentity(session: session)
+        
+        if let session {
+            syncInternalFlagToSupabaseIfNeeded(session: session)
+        }
+        
+        return true
+    }
+    
+    @MainActor
+    func disableInternalMode() -> Bool {
+        guard isInternalUser else {
+            return false
+        }
+        
+        setInternalMode(false)
+        refreshAnalyticsIdentity(session: session)
+        
+        if let session {
+            syncInternalFlagToSupabaseIfNeeded(session: session)
+        }
+        
+        return true
+    }
+    
+    @MainActor
+    func refreshInternalModeFromServer(_ metadata: [String: AnyJSON]) {
+        guard let serverFlag = metadata["is_internal"]?.boolValue else {
+            return
+        }
+        
+        setInternalMode(serverFlag)
+        refreshAnalyticsIdentity(session: session)
+    }
+    
+    @MainActor
+    private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
+        self.session = session
+        
+        if let session {
+            signInState = .signedIn
+            refreshInternalModeFromServer(session.user.userMetadata)
+            syncInternalFlagToSupabaseIfNeeded(session: session)
+            refreshAnalyticsIdentity(session: session)
+        } else {
+            signInState = .signedOut
+            let shouldReset = event == .signedOut || event == .userDeleted
+            refreshAnalyticsIdentity(session: nil, reset: shouldReset)
+        }
+    }
+    
+    @MainActor
+    private func setInternalMode(_ enabled: Bool) {
+        guard isInternalUser != enabled else { return }
+        isInternalUser = enabled
+        keychain.set(enabled, forKey: AuthController.internalFlagKey)
+    }
+    
+    @MainActor
+    private func refreshAnalyticsIdentity(session: Session?, reset: Bool = false) {
+        let properties: [String: Any] = ["is_internal": isInternalUser]
+        
+        if reset {
+            PostHogSDK.shared.reset()
+        }
+        
+        if let session {
+            let distinctId = session.user.id.uuidString
+            PostHogSDK.shared.identify(distinctId, userProperties: properties)
+        }
+        
+        PostHogSDK.shared.register(properties)
+    }
+    
+    @MainActor
+    private func syncInternalFlagToSupabaseIfNeeded(session: Session) {
+        let metadataFlag = session.user.userMetadata["is_internal"]?.boolValue
+        
+        Task {
+            do {
+                if isInternalUser {
+                    guard metadataFlag != true else { return }
+                    try await updateSupabaseInternalFlag(true)
+                } else {
+                    guard metadataFlag != false else { return }
+                    try await updateSupabaseInternalFlag(false)
+                }
+            } catch {
+                print("Failed to sync internal mode flag to Supabase: \(error)")
+            }
+        }
+    }
+    
+    @MainActor
+    private func updateSupabaseInternalFlag(_ enabled: Bool) async throws {
+        _ = try await supabaseClient.auth.update(
+            user: UserAttributes(data: ["is_internal": .bool(enabled)])
+        )
+        
+        if var currentSession = session {
+            currentSession.user.userMetadata["is_internal"] = .bool(enabled)
+            session = currentSession
+        }
     }
 }
