@@ -26,49 +26,56 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
     }
 
     func updateUIViewController(_ parent: UIViewController, context: Context) {
-        guard let item = item else {
-            // dismiss if nil
+        // If sheet should close
+        guard let newItem = item else {
             if let presented = parent.presentedViewController {
                 presented.dismiss(animated: true) {
-                    // reset so same item can be re-presented later
                     context.coordinator.presentedID = nil
                 }
             }
             return
         }
 
-        // if same sheet already showing, skip
-        if context.coordinator.presentedID == item.id { return }
+        // If same sheet already showing, skip
+        if context.coordinator.presentedID == newItem.id { return }
 
-        // create a hosting controller for the sheet
-        let hosting = UIHostingController(rootView:
-            ZStack {
-                Color.white.ignoresSafeArea() // full white background
-                content(item)
+        let presentSheet = {
+            // Build hosting controller
+            let hosting = UIHostingController(rootView:
+                ZStack {
+                    Color.white.ignoresSafeArea()
+                    content(newItem)
+                }
+            )
+            hosting.view.backgroundColor = .white
+            hosting.modalPresentationStyle = .pageSheet
+
+            parent.present(hosting, animated: true)
+            context.coordinator.presentedID = newItem.id
+
+            DispatchQueue.main.async {
+                if let sheet = hosting.sheetPresentationController {
+                    let h = heightForItem(newItem)
+                    let id = UISheetPresentationController.Detent.Identifier("custom.\(Int(h))")
+                    let detent = UISheetPresentationController.Detent.custom(identifier: id) { _ in h }
+                    sheet.detents = [detent]
+                    sheet.largestUndimmedDetentIdentifier = id
+                    sheet.prefersGrabberVisible = true
+                    sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+                    sheet.preferredCornerRadius = cornerRadius
+                    hosting.presentationController?.delegate = context.coordinator
+                }
             }
-        )
+        }
 
-        hosting.view.backgroundColor = .white
-        hosting.modalPresentationStyle = .pageSheet
-
-        parent.present(hosting, animated: true)
-        context.coordinator.presentedID = item.id
-
-        DispatchQueue.main.async {
-            if let sheet = hosting.sheetPresentationController {
-                let h = heightForItem(item)
-
-                let identifier = UISheetPresentationController.Detent.Identifier("custom.\(Int(h))")
-                let detent = UISheetPresentationController.Detent.custom(identifier: identifier) { _ in h }
-                sheet.detents = [detent]
-                sheet.largestUndimmedDetentIdentifier = identifier // remove dimming
-                sheet.prefersGrabberVisible = false
-                sheet.prefersScrollingExpandsWhenScrolledToEdge = false
-                sheet.preferredCornerRadius = cornerRadius
-
-                // when sheet is dismissed by swipe or drag down, reset coordinator
-                hosting.presentationController?.delegate = context.coordinator
+        // If another sheet is still visible → dismiss first, then present the new one
+        if parent.presentedViewController != nil {
+            parent.presentedViewController?.dismiss(animated: true) {
+                context.coordinator.presentedID = nil
+                presentSheet()
             }
+        } else {
+            presentSheet()
         }
     }
 
@@ -85,7 +92,7 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
         }
 
         func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-            // update SwiftUI binding to nil when dismissed by swipe
+            // Reset binding when user swipes down to dismiss
             itemBinding.wrappedValue = nil
             presentedID = nil
         }
