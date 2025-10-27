@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - CustomSheet
-
 struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresentable {
     @Binding var item: Item?
     let cornerRadius: CGFloat
@@ -23,7 +21,7 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
 
     func makeUIViewController(context: Context) -> UIViewController {
         let vc = UIViewController()
-        vc.view.backgroundColor = .clear // background of the presenting controller
+        vc.view.backgroundColor = .clear
         return vc
     }
 
@@ -31,7 +29,10 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
         guard let item = item else {
             // dismiss if nil
             if let presented = parent.presentedViewController {
-                presented.dismiss(animated: true)
+                presented.dismiss(animated: true) {
+                    // reset so same item can be re-presented later
+                    context.coordinator.presentedID = nil
+                }
             }
             return
         }
@@ -42,13 +43,12 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
         // create a hosting controller for the sheet
         let hosting = UIHostingController(rootView:
             ZStack {
-                Color.white // <- makes background white
-                    .ignoresSafeArea()
+                Color.white.ignoresSafeArea() // full white background
                 content(item)
             }
         )
 
-        hosting.view.backgroundColor = .white // <- ensures UIKit background is white
+        hosting.view.backgroundColor = .white
         hosting.modalPresentationStyle = .pageSheet
 
         parent.present(hosting, animated: true)
@@ -58,22 +58,37 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
             if let sheet = hosting.sheetPresentationController {
                 let h = heightForItem(item)
 
-                // custom detent height
                 let identifier = UISheetPresentationController.Detent.Identifier("custom.\(Int(h))")
                 let detent = UISheetPresentationController.Detent.custom(identifier: identifier) { _ in h }
                 sheet.detents = [detent]
-                sheet.largestUndimmedDetentIdentifier = identifier // removes background dimming
+                sheet.largestUndimmedDetentIdentifier = identifier // remove dimming
                 sheet.prefersGrabberVisible = false
                 sheet.prefersScrollingExpandsWhenScrolledToEdge = false
                 sheet.preferredCornerRadius = cornerRadius
+
+                // when sheet is dismissed by swipe or drag down, reset coordinator
+                hosting.presentationController?.delegate = context.coordinator
             }
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(itemBinding: _item)
+    }
 
-    class Coordinator {
+    class Coordinator: NSObject, UIAdaptivePresentationControllerDelegate {
         var presentedID: Item.ID?
+        private var itemBinding: Binding<Item?>
+
+        init(itemBinding: Binding<Item?>) {
+            self.itemBinding = itemBinding
+        }
+
+        func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+            // update SwiftUI binding to nil when dismissed by swipe
+            itemBinding.wrappedValue = nil
+            presentedID = nil
+        }
     }
 }
 

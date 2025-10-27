@@ -50,7 +50,7 @@ struct IngrediFamCanvasView: View {
             }
         }
         CustomSheet(item: $addFamilyMemberSheetOption,
-                    cornerRadius: 24,
+                    cornerRadius: 34,
                     heightForItem: { sheet in
                         switch sheet {
                         case .addMoreMember: return 437
