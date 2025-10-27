@@ -97,41 +97,41 @@ struct FamilyCarouselView: View {
             }
         }
     }
-    
-    
-    struct circleImage: View {
+}
 
-        let image: String
-        let name: String
-        let color: Color
-        
-        var body: some View {
-            VStack(spacing: 4) {
-                if name == "Everyone" {
-                    Circle()
-                        .frame(width: 46, height: 46)
-                        .foregroundStyle(
-                            LinearGradient(colors: [Color(hex: "FFC552"), Color(hex: "FFAA28")], startPoint: .top, endPoint: .bottom)
-                        )
-                        .overlay(
-                            Image(image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 28, height: 28)
-                        )
-                } else {
-                    Circle()
-                        .frame(width: 46, height: 46)
-                        .foregroundStyle(color)
-                        .overlay(
-                            Image(image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 46, height: 46)
-                        )
-                }
-                
-                
+struct circleImage: View {
+
+    let image: String
+    let name: String?
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            if name == "Everyone" {
+                Circle()
+                    .frame(width: 46, height: 46)
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color(hex: "FFC552"), Color(hex: "FFAA28")], startPoint: .top, endPoint: .bottom)
+                    )
+                    .overlay(
+                        Image(image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 28, height: 28)
+                    )
+            } else {
+                Circle()
+                    .frame(width: 46, height: 46)
+                    .foregroundStyle(color)
+                    .overlay(
+                        Image(image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 46, height: 46)
+                    )
+            }
+            
+            if let name = name {
                 Text(name)
                     .font(ManropeFont.regular.size(10))
                     .foregroundStyle(.grayScale130)

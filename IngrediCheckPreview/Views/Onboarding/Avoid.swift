@@ -74,5 +74,5 @@ struct Avoid: View {
 }
 
 #Preview {
-    Avoid(onboardingFlowType: .individual)
+    Avoid(onboardingFlowType: .family)
 }

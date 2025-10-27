@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TempStore: View {
-    @StateObject var store = Onboarding(onboardingFlowtype: .family)
+    @StateObject var store = Onboarding(onboardingFlowtype: .individual)
     var body: some View {
         VStack {
             store.currentScreen.view
