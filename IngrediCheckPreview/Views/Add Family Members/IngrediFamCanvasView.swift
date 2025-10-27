@@ -18,7 +18,7 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
 
 struct IngrediFamCanvasView: View {
     
-    @State var addFamilyMemberSheetOption: AddFamilyMemberSheetOption? = .allSet
+    @State var addFamilyMemberSheetOption: AddFamilyMemberSheetOption? = .whatsYourName
     
     var body: some View {
         ZStack {
@@ -49,22 +49,28 @@ struct IngrediFamCanvasView: View {
                 }
             }
         }
-        .sheet(item: $addFamilyMemberSheetOption) { sheet in
+        CustomSheet(item: $addFamilyMemberSheetOption,
+                    cornerRadius: 24,
+                    heightForItem: { sheet in
+                        switch sheet {
+                        case .addMoreMember: return 437
+                        case .allSet: return 270
+                        case .meetYourIngrediFam: return 396
+                        case .whatsYourName: return 437
+                        }
+                    }) { sheet in
             switch sheet {
             case .addMoreMember:
                 AddMoreMembers()
-                    .presentationDetents([.height(437)])
             case .allSet:
                 AllSet()
-                    .presentationDetents([.height(270)])
             case .meetYourIngrediFam:
                 MeetYourIngrediFam()
-                    .presentationDetents([.height(396)])
             case .whatsYourName:
                 WhatsYourName()
-                    .presentationDetents([.height(437)])
             }
         }
+
     }
 }
 
@@ -91,25 +97,29 @@ struct MeetYourIngrediFam: View {
             }
         }
         .padding(.horizontal, 20)
-        
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 
 struct WhatsYourName: View {
     @State var name: String = ""
     @State var familyMembersList: [UserModel] = [
-        UserModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj", backgroundColor: Color(hex: "DCC7F6")),
-        UserModel(familyMemberName: "Neha", familyMemberImage: "Neha", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "Harsh", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "Grandma", backgroundColor: Color(hex: "A7D8F0"))
+        UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
+        UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
+        UserModel(familyMemberName: "Harsh", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5")),
+        UserModel(familyMemberName: "Grandpa", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
+        UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
+    @State var selectedFamilyMember: UserModel? = nil
     var body: some View {
         VStack {
-            
-            RoundedRectangle(cornerRadius: 4)
-                .frame(width: 60, height: 4)
             
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
@@ -145,7 +155,28 @@ struct WhatsYourName: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 18) {
                             ForEach(familyMembersList, id: \.id) { ele in
-                                circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
+                                ZStack(alignment: .topTrailing) {
+                                    circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
+                                    
+                                    if selectedFamilyMember?.id == ele.id {
+                                        Circle()
+                                            .fill(Color(hex: "2C9C3D"))
+                                            .frame(width: 16, height: 16)
+                                            .padding(.top, 1)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(lineWidth: 1)
+                                                    .foregroundStyle(.white)
+                                                    .padding(.top, 1)
+                                                    .overlay(
+                                                        Image("white-rounded-checkmark")
+                                                    )
+                                            )
+                                    }
+                                }
+                                .onTapGesture {
+                                    selectedFamilyMember = ele
+                                }
                             }
                         }
                     }
@@ -159,22 +190,30 @@ struct WhatsYourName: View {
                 GreenCapsule(title: "Add Member")
             }
         }
-//        .background(.red)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 
 struct AddMoreMembers: View {
     @State var name: String = ""
     @State var familyMembersList: [UserModel] = [
-        UserModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj", backgroundColor: Color(hex: "DCC7F6")),
-        UserModel(familyMemberName: "Neha", familyMemberImage: "Neha", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "Harsh", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "Grandma", backgroundColor: Color(hex: "A7D8F0"))
+        UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
+        UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
+        UserModel(familyMemberName: "Harsh", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5")),
+        UserModel(familyMemberName: "Grandpa", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
+        UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
+    @State var selectedFamilyMember: UserModel? = nil
     var body: some View {
         VStack {
+            
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
                     Text("Add more members?")
@@ -209,20 +248,49 @@ struct AddMoreMembers: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 18) {
                             ForEach(familyMembersList, id: \.id) { ele in
-                                circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
+                                ZStack(alignment: .topTrailing) {
+                                    circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
+                                    
+                                    if selectedFamilyMember?.id == ele.id {
+                                        Circle()
+                                            .fill(Color(hex: "2C9C3D"))
+                                            .frame(width: 16, height: 16)
+                                            .padding(.top, 1)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(lineWidth: 1)
+                                                    .foregroundStyle(.white)
+                                                    .padding(.top, 1)
+                                                    .overlay(
+                                                        Image("white-rounded-checkmark")
+                                                    )
+                                            )
+                                    }
+                                }
+                                .onTapGesture {
+                                    selectedFamilyMember = ele
+                                }
                             }
                         }
                     }
                 }
                 .padding(.leading, 20)
             }
+            .padding(.bottom, 40)
             
             HStack(spacing: 16) {
                 GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
                 GreenCapsule(title: "Add Member")
             }
-            
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 
@@ -259,8 +327,14 @@ struct AllSet: View {
                 GreenCapsule(title: "Add Member", width: 160, height: 52)
             }
         }
-        
-        
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 
