@@ -12,13 +12,15 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case whatsYourName
     case addMoreMember
     case allSet
+    case generateAvatar
     
     var id: String { self.rawValue }
 }
 
 struct IngrediFamCanvasView: View {
     
-    @State var addFamilyMemberSheetOption: AddFamilyMemberSheetOption? = .whatsYourName
+    @State var addFamilyMemberSheetOption: AddFamilyMemberSheetOption? = .allSet
+    @State var isExpandedMinimal: Bool = false
     
     var body: some View {
         ZStack {
@@ -47,16 +49,20 @@ struct IngrediFamCanvasView: View {
                 Button("whatsYourName") {
                     addFamilyMemberSheetOption = .whatsYourName
                 }
+                Button("generateAvatar") {
+                    addFamilyMemberSheetOption = .generateAvatar
+                }
             }
         }
         CustomSheet(item: $addFamilyMemberSheetOption,
                     cornerRadius: 34,
-                    heightForItem: { sheet in
+                    heightsForItem: { sheet in
                         switch sheet {
-                        case .addMoreMember: return 437
-                        case .allSet: return 270
-                        case .meetYourIngrediFam: return 396
-                        case .whatsYourName: return 437
+                        case .addMoreMember: return (min: 437, max: 438)
+                        case .allSet: return (min: 270, max: 271)
+                        case .meetYourIngrediFam: return (min: 396, max: 397)
+                        case .whatsYourName: return (min: 437, max: 438)
+                        case .generateAvatar: return (min: 379, max: 642)
                         }
                     }) { sheet in
             switch sheet {
@@ -68,276 +74,248 @@ struct IngrediFamCanvasView: View {
                 MeetYourIngrediFam()
             case .whatsYourName:
                 WhatsYourName()
+            case .generateAvatar:
+                GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
             }
         }
-
+//        .sheet(item: $addFamilyMemberSheetOption) { sheet in
+//            switch sheet {
+//            case .addMoreMember:
+//                AddMoreMembers()
+//            case .allSet:
+//                AllSet()
+//            case .meetYourIngrediFam:
+//                MeetYourIngrediFam()
+//            case .whatsYourName:
+//                WhatsYourName()
+//            case .generateAvatar:
+//                GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
+//                    .presentationDetents([.height(379), .height(642)])
+//            }
+//        }
+        
     }
 }
 
-
-struct MeetYourIngrediFam: View {
+struct GenerateAvatar: View {
+    
+    @State var toolIcons: [String] = [
+        "family-member",
+        "gesture",
+        "hair-style",
+        "skin-tone",
+        "accessories",
+        "color-theme"
+    ]
+    
+    @State var familyMember: [UserModel] = [
+        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
+        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
+        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
+        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4"),
+        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
+        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
+        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
+        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4"),
+        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
+        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
+        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
+        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
+    ]
+    
+    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "Son", familyMemberImage: "image-bg1")
+    
+    @State var selectedTool: String = "family-member"
+    @Binding var isExpandedMinimal: Bool
+    @Namespace private var animation
+    
     var body: some View {
-        VStack(spacing: 20) {
-            Image("IngrediFamGroup")
+        GeometryReader { geometry in
+            ZStack {
+                if geometry.size.height >= 500 {
+                    VStack {
+                        Image(.funGuy)
+                        
+                        Text("AI Memojis")
+                        
+                        Text("Create Personalized family Avatar")
+                        
+                        Text("Generate Avatar")
+                        
+                        HStack {
+                            Image(.familyMember)
+                                
+                            Text("Family Member")
+                        }
+                        
+                        Text("Tell us how you're related to them so we can create the perfect avatar!")
+                    }
+                } else {
+                    if isExpandedMinimal {
+                        VStack {
+                            Spacer()
+                            selectedMemberRow()
+                        }
+                        .matchedGeometryEffect(id: "circle", in: animation)
+                    } else {
+                        VStack(spacing: 40) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Text("Generate Avatar: \(geometry.size.height.description)")
+                                        .font(ManropeFont.bold.size(14))
+                                        .foregroundStyle(.grayScale150)
+                                    
+                                    Spacer()
+                                    
+                                    Text("0/2")
+                                        .font(ManropeFont.regular.size(14))
+                                        .foregroundStyle(.grayScale100)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 12) {
+                                        ForEach(toolIcons, id: \.self) { ele in
+                                            GenerateAvatarToolPill(icon: ele, title: ele, isSelected: $selectedTool) {
+                                                selectedTool = ele
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                }
+                                
+                                Text("Tell us how you’re related to them so we can create the perfect avatar!")
+                                    .font(ManropeFont.medium.size(12))
+                                    .foregroundStyle(.grayScale120)
+                                    .padding(.horizontal, 20)
+                                
+                                selectedMemberRow()
+                                    .matchedGeometryEffect(id: "circle", in: animation)
+                            }
+                            
+                            HStack {
+                                GreenOutlinedCapsule(image: "ai-stick", title: "Random")
+                                Spacer()
+                                GreenCapsule(title: "Generate", icon: "stars-generate")
+                            }
+                            .padding(.horizontal, 20)
+                            
+                        }
+                        .padding(.top,isExpandedMinimal ? 10 : 32)
+                    }
+                }
+                
+            }
+            .overlay(alignment: .bottom) {
+                if isExpandedMinimal {
+                    familyMemberListView()
+                }
+            }
+            .animation(.easeInOut, value: isExpandedMinimal)
+        }
+    }
+    
+    @ViewBuilder
+    func selectedMemberRow() -> some View {
+        HStack {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .frame(width: 36, height: 36)
+                        .foregroundStyle(Color(hex: "F9F9F9"))
+                    
+                    Image(selectedFamilyMember.image)
+                        .resizable()
+                        .frame(width: 30, height: 30)
+                        .shadow(color: Color(hex: "DEDDDD"), radius: 3.5, x: 0, y: 0)
+                }
+                
+                Text(selectedFamilyMember.name)
+                    .font(ManropeFont.medium.size(14))
+                    .foregroundStyle(.grayScale150)
+            }
+            
+            Spacer()
+            
+            Image(.arrow)
                 .resizable()
-                .frame(width: 295, height: 146)
-            
-            VStack(spacing: 16) {
-                Text("Let's meet your IngrediFam!")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                
-                Text("Add everyone’s name and a fun avatar so we can tailor tips and scans just for them.")
-                    .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(.grayScale120)
-                    .multilineTextAlignment(.center)
-                
-                
-                GreenCapsule(title: "Add Members")
-            }
+                .frame(width: 24, height: 24)
+                .rotationEffect(Angle(degrees: 180))
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .foregroundStyle(.grayScale10)
+                .shadow(color: Color(hex: "ECECEC").opacity(0.4), radius: 5, x: 0, y: 0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(lineWidth: 0.5)
+                        .foregroundStyle(.grayScale40)
+                )
+            
+        )
         .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
-        )
+        .onTapGesture {
+            withAnimation(.easeInOut) {
+                isExpandedMinimal.toggle()
+            }
+        }
     }
-}
-
-struct WhatsYourName: View {
-    @State var name: String = ""
-    @State var familyMembersList: [UserModel] = [
-        UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
-    ]
-    @State var selectedFamilyMember: UserModel? = nil
-    var body: some View {
+    
+    @ViewBuilder
+    func familyMemberListView() -> some View {
         VStack {
-            
-            VStack(spacing: 24) {
-                VStack(spacing: 12) {
-                    Text("What's your name?")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                    
-                    Text("This helps us personalize your experience and scan tips—just for you!")
-                        .font(ManropeFont.medium.size(12))
-                        .foregroundStyle(.grayScale120)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 20)
-                
-                
-                TextField("Enter your Name", text: $name)
-                    .padding(16)
-                    .background(.grayScale10)
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(lineWidth: 0.5)
-                            .foregroundStyle(.grayScale60)
-                    )
-                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                    .padding(.horizontal, 20)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Choose Avatar (Optional)")
-                        .font(ManropeFont.bold.size(14))
-                        .foregroundStyle(.grayScale150)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 18) {
-                            ForEach(familyMembersList, id: \.id) { ele in
-                                ZStack(alignment: .topTrailing) {
-                                    circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
-                                    
-                                    if selectedFamilyMember?.id == ele.id {
-                                        Circle()
-                                            .fill(Color(hex: "2C9C3D"))
-                                            .frame(width: 16, height: 16)
-                                            .padding(.top, 1)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(.white)
-                                                    .padding(.top, 1)
-                                                    .overlay(
-                                                        Image("white-rounded-checkmark")
-                                                    )
-                                            )
-                                    }
-                                }
-                                .onTapGesture {
-                                    selectedFamilyMember = ele
-                                }
+            ScrollView {
+                VStack {
+                    ForEach(familyMember) { member in
+                        HStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .frame(width: 36, height: 36)
+                                    .foregroundStyle(Color(hex: "F9F9F9"))
+                                
+                                Image(member.image)
+                                    .resizable()
+                                    .frame(width: 30, height: 30)
+                                    .shadow(color: Color(hex: "DEDDDD"), radius: 3.5, x: 0, y: 0)
                             }
+                            
+                            Text(member.name)
+                                .font(ManropeFont.medium.size(14))
+                                .foregroundStyle(.grayScale150)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onTapGesture {
+                            selectedFamilyMember = member
+                            isExpandedMinimal = false
                         }
                     }
                 }
-                .padding(.leading, 20)
-            }
-            .padding(.bottom, 40)
-            
-            HStack(spacing: 16) {
-                GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
-                GreenCapsule(title: "Add Member")
+                .padding(12)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
+        .frame(maxWidth: .infinity)
+        .frame(height: UIScreen.main.bounds.height * 0.35)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .foregroundStyle(.grayScale10)
+                .shadow(color: Color(hex: "ECECEC"), radius: 5, x: 0, y: 0)
         )
-    }
-}
-
-struct AddMoreMembers: View {
-    @State var name: String = ""
-    @State var familyMembersList: [UserModel] = [
-        UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
-    ]
-    @State var selectedFamilyMember: UserModel? = nil
-    var body: some View {
-        VStack {
-            
-            VStack(spacing: 24) {
-                VStack(spacing: 12) {
-                    Text("Add more members?")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                    
-                    Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
-                        .font(ManropeFont.medium.size(12))
-                        .foregroundStyle(.grayScale120)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 20)
-                
-                
-                TextField("Enter your Name", text: $name)
-                    .padding(16)
-                    .background(.grayScale10)
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(lineWidth: 0.5)
-                            .foregroundStyle(.grayScale60)
-                    )
-                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                    .padding(.horizontal, 20)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Choose Avatar (Optional)")
-                        .font(ManropeFont.bold.size(14))
-                        .foregroundStyle(.grayScale150)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 18) {
-                            ForEach(familyMembersList, id: \.id) { ele in
-                                ZStack(alignment: .topTrailing) {
-                                    circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
-                                    
-                                    if selectedFamilyMember?.id == ele.id {
-                                        Circle()
-                                            .fill(Color(hex: "2C9C3D"))
-                                            .frame(width: 16, height: 16)
-                                            .padding(.top, 1)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(.white)
-                                                    .padding(.top, 1)
-                                                    .overlay(
-                                                        Image("white-rounded-checkmark")
-                                                    )
-                                            )
-                                    }
-                                }
-                                .onTapGesture {
-                                    selectedFamilyMember = ele
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(.leading, 20)
-            }
-            .padding(.bottom, 40)
-            
-            HStack(spacing: 16) {
-                GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
-                GreenCapsule(title: "Add Member")
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(lineWidth: 0.5)
+                .foregroundStyle(.grayScale40)
         )
+        .padding(.bottom, 40)
+        .padding(.horizontal, 20)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .offset(y: -30)
     }
 }
 
 
-struct AllSet: View {
-    var body: some View {
-        VStack {
-            VStack(spacing: 12) {
-                Text("Add more members?")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                
-                Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
-                    .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(.grayScale120)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.bottom, 40)
-            
-            HStack(spacing: 16) {
-                Button {
-                    
-                } label: {
-                    Text("All Set!")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(width: 160, height: 52)
-                        .background(
-                            .grayScale40, in: RoundedRectangle(cornerRadius: 28)
-                        )
-                }
-
-                
-                GreenCapsule(title: "Add Member", width: 160, height: 52)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
-        )
-    }
-}
 
 #Preview {
-    IngrediFamCanvasView()
+    GenerateAvatar(isExpandedMinimal: .constant(false))
+//    IngrediFamCanvasView()
 }

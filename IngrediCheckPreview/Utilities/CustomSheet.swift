@@ -4,18 +4,18 @@ import UIKit
 struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresentable {
     @Binding var item: Item?
     let cornerRadius: CGFloat
-    let heightForItem: (Item) -> CGFloat
+    let heightsForItem: (Item) -> (min: CGFloat, max: CGFloat)
     let content: (Item) -> Content
 
     init(
         item: Binding<Item?>,
         cornerRadius: CGFloat = 16,
-        heightForItem: @escaping (Item) -> CGFloat,
+        heightsForItem: @escaping (Item) -> (min: CGFloat, max: CGFloat),
         @ViewBuilder content: @escaping (Item) -> Content
     ) {
         self._item = item
         self.cornerRadius = cornerRadius
-        self.heightForItem = heightForItem
+        self.heightsForItem = heightsForItem
         self.content = content
     }
 
@@ -26,8 +26,8 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
     }
 
     func updateUIViewController(_ parent: UIViewController, context: Context) {
-        // If sheet should close
         guard let newItem = item else {
+            // dismiss if item is nil
             if let presented = parent.presentedViewController {
                 presented.dismiss(animated: true) {
                     context.coordinator.presentedID = nil
@@ -36,11 +36,10 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
             return
         }
 
-        // If same sheet already showing, skip
+        // Skip if same sheet already visible
         if context.coordinator.presentedID == newItem.id { return }
 
         let presentSheet = {
-            // Build hosting controller
             let hosting = UIHostingController(rootView:
                 ZStack {
                     Color.white.ignoresSafeArea()
@@ -55,20 +54,27 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
 
             DispatchQueue.main.async {
                 if let sheet = hosting.sheetPresentationController {
-                    let h = heightForItem(newItem)
-                    let id = UISheetPresentationController.Detent.Identifier("custom.\(Int(h))")
-                    let detent = UISheetPresentationController.Detent.custom(identifier: id) { _ in h }
-                    sheet.detents = [detent]
-                    sheet.largestUndimmedDetentIdentifier = id
-                    sheet.prefersGrabberVisible = true
+                    let (minH, maxH) = heightsForItem(newItem)
+
+                    let minID = UISheetPresentationController.Detent.Identifier("custom.min.\(Int(minH))")
+                    let maxID = UISheetPresentationController.Detent.Identifier("custom.max.\(Int(maxH))")
+
+                    let minDetent = UISheetPresentationController.Detent.custom(identifier: minID) { _ in minH }
+                    let maxDetent = UISheetPresentationController.Detent.custom(identifier: maxID) { _ in maxH }
+
+                    sheet.detents = [minDetent, maxDetent]
+                    sheet.selectedDetentIdentifier = minID
+                    sheet.largestUndimmedDetentIdentifier = maxID
+                    sheet.prefersGrabberVisible = false
                     sheet.prefersScrollingExpandsWhenScrolledToEdge = false
                     sheet.preferredCornerRadius = cornerRadius
+
                     hosting.presentationController?.delegate = context.coordinator
                 }
             }
         }
 
-        // If another sheet is still visible → dismiss first, then present the new one
+        // If a different sheet is open, dismiss first
         if parent.presentedViewController != nil {
             parent.presentedViewController?.dismiss(animated: true) {
                 context.coordinator.presentedID = nil
@@ -92,7 +98,7 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
         }
 
         func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-            // Reset binding when user swipes down to dismiss
+            // reset when user dismisses by swipe
             itemBinding.wrappedValue = nil
             presentedID = nil
         }

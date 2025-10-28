@@ -11,11 +11,10 @@ struct CollapseFamilyList: View {
     
     @State var collapsed: Bool = false
     @State var familyNames: [UserModel] = [
-        UserModel(familyMemberName: "father", familyMemberImage: "Father"),
-        UserModel(familyMemberName: "mother", familyMemberImage: "Mother"),
-        UserModel(familyMemberName: "son", familyMemberImage: "Son"),
-        UserModel(familyMemberName: "daughter", familyMemberImage: "Daughter"),
-        UserModel(familyMemberName: "grandmother", familyMemberImage: "Grandmother")
+        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
+        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
+        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
+        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
     ]
     @State var selectedItem: UserModel? = nil
     
@@ -27,8 +26,8 @@ struct CollapseFamilyList: View {
                         let correctIdx = (idx - familyNames.count + 1) * -1
                         
                         if correctIdx < 3 {
-                            nameRow(name: ele)
-                                .offset(y: collapsed ? CGFloat(correctIdx) * 60 : CGFloat(correctIdx * 8))
+                            nameRow(name: ele, isSelected: false)
+                                .offset(y: collapsed ? CGFloat(correctIdx) * 70 : CGFloat(correctIdx * 8))
                                 .opacity(collapsed ? 1 : 1.0 - Double(correctIdx + 1) * 0.2)
                                 .padding(.horizontal, collapsed ? 0 : CGFloat(correctIdx + 1) * 10)
                                 .onTapGesture {
@@ -40,10 +39,10 @@ struct CollapseFamilyList: View {
                                     }
                                 }
                         } else {
-                            nameRow(name: ele)
-                                .offset(y: collapsed ? CGFloat(correctIdx) * 60 : 0)
+                            nameRow(name: ele, isSelected: false)
+                                .offset(y: collapsed ? CGFloat(correctIdx) * 70 : 0)
                                 .opacity(collapsed ? 1 : 0)
-                                .padding(.horizontal, collapsed ? 0 : CGFloat(correctIdx + 1) * 10)
+//                                .padding(.horizontal, collapsed ? 0 : CGFloat(correctIdx + 1) * 10)
                                 .onTapGesture {
                                     if collapsed {
                                         selectedItemPressed(item: ele)
@@ -55,10 +54,10 @@ struct CollapseFamilyList: View {
                         }
                     }
                 }
-                .offset(y: collapsed ? 60 : 10)
+                .offset(y: collapsed ? 70 : 10)
                 
                 if let selectedItem {
-                    nameRow(name: selectedItem)
+                    nameRow(name: selectedItem, isSelected: true)
                         .onTapGesture {
                             withAnimation(.spring(dampingFraction: 0.7)) {
                                 collapsed.toggle()
@@ -85,38 +84,48 @@ struct CollapseFamilyList: View {
     }
     
     @ViewBuilder
-    func nameRow(name: UserModel) -> some View {
+    func nameRow(name: UserModel, isSelected: Bool) -> some View {
         HStack {
-            Image(name.image)
-                .resizable()
-                .frame(width: 33, height: 33)
-            
-            Text(name.name.capitalized)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(Color(hex: "#2E2E2E"))
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .frame(width: 36, height: 36)
+                        .foregroundStyle(Color(hex: "F9F9F9"))
+                    
+                    Image(name.image)
+                        .resizable()
+                        .frame(width: 30, height: 30)
+                        .shadow(color: Color(hex: "DEDDDD"), radius: 3.5, x: 0, y: 0)
+                }
+                
+                Text(name.name)
+                    .font(ManropeFont.medium.size(14))
+                    .foregroundStyle(.grayScale150)
+            }
             
             Spacer()
             
             Circle()
-                .fill(.white)
-                .frame(width: 14, height: 14)
-                .padding(3)
-                .background(
+                .stroke(lineWidth: 0.5)
+                .foregroundStyle(isSelected ? .primary400 : .grayScale60)
+                .frame(width: 28, height: 28)
+                .overlay(
                     Circle()
-                        .stroke(lineWidth: 0.5)
-                        .foregroundStyle(Color(hex: "#B6B6B6"))
+                        .frame(width: 16, height: 16)
+                        .foregroundStyle(isSelected ? .primary500 : Color(hex: "FFFFFF"))
+                        .shadow(color: Color(hex: "B5B5B5").opacity(0.4), radius: 5, x: 0, y: 0)
                 )
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 19)
                 .stroke(lineWidth: 0.5)
-                .foregroundStyle(Color(hex: "#BAB8B8"))
+                .foregroundStyle(.grayScale80)
         )
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(hex: "#EBEBEB"))
+            RoundedRectangle(cornerRadius: 19)
+                .fill(.grayScale10)
         )
     }
 }

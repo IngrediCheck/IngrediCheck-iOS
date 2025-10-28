@@ -8,39 +8,41 @@
 import SwiftUI
 
 struct GenerateAvatarToolPill: View {
-    @State var isSelected: Bool = true
+    @State var icon: String = "family-member"
+    @State var title: String = "Family Member"
+    @Binding var isSelected: String
     @State var onTap: (() -> Void)? = nil
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 4) {
             ZStack {
-                Image("family-member")
+                Image(icon)
                     .resizable()
-                    .frame(width: 24, height: 24)
+                    .frame(width:(isSelected == icon) ? 20 : 24, height: (isSelected == icon) ? 20 : 24)
                 
                     Circle()
                         .stroke(lineWidth: 0.5)
-                        .foregroundStyle(Color(hex: "#989393"))
-                        .frame(width: 36, height: 36)
-                        .opacity(isSelected ? 0 : 1)
-                
+                        .foregroundStyle(.grayScale60)
+                        .frame(width: (isSelected == icon) ? 0 : 36, height: (isSelected == icon) ? 0 : 36)
+                        .opacity((isSelected == icon) ? 0 : 1)
             }
             
-            if isSelected {
-                Text("Family Member")
-                    .font(.system(size: 10, weight: .regular))
+            if (isSelected == icon) {
+                Text(title)
+                    .font(ManropeFont.medium.size(12))
                     .foregroundStyle(Color(hex: "#404040"))
-                    .offset(x: isSelected ? 0 : -30)
-//                    .opacity(isSelected ? 1 : 0)
+                    .offset(x: (isSelected == icon) ? 0 : -30)
+                    .opacity((isSelected == icon) ? 1 : 0)
             }
         }
-        .padding(.vertical, isSelected ? 6 : nil)
-        .padding(.leading, isSelected ? 8 : nil)
-        .padding(.trailing, isSelected ? 12 : nil)
-        .background(isSelected ? Color(hex: "#DFDFDF") : .clear, in: .capsule)
+        .padding(.vertical, (isSelected == icon) ? 8 : 0)
+        .padding(.leading, (isSelected == icon) ? 12 : 0)
+        .padding(.trailing, (isSelected == icon) ? 16 : 0)
+        .background((isSelected == icon) ? Color(hex: "#DFDFDF") : .clear, in: RoundedRectangle(cornerRadius: 36))
         .onTapGesture {
             withAnimation(.smooth) {
-                isSelected.toggle()
+                onTap?()
             }
+            
         }
     }
 }
@@ -48,6 +50,11 @@ struct GenerateAvatarToolPill: View {
 #Preview {
     ZStack {
         Color.gray.opacity(0.1).ignoresSafeArea()
-        GenerateAvatarToolPill()
+        HStack {
+            GenerateAvatarToolPill(isSelected: .constant("family-member"))
+            GenerateAvatarToolPill(isSelected: .constant(""))
+            GenerateAvatarToolPill(isSelected: .constant(""))
+        }
+        
     }
 }
