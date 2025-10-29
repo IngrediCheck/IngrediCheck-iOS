@@ -9,17 +9,12 @@ import SwiftUI
 
 struct CollapseFamilyList: View {
     
-    @State var collapsed: Bool = false
-    @State var familyNames: [UserModel] = [
-        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
-    ]
+    @Binding var collapsed: Bool
+    @State var familyNames: [UserModel]
     @State var selectedItem: UserModel? = nil
     
     var body: some View {
-        ScrollView {
+//        ScrollView {
             ZStack {
                 ZStack {
                     ForEach(Array(familyNames.reversed().enumerated()), id: \.element.id) { idx, ele in
@@ -59,14 +54,16 @@ struct CollapseFamilyList: View {
                 if let selectedItem {
                     nameRow(name: selectedItem, isSelected: true)
                         .onTapGesture {
-                            withAnimation(.spring(dampingFraction: 0.7)) {
-                                collapsed.toggle()
-                            }
+                                withAnimation(.spring(dampingFraction: 0.7)) {
+                                    collapsed.toggle()
+                                }
                         }
                 }
             }
-            .padding(.horizontal)
-        }
+            .frame(height: collapsed ? CGFloat(familyNames.count + 1) * 70 : 60, alignment: .top)
+//            .background(.blue)
+//            .padding(.horizontal)
+//        }
         .onAppear() {
             if let first = familyNames.first {
                 selectedItemPressed(item: first)
@@ -131,7 +128,15 @@ struct CollapseFamilyList: View {
 }
 
 #Preview {
-    CollapseFamilyList()
+    CollapseFamilyList(
+        collapsed: .constant(true),
+        familyNames: [
+            UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
+            UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
+            UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
+            UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
+        ]
+    )
 //        .padding(.horizontal, 10)
 }
 

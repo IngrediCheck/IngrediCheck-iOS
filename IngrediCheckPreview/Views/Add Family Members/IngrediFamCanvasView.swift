@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+struct GenerateAvatarTools: Identifiable {
+    let id = UUID().uuidString
+    var title: String
+    var icon: String
+    var tools: [ChipsModel]
+}
+
 enum AddFamilyMemberSheetOption: String, Identifiable {
     case meetYourIngrediFam
     case whatsYourName
@@ -129,26 +136,172 @@ struct GenerateAvatar: View {
     @Binding var isExpandedMinimal: Bool
     @Namespace private var animation
     
+    @State var tools: [GenerateAvatarTools] = [
+        GenerateAvatarTools(
+            title: "Gesture",
+            icon: "gesture",
+            tools: [
+                ChipsModel(name: "Wave", icon: "wave"),
+                ChipsModel(name: "Thumbs Up", icon: "thumbs-up"),
+                ChipsModel(name: "Heart Hands", icon: "heart-hands"),
+                ChipsModel(name: "Phone in Hand", icon: "phone-in-hand"),
+                ChipsModel(name: "Peace", icon: "peace"),
+                ChipsModel(name: "Pointing", icon: "pointing")
+            ]
+        ),
+        GenerateAvatarTools(
+            title: "Hair Style",
+            icon: "hair-style",
+            tools: [
+                ChipsModel(name: "Short hair", icon: "short-hair"),
+                ChipsModel(name: "Long hair", icon: "long-hair"),
+                ChipsModel(name: "straight hair", icon: "straight-hair"),
+                ChipsModel(name: "Ponytail", icon: "ponytail"),
+                ChipsModel(name: "Curly hair", icon: "curly-hair"),
+                ChipsModel(name: "Bun", icon: "bun"),
+                ChipsModel(name: "Bald", icon: "bald")
+            ]
+        ),
+        GenerateAvatarTools(
+            title: "Skin Tone",
+            icon: "skin-tone",
+            tools: [
+                ChipsModel(name: "Light", icon: "light"),
+                ChipsModel(name: "Medium", icon: "medium"),
+                ChipsModel(name: "Tan", icon: "tan"),
+                ChipsModel(name: "Deep", icon: "deep"),
+                ChipsModel(name: "Freckled", icon: "freckled")
+            ]
+        ),
+        GenerateAvatarTools(
+            title: "Accessories",
+            icon: "accessories",
+            tools: [
+                ChipsModel(name: "None", icon: "none"),
+                ChipsModel(name: "Glasses", icon: "glasses"),
+                ChipsModel(name: "Hat", icon: "hat"),
+                ChipsModel(name: "Earrings", icon: "earrings"),
+                ChipsModel(name: "Sunglasses", icon: "sunglasses"),
+                ChipsModel(name: "Cap", icon: "cap")
+            ]
+        ),
+        GenerateAvatarTools(
+            title: "Color Theme",
+            icon: "color-theme",
+            tools: [
+                ChipsModel(name: "Pastel Blue", icon: "pastel-blue"),
+                ChipsModel(name: "Warm Pink", icon: "warm-pink"),
+                ChipsModel(name: "Soft Green", icon: "soft-green"),
+                ChipsModel(name: "Lavender", icon: "lavender"),
+                ChipsModel(name: "Cream", icon: "cream"),
+                ChipsModel(name: "Mint", icon: "mint"),
+                ChipsModel(name: "Transparent", icon: "transparent")
+            ]
+        )
+    ]
+    
+    @State var isExpandedMaximal: Bool = false
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 if geometry.size.height >= 500 {
-                    VStack {
-                        Image(.funGuy)
-                        
-                        Text("AI Memojis")
-                        
-                        Text("Create Personalized family Avatar")
-                        
-                        Text("Generate Avatar")
-                        
-                        HStack {
-                            Image(.familyMember)
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 16) {
+                            
+                            if isExpandedMaximal == false {
+                                VStack(spacing: 4) {
+                                    Image(.funGuy)
+                                    
+                                    Text("AI Memojis")
+                                        .font(ManropeFont.bold.size(16))
+                                        .foregroundStyle(.grayScale150)
+                                    
+                                    Text("Create Personalized family Avatar")
+                                        .font(ManropeFont.medium.size(12))
+                                        .foregroundStyle(.grayScale150)
+                                }
                                 
-                            Text("Family Member")
+                                Text("Generate Avatar")
+                                    .font(ManropeFont.bold.size(14))
+                                    .foregroundStyle(.grayScale150)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            
+                            VStack(spacing: 20) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Image(.familyMember)
+                                            .resizable()
+                                            .renderingMode(.template)
+                                            .foregroundStyle(.grayScale150)
+                                            .frame(width: 22, height: 24)
+                                        
+                                        Text("Family Member")
+                                            .font(ManropeFont.semiBold.size(16))
+                                            .foregroundStyle(.grayScale150)
+                                    }
+                                    
+                                    Text("Tell us how you're related to them so we can create the perfect avatar!")
+                                        .font(ManropeFont.medium.size(12))
+                                        .foregroundStyle(.grayScale120)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                
+                                CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: familyMember)
+                            }
+                            
+                            .padding(.bottom, 30)
+                            
+                            
+                            if isExpandedMaximal == false {
+                                ForEach(tools) { tool in
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Image(tool.icon)
+                                                .resizable()
+                                                .renderingMode(.template)
+                                                .foregroundStyle(.grayScale150)
+                                                .frame(width: 24, height: 24)
+                                            
+                                            Text(tool.title)
+                                                .font(ManropeFont.semiBold.size(16))
+                                                .foregroundStyle(.grayScale150)
+                                        }
+                                        
+                                        FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                                            ForEach(tool.tools) { innerTool in
+                                                
+                                                Button {
+                                                    
+                                                } label: {
+                                                    HStack(spacing: 4) {
+                                                        Image(innerTool.icon ?? "")
+                                                            .resizable()
+                                                            .frame(width: 24, height: 24)
+                                                        
+                                                        Text(innerTool.name)
+                                                            .font(ManropeFont.medium.size(14))
+                                                            .foregroundStyle(.grayScale150)
+                                                    }
+                                                    .padding(.vertical, 8)
+                                                    .padding(.trailing, 16)
+                                                    .padding(.leading, 12)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 40)
+                                                            .stroke(lineWidth: 1)
+                                                            .foregroundStyle(.grayScale60)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
                         }
-                        
-                        Text("Tell us how you're related to them so we can create the perfect avatar!")
+                        .padding(.horizontal, 20)
+                        .padding(.top, 30)
                     }
                 } else {
                     if isExpandedMinimal {
@@ -316,6 +469,6 @@ struct GenerateAvatar: View {
 
 
 #Preview {
-    GenerateAvatar(isExpandedMinimal: .constant(false))
-//    IngrediFamCanvasView()
+//    GenerateAvatar(isExpandedMinimal: .constant(false))
+    IngrediFamCanvasView()
 }
