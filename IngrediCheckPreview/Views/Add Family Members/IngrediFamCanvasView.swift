@@ -536,7 +536,33 @@ struct GenerateAvatar: View {
 
 struct MeetYourAvatar: View {
     var body: some View {
-        
+        VStack(spacing: 20) {
+            // Avatar placeholder
+            Circle()
+                .fill(.gray)
+                .frame(width: 137, height: 137)
+
+            VStack(spacing: 40) {
+                Text("Meet your dad’s avatar,\nlooking good!")
+                    .font(NunitoFont.bold.size(18))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 12) {
+                    GreenOutlinedCapsule(image: "stars-generate", title: "Regenerate")
+                    GreenCapsule(title: "Assign")
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 
