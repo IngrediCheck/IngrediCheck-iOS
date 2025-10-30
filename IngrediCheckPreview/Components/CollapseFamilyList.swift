@@ -10,8 +10,8 @@ import SwiftUI
 struct CollapseFamilyList: View {
     
     @Binding var collapsed: Bool
-    @State var familyNames: [UserModel]
-    @State var selectedItem: UserModel? = nil
+    @Binding var familyNames: [UserModel]
+    @Binding var selectedItem: UserModel
     
     var body: some View {
 //        ScrollView {
@@ -51,33 +51,33 @@ struct CollapseFamilyList: View {
                 }
                 .offset(y: collapsed ? 70 : 10)
                 
-                if let selectedItem {
+//                if let selectedItem {
                     nameRow(name: selectedItem, isSelected: true)
                         .onTapGesture {
                                 withAnimation(.spring(dampingFraction: 0.7)) {
                                     collapsed.toggle()
                                 }
                         }
-                }
+//                }
             }
             .frame(height: collapsed ? CGFloat(familyNames.count + 1) * 70 : 60, alignment: .top)
 //            .background(.blue)
 //            .padding(.horizontal)
 //        }
-        .onAppear() {
-            if let first = familyNames.first {
-                selectedItemPressed(item: first)
-            }
-        }
+//        .onAppear() {
+//            if let first = familyNames.first {
+//                selectedItemPressed(item: first)
+//            }
+//        }
     }
     
     func selectedItemPressed(item: UserModel) {
         let temp = selectedItem
         selectedItem = item
         familyNames.removeAll { $0.name == item.name } // removes matching value
-        if let temp {
+//        if let temp {
             familyNames.append(temp)
-        }
+//        }
     }
     
     @ViewBuilder
@@ -130,12 +130,13 @@ struct CollapseFamilyList: View {
 #Preview {
     CollapseFamilyList(
         collapsed: .constant(true),
-        familyNames: [
+        familyNames: .constant([
             UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
             UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
             UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
             UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
-        ]
+        ]) ,
+        selectedItem: .constant(UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4"))
     )
 //        .padding(.horizontal, 10)
 }

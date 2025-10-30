@@ -10,7 +10,7 @@ import SwiftUI
 struct GreenOutlinedCapsule: View {
     var image: String
     var title: String
-    var width: CGFloat? = 160
+    var width: CGFloat? = 152
     var height: CGFloat? = 52
     var body: some View {
         Button {
@@ -22,7 +22,9 @@ struct GreenOutlinedCapsule: View {
                     .font(NunitoFont.semiBold.size(16))
                     .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
             }
-            .frame(width: width, height: height)
+            .frame(height: height)
+            .frame(minWidth: 152)
+            .frame(maxWidth: .infinity)
             .background(
                 Capsule()
                     .stroke(lineWidth: 1.5)

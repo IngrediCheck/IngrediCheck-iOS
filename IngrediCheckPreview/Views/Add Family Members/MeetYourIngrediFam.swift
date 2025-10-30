@@ -26,6 +26,7 @@ struct MeetYourIngrediFam: View {
                 
                 
                 GreenCapsule(title: "Add Members")
+                    .frame(width: 156)
             }
         }
         .padding(.horizontal, 20)

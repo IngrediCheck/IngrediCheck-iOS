@@ -50,12 +50,15 @@ struct WhatsYourName: View {
                     Text("Choose Avatar (Optional)")
                         .font(ManropeFont.bold.size(14))
                         .foregroundStyle(.grayScale150)
+                        .padding(.leading, 20)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 18) {
+                        HStack(spacing: 24) {
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {
-                                    circleImage(image: ele.image, name: ele.name, color: ele.backgroundColor ?? .clear)
+                                    Image(ele.image)
+                                        .resizable()
+                                        .frame(width: 50, height: 50)
                                     
                                     if selectedFamilyMember?.id == ele.id {
                                         Circle()
@@ -78,9 +81,10 @@ struct WhatsYourName: View {
                                 }
                             }
                         }
+                        .padding(.horizontal, 20)
                     }
                 }
-                .padding(.leading, 20)
+                
             }
             .padding(.bottom, 40)
             
@@ -88,6 +92,7 @@ struct WhatsYourName: View {
                 GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
                 GreenCapsule(title: "Add Member")
             }
+            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(

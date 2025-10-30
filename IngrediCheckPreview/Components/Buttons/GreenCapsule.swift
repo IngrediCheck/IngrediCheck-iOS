@@ -10,7 +10,7 @@ import SwiftUI
 struct GreenCapsule: View {
     @State var title: String
     @State var icon: String?
-    var width: CGFloat? = 160
+    var width: CGFloat? = 152
     var height: CGFloat? = 52
     
     var body: some View {
@@ -31,7 +31,9 @@ struct GreenCapsule: View {
                     .font(NunitoFont.semiBold.size(16))
                     .foregroundStyle(.grayScale10)
             }
-            .frame(width: width, height: height)
+            .frame(height: height)
+            .frame(minWidth: 152)
+            .frame(maxWidth: .infinity)
             .background(
                 Capsule()
                     .foregroundStyle(

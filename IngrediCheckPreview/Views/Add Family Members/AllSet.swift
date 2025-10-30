@@ -38,6 +38,7 @@ struct AllSet: View {
                 
                 GreenCapsule(title: "Add Member", width: 160, height: 52)
             }
+            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(

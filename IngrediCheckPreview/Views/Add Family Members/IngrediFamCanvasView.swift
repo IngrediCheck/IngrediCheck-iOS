@@ -20,6 +20,7 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case addMoreMember
     case allSet
     case generateAvatar
+    case meetYourAvatar
     
     var id: String { self.rawValue }
 }
@@ -59,6 +60,9 @@ struct IngrediFamCanvasView: View {
                 Button("generateAvatar") {
                     addFamilyMemberSheetOption = .generateAvatar
                 }
+                Button("meetYourAvatar") {
+                    addFamilyMemberSheetOption = .meetYourAvatar
+                }
             }
         }
         CustomSheet(item: $addFamilyMemberSheetOption,
@@ -70,6 +74,7 @@ struct IngrediFamCanvasView: View {
                         case .meetYourIngrediFam: return (min: 396, max: 397)
                         case .whatsYourName: return (min: 437, max: 438)
                         case .generateAvatar: return (min: 379, max: 642)
+                        case .meetYourAvatar: return (min: 390, max: 391)
                         }
                     }) { sheet in
             switch sheet {
@@ -83,24 +88,10 @@ struct IngrediFamCanvasView: View {
                 WhatsYourName()
             case .generateAvatar:
                 GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
+            case .meetYourAvatar:
+                MeetYourAvatar()
             }
         }
-//        .sheet(item: $addFamilyMemberSheetOption) { sheet in
-//            switch sheet {
-//            case .addMoreMember:
-//                AddMoreMembers()
-//            case .allSet:
-//                AllSet()
-//            case .meetYourIngrediFam:
-//                MeetYourIngrediFam()
-//            case .whatsYourName:
-//                WhatsYourName()
-//            case .generateAvatar:
-//                GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
-//                    .presentationDetents([.height(379), .height(642)])
-//            }
-//        }
-        
     }
 }
 
@@ -116,14 +107,6 @@ struct GenerateAvatar: View {
     ]
     
     @State var familyMember: [UserModel] = [
-        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4"),
-        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4"),
         UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
         UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
         UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
@@ -202,12 +185,14 @@ struct GenerateAvatar: View {
     
     @State var isExpandedMaximal: Bool = false
     
+    @State var idx: Int = 0
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 if geometry.size.height >= 500 {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 16) {
+                        VStack(spacing: 32) {
                             
                             if isExpandedMaximal == false {
                                 VStack(spacing: 4) {
@@ -248,7 +233,7 @@ struct GenerateAvatar: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 
-                                CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: familyMember)
+                                CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: $familyMember, selectedItem: $selectedFamilyMember)
                             }
                             
                             .padding(.bottom, 30)
@@ -269,7 +254,7 @@ struct GenerateAvatar: View {
                                                 .foregroundStyle(.grayScale150)
                                         }
                                         
-                                        FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                                        FlowLayout(horizontalSpacing: 8, verticalSpacing: 12) {
                                             ForEach(tool.tools) { innerTool in
                                                 
                                                 Button {
@@ -308,13 +293,15 @@ struct GenerateAvatar: View {
                         VStack {
                             Spacer()
                             selectedMemberRow()
+                                
                         }
+                        .padding(.horizontal, 20)
                         .matchedGeometryEffect(id: "circle", in: animation)
                     } else {
                         VStack(spacing: 40) {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Text("Generate Avatar: \(geometry.size.height.description)")
+                                    Text("Generate Avatar: \(idx)")
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
@@ -330,6 +317,7 @@ struct GenerateAvatar: View {
                                     HStack(spacing: 12) {
                                         ForEach(toolIcons, id: \.self) { ele in
                                             GenerateAvatarToolPill(icon: ele, title: ele, isSelected: $selectedTool) {
+                                                idx = 0
                                                 selectedTool = ele
                                             }
                                         }
@@ -337,34 +325,111 @@ struct GenerateAvatar: View {
                                     .padding(.horizontal, 20)
                                 }
                                 
-                                Text("Tell us how you’re related to them so we can create the perfect avatar!")
-                                    .font(ManropeFont.medium.size(12))
-                                    .foregroundStyle(.grayScale120)
-                                    .padding(.horizontal, 20)
-                                
-                                selectedMemberRow()
-                                    .matchedGeometryEffect(id: "circle", in: animation)
+                                VStack {
+                                    switch selectedTool {
+                                    case "family-member":
+                                        Text("Tell us how you’re related to them so we can create the perfect avatar!")
+                                            .font(ManropeFont.medium.size(12))
+                                            .foregroundStyle(.grayScale120)
+                                        
+                                        selectedMemberRow()
+                                            .padding(.horizontal, 20)
+                                            .matchedGeometryEffect(id: "circle", in: animation)
+                                            
+                                    case "gesture":
+                                        minimalToolsSelector(toolIdx: 0)
+                                        
+                                    case "hair-style":
+                                        minimalToolsSelector(toolIdx: 1)
+                                        
+                                    case "skin-tone":
+                                        minimalToolsSelector(toolIdx: 2)
+                                        
+                                    case "accessories":
+                                        minimalToolsSelector(toolIdx: 3)
+                                        
+                                    case "color-theme":
+                                        minimalToolsSelector(toolIdx: 4)
+                                        
+                                    default:
+                                        EmptyView()
+                                    }
+                                }
+                                .padding(.horizontal, selectedTool == "family-member" ? 0 : 20)
                             }
                             
-                            HStack {
+                            
+                            HStack(spacing: 16) {
                                 GreenOutlinedCapsule(image: "ai-stick", title: "Random")
-                                Spacer()
                                 GreenCapsule(title: "Generate", icon: "stars-generate")
                             }
                             .padding(.horizontal, 20)
-                            
                         }
-                        .padding(.top,isExpandedMinimal ? 10 : 32)
                     }
                 }
-                
             }
             .overlay(alignment: .bottom) {
                 if isExpandedMinimal {
                     familyMemberListView()
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(.neutral500)
+                    .frame(width: 60, height: 4)
+                    .padding(.top, 11)
+                , alignment: .top
+            )
             .animation(.easeInOut, value: isExpandedMinimal)
+        }
+    }
+    
+    @ViewBuilder
+    func minimalToolsSelector(toolIdx: Int) -> some View {
+        HStack {
+            Button {
+                idx = idx - 1
+            } label: {
+                Circle()
+                    .fill(.grayScale60)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(.arrowLeft)
+                            .resizable()
+                            .rotationEffect(.degrees(180))
+                            .frame(width: 22, height: 22)
+                    )
+            }
+            .disabled(idx == 0)
+
+            Spacer()
+            
+            VStack {
+                Image(tools[toolIdx].tools[idx].icon ?? "")
+                    .resizable()
+                    .frame(width: 56, height: 50)
+                
+                Text(tools[toolIdx].tools[idx].name)
+                    .font(ManropeFont.medium.size(14))
+                    .foregroundStyle(.grayScale140)
+            }
+            
+            Spacer()
+            
+            Button {
+                idx = idx + 1
+            } label: {
+                Circle()
+                    .fill(.grayScale60)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(.arrowLeft)
+                            .resizable()
+                            .frame(width: 22, height: 22)
+                    )
+            }
+            .disabled(idx == tools[toolIdx].tools.count - 1)
         }
     }
     
@@ -407,7 +472,6 @@ struct GenerateAvatar: View {
                 )
             
         )
-        .padding(.horizontal, 20)
         .onTapGesture {
             withAnimation(.easeInOut) {
                 isExpandedMinimal.toggle()
@@ -439,7 +503,11 @@ struct GenerateAvatar: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .onTapGesture {
+                            let temp = selectedFamilyMember
                             selectedFamilyMember = member
+                            familyMember.removeAll { $0.name == member.name }
+                            familyMember.append(temp)
+                            
                             isExpandedMinimal = false
                         }
                     }
@@ -466,7 +534,11 @@ struct GenerateAvatar: View {
     }
 }
 
-
+struct MeetYourAvatar: View {
+    var body: some View {
+        
+    }
+}
 
 #Preview {
 //    GenerateAvatar(isExpandedMinimal: .constant(false))
