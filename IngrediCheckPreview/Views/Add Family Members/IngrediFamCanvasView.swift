@@ -21,6 +21,10 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case allSet
     case generateAvatar
     case meetYourAvatar
+    case letsScanSmarter
+    case accessDenied
+    case stayUpdated
+    case preferenceAreReady
     
     var id: String { self.rawValue }
 }
@@ -42,6 +46,7 @@ struct IngrediFamCanvasView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 10)
+                .frame(height: 500)
                 .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
             
             VStack(spacing: 20) {
@@ -63,6 +68,18 @@ struct IngrediFamCanvasView: View {
                 Button("meetYourAvatar") {
                     addFamilyMemberSheetOption = .meetYourAvatar
                 }
+                Button("letsScanSmarter") {
+                    addFamilyMemberSheetOption = .letsScanSmarter
+                }
+                Button("accessDenied") {
+                    addFamilyMemberSheetOption = .accessDenied
+                }
+                Button("stayUpdated") {
+                    addFamilyMemberSheetOption = .stayUpdated
+                }
+                Button("preferenceAreReady") {
+                    addFamilyMemberSheetOption = .preferenceAreReady
+                }
             }
         }
         CustomSheet(item: $addFamilyMemberSheetOption,
@@ -75,6 +92,10 @@ struct IngrediFamCanvasView: View {
                         case .whatsYourName: return (min: 437, max: 438)
                         case .generateAvatar: return (min: 379, max: 642)
                         case .meetYourAvatar: return (min: 390, max: 391)
+                        case .letsScanSmarter: return (min: 283, max: 284)
+                        case .accessDenied: return (min: 268, max: 269)
+                        case .stayUpdated: return (min: 258, max: 259)
+                        case .preferenceAreReady: return (min: 243, max: 244)
                         }
                     }) { sheet in
             switch sheet {
@@ -90,6 +111,14 @@ struct IngrediFamCanvasView: View {
                 GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
             case .meetYourAvatar:
                 MeetYourAvatar()
+            case .letsScanSmarter:
+                LetsScanSmarter()
+            case .accessDenied:
+                AccessDenied()
+            case .stayUpdated:
+                StayUpdated()
+            case .preferenceAreReady:
+                PreferenceAreReady()
             }
         }
     }
@@ -555,6 +584,149 @@ struct MeetYourAvatar: View {
             }
         }
         .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct LetsScanSmarter: View {
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Let's scan smarter")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                
+                Text("Your camera helps you quickly add products by scanning labels — it’s safe and private. We never record or share anything without your permission.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+            }
+            
+            HStack(spacing: 16) {
+                Button {
+                    
+                } label: {
+                    Text("Later")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+
+                
+                
+                GreenCapsule(title: "Enable")
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct AccessDenied: View {
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Access Denied !")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("IngrediCheck needs camera access to scan products and give you personalized recommendations. Please enable it in settings to continue.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+
+            GreenCapsule(title: "Open Settings")
+                .frame(width: 156)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct StayUpdated: View {
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Stay updated !")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("We’ll send you helpful meal tips, reminders, and important updates—only when you want them.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: 16) {
+                Button {
+                    
+                } label: {
+                    Text("Remind me Later")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+
+                GreenCapsule(title: "Allow")
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct PreferenceAreReady: View {
+    var body: some View {
+        VStack(spacing: 32) {
+            VStack(spacing: 12) {
+                Text("All set! Your IngrediFam’s\npreferences are ready.")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("Tap on any member to view their summary")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+
+            GreenCapsule(title: "Continue")
+                .padding(.horizontal, 20)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
