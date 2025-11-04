@@ -1,16 +1,17 @@
 import Foundation
 
 struct FamilyAPI {
-    private static let baseURL = URL(string: "http://127.0.0.1:54321/functions/v1")!
-    
     static func makeRequest(
+        baseURL: String,
         path: String,
         method: String,
         apiKey: String,
         jwt: String,
         body: [String: Any]? = nil
     ) async throws -> (statusCode: Int, body: String) {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        let urlString = baseURL.hasSuffix("/") ? baseURL + path : baseURL + "/" + path
+        let url = urlString.hasPrefix("http") ? URL(string: urlString)! : URL(string: "http://\(urlString)")!
+        var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue(apiKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
@@ -30,6 +31,7 @@ struct FamilyAPI {
     
     // POST /ingredicheck/family
     static func createFamily(
+        baseURL: String,
         apiKey: String,
         jwt: String,
         name: String,
@@ -44,7 +46,8 @@ struct FamilyAPI {
             body["otherMembers"] = otherMembers
         }
         return try await makeRequest(
-            path: "/ingredicheck/family",
+            baseURL: baseURL,
+            path: "ingredicheck/family",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -54,11 +57,13 @@ struct FamilyAPI {
     
     // GET /ingredicheck/family
     static func getFamily(
+        baseURL: String,
         apiKey: String,
         jwt: String
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
-            path: "/ingredicheck/family",
+            baseURL: baseURL,
+            path: "ingredicheck/family",
             method: "GET",
             apiKey: apiKey,
             jwt: jwt,
@@ -68,13 +73,15 @@ struct FamilyAPI {
     
     // POST /ingredicheck/family/invite
     static func createInvite(
+        baseURL: String,
         apiKey: String,
         jwt: String,
         memberID: String
     ) async throws -> (statusCode: Int, body: String) {
         let body: [String: Any] = ["memberID": memberID]
         return try await makeRequest(
-            path: "/ingredicheck/family/invite",
+            baseURL: baseURL,
+            path: "ingredicheck/family/invite",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -84,13 +91,15 @@ struct FamilyAPI {
     
     // POST /ingredicheck/family/join
     static func joinFamily(
+        baseURL: String,
         apiKey: String,
         jwt: String,
         inviteCode: String
     ) async throws -> (statusCode: Int, body: String) {
         let body: [String: Any] = ["inviteCode": inviteCode]
         return try await makeRequest(
-            path: "/ingredicheck/family/join",
+            baseURL: baseURL,
+            path: "ingredicheck/family/join",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -100,11 +109,13 @@ struct FamilyAPI {
     
     // POST /ingredicheck/family/leave
     static func leaveFamily(
+        baseURL: String,
         apiKey: String,
         jwt: String
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
-            path: "/ingredicheck/family/leave",
+            baseURL: baseURL,
+            path: "ingredicheck/family/leave",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -114,12 +125,14 @@ struct FamilyAPI {
     
     // POST /ingredicheck/family/members
     static func addMember(
+        baseURL: String,
         apiKey: String,
         jwt: String,
         member: [String: Any]
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
-            path: "/ingredicheck/family/members",
+            baseURL: baseURL,
+            path: "ingredicheck/family/members",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -129,13 +142,15 @@ struct FamilyAPI {
     
     // PATCH /ingredicheck/family/members/:id
     static func editMember(
+        baseURL: String,
         apiKey: String,
         jwt: String,
         memberID: String,
         member: [String: Any]
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
-            path: "/ingredicheck/family/members/\(memberID)",
+            baseURL: baseURL,
+            path: "ingredicheck/family/members/\(memberID)",
             method: "PATCH",
             apiKey: apiKey,
             jwt: jwt,
@@ -145,12 +160,14 @@ struct FamilyAPI {
     
     // DELETE /ingredicheck/family/members/:id
     static func deleteMember(
+        baseURL: String,
         apiKey: String,
         jwt: String,
         memberID: String
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
-            path: "/ingredicheck/family/members/\(memberID)",
+            baseURL: baseURL,
+            path: "ingredicheck/family/members/\(memberID)",
             method: "DELETE",
             apiKey: apiKey,
             jwt: jwt,

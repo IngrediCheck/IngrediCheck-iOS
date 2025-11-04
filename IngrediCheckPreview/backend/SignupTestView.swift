@@ -3,6 +3,7 @@ import SwiftUI
 struct SignupTestView: View {
     @State private var output: String = ""
     @State private var isLoading: Bool = false
+    @State private var baseURL: String = "192.168.1.9:54321/functions/v1"
     @State private var apiKey: String = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
     @State private var jwt: String = ""
     
@@ -21,6 +22,17 @@ struct SignupTestView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // API Key and JWT fields
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Base URL")
+                        .font(.headline)
+                    TextField("Base URL (e.g., 127.0.0.1:54321/functions/v1)", text: $baseURL)
+                        .textFieldStyle(.roundedBorder)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                    
+                    Text("⚠️ For physical device: Use your Mac's IP (e.g., 192.168.1.100:54321/functions/v1)")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    
                     Text("API Key")
                         .font(.headline)
                     TextField("API Key", text: $apiKey)
@@ -36,7 +48,8 @@ struct SignupTestView: View {
                             isLoading = true
                             defer { isLoading = false }
                             do {
-                                let result = try await AuthAPI.signupAnonymous()
+                                let authBaseURL = baseURL.replacingOccurrences(of: "/functions/v1", with: "")
+                                let result = try await AuthAPI.signupAnonymous(baseURL: authBaseURL)
                                 if
                                     let data = result.body.data(using: .utf8),
                                     let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -47,7 +60,7 @@ struct SignupTestView: View {
                                     output = formatResponse(statusCode: result.statusCode, body: result.body)
                                 }
                             } catch {
-                                output = "Error: \(error.localizedDescription)"
+                                output = formatError(error)
                             }
                         }
                     }
@@ -172,6 +185,31 @@ struct SignupTestView: View {
         }
     }
     
+    private func formatError(_ error: Error) -> String {
+        let errorMsg = error.localizedDescription
+        if errorMsg.contains("1004") || errorMsg.contains("Connection refused") || errorMsg.contains("61") || errorMsg.contains("Could not connect") {
+            return """
+            Error: Connection Refused
+            
+            This usually means:
+            1. Your Supabase server is not running
+            2. You're on a physical device using 127.0.0.1 (use your Mac's IP instead)
+            3. Device and Mac are not on the same WiFi network
+            
+            To find your Mac's IP:
+            - Open Terminal and run: ifconfig | grep "inet " | grep -v 127.0.0.1
+            - Or: System Settings → Network → Wi-Fi → Details
+            
+            Then update Base URL to: YOUR_IP:54321/functions/v1
+            Example: 192.168.1.100:54321/functions/v1
+            
+            Original error: \(errorMsg)
+            """
+        } else {
+            return "Error: \(errorMsg)"
+        }
+    }
+    
     private func formatResponse(statusCode: Int, body: String) -> String {
         var formattedOutput = "Status: \(statusCode)\n\n"
         
@@ -221,6 +259,7 @@ struct SignupTestView: View {
                 }
                 
                 let result = try await FamilyAPI.createFamily(
+                    baseURL: baseURL,
                     apiKey: apiKey,
                     jwt: jwt,
                     name: name,
@@ -228,7 +267,7 @@ struct SignupTestView: View {
                 )
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
@@ -248,10 +287,10 @@ struct SignupTestView: View {
             }
             
             do {
-                let result = try await FamilyAPI.getFamily(apiKey: apiKey, jwt: jwt)
+                let result = try await FamilyAPI.getFamily(baseURL: baseURL, apiKey: apiKey, jwt: jwt)
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
@@ -272,13 +311,14 @@ struct SignupTestView: View {
             
             do {
                 let result = try await FamilyAPI.createInvite(
+                    baseURL: baseURL,
                     apiKey: apiKey,
                     jwt: jwt,
                     memberID: memberID
                 )
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
@@ -299,13 +339,14 @@ struct SignupTestView: View {
             
             do {
                 let result = try await FamilyAPI.joinFamily(
+                    baseURL: baseURL,
                     apiKey: apiKey,
                     jwt: jwt,
                     inviteCode: inviteCode
                 )
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
@@ -325,10 +366,10 @@ struct SignupTestView: View {
             }
             
             do {
-                let result = try await FamilyAPI.leaveFamily(apiKey: apiKey, jwt: jwt)
+                let result = try await FamilyAPI.leaveFamily(baseURL: baseURL, apiKey: apiKey, jwt: jwt)
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
@@ -360,13 +401,14 @@ struct SignupTestView: View {
                 }
                 
                 let result = try await FamilyAPI.addMember(
+                    baseURL: baseURL,
                     apiKey: apiKey,
                     jwt: jwt,
                     member: member
                 )
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
@@ -398,6 +440,7 @@ struct SignupTestView: View {
                 }
                 
                 let result = try await FamilyAPI.editMember(
+                    baseURL: baseURL,
                     apiKey: apiKey,
                     jwt: jwt,
                     memberID: memberID,
@@ -426,13 +469,14 @@ struct SignupTestView: View {
             
             do {
                 let result = try await FamilyAPI.deleteMember(
+                    baseURL: baseURL,
                     apiKey: apiKey,
                     jwt: jwt,
                     memberID: memberID
                 )
                 output = formatResponse(statusCode: result.statusCode, body: result.body)
             } catch {
-                output = "Error: \(error.localizedDescription)"
+                output = formatError(error)
             }
         }
     }
