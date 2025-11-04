@@ -19,6 +19,8 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case whatsYourName
     case addMoreMember
     case allSet
+    case alreadyHaveAnAccount
+    case doYouHaveAnInviteCode
     case generateAvatar
     case meetYourAvatar
     case letsScanSmarter
@@ -56,6 +58,12 @@ struct IngrediFamCanvasView: View {
                 Button("allSet") {
                     addFamilyMemberSheetOption = .allSet
                 }
+                Button("alreadyHaveAnAccount") {
+                    addFamilyMemberSheetOption = .alreadyHaveAnAccount
+                }
+                Button("doYouHaveAnInviteCode") {
+                    addFamilyMemberSheetOption = .doYouHaveAnInviteCode
+                }
                 Button("meetYourIngrediFam") {
                     addFamilyMemberSheetOption = .meetYourIngrediFam
                 }
@@ -88,6 +96,8 @@ struct IngrediFamCanvasView: View {
                         switch sheet {
                         case .addMoreMember: return (min: 437, max: 438)
                         case .allSet: return (min: 270, max: 271)
+                        case .alreadyHaveAnAccount: return (min: 276, max: 277)
+                        case .doYouHaveAnInviteCode: return (min: 276, max: 277)
                         case .meetYourIngrediFam: return (min: 396, max: 397)
                         case .whatsYourName: return (min: 437, max: 438)
                         case .generateAvatar: return (min: 379, max: 642)
@@ -103,6 +113,10 @@ struct IngrediFamCanvasView: View {
                 AddMoreMembers()
             case .allSet:
                 AllSet()
+            case .alreadyHaveAnAccount:
+                AlreadyHaveAnAccount()
+                case .doYouHaveAnInviteCode:
+                    DoYouHaveAnInviteCode()
             case .meetYourIngrediFam:
                 MeetYourIngrediFam()
             case .whatsYourName:
@@ -727,6 +741,112 @@ struct PreferenceAreReady: View {
             GreenCapsule(title: "Continue")
                 .padding(.horizontal, 20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct AlreadyHaveAnAccount: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Already have an account?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("We’ll help you log in or start fresh.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 40)
+
+            HStack(spacing: 16) {
+                Button {
+                } label: {
+                    Text("Yes, I have")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .frame(height: 52)
+                        .frame(minWidth: 152)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Capsule()
+                                .foregroundStyle(.grayScale40)
+                        )
+                }
+                .disabled(true)
+
+                GreenCapsule(title: "No")
+            }
+            .padding(.bottom, 20)
+
+            Text("You can switch anytime before continuing.")
+                .font(ManropeFont.regular.size(12))
+                .foregroundStyle(.grayScale120)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct DoYouHaveAnInviteCode: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Do you have an invite code?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("If someone invited you to their IngrediCheck family, tap Yes to join them.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 24)
+
+            HStack(spacing: 16) {
+                Button {
+                    
+                } label: {
+                    Text("No, continue")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .frame(height: 52)
+                        .frame(minWidth: 152)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Capsule()
+                                .foregroundStyle(.grayScale40)
+                        )
+                }
+
+                GreenCapsule(title: "Yes, I have one")
+            }
+            .padding(.bottom, 20)
+
+            Text("No code? No problem — we’ll set things up for you.")
+                .font(ManropeFont.regular.size(12))
+                .foregroundStyle(.grayScale120)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
