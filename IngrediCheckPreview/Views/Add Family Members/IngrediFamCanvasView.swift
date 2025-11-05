@@ -27,6 +27,10 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case accessDenied
     case stayUpdated
     case preferenceAreReady
+    case welcomeBack
+    case whosThisFor
+    case allSetToJoinYourFamily
+    case enterYourInviteCode
     
     var id: String { self.rawValue }
 }
@@ -48,10 +52,22 @@ struct IngrediFamCanvasView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 10)
-                .frame(height: 500)
+                .frame(height: 700)
                 .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
             
             VStack(spacing: 20) {
+                Button("welcomeBack") {
+                    addFamilyMemberSheetOption = .welcomeBack
+                }
+                Button("whosThisFor") {
+                    addFamilyMemberSheetOption = .whosThisFor
+                }
+                Button("allSetToJoinYourFamily") {
+                    addFamilyMemberSheetOption = .allSetToJoinYourFamily
+                }
+                Button("enterYourInviteCode") {
+                    addFamilyMemberSheetOption = .enterYourInviteCode
+                }
                 Button("addMoreMember") {
                     addFamilyMemberSheetOption = .addMoreMember
                 }
@@ -106,6 +122,10 @@ struct IngrediFamCanvasView: View {
                         case .accessDenied: return (min: 268, max: 269)
                         case .stayUpdated: return (min: 258, max: 259)
                         case .preferenceAreReady: return (min: 243, max: 244)
+                        case .welcomeBack: return (min: 276, max: 277)
+                        case .whosThisFor: return (min: 296, max: 297)
+                        case .allSetToJoinYourFamily: return (min: 258, max: 259)
+                        case .enterYourInviteCode: return (min: 360, max: 361)
                         }
                     }) { sheet in
             switch sheet {
@@ -133,6 +153,14 @@ struct IngrediFamCanvasView: View {
                 StayUpdated()
             case .preferenceAreReady:
                 PreferenceAreReady()
+            case .welcomeBack:
+                WelcomeBack()
+            case .whosThisFor:
+                WhosThisFor()
+            case .allSetToJoinYourFamily:
+                AllSetToJoinYourFamily()
+            case .enterYourInviteCode:
+                EnterYourInviteCode()
             }
         }
     }
@@ -858,7 +886,272 @@ struct DoYouHaveAnInviteCode: View {
     }
 }
 
+struct WelcomeBack: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Welcome back 👋")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("Log in to access your saved preferences and food insights.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 40)
+
+            HStack(spacing: 16) {
+                GreenCapsule(title: "Google", icon: "google_logo", iconWidth: 24, iconHeight: 24)
+                GreenCapsule(title: "Apple", icon: "apple_logo", iconWidth: 24, iconHeight: 24)
+            }
+            .padding(.bottom, 20)
+
+            HStack(spacing: 4) {
+                Text("New here?")
+                    .font(ManropeFont.regular.size(12))
+                    .foregroundStyle(.grayScale120)
+
+                Button {
+                    
+                } label: {
+                    Text("Get started instead")
+                        .font(ManropeFont.semiBold.size(12))
+                        .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct WhosThisFor: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Hey there! Who’s this for?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("Is it just you, or your whole IngrediFam — family, friends, anyone you care about?")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 40)
+
+            HStack(spacing: 16) {
+                Button {
+                    
+                } label: {
+                    Text("Just Me")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .frame(height: 52)
+                        .frame(minWidth: 152)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+
+                GreenCapsule(title: "Add Family")
+            }
+            .padding(.bottom, 20)
+
+            Text("You can always add or edit members later.")
+                .font(ManropeFont.regular.size(12))
+                .foregroundStyle(.grayScale90)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct AllSetToJoinYourFamily: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("All set to join your family!")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+
+                Text("Welcome to the Patel Family! Your ingredient lists and preferences will now sync automatically.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 40)
+
+            GreenCapsule(title: "Go to Home")
+                .frame(width: 156)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct EnterYourInviteCode : View {
+    @State var code: [String] = Array(repeating: "", count: 6)
+    @FocusState private var focusedIndex: Int?
+    @State private var isError: Bool = false
+    
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Enter your invite code")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("This connects you to your family or shared\nIngrediCheck space.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 24)
+            
+//            HStack(spacing: 12) {
+//                ForEach(0..<3, id: \.self) { i in
+//                    codeBox(index: i)
+//                }
+//                
+//                Text("-")
+//                    .font(ManropeFont.bold.size(20))
+//                    .foregroundStyle(.grayScale90)
+//                    .padding(.horizontal, 2)
+//                
+//                ForEach(3..<6, id: \.self) { i in
+//                    codeBox(index: i)
+//                }
+//            }
+//            .padding(.bottom, isError ? 8 : 20)
+            
+            if isError {
+                Text("We couldn't verify your code. Please try again..")
+                    .font(ManropeFont.regular.size(12))
+                    .foregroundStyle(.red)
+                    .padding(.bottom, 12)
+            }
+            
+            Text("You can add this later if you receive one.")
+                .font(ManropeFont.regular.size(12))
+                .foregroundStyle(.grayScale100)
+                .padding(.bottom, 24)
+            
+            HStack(spacing: 16) {
+                Button {
+                } label: {
+                    Text("No, continue")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .frame(height: 52)
+                        .frame(minWidth: 152)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+                .disabled(true)
+                
+                Button {
+                    let entered = code.joined()
+                    // Demo validation – change to your real backend check
+                    if entered.count == 6 && entered != "ABCXYZ" {
+                        isError = true
+                    } else {
+                        isError = false
+                    }
+                } label: {
+                    GreenCapsule(title: "Verify & Continue")
+                }
+            }
+            .padding(.bottom, 16)
+            
+            Text("By continuing, you agree to our Terms & Privacy Policy.")
+                .font(ManropeFont.regular.size(11))
+                .foregroundStyle(.grayScale90)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                focusedIndex = 0
+            }
+        }
+    }
+
+    struct InviteTextField: View {
+        var body: some View {
+            HStack(spacing: 14) {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 12)
+                        .foregroundStyle(.grayScale40)
+                        .frame(width: 44, height: 50)
+                    
+                    RoundedRectangle(cornerRadius: 12)
+                        .foregroundStyle(.grayScale40)
+                        .frame(width: 44, height: 50)
+                    
+                    RoundedRectangle(cornerRadius: 12)
+                        .foregroundStyle(.grayScale40)
+                        .frame(width: 44, height: 50)
+                }
+                
+                RoundedRectangle(cornerRadius: 10)
+                    .foregroundStyle(.grayScale40)
+                    .frame(width: 12, height: 2.5)
+                
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 12)
+                        .foregroundStyle(.grayScale40)
+                        .frame(width: 44, height: 50)
+                    
+                    RoundedRectangle(cornerRadius: 12)
+                        .foregroundStyle(.grayScale40)
+                        .frame(width: 44, height: 50)
+                    
+                    RoundedRectangle(cornerRadius: 12)
+                        .foregroundStyle(.grayScale40)
+                        .frame(width: 44, height: 50)
+                }
+            }
+        }
+    }
+}
+
 #Preview {
 //    GenerateAvatar(isExpandedMinimal: .constant(false))
-    IngrediFamCanvasView()
+//    IngrediFamCanvasView()
+    EnterYourInviteCode.InviteTextField()
 }

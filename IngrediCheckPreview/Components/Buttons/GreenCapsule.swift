@@ -10,6 +10,8 @@ import SwiftUI
 struct GreenCapsule: View {
     @State var title: String
     @State var icon: String?
+    var iconWidth: CGFloat? = 20
+    var iconHeight: CGFloat? = 20
     var width: CGFloat? = 152
     var height: CGFloat? = 52
     
@@ -20,11 +22,11 @@ struct GreenCapsule: View {
             HStack(spacing: 8) {
                 
                 if icon != nil {
-                    Image("stars-generate")
+                    Image(icon ?? "")
                         .renderingMode(.template)
                         .resizable()
                         .foregroundStyle(.white)
-                        .frame(width: 20, height: 20)
+                        .frame(width: iconWidth, height: iconHeight)
                 }
                 
                 Text(title)
