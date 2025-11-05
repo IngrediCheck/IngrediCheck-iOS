@@ -1017,8 +1017,7 @@ struct AllSetToJoinYourFamily: View {
 
 struct EnterYourInviteCode : View {
     @State var code: [String] = Array(repeating: "", count: 6)
-    @FocusState private var focusedIndex: Int?
-    @State private var isError: Bool = false
+    @State private var isError: Bool = true
     
     
     var body: some View {
@@ -1036,36 +1035,24 @@ struct EnterYourInviteCode : View {
             }
             .padding(.bottom, 24)
             
-//            HStack(spacing: 12) {
-//                ForEach(0..<3, id: \.self) { i in
-//                    codeBox(index: i)
-//                }
-//                
-//                Text("-")
-//                    .font(ManropeFont.bold.size(20))
-//                    .foregroundStyle(.grayScale90)
-//                    .padding(.horizontal, 2)
-//                
-//                ForEach(3..<6, id: \.self) { i in
-//                    codeBox(index: i)
-//                }
-//            }
-//            .padding(.bottom, isError ? 8 : 20)
+            InviteTextField(code: $code, isError: $isError)
+                .padding(.bottom, 12)
             
             if isError {
                 Text("We couldn't verify your code. Please try again..")
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(.red)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 44)
+            } else {
+                Text("You can add this later if you receive one.")
+                    .font(ManropeFont.regular.size(12))
+                    .foregroundStyle(.grayScale100)
+                    .padding(.bottom, 44)
             }
-            
-            Text("You can add this later if you receive one.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale100)
-                .padding(.bottom, 24)
             
             HStack(spacing: 16) {
                 Button {
+                    
                 } label: {
                     Text("No, continue")
                         .font(NunitoFont.semiBold.size(16))
@@ -1075,7 +1062,6 @@ struct EnterYourInviteCode : View {
                         .frame(maxWidth: .infinity)
                         .background(.grayScale40, in: .capsule)
                 }
-                .disabled(true)
                 
                 Button {
                     let entered = code.joined()
@@ -1089,10 +1075,10 @@ struct EnterYourInviteCode : View {
                     GreenCapsule(title: "Verify & Continue")
                 }
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, 20)
             
             Text("By continuing, you agree to our Terms & Privacy Policy.")
-                .font(ManropeFont.regular.size(11))
+                .font(ManropeFont.regular.size(12))
                 .foregroundStyle(.grayScale90)
         }
         .padding(.horizontal, 20)
@@ -1104,54 +1090,90 @@ struct EnterYourInviteCode : View {
                 .padding(.top, 11)
             , alignment: .top
         )
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                focusedIndex = 0
-            }
-        }
     }
 
     struct InviteTextField: View {
+        @Binding var code: [String]
+        @Binding var isError: Bool
+        @State private var input: String = ""
+        @FocusState private var isFocused: Bool
+
+        private let boxSize = CGSize(width: 44, height: 50)
+        private var nextIndex: Int { min(code.firstIndex(where: { $0.isEmpty }) ?? 5, 5) }
+
         var body: some View {
-            HStack(spacing: 14) {
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .foregroundStyle(.grayScale40)
-                        .frame(width: 44, height: 50)
-                    
-                    RoundedRectangle(cornerRadius: 12)
-                        .foregroundStyle(.grayScale40)
-                        .frame(width: 44, height: 50)
-                    
-                    RoundedRectangle(cornerRadius: 12)
-                        .foregroundStyle(.grayScale40)
-                        .frame(width: 44, height: 50)
+            ZStack {
+                // Hidden TextField that captures all input and backspace behavior
+                TextField("", text: $input)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                    .focused($isFocused)
+                    .onChange(of: input) { newValue in
+                        // Allow only A-Z and 0-9, uppercase, and limit to 6 chars
+                        let filtered = newValue.filter { $0.isLetter || $0.isNumber }
+                        let trimmed = String(filtered.prefix(6))
+                        if trimmed != newValue { input = trimmed }
+
+                        let chars = Array(trimmed)
+                        for i in 0..<6 {
+                            if i < chars.count {
+                                code[i] = String(chars[i])
+                            } else {
+                                code[i] = ""
+                            }
+                        }
+                    }
+                    .frame(width: 1, height: 1)
+                    .opacity(0.01)
+
+                // Visual OTP boxes
+                HStack(spacing: 14) {
+                    HStack(spacing: 8) {
+                        box(0)
+                        box(1)
+                        box(2)
+                    }
+
+                    RoundedRectangle(cornerRadius: 10)
+                        .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FFE2E0") : .grayScale40)
+                        .frame(width: 12, height: 2.5)
+
+                    HStack(spacing: 8) {
+                        box(3)
+                        box(4)
+                        box(5)
+                    }
                 }
-                
-                RoundedRectangle(cornerRadius: 10)
-                    .foregroundStyle(.grayScale40)
-                    .frame(width: 12, height: 2.5)
-                
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .foregroundStyle(.grayScale40)
-                        .frame(width: 44, height: 50)
-                    
-                    RoundedRectangle(cornerRadius: 12)
-                        .foregroundStyle(.grayScale40)
-                        .frame(width: 44, height: 50)
-                    
-                    RoundedRectangle(cornerRadius: 12)
-                        .foregroundStyle(.grayScale40)
-                        .frame(width: 44, height: 50)
-                }
+                .contentShape(Rectangle())
+                .onTapGesture { isFocused = true }
+            }
+            .onAppear {
+                // Pre-fill input if parent provided existing code
+                input = code.joined().uppercased()
+            }
+        }
+
+        @ViewBuilder
+        private func box(_ index: Int) -> some View {
+            ZStack {
+                let isFilled = !code[index].isEmpty
+                let isActive = isFilled || (isFocused && index == nextIndex)
+                RoundedRectangle(cornerRadius: 12)
+                    .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FFE2E0") : isActive ? .secondary200 : .grayScale40)
+                    .frame(width: boxSize.width, height: boxSize.height)
+                    .shadow(color: (isFocused && index == nextIndex) ? Color(hex: "C7C7C7").opacity(0.25) : .clear, radius: 9, x: 0, y: 4)
+
+                // Character for this box (if any)
+                Text(code[index])
+                    .font(NunitoFont.semiBold.size(22))
+                    .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FF1100") : .grayScale150)
             }
         }
     }
 }
 
 #Preview {
-//    GenerateAvatar(isExpandedMinimal: .constant(false))
-//    IngrediFamCanvasView()
-    EnterYourInviteCode.InviteTextField()
+
+    IngrediFamCanvasView()
+
 }

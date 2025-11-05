@@ -31,10 +31,12 @@ struct DetailedAISummary: View {
     private let sections: [AISummarySectionItem] = AISummarySectionItem.sample
 
     var body: some View {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 0) {
                 header
                 
                 AIPill()
+                    .padding(.top, 24)
+                    .padding(.bottom, 16)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 14) {
@@ -62,9 +64,34 @@ struct DetailedAISummary: View {
                     }
                     .background(.white, in: RoundedRectangle(cornerRadius: 28))
                 }
+                .overlay(
+                    Rectangle()
+                        .frame(height: 30)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "FDF6E7"), Color(hex: "FDF6E7").opacity(0.2)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    , alignment: .top
+                )
+                .overlay(
+                    Rectangle()
+                        .frame(height: 30)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "FDF6E7"), Color(hex: "FDF6E7").opacity(0.2)],
+                                startPoint: .bottom,
+                                endPoint: .top
+                            )
+                        )
+                    , alignment: .bottom
+                )
+                .padding(.bottom, 14)
                 
-                GradientButton(title: "Next") {}
-                    .padding(.top, 8)
+                
+                GreenCapsule(title: "Next")
             }
             .padding(20)
         .background(Color(hex: "FDF6E7"))
@@ -329,35 +356,6 @@ private struct BulletedPoints: View {
                 .font(ManropeFont.regular.size(12))
                 .foregroundStyle(Color(.secondaryLabel))
                 .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-private struct GradientButton: View {
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.45, green: 0.75, blue: 0.10),
-                                    Color(red: 0.22, green: 0.56, blue: 0.00)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                )
         }
     }
 }
