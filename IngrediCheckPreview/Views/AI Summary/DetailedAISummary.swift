@@ -29,6 +29,16 @@ struct DashedLine: View {
 
 struct DetailedAISummary: View {
     private let sections: [AISummarySectionItem] = AISummarySectionItem.sample
+    @State private var scrollOffset: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+    @State private var scrollViewHeight: CGFloat = 0
+    private let fadeDistance: CGFloat = 30
+    private var remainingToBottom: CGFloat { max(0, (contentHeight - scrollViewHeight) - scrollOffset) }
+    private var topOverlayOpacity: Double { Double(min(1, max(0, scrollOffset / fadeDistance))) }
+    private var bottomOverlayOpacity: Double {
+        if contentHeight <= scrollViewHeight { return 0 }
+        return Double(min(1, remainingToBottom / fadeDistance))
+    }
 
     var body: some View {
             VStack(alignment: .leading, spacing: 0) {
@@ -63,7 +73,35 @@ struct DetailedAISummary: View {
                         .padding(.bottom, 20)
                     }
                     .background(.white, in: RoundedRectangle(cornerRadius: 28))
+                    // Track content height and scroll offset
+                    .background(
+                        GeometryReader { geo in
+                            let minY = geo.frame(in: .named("detailedAIScroll")).minY
+                            Color.clear
+                                .onAppear {
+                                    contentHeight = geo.size.height
+                                    scrollOffset = max(0, -minY)
+                                }
+                                .onChange(of: geo.size.height) { newVal in
+                                    contentHeight = newVal
+                                }
+                                .onChange(of: minY) { newVal in
+                                    scrollOffset = max(0, -newVal)
+                                }
+                        }
+                    )
                 }
+                // Name coordinate space and measure viewport height
+                .coordinateSpace(name: "detailedAIScroll")
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear { scrollViewHeight = proxy.size.height }
+                            .onChange(of: proxy.size.height) { newVal in
+                                scrollViewHeight = newVal
+                            }
+                    }
+                )
                 .overlay(
                     Rectangle()
                         .frame(height: 30)
@@ -74,6 +112,7 @@ struct DetailedAISummary: View {
                                 endPoint: .bottom
                             )
                         )
+                        .opacity(topOverlayOpacity)
                     , alignment: .top
                 )
                 .overlay(
@@ -86,6 +125,7 @@ struct DetailedAISummary: View {
                                 endPoint: .top
                             )
                         )
+                        .opacity(bottomOverlayOpacity)
                     , alignment: .bottom
                 )
                 .padding(.bottom, 14)
