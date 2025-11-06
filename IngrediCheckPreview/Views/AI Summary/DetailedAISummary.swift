@@ -46,7 +46,7 @@ struct DetailedAISummary: View {
                 
                 AIPill()
                     .padding(.top, 24)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 14)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 14) {
@@ -107,7 +107,9 @@ struct DetailedAISummary: View {
                         .frame(height: 30)
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [Color(hex: "FDF6E7"), Color(hex: "FDF6E7").opacity(0.2)],
+                                colors: [
+                                    Color(hex: "FDF6E7"), Color(hex: "FDF6E7").opacity(0.2), Color(hex: "FDF6E7").opacity(0.2), Color(hex: "FDF6E7").opacity(0.1)
+                                ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
@@ -120,7 +122,9 @@ struct DetailedAISummary: View {
                         .frame(height: 30)
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [Color(hex: "FDF6E7"), Color(hex: "FDF6E7").opacity(0.2)],
+                                colors: [
+                                    Color(hex: "FDF6E7"), Color(hex: "FDF6E7").opacity(0.2), Color(hex: "FDF6E7").opacity(0.2), Color(hex: "FDF6E7").opacity(0.1)
+                                ],
                                 startPoint: .bottom,
                                 endPoint: .top
                             )
