@@ -59,5 +59,5 @@ struct Intolerances: View {
 }
 
 #Preview {
-    Intolerances(onboardingFlowType: .individual)
+    Intolerances(onboardingFlowType: .family)
 }
