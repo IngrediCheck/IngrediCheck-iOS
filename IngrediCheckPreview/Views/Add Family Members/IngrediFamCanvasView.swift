@@ -402,6 +402,8 @@ struct GenerateAvatar: View {
                                         Text("Tell us how you’re related to them so we can create the perfect avatar!")
                                             .font(ManropeFont.medium.size(12))
                                             .foregroundStyle(.grayScale120)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.horizontal, 20)
                                         
                                         selectedMemberRow()
                                             .padding(.horizontal, 20)
@@ -648,6 +650,7 @@ struct LetsScanSmarter: View {
                 Text("Your camera helps you quickly add products by scanning labels — it’s safe and private. We never record or share anything without your permission.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
             }
             
             HStack(spacing: 16) {
@@ -1017,7 +1020,7 @@ struct AllSetToJoinYourFamily: View {
 
 struct EnterYourInviteCode : View {
     @State var code: [String] = Array(repeating: "", count: 6)
-    @State private var isError: Bool = true
+    @State private var isError: Bool = false
     
     
     var body: some View {
