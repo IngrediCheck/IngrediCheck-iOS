@@ -32,7 +32,7 @@ struct AIMemojiTrigger: View {
                         AIimage = try await generateMemojiImage(baseURL: "https://ai-memojis-backend.vercel.app")
                         print("finished generating image")
                     } catch {
-                        print("Error loading image")
+                        print("Error loading image: \(error)")
                     }
                 }
             } label: {

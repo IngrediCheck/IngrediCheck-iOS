@@ -40,7 +40,7 @@ struct MatchingRateCard: View {
                     .frame(width: 200)
                     .overlay(
                         MatchingRateProgressBar(filledSegments: 7)
-                            .scaleEffect(0.65)
+                            .scaleEffect(UIScreen.main.bounds.width * 0.00165)
                             .offset(y: 15)
                         , alignment: .center
                     )
@@ -61,7 +61,7 @@ struct MatchingRateCard: View {
                         .foregroundStyle(.grayScale100)
                 }
             }
-                .offset(x: -15,y: 20)
+                .offset(x: UIScreen.main.bounds.width * 0.003,y: 20)
             , alignment: .trailing
         )
         .overlay(

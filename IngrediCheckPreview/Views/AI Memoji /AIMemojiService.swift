@@ -16,11 +16,11 @@ func memojiRequestBody() -> [String: Any] {
     return [
         "userId": UUID().uuidString,
         "subscriptionTier": "monthly_basic",
-        "familyType": "father",
-        "gesture": "wave", // examples: "wave", "heart-hands", "thumbs-up", "peace-sign", "pointing"
-        "hair": "short",
-        "skinTone": "dark",
-        "background": "transparent", // or "auto"
+        "familyType": "mother",
+        "gesture": "heart", // examples: "wave", "heart-hands", "thumbs-up", "peace-sign", "pointing"
+        "hair": "long",
+        "skinTone": "light",
+        "background": "auto", // or "auto"
         "size": "1024x1024",
         "model": "gpt-image-1"
     ]
