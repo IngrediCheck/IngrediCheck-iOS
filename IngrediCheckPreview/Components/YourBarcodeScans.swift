@@ -54,7 +54,7 @@ struct YourBarcodeScans: View {
             )
         }
         .padding(12)
-        .frame(width: 160)
+        .frame(height: 141)
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .foregroundStyle(.grayScale10)

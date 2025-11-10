@@ -41,6 +41,7 @@ struct UserFeedbackCard: View {
                     +
                     Text("very helpful.")
                 }
+                .padding(.horizontal, 12)
                 
                 Divider()
                     .padding(.horizontal, 12)
@@ -59,7 +60,7 @@ struct UserFeedbackCard: View {
                 .foregroundStyle(.grayScale120)
             }
             .font(ManropeFont.semiBold.size(12))
-            .frame(width: 159, height: 141)
+            .frame(height: 141)
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .foregroundStyle(.grayScale10)

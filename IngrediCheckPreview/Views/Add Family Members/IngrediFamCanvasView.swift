@@ -1242,8 +1242,12 @@ struct AddMoreMembersMinimal: View {
     }
 }
 
-#Preview {
-
+#Preview("iPhone 13 mini") {
     IngrediFamCanvasView()
+        .previewDevice("iPhone 13 mini")
+}
 
+#Preview("iPhone 16 Pro") {
+    IngrediFamCanvasView()
+        .previewDevice("iPhone 16 Pro")
 }

@@ -151,6 +151,13 @@ struct HomeView: View {
                     .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                     .padding(.bottom, 20)
                 
+                HStack {
+                    YourBarcodeScans()
+                    
+                    UserFeedbackCard()
+                }
+                .padding(.bottom, 20)
+                
                 // matching rate card
                 MatchingRateCard()
                     .padding(.bottom, 20)
@@ -204,6 +211,13 @@ struct HomeView: View {
     
 }
 
-#Preview {
+
+#Preview("iPhone 13 mini") {
     HomeView()
+        .previewDevice("iPhone 13 mini")
+}
+
+#Preview("iPhone 16 Pro") {
+    HomeView()
+        .previewDevice("iPhone 16 Pro")
 }
