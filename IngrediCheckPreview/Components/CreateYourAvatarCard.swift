@@ -16,6 +16,7 @@ struct CreateYourAvatarCard: View {
                         Text("Create Your Avatar")
                             .font(ManropeFont.medium.size(18))
                             .foregroundStyle(.grayScale150)
+                            .lineLimit(1)
                         
                         Text("Create a fun digital version of yourself.")
                             .font(ManropeFont.light.size(12))
@@ -35,11 +36,13 @@ struct CreateYourAvatarCard: View {
                     .foregroundStyle(.grayScale150)
                 }
                 
+                Spacer()
+                
                 HStack(spacing: -11) {
-                    avatarCircle(imageName: "bald-lady", size: 47.5, color: Color(hex: "#F9C6D0"))
+                    avatarCircle(imageName: "bald-lady", size: 46, color: Color(hex: "#F9C6D0"))
                         .zIndex(2)
                     
-                    avatarCircle(imageName: "curly-lady", size: 66.5, color: Color(hex: "#DCC7F6"))
+                    avatarCircle(imageName: "curly-lady", size: 61, color: Color(hex: "#DCC7F6"))
                         .overlay(
                             ZStack {
                                 
@@ -55,11 +58,12 @@ struct CreateYourAvatarCard: View {
                         )
                         .zIndex(1)
                     
-                    avatarCircle(imageName: "pony-lady", size: 47.5, color: Color(hex: "#FED5B9"))
+                    avatarCircle(imageName: "pony-lady", size: 46, color: Color(hex: "#FED5B9"))
                         .zIndex(2)
                 }
             }
             .padding(12)
+            .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .foregroundStyle(.grayScale10)
@@ -81,7 +85,6 @@ struct CreateYourAvatarCard: View {
             .overlay(
                 Image(imageName)
                     .resizable()
-                    
                     .frame(width: 47.5, height: 47.5)
                     
             )
@@ -98,4 +101,5 @@ struct CreateYourAvatarCard: View {
 
 #Preview {
     CreateYourAvatarCard()
+        .padding(.horizontal, 20)
 }

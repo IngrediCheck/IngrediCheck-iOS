@@ -47,6 +47,9 @@ struct AskIngrediBotButton: View {
                             .shadow(
                                 .inner(color: .primary400.opacity(0.85), radius: 2, x: 0, y: 3)
                             )
+                            .shadow(
+                                .drop(color: Color(hex: "C5C5C5"), radius: 8.8, x: 0, y: 2)
+                            )
                         )
                     
                     Image("ingredi-bot-button-background")

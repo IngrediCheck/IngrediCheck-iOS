@@ -85,7 +85,7 @@ struct AverageScansCard: View {
 
             
         }
-        
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 18)

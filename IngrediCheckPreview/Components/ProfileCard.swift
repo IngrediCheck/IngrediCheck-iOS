@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProfileCard: View {
-    @State var isProfileCompleted: Bool = true
+    @State var isProfileCompleted: Bool = false
     var body: some View {
         ZStack {
             

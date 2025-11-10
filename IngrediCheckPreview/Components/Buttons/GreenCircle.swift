@@ -8,12 +8,19 @@
 import SwiftUI
 
 struct GreenCircle: View {
+    
+    var iconName: String = "right-arrow-rounded-edge"
+    var iconSize: CGFloat = 20
+    var circleSize: CGFloat = 32
+    
     var body: some View {
-        Image("right-arrow-rounded-edge")
-            .frame(width: 32, height: 32)
+        Image(iconName)
+            .resizable()
+            .frame(width: iconSize, height: iconSize)
             .padding(10)
             .background(
                 Capsule()
+                    .frame(width: circleSize, height: circleSize)
                     .foregroundStyle(
                         LinearGradient(
                             gradient: Gradient(stops: [
@@ -31,6 +38,11 @@ struct GreenCircle: View {
                             )
                     )
                     .rotationEffect(.degrees(17))
+                    .overlay(
+                        Circle()
+                            .stroke(lineWidth: 1)
+                            .foregroundColor(Color(hex: "FFFFFF"))
+                    )
             )
     }
 }

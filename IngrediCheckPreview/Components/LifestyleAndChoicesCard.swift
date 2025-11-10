@@ -14,10 +14,14 @@ struct LifestyleAndChoicesCard: View {
                 Text("Lifestyle & Choices")
                     .font(ManropeFont.medium.size(18))
                     .foregroundStyle(.grayScale150)
+                    .fixedSize(horizontal: false, vertical: true) // let it wrap
+                    .lineLimit(nil)
                 
                 Text("A quick look at your family's food value.")
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(.grayScale130)
+                    .fixedSize(horizontal: false, vertical: true) // let it wrap
+                    .lineLimit(nil)
             }
             .padding(.bottom, 8)
             
@@ -33,7 +37,7 @@ struct LifestyleAndChoicesCard: View {
             .padding(.top, 20)
         }
         .padding(12)
-        .frame(width: 160)
+        .frame(height: 268)
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .foregroundStyle(.grayScale10)

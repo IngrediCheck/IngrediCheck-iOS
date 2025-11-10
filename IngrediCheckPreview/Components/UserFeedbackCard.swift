@@ -63,6 +63,12 @@ struct UserFeedbackCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .foregroundStyle(.grayScale10)
+                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(lineWidth: 0.25)
+                    .foregroundStyle(.grayScale60)
             )
             
             Image("lays")
@@ -84,7 +90,7 @@ struct UserFeedbackCard: View {
 
 #Preview {
     ZStack {
-        Color(.gray).opacity(0.2).ignoresSafeArea()
+//        Color(.gray).opacity(0.2).ignoresSafeArea()
         UserFeedbackCard()
     }
 }
