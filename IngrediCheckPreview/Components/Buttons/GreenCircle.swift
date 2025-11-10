@@ -10,8 +10,8 @@ import SwiftUI
 struct GreenCircle: View {
     
     var iconName: String = "right-arrow-rounded-edge"
-    var iconSize: CGFloat = 20
-    var circleSize: CGFloat = 32
+    var iconSize: CGFloat = 32
+    var circleSize: CGFloat = 52
     
     var body: some View {
         Image(iconName)

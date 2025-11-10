@@ -18,6 +18,7 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case meetYourIngrediFam
     case whatsYourName
     case addMoreMember
+    case addMoreMembersMinimal
     case allSet
     case alreadyHaveAnAccount
     case doYouHaveAnInviteCode
@@ -71,6 +72,9 @@ struct IngrediFamCanvasView: View {
                 Button("addMoreMember") {
                     addFamilyMemberSheetOption = .addMoreMember
                 }
+                Button("addMoreMembersMinimal") {
+                    addFamilyMemberSheetOption = .addMoreMembersMinimal
+                }
                 Button("allSet") {
                     addFamilyMemberSheetOption = .allSet
                 }
@@ -111,6 +115,7 @@ struct IngrediFamCanvasView: View {
                     heightsForItem: { sheet in
                         switch sheet {
                         case .addMoreMember: return (min: 437, max: 438)
+                        case .addMoreMembersMinimal: return (min: 276, max: 277)
                         case .allSet: return (min: 270, max: 271)
                         case .alreadyHaveAnAccount: return (min: 276, max: 277)
                         case .doYouHaveAnInviteCode: return (min: 276, max: 277)
@@ -131,6 +136,8 @@ struct IngrediFamCanvasView: View {
             switch sheet {
             case .addMoreMember:
                 AddMoreMembers()
+            case .addMoreMembersMinimal:
+                AddMoreMembersMinimal()
             case .allSet:
                 AllSet()
             case .alreadyHaveAnAccount:
@@ -784,6 +791,8 @@ struct PreferenceAreReady: View {
 }
 
 struct AlreadyHaveAnAccount: View {
+    @State var yesPressed: (() -> Void)? = nil
+    @State var noPressed: (() -> Void)? = nil
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -801,6 +810,7 @@ struct AlreadyHaveAnAccount: View {
 
             HStack(spacing: 16) {
                 Button {
+                    yesPressed?()
                 } label: {
                     Text("Yes, I have")
                         .font(NunitoFont.semiBold.size(16))
@@ -813,9 +823,13 @@ struct AlreadyHaveAnAccount: View {
                                 .foregroundStyle(.grayScale40)
                         )
                 }
-                .disabled(true)
 
-                GreenCapsule(title: "No")
+                Button {
+                    noPressed?()
+                } label: {
+                    GreenCapsule(title: "No")
+                }
+                
             }
             .padding(.bottom, 20)
 
@@ -837,6 +851,8 @@ struct AlreadyHaveAnAccount: View {
 }
 
 struct DoYouHaveAnInviteCode: View {
+    @State var yesPressed: (() -> Void)? = nil
+    @State var noPressed: (() -> Void)? = nil
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -854,7 +870,7 @@ struct DoYouHaveAnInviteCode: View {
 
             HStack(spacing: 16) {
                 Button {
-                    
+                    noPressed?()
                 } label: {
                     Text("No, continue")
                         .font(NunitoFont.semiBold.size(16))
@@ -868,7 +884,12 @@ struct DoYouHaveAnInviteCode: View {
                         )
                 }
 
-                GreenCapsule(title: "Yes, I have one")
+                Button {
+                    yesPressed?()
+                } label: {
+                    GreenCapsule(title: "Yes, I have one")
+                }
+                
             }
             .padding(.bottom, 20)
 
@@ -1021,7 +1042,8 @@ struct AllSetToJoinYourFamily: View {
 struct EnterYourInviteCode : View {
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
-    
+    @State var yesPressed: (() -> Void)? = nil
+    @State var noPressed: (() -> Void)? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1055,7 +1077,7 @@ struct EnterYourInviteCode : View {
             
             HStack(spacing: 16) {
                 Button {
-                    
+                    noPressed?()
                 } label: {
                     Text("No, continue")
                         .font(NunitoFont.semiBold.size(16))
@@ -1073,7 +1095,9 @@ struct EnterYourInviteCode : View {
                         isError = true
                     } else {
                         isError = false
+                        
                     }
+                    yesPressed?()
                 } label: {
                     GreenCapsule(title: "Verify & Continue")
                 }
@@ -1172,6 +1196,49 @@ struct EnterYourInviteCode : View {
                     .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FF1100") : .grayScale150)
             }
         }
+    }
+}
+
+struct AddMoreMembersMinimal: View {
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Add more members?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 20)
+            
+            HStack(spacing: 16) {
+                Button {
+                    
+                } label: {
+                    Text("All Set!")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+                
+                GreenCapsule(title: "Add Member")
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 

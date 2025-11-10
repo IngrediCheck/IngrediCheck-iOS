@@ -1,0 +1,36 @@
+//
+//  LetsGetStartedView.swift
+//  IngrediCheckPreview
+//
+//  Created by Gunjan Haldar   on 10/11/25.
+//
+
+import SwiftUI
+
+struct LetsGetStartedView: View {
+    @State var showSheet: Bool = false
+    var body: some View {
+        ZStack {
+            
+            CustomBoolSheet(isPresented: $showSheet, cornerRadius: 34, heights: (min: 283, max: 284), content: {
+                WhosThisFor()
+            })
+            
+            VStack {
+                Text("Let’s get started! Your IngrediFam will appear here as you set things up.")
+                    .multilineTextAlignment(.center)
+            }
+            .onAppear() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showSheet = true
+                }
+            }
+        }
+        
+        
+    }
+}
+
+#Preview {
+    LetsGetStartedView()
+}

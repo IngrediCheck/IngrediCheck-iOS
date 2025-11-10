@@ -7,24 +7,51 @@
 
 import SwiftUI
 
+enum HeyThereScreenSheetOptions: String, CaseIterable, Identifiable {
+    case alreadyHaveAnAccount
+    case welcomeBack
+    
+    var id: String { self.rawValue }
+}
+
 struct HeyThereScreen: View {
-    @State var isShown: Bool = false
+    
+    @State var heyThereScreenSheetOption: HeyThereScreenSheetOptions? = nil
+    @State var goToBlankScreen: Bool = false
+    
     var body: some View {
         ZStack {
             
-            CustomBoolSheet(isPresented: $isShown, cornerRadius: 34, heights: (min: 270, max: 400)) {
-                Text("Hii")
-            }
+           CustomSheet(item: $heyThereScreenSheetOption, cornerRadius: 34, heightsForItem: { sheet in
+               switch sheet {
+               case .alreadyHaveAnAccount: return (min: 274, max: 275)
+               case .welcomeBack: return (min: 290, max: 291)
+               }
+           }, content: { sheet in
+               switch sheet {
+                   
+               case .alreadyHaveAnAccount: AlreadyHaveAnAccount {
+                   heyThereScreenSheetOption = .welcomeBack
+               } noPressed: {
+                   heyThereScreenSheetOption = nil
+                   goToBlankScreen = true
+               }
+
+               case .welcomeBack: WelcomeBack()
+                   
+               }
+           })
             
             VStack {
                 Text("Hey There 👋")
-                Button("toggle") {
-                    isShown.toggle()
+                
+                NavigationLink(destination: BlankScreen(), isActive: $goToBlankScreen) {
+                    EmptyView()
                 }
             }
             .onAppear() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isShown = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    heyThereScreenSheetOption = .alreadyHaveAnAccount
                 }
                 
             }
