@@ -77,7 +77,7 @@ struct DietaryPreferencesAndRestrictions: View {
             GreenCapsule(title: "Let's Go!", takeFullWidth: false)
                 .padding(.top, 60)
         }
-        
+        .padding(.horizontal, 20)
     }
 }
 

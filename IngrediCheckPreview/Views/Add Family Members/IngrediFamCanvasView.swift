@@ -959,6 +959,8 @@ struct WelcomeBack: View {
 }
 
 struct WhosThisFor: View {
+    @State var justmePressed: (() -> Void)? = nil
+    @State var addFamilyPressed: (() -> Void)? = nil
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -975,8 +977,9 @@ struct WhosThisFor: View {
             .padding(.bottom, 40)
 
             HStack(spacing: 16) {
+
                 Button {
-                    
+                    justmePressed?()
                 } label: {
                     Text("Just Me")
                         .font(NunitoFont.semiBold.size(16))
@@ -987,7 +990,12 @@ struct WhosThisFor: View {
                         .background(.grayScale40, in: .capsule)
                 }
 
-                GreenCapsule(title: "Add Family")
+                Button {
+                    addFamilyPressed?()
+                } label: {
+                    GreenCapsule(title: "Add Family")
+                }
+                
             }
             .padding(.bottom, 20)
 
@@ -1242,12 +1250,6 @@ struct AddMoreMembersMinimal: View {
     }
 }
 
-#Preview("iPhone 13 mini") {
+#Preview {
     IngrediFamCanvasView()
-        .previewDevice("iPhone 13 mini")
-}
-
-#Preview("iPhone 16 Pro") {
-    IngrediFamCanvasView()
-        .previewDevice("iPhone 16 Pro")
 }
