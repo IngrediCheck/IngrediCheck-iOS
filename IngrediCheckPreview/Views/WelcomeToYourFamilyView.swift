@@ -10,12 +10,16 @@ import SwiftUI
 struct WelcomeToYourFamilyView: View {
     
     @State var showSheet: Bool = false
+    @State var goToHome: Bool = false
     
     var body: some View {
         ZStack {
             
             CustomBoolSheet(isPresented: $showSheet, cornerRadius: 34, heights: (min: 283, max: 284), content: {
-                AllSetToJoinYourFamily()
+                AllSetToJoinYourFamily {
+                    showSheet = false
+                    goToHome = true
+                }
             })
             
             VStack {
@@ -30,6 +34,10 @@ struct WelcomeToYourFamilyView: View {
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
+                
+                NavigationLink(destination: HomeView(), isActive: $goToHome) {
+                    EmptyView()
+                }
                 
                 Spacer()
             }

@@ -1048,6 +1048,7 @@ struct WhosThisFor: View {
 }
 
 struct AllSetToJoinYourFamily: View {
+    @State var goToHomePressed: () -> Void = { }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1063,8 +1064,13 @@ struct AllSetToJoinYourFamily: View {
             }
             .padding(.bottom, 40)
 
-            GreenCapsule(title: "Go to Home")
-                .frame(width: 156)
+            Button {
+                goToHomePressed()
+            } label: {
+                GreenCapsule(title: "Go to Home")
+                    .frame(width: 156)
+            }
+            
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

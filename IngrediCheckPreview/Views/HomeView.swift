@@ -201,6 +201,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 90)
+            .navigationBarBackButtonHidden(true)
         }
         .overlay(
             TabBar(isExpanded: .constant(true))

@@ -60,7 +60,7 @@ struct UserFeedbackCard: View {
                 .foregroundStyle(.grayScale120)
             }
             .font(ManropeFont.semiBold.size(12))
-            .frame(height: 141)
+            .frame(height: UIScreen.main.bounds.height * 0.18)
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .foregroundStyle(.grayScale10)

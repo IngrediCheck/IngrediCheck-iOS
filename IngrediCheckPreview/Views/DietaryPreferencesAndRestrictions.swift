@@ -74,8 +74,14 @@ struct DietaryPreferencesAndRestrictions: View {
                 .padding(.top, 20)
             }
             
-            GreenCapsule(title: "Let's Go!", takeFullWidth: false)
-                .padding(.top, 60)
+            NavigationLink {
+                MainCanvasView(flow: isFamilyFlow ? .family : .individual)
+            } label: {
+                GreenCapsule(title: "Let's Go!", takeFullWidth: false)
+                    .padding(.top, 60)
+            }
+
+            
         }
         .padding(.horizontal, 20)
     }
