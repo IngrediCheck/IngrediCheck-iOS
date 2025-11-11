@@ -44,7 +44,7 @@ struct CanvasTagBar: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .animation(.linear(duration: 0.2), value: selectedTag.name)
         }
         .onAppear() {

@@ -95,7 +95,7 @@ struct OnboardingSectionsFactory {
             ]),
             OnboardingSection(name: "Region", screens: [
                 OnboardingScreen(screenId: .region, view: AnyView(Text("Region: \(onboardingFlowType.rawValue)"))),
-                OnboardingScreen(screenId: .region, view: AnyView(Text("Inner Region: \(onboardingFlowType.rawValue)")))
+//                OnboardingScreen(screenId: .region, view: AnyView(Text("Inner Region: \(onboardingFlowType.rawValue)")))
             ]),
             OnboardingSection(name: "Avoid", screens: [
                 OnboardingScreen(screenId: .aviod, view: AnyView(Text("Avoid: \(onboardingFlowType.rawValue)")))

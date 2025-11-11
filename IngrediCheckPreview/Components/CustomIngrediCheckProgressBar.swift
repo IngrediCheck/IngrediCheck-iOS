@@ -17,13 +17,13 @@ struct CustomIngrediCheckProgressBar: View {
             Capsule()
                 .fill(Color(hex: "#EEEEEE"))
                 .frame(height: 4)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 20)
             
             ZStack(alignment: .trailing) {
                 Capsule()
                     .fill(.secondary600)
-                    .frame(width: (UIScreen.main.bounds.width - 48) * progress / 100, height: 4)
-                    .padding(.horizontal, 24)
+                    .frame(width: (UIScreen.main.bounds.width - 40) * progress / 100, height: 4)
+                    .padding(.horizontal, 20)
                 
                 VStack(spacing: 0) {
                     Text("\(Int(progress))%")
@@ -46,23 +46,24 @@ struct CustomIngrediCheckProgressBar: View {
                     }
                 }
                 .padding(.trailing, 12)
-                .offset(y: -8)
+                .offset(x: 12,y: -8)
             }
             
-            VStack {
-                
-                
-                
-                Button {
-                    withAnimation(.smooth) {
-                        progress += 10
-                    }
-                } label: {
-                    Text("Press")
-                }
-                
-                Spacer()
-            }
+            
+//            VStack {
+//                
+//                
+//                
+//                Button {
+//                    withAnimation(.smooth) {
+//                        progress += 10
+//                    }
+//                } label: {
+//                    Text("Press")
+//                }
+//                
+//                Spacer()
+//            }
         }
     }
 }

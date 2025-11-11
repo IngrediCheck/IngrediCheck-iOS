@@ -7,9 +7,47 @@
 
 import SwiftUI
 
+enum mainCanvasViewSheetOptions: String, Identifiable {
+    case allergies
+    case intollerances
+    case healthConditions
+    case lifestage
+    case region
+    case avoid
+    case lifestyle
+    case nutrition
+    case ethical
+    case taste
+
+
+    var id: String {
+        return self.rawValue
+    }
+}
+
 struct MainCanvasView: View {
+    
+    @StateObject var store = Onboarding(onboardingFlowtype: .individual)
+    
     var body: some View {
-        onboardingSheetTitle(title: "Does anyone in your IngrediFam have allergies we should know ?")
+        ZStack {
+            
+            
+            
+            VStack(spacing: 0) {
+                CustomIngrediCheckProgressBar()
+                
+                CanvasTagBar()
+                    .padding(.bottom, 16)
+                
+                
+                RoundedRectangle(cornerRadius: 24)
+                    .foregroundStyle(.white)
+                    .shadow(color: .gray.opacity(0.3), radius: 9, x: 0, y: 0)
+                    .frame(width: UIScreen.main.bounds.width * 0.9)
+            }
+            
+        }
     }
 }
 
