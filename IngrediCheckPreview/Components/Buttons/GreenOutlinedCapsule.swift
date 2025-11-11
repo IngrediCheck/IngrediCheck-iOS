@@ -13,25 +13,20 @@ struct GreenOutlinedCapsule: View {
     var width: CGFloat? = 152
     var height: CGFloat? = 52
     var body: some View {
-        Button {
-            
-        } label: {
-            HStack(spacing: 10) {
-                Image(image)
-                Text(title)
-                    .font(NunitoFont.semiBold.size(16))
-                    .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
-            }
-            .frame(height: height)
-            .frame(minWidth: 152)
-            .frame(maxWidth: .infinity)
-            .background(
-                Capsule()
-                    .stroke(lineWidth: 1.5)
-                    .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 85))
-            )
+        HStack(spacing: 10) {
+            Image(image)
+            Text(title)
+                .font(NunitoFont.semiBold.size(16))
+                .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
         }
-        
+        .frame(height: height)
+        .frame(minWidth: 152)
+        .frame(maxWidth: .infinity)
+        .background(
+            Capsule()
+                .stroke(lineWidth: 1.5)
+                .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 85))
+        )
     }
 }
 

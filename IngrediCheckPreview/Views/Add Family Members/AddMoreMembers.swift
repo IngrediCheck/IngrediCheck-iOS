@@ -17,6 +17,8 @@ struct AddMoreMembers: View {
         UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
+    @State var generatePressed: () -> Void = { }
+    @State var addMemberPressed: () -> Void = { }
     var body: some View {
         VStack {
             
@@ -88,8 +90,20 @@ struct AddMoreMembers: View {
             .padding(.bottom, 40)
             
             HStack(spacing: 16) {
-                GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
-                GreenCapsule(title: "Add Member")
+                Button {
+                    generatePressed()
+                } label: {
+                    GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
+                }
+                
+                Button {
+                    addMemberPressed()
+                } label: {
+                    GreenCapsule(title: "Add Member")
+                }
+
+                
+                
             }
             .padding(.horizontal, 20)
         }

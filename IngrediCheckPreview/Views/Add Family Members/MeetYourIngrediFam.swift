@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct MeetYourIngrediFam: View {
+    @State var addMemberPressed: () -> Void = { }
     var body: some View {
         VStack(spacing: 20) {
             Image("IngrediFamGroup")
@@ -24,9 +25,12 @@ struct MeetYourIngrediFam: View {
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
                 
-                
-                GreenCapsule(title: "Add Members")
-                    .frame(width: 156)
+                Button {
+                    addMemberPressed()
+                } label: {
+                    GreenCapsule(title: "Add Members")
+                        .frame(width: 156)
+                }
             }
         }
         .padding(.horizontal, 20)

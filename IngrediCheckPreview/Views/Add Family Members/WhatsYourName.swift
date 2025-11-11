@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct WhatsYourName: View {
+    
     @State var name: String = ""
     @State var familyMembersList: [UserModel] = [
         UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
@@ -17,6 +18,10 @@ struct WhatsYourName: View {
         UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
+    
+    @State var generatePressed: () -> Void = { }
+    @State var addMemberPressed: () -> Void = { }
+    
     var body: some View {
         VStack {
             
@@ -89,8 +94,19 @@ struct WhatsYourName: View {
             .padding(.bottom, 40)
             
             HStack(spacing: 16) {
-                GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
-                GreenCapsule(title: "Add Member")
+                Button {
+                    generatePressed()
+                } label: {
+                    GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
+                }
+                
+                Button {
+                    addMemberPressed()
+                } label: {
+                    GreenCapsule(title: "Add Member")
+                }
+                
+                
             }
             .padding(.horizontal, 20)
         }

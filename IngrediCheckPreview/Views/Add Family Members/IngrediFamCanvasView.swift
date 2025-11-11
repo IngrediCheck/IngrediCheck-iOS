@@ -23,6 +23,7 @@ enum AddFamilyMemberSheetOption: String, Identifiable {
     case alreadyHaveAnAccount
     case doYouHaveAnInviteCode
     case generateAvatar
+    case bringingYourAvatar
     case meetYourAvatar
     case letsScanSmarter
     case accessDenied
@@ -108,6 +109,9 @@ struct IngrediFamCanvasView: View {
                 Button("preferenceAreReady") {
                     addFamilyMemberSheetOption = .preferenceAreReady
                 }
+                Button("bringYourAvatar") {
+                    addFamilyMemberSheetOption = .bringingYourAvatar
+                }
             }
         }
         CustomSheet(item: $addFamilyMemberSheetOption,
@@ -122,6 +126,7 @@ struct IngrediFamCanvasView: View {
                         case .meetYourIngrediFam: return (min: 396, max: 397)
                         case .whatsYourName: return (min: 437, max: 438)
                         case .generateAvatar: return (min: 379, max: 642)
+                        case .bringingYourAvatar: return (min: 330, max: 331)
                         case .meetYourAvatar: return (min: 390, max: 391)
                         case .letsScanSmarter: return (min: 283, max: 284)
                         case .accessDenied: return (min: 268, max: 269)
@@ -150,6 +155,8 @@ struct IngrediFamCanvasView: View {
                 WhatsYourName()
             case .generateAvatar:
                 GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
+            case .bringingYourAvatar:
+                BringingYourAvatar()
             case .meetYourAvatar:
                 MeetYourAvatar()
             case .letsScanSmarter:
@@ -264,6 +271,9 @@ struct GenerateAvatar: View {
     @State var isExpandedMaximal: Bool = false
     
     @State var idx: Int = 0
+    
+    @State var randomPressed: () -> Void = { }
+    @State var generatePressed: () -> Void = { }
     
     var body: some View {
         GeometryReader { geometry in
@@ -440,8 +450,18 @@ struct GenerateAvatar: View {
                             
                             
                             HStack(spacing: 16) {
-                                GreenOutlinedCapsule(image: "ai-stick", title: "Random")
-                                GreenCapsule(title: "Generate", icon: "stars-generate")
+                                Button {
+                                    randomPressed()
+                                } label: {
+                                    GreenOutlinedCapsule(image: "ai-stick", title: "Random")
+                                }
+
+                                
+                                Button {
+                                    generatePressed()
+                                } label: {
+                                    GreenCapsule(title: "Generate", icon: "stars-generate")
+                                }
                             }
                             .padding(.horizontal, 20)
                         }
@@ -615,6 +635,8 @@ struct GenerateAvatar: View {
 }
 
 struct MeetYourAvatar: View {
+    @State var regeneratePressed: () -> Void = { }
+    @State var assignedPressed: () -> Void = { }
     var body: some View {
         VStack(spacing: 20) {
             // Avatar placeholder
@@ -629,8 +651,17 @@ struct MeetYourAvatar: View {
                     .multilineTextAlignment(.center)
 
                 HStack(spacing: 12) {
-                    GreenOutlinedCapsule(image: "stars-generate", title: "Regenerate")
-                    GreenCapsule(title: "Assign")
+                    Button {
+                        regeneratePressed()
+                    } label: {
+                        GreenOutlinedCapsule(image: "stars-generate", title: "Regenerate")
+                    }
+                    
+                    Button {
+                        assignedPressed()
+                    } label: {
+                        GreenCapsule(title: "Assign")
+                    }
                 }
             }
         }
@@ -1208,6 +1239,8 @@ struct EnterYourInviteCode : View {
 }
 
 struct AddMoreMembersMinimal: View {
+    @State var allSetPressed: () -> Void = { }
+    @State var addMorePressed: () -> Void = { }
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
@@ -1225,7 +1258,7 @@ struct AddMoreMembersMinimal: View {
             
             HStack(spacing: 16) {
                 Button {
-                    
+                    allSetPressed()
                 } label: {
                     Text("All Set!")
                         .font(NunitoFont.semiBold.size(16))
@@ -1235,7 +1268,13 @@ struct AddMoreMembersMinimal: View {
                         .background(.grayScale40, in: .capsule)
                 }
                 
-                GreenCapsule(title: "Add Member")
+                Button {
+                    addMorePressed()
+                } label: {
+                    GreenCapsule(title: "Add Member")
+                }
+
+                
             }
             .padding(.horizontal, 20)
         }
@@ -1247,6 +1286,41 @@ struct AddMoreMembersMinimal: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+    }
+}
+
+struct BringingYourAvatar: View {
+    @State var viewDidAppear: () -> Void = {}
+    var body: some View {
+        VStack(spacing: 32) {
+            // Robot image
+            Image("ingrediBot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 147, height: 147)
+                .clipped()
+            
+            VStack(spacing: 24) {
+                Text("Bringing your avatar to life... it’s going to be awesome!")
+                    .font(NunitoFont.bold.size(20))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+        .onAppear() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                viewDidAppear()
+            }
+        }
     }
 }
 

@@ -16,9 +16,11 @@ struct LetsGetStartedView: View {
             
             CustomBoolSheet(isPresented: $showSheet, cornerRadius: 34, heights: (min: 283, max: 284), content: {
                 WhosThisFor {
+                    showSheet = false
                     goToSingleDietaryPreference = true
                 } addFamilyPressed: {
-                    
+                    showSheet = false
+                    goToFamilyDietaryPreference = true
                 }
 
             })
@@ -32,10 +34,16 @@ struct LetsGetStartedView: View {
                 } label: {
                     EmptyView()
                 }
+                
+                NavigationLink(isActive: $goToFamilyDietaryPreference) {
+                    LetsMeetYourIngrediFamView()
+                } label: {
+                    EmptyView()
+                }
 
             }
             .onAppear() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     showSheet = true
                 }
             }
