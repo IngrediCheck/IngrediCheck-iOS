@@ -32,7 +32,6 @@ struct AllergySummaryCard: View {
             .padding(.top, 12)
             .padding(.bottom, 17)
             .frame(height: 196)
-            
             .background(
                 RoundedRectangle(cornerRadius: 18)
                     .foregroundStyle(.grayScale10)

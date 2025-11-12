@@ -213,12 +213,7 @@ struct HomeView: View {
 }
 
 
-#Preview("iPhone 13 mini") {
+#Preview {
     HomeView()
-        .previewDevice("iPhone 13 mini")
 }
 
-#Preview("iPhone 16 Pro") {
-    HomeView()
-        .previewDevice("iPhone 16 Pro")
-}

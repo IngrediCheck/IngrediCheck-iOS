@@ -279,102 +279,122 @@ struct GenerateAvatar: View {
         GeometryReader { geometry in
             ZStack {
                 if geometry.size.height >= 500 {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 32) {
-                            
-                            if isExpandedMaximal == false {
-                                VStack(spacing: 4) {
-                                    Image(.funGuy)
-                                    
-                                    Text("AI Memojis")
-                                        .font(ManropeFont.bold.size(16))
-                                        .foregroundStyle(.grayScale150)
-                                    
-                                    Text("Create Personalized family Avatar")
-                                        .font(ManropeFont.medium.size(12))
-                                        .foregroundStyle(.grayScale150)
-                                }
+                    VStack {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 32) {
                                 
-                                Text("Generate Avatar")
-                                    .font(ManropeFont.bold.size(14))
-                                    .foregroundStyle(.grayScale150)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            
-                            VStack(spacing: 20) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack(spacing: 8) {
-                                        Image(.familyMember)
-                                            .resizable()
-                                            .renderingMode(.template)
-                                            .foregroundStyle(.grayScale150)
-                                            .frame(width: 22, height: 24)
+                                if isExpandedMaximal == false {
+                                    VStack(spacing: 4) {
+                                        Image(.funGuy)
                                         
-                                        Text("Family Member")
-                                            .font(ManropeFont.semiBold.size(16))
+                                        Text("AI Memojis")
+                                            .font(ManropeFont.bold.size(16))
+                                            .foregroundStyle(.grayScale150)
+                                        
+                                        Text("Create Personalized family Avatar")
+                                            .font(ManropeFont.medium.size(12))
                                             .foregroundStyle(.grayScale150)
                                     }
                                     
-                                    Text("Tell us how you're related to them so we can create the perfect avatar!")
-                                        .font(ManropeFont.medium.size(12))
-                                        .foregroundStyle(.grayScale120)
+                                    Text("Generate Avatar")
+                                        .font(ManropeFont.bold.size(14))
+                                        .foregroundStyle(.grayScale150)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 
-                                CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: $familyMember, selectedItem: $selectedFamilyMember)
-                            }
-                            
-                            .padding(.bottom, 30)
-                            
-                            
-                            if isExpandedMaximal == false {
-                                ForEach(tools) { tool in
+                                VStack(spacing: 20) {
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack(spacing: 8) {
-                                            Image(tool.icon)
+                                            Image(.familyMember)
                                                 .resizable()
                                                 .renderingMode(.template)
                                                 .foregroundStyle(.grayScale150)
-                                                .frame(width: 24, height: 24)
+                                                .frame(width: 22, height: 24)
                                             
-                                            Text(tool.title)
+                                            Text("Family Member")
                                                 .font(ManropeFont.semiBold.size(16))
                                                 .foregroundStyle(.grayScale150)
                                         }
                                         
-                                        FlowLayout(horizontalSpacing: 8, verticalSpacing: 12) {
-                                            ForEach(tool.tools) { innerTool in
+                                        Text("Tell us how you're related to them so we can create the perfect avatar!")
+                                            .font(ManropeFont.medium.size(12))
+                                            .foregroundStyle(.grayScale120)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    
+                                    CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: $familyMember, selectedItem: $selectedFamilyMember)
+                                }
+                                
+                                .padding(.bottom, 30)
+                                
+                                
+                                if isExpandedMaximal == false {
+                                    ForEach(tools) { tool in
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack(spacing: 8) {
+                                                Image(tool.icon)
+                                                    .resizable()
+                                                    .renderingMode(.template)
+                                                    .foregroundStyle(.grayScale150)
+                                                    .frame(width: 24, height: 24)
                                                 
-                                                Button {
+                                                Text(tool.title)
+                                                    .font(ManropeFont.semiBold.size(16))
+                                                    .foregroundStyle(.grayScale150)
+                                            }
+                                            
+                                            FlowLayout(horizontalSpacing: 8, verticalSpacing: 12) {
+                                                ForEach(tool.tools) { innerTool in
                                                     
-                                                } label: {
-                                                    HStack(spacing: 4) {
-                                                        Image(innerTool.icon ?? "")
-                                                            .resizable()
-                                                            .frame(width: 24, height: 24)
+                                                    Button {
                                                         
-                                                        Text(innerTool.name)
-                                                            .font(ManropeFont.medium.size(14))
-                                                            .foregroundStyle(.grayScale150)
+                                                    } label: {
+                                                        HStack(spacing: 4) {
+                                                            Image(innerTool.icon ?? "")
+                                                                .resizable()
+                                                                .frame(width: 24, height: 24)
+                                                            
+                                                            Text(innerTool.name)
+                                                                .font(ManropeFont.medium.size(14))
+                                                                .foregroundStyle(.grayScale150)
+                                                        }
+                                                        .padding(.vertical, 8)
+                                                        .padding(.trailing, 16)
+                                                        .padding(.leading, 12)
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 40)
+                                                                .stroke(lineWidth: 1)
+                                                                .foregroundStyle(.grayScale60)
+                                                        )
                                                     }
-                                                    .padding(.vertical, 8)
-                                                    .padding(.trailing, 16)
-                                                    .padding(.leading, 12)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 40)
-                                                            .stroke(lineWidth: 1)
-                                                            .foregroundStyle(.grayScale60)
-                                                    )
                                                 }
                                             }
                                         }
                                     }
                                 }
+                                
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 30)
+                            .padding(.bottom, 5)
+                        }
+                        .padding(.top, 20)
+                        
+                        HStack(spacing: 16) {
+                            Button {
+                                randomPressed()
+                            } label: {
+                                GreenOutlinedCapsule(image: "ai-stick", title: "Random")
+                            }
+
                             
+                            Button {
+                                generatePressed()
+                            } label: {
+                                GreenCapsule(title: "Generate", icon: "stars-generate")
+                            }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.top, 30)
                     }
                 } else {
                     if isExpandedMinimal {
