@@ -17,7 +17,6 @@ enum HeyThereScreenSheetOptions: String, CaseIterable, Identifiable {
 struct HeyThereScreen: View {
     
     @State var heyThereScreenSheetOption: HeyThereScreenSheetOptions? = nil
-    @State var goToBlankScreen: Bool = false
     
     var body: some View {
         ZStack {
@@ -30,12 +29,7 @@ struct HeyThereScreen: View {
            }, content: { sheet in
                switch sheet {
                    
-               case .alreadyHaveAnAccount: AlreadyHaveAnAccount {
-                   heyThereScreenSheetOption = .welcomeBack
-               } noPressed: {
-                   heyThereScreenSheetOption = nil
-                   goToBlankScreen = true
-               }
+               case .alreadyHaveAnAccount: AlreadyHaveAnAccount()
 
                case .welcomeBack: WelcomeBack()
                    
@@ -44,10 +38,6 @@ struct HeyThereScreen: View {
             
             VStack {
                 Text("Hey There 👋")
-                
-                NavigationLink(destination: BlankScreen(), isActive: $goToBlankScreen) {
-                    EmptyView()
-                }
             }
             .onAppear() {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
