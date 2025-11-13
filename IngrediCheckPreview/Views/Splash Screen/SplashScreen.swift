@@ -26,12 +26,6 @@ struct SplashScreen: View {
     var body: some View {
         NavigationStack {
             VStack {
-                HStack {
-                    Spacer()
-                    Text("Skip")
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale110)
-                }
                 
                 Spacer()
                 Spacer()
