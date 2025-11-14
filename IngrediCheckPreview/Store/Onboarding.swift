@@ -23,30 +23,6 @@ struct SectionedChipModel: Identifiable {
     var chips: [ChipsModel]
 }
 
-struct UserModel: Identifiable {
-    var id = UUID().uuidString
-    var name: String
-    var image: String
-    var backgroundColor: Color?
-    var allergies: [String] = []
-    var intolerances: [String] = []
-    var healthConditions: [String] = []
-    var lifeStage: [String] = []
-    var region: [String] = []
-    var avoid: [String] = []
-    var lifestyle: [String] = []
-    var nutrition: [String] = []
-    var ethical: [String] = []
-    var taste: [String] = []
-    
-    init(id: String = UUID().uuidString, familyMemberName: String, familyMemberImage: String, backgroundColor: Color? = nil) {
-        self.id = id
-        self.name = familyMemberName
-        self.image = familyMemberImage
-        self.backgroundColor = backgroundColor
-    }
-}
-
 enum OnboardingFlowType: String {
     case individual
     case family

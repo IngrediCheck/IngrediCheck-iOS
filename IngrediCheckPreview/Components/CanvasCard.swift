@@ -11,24 +11,30 @@ import SwiftUI
 struct CanvasCard: View {
     
     @State var chips: [ChipsModel]? = nil
+//    [
+//        ChipsModel(name: "Peanuts", icon: "peanuts"),
+//        ChipsModel(name: "Sesame", icon: "sesame"),
+//        ChipsModel(name: "Wheat", icon: "wheat"),
+//        ChipsModel(name: "Shellfish", icon: "shellfish")
+//    ]
     
     @State var sectionedChips: [SectionedChipModel]? = [
         SectionedChipModel(title: "Animal-Based", chips: [
-            ChipsModel(name: "Peanuts", icon: "peanut"),
+            ChipsModel(name: "Peanuts", icon: "peanuts"),
             ChipsModel(name: "Sesame", icon: "sesame"),
             ChipsModel(name: "Wheat", icon: "wheat"),
-            ChipsModel(name: "Sellfish", icon: "sellfish")
+            ChipsModel(name: "Shellfish", icon: "shellfish")
         ]),
         SectionedChipModel(title: "Oils & Fats", chips: [
-            ChipsModel(name: "Peanuts", icon: "peanut"),
+            ChipsModel(name: "Peanuts", icon: "peanuts"),
             ChipsModel(name: "Sesame with almonds (in moderation) (10g)", icon: "sesame"),
             ChipsModel(name: "Wheat", icon: "wheat"),
-            ChipsModel(name: "Sellfish", icon: "sellfish")
+            ChipsModel(name: "Shellfish", icon: "shellfish")
         ]),
         SectionedChipModel(title: "Additives & Sweeteners", chips: [
-            ChipsModel(name: "Peanuts", icon: "peanut"),
+            ChipsModel(name: "Peanuts", icon: "peanuts"),
             ChipsModel(name: "Sesame", icon: "sesame"),
-            ChipsModel(name: "Sellfish", icon: "sellfish")
+            ChipsModel(name: "Shellfish", icon: "shellfish")
         ])
     ]
     
