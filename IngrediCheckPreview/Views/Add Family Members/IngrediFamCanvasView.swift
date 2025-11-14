@@ -842,6 +842,9 @@ struct PreferenceAreReady: View {
 }
 
 struct AlreadyHaveAnAccount: View {
+    @State var yesPressed: () -> Void = { }
+    @State var noPressed: () -> Void = { }
+    @State var goToNextScreen: Bool = false
 
     var body: some View {
         
@@ -861,8 +864,8 @@ struct AlreadyHaveAnAccount: View {
                 .padding(.bottom, 40)
 
                 HStack(spacing: 16) {
-                    NavigationLink {
-                        
+                    Button {
+                        yesPressed()
                     } label: {
                         Text("Yes, I have")
                             .font(NunitoFont.semiBold.size(16))
@@ -876,8 +879,10 @@ struct AlreadyHaveAnAccount: View {
                             )
                     }
 
-                    NavigationLink {
-                        WelcomeBack()
+                    Button {
+                        goToNextScreen = true
+                        noPressed()
+                        
                     } label: {
                         GreenCapsule(title: "No")
                     }
@@ -889,6 +894,10 @@ struct AlreadyHaveAnAccount: View {
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
+                
+                NavigationLink(destination: DoYouHaveAnInviteCode(), isActive: $goToNextScreen) {
+                    EmptyView()
+                }
             }
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -954,6 +963,7 @@ struct DoYouHaveAnInviteCode: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationBarBackButtonHidden(true)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .fill(.neutral500)

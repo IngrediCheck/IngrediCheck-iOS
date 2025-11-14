@@ -63,7 +63,7 @@ struct HomeView: View {
                         
                         AskIngrediBotButton()
                     }
-                    .frame(height: 196)
+                    .frame(height: UIScreen.main.bounds.height * 0.22)
                     
                     Spacer()
                     
@@ -139,6 +139,7 @@ struct HomeView: View {
                         .frame(height: 103)
                         
                         AverageScansCard()
+
                     }
                 }
                 .padding(.bottom, 20)
