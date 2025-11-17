@@ -68,26 +68,26 @@ struct MainCanvasView: View {
                     .foregroundStyle(.white)
                     .shadow(color: .gray.opacity(0.3), radius: 9, x: 0, y: 0)
                     .frame(width: UIScreen.main.bounds.width * 0.9)
-                    .overlay(
-                        ScrollView(.vertical, showsIndicators: false) {
-                            VStack(spacing: 16) {
-                                ForEach(store.sections) { section in
-                                    if let screenId = section.screens.first?.screenId {
+                    .overlay(alignment: .top) {
+                        if let cards = canvasCards(), cards.isEmpty == false {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 16) {
+                                    ForEach(cards, id: \.id) { card in
                                         CanvasCard(
-                                            chips: chips(for: screenId),
-                                            sectionedChips: sectionedChips(for: screenId),
-                                            title: section.name,
-                                            iconName: icon(for: screenId)
+                                            chips: card.chips,
+                                            sectionedChips: card.sectionedChips,
+                                            title: card.title,
+                                            iconName: card.icon
                                         )
                                     }
                                 }
+                                .padding(.vertical, 20)
+                                .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, 20)
-                            .padding(.horizontal, 16)
+                            .frame(width: UIScreen.main.bounds.width * 0.9)
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
-                        .frame(width: UIScreen.main.bounds.width * 0.9)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                    )
+                    }
                 
                 
                 NavigationLink(isActive: $goToHomeScreen) {
@@ -161,6 +161,30 @@ struct MainCanvasView: View {
         }
     }
     
+    private func canvasCards() -> [CanvasCardModel]? {
+        var cards: [CanvasCardModel] = []
+        
+        for section in store.sections {
+            guard let screenId = section.screens.first?.screenId else { continue }
+            let chips = chips(for: screenId)
+            let groupedChips = sectionedChips(for: screenId)
+            
+            if chips != nil || groupedChips != nil {
+                cards.append(
+                    CanvasCardModel(
+                        id: section.id,
+                        title: section.name,
+                        icon: icon(for: screenId),
+                        chips: chips,
+                        sectionedChips: groupedChips
+                    )
+                )
+            }
+        }
+        
+        return cards.isEmpty ? nil : cards
+    }
+    
     private func chipModels(from list: [String]?) -> [ChipsModel]? {
         guard let items = list, !items.isEmpty else { return nil }
         return items.map { ChipsModel(name: $0, icon: nil) }
@@ -220,6 +244,14 @@ struct MainCanvasView: View {
         }
         return sections.isEmpty ? nil : sections
     }
+}
+
+struct CanvasCardModel: Identifiable {
+    let id: UUID
+    let title: String
+    let icon: String
+    let chips: [ChipsModel]?
+    let sectionedChips: [SectionedChipModel]?
 }
 
 func onboardingSheetTitle(title: String) -> some View {
