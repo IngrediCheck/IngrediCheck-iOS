@@ -22,7 +22,7 @@ struct IngrediCheckPreviewApp: App {
     
     var body: some Scene {
         WindowGroup {
-            HeyThereScreen()
+            SplashScreen()
                 .preferredColorScheme(.light)
         }
     }

@@ -28,31 +28,7 @@ struct MainCanvasView: View {
         ZStack {
             
             CustomSheet(item: $presentedOnboardingSheet,
-                        cornerRadius: 34,
-                        heightsForItem: { sheet in
-                switch sheet {
-                case .allergies:
-                    (min: 443, max: 444)
-                case .intolerances:
-                    (min: 334, max: 335)
-                case .healthConditions:
-                    (min: 433, max: 434)
-                case .lifeStage:
-                    (min: 422, max: 423)
-                case .region:
-                    (min: 384, max: 385)
-                case .aviod:
-                    (min: 412, max: 413)
-                case .lifeStyle:
-                    (min: 400, max: 401)
-                case .nutrition:
-                    (min: 401, max: 402)
-                case .ethical:
-                    (min: 462, max: 463)
-                case .taste:
-                    (min: 446, max: 447)
-                }
-            }) { _ in
+                        cornerRadius: 34) { _ in
                 VStack(spacing: 0) {
                     store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
                         .padding(.bottom, 32)
@@ -257,7 +233,9 @@ func onboardingSheetTitle(title: String) -> some View {
             .foregroundStyle(.grayScale150))
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true) // <-- important
     }
+    
 }
 
 func onboardingSheetSubtitle(subtitle: String, onboardingFlowType: OnboardingFlowType) -> some View {
@@ -265,10 +243,12 @@ func onboardingSheetSubtitle(subtitle: String, onboardingFlowType: OnboardingFlo
         Text(subtitle)
             .font(ManropeFont.regular.size(14))
             .foregroundStyle(.grayScale100)
+            .fixedSize(horizontal: false, vertical: true) // <-- important
     } else {
         Text(subtitle)
             .font(ManropeFont.regular.size(14))
             .foregroundStyle(.grayScale120)
+            .fixedSize(horizontal: false, vertical: true) // <-- important
     }
 }
 

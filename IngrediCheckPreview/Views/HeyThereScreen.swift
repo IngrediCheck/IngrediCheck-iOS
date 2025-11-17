@@ -22,12 +22,7 @@ struct HeyThereScreen: View {
     var body: some View {
         ZStack {
             
-           CustomSheet(item: $heyThereScreenSheetOption, cornerRadius: 34, heightsForItem: { sheet in
-               switch sheet {
-               case .alreadyHaveAnAccount: return (min: 274, max: 275)
-               case .welcomeBack: return (min: 290, max: 291)
-               }
-           }, content: { sheet in
+           CustomSheet(item: $heyThereScreenSheetOption, cornerRadius: 34, content: { sheet in
                switch sheet {
                    
                case .alreadyHaveAnAccount: AlreadyHaveAnAccount {

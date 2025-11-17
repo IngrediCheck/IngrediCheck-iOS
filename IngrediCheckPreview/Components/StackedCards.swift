@@ -45,10 +45,16 @@ struct StackedCards: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(card.title)
                                 .font(.system(size: 20, weight: .regular))
-                            
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+
                             Text(card.subTitle)
                                 .font(.system(size: 12, weight: .regular))
                                 .opacity(0.8)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .opacity((idx == 0) ? 1 : 0)
                         

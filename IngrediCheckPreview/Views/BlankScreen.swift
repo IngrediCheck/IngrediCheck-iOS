@@ -23,12 +23,7 @@ struct BlankScreen: View {
     var body: some View {
         ZStack {
             
-            CustomSheet(item: $blankSheetOption, cornerRadius: 34, heightsForItem: { sheet in
-                switch sheet {
-                case .doYouHaveAnInviteCode: return (min: 274, max: 275)
-                case .enterInviteCode: return (min: 396, max: 397)
-                }
-            }, content: { sheet in
+            CustomSheet(item: $blankSheetOption, cornerRadius: 34, content: { sheet in
                 switch sheet {
                     
                 case .doYouHaveAnInviteCode: DoYouHaveAnInviteCode {

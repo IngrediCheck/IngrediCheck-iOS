@@ -52,13 +52,17 @@ struct HomeCardShape: Shape {
     }
 }
 
+struct MyIcon2: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let width = rect.size.width
+        let height = rect.size.height
+        path.addRect(CGRect(x: 0.00782*width, y: 0.01848*height, width: 0.98436*width, height: 0.96304*height))
+        return path
+    }
+}
 
 #Preview {
-    HomeCardShape()
-        .fill(Color.white)
-        .shadow(radius: 8)
-        .frame(width: 160, height: 110)
-
-
+    MyIcon2()
 }
 

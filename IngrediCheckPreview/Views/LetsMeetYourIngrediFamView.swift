@@ -29,18 +29,7 @@ struct LetsMeetYourIngrediFamView: View {
         ZStack {
             
             CustomSheet(item: $letsMeetYourIngrediFamSheetOption,
-                        cornerRadius: 34,
-                        heightsForItem: { sheet in
-                            switch sheet {
-                            case .letsMeetYourIngrediFam: return (min: 396, max: 397)
-                            case .whatsYourName: return (min: 437, max: 438)
-                            case .addMoreMembers: return (min: 437, max: 438)
-                            case .addMoreMembersMinimal: return (min: 270, max: 271)
-                            case .generateAvatar: return (min: 379, max: 642)
-                            case .bringingYourAvatar: return (min: 281, max: 282)
-                            case .meetYourAvatar: return (min: 390, max: 391)
-                            }
-                        }) { sheet in
+                        cornerRadius: 34) { sheet in
                 switch sheet {
                 case .letsMeetYourIngrediFam: MeetYourIngrediFam {
                     letsMeetYourIngrediFamSheetOption = .whatsYourName

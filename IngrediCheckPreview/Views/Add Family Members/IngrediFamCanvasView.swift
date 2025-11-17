@@ -115,29 +115,7 @@ struct IngrediFamCanvasView: View {
             }
         }
         CustomSheet(item: $addFamilyMemberSheetOption,
-                    cornerRadius: 34,
-                    heightsForItem: { sheet in
-                        switch sheet {
-                        case .addMoreMember: return (min: 437, max: 438)
-                        case .addMoreMembersMinimal: return (min: 276, max: 277)
-                        case .allSet: return (min: 270, max: 271)
-                        case .alreadyHaveAnAccount: return (min: 276, max: 277)
-                        case .doYouHaveAnInviteCode: return (min: 276, max: 277)
-                        case .meetYourIngrediFam: return (min: 396, max: 397)
-                        case .whatsYourName: return (min: 437, max: 438)
-                        case .generateAvatar: return (min: 379, max: 642)
-                        case .bringingYourAvatar: return (min: 330, max: 331)
-                        case .meetYourAvatar: return (min: 390, max: 391)
-                        case .letsScanSmarter: return (min: 283, max: 284)
-                        case .accessDenied: return (min: 268, max: 269)
-                        case .stayUpdated: return (min: 258, max: 259)
-                        case .preferenceAreReady: return (min: 243, max: 244)
-                        case .welcomeBack: return (min: 276, max: 277)
-                        case .whosThisFor: return (min: 296, max: 297)
-                        case .allSetToJoinYourFamily: return (min: 258, max: 259)
-                        case .enterYourInviteCode: return (min: 360, max: 361)
-                        }
-                    }) { sheet in
+                    cornerRadius: 34) { sheet in
             switch sheet {
             case .addMoreMember:
                 AddMoreMembers()
