@@ -17,10 +17,23 @@ struct Card: Identifiable, Equatable {
 
 struct StackedCards: View {
     
-    @State var cards: [Card]
+    var isChipSelected: (Card, ChipsModel) -> Bool
+    var onChipTap: (Card, ChipsModel) -> Void
+    
+    @State private var cards: [Card]
     @State var dragOffset: CGSize = .zero
     @State var dragValue: CGFloat = 0
     @State var tempCard: Card = Card(title: "", subTitle: "", color: .black, chips: [])
+    
+    init(
+        cards: [Card],
+        isChipSelected: @escaping (Card, ChipsModel) -> Bool = { _, _ in false },
+        onChipTap: @escaping (Card, ChipsModel) -> Void = { _, _ in }
+    ) {
+        self._cards = State(initialValue: cards)
+        self.isChipSelected = isChipSelected
+        self.onChipTap = onChipTap
+    }
     
     var body: some View {
         ZStack {
@@ -41,12 +54,15 @@ struct StackedCards: View {
                         
                         FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
                             ForEach(card.chips, id: \.id) { chip in
-                                IngredientsChips(
+                                IngredientsChipsForStackedCards(
                                     title: chip.name,
-                                    bgColor: .grayScale10,
+                                    bgColor: nil,
                                     fontColor: "303030",
                                     image: chip.icon ?? "",
-                                    isSelected: false,
+                                    onClick: {
+                                        onChipTap(card, chip)
+                                    },
+                                    isSelected: isChipSelected(card, chip),
                                     outlined: false
                                 )
                             }
