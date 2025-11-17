@@ -9,14 +9,14 @@ import SwiftUI
 
 struct IngredientsChips: View {
     var title: String = "Peanuts"
-    var bgColor: Color? = .white
+    @State var bgColor: Color? = nil
     var fontColor: String = "000000"
     var fontSize: CGFloat = 12
     var fontWeight: Font.Weight = .regular
     var image: String? = nil
     var familyList: [String] = []
     var onClick: (() -> Void)? = nil
-    var isSelected: Bool = false
+    @State var isSelected: Bool = false
     var outlined: Bool = true
     
     var body: some View {
@@ -56,10 +56,7 @@ struct IngredientsChips: View {
                 )
                 : isSelected
                     ? LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: Color(hex: "9DCF10"), location: 0.0),
-                            .init(color: Color(hex: "6B8E06"), location: 0.87)
-                        ]),
+                        colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
                         startPoint: .top,
                         endPoint: .bottom
                     )

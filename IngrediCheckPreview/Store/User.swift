@@ -52,20 +52,20 @@ struct FamilyMember: Codable {
 
 
 struct Preferences: Codable {
-    let allergies: [String]?
-    let intolerances: [String]?
+    let allergies: [String]? = nil
+    let intolerances: [String]? = nil
 
-    let region: RegionPreferences?
-    let avoid: AvoidPreferences?
-    let lifestyle: LifestylePreferences?
-    let nutrition: NutritionPreferences?
+    let region: RegionPreferences? = nil
+    let avoid: AvoidPreferences? = nil
+    let lifestyle: LifestylePreferences? = nil
+    let nutrition: NutritionPreferences? = nil
 
-    let ethical: [String]?
-    let taste: [String]?
-    let miscellaneousNotes: [String]?
+    let ethical: [String]? = nil
+    let taste: [String]? = nil
+    let miscellaneousNotes: [String]? = nil
 
-    let healthConditions: [String]?
-    let lifeStage: [String]?
+    let healthConditions: [String]? = nil
+    let lifeStage: [String]? = nil
 
     enum CodingKeys: String, CodingKey {
         case allergies = "Allergies"
