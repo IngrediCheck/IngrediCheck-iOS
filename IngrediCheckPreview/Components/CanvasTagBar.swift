@@ -11,6 +11,7 @@ struct CanvasTagBar: View {
     
     @ObservedObject var store: Onboarding
     var onTapCurrentSection: (() -> Void)? = nil
+    @Binding var scrollTarget: UUID?
     
     @State var iconsArr: [ChipsModel] = [
         ChipsModel(name: "Allergies", icon: "allergies"),
@@ -26,69 +27,40 @@ struct CanvasTagBar: View {
     ]
     @State var visited: [String] = []
     
-    private var selectedTitleBinding: Binding<String> {
-        Binding(
-            get: { store.sections[store.currentSectionIndex].name },
-            set: { newName in
-                guard let tappedIndex = iconsArr.firstIndex(where: { $0.name == newName }),
-                      store.sections.indices.contains(tappedIndex) else { return }
-                
-                if tappedIndex == store.currentSectionIndex {
-                    onTapCurrentSection?()
-                    return
-                }
-                
-                // Allow navigation to:
-                // 1) any section that is marked complete, or
-                // 2) any section that was already visited in this session
-                if store.sections[tappedIndex].isComplete || visited.contains(store.sections[tappedIndex].name) {
-                    store.currentSectionIndex = tappedIndex
-                    store.currentScreenIndex = 0
-                    if visited.contains(store.sections[tappedIndex].name) == false {
-                        visited.append(store.sections[tappedIndex].name)
-                    }
-                }
-            }
-        )
-    }
-    
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: -1) {
-                ForEach(iconsArr) { model in
-                    TagIconCapsule(
-                        image: model.icon ?? "",
-                        title: model.name,
-                        isSelected: selectedTitleBinding,
-                        isFirst: (model.name == iconsArr.first?.name),
-                        visited: $visited
-                    )
-                    .onTapGesture {
-                        guard let tappedIndex = iconsArr.firstIndex(where: { $0.id == model.id }) else { return }
-                        
-                        guard store.sections.indices.contains(tappedIndex) else { return }
-                        
-                        if tappedIndex == store.currentSectionIndex {
-                            onTapCurrentSection?()
-                            return
-                        }
-                        
-                        // Allow navigation to:
-                        // 1) any section that is marked complete, or
-                        // 2) any section that was already visited in this session
-                        let tappedName = store.sections[tappedIndex].name
-                        if store.sections[tappedIndex].isComplete || visited.contains(tappedName) {
-                            store.currentSectionIndex = tappedIndex
-                            store.currentScreenIndex = 0
-                            if visited.contains(tappedName) == false {
-                                visited.append(tappedName)
-                            }
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: -1) {
+                    ForEach(iconsArr.indices, id: \.self) { index in
+                        let model = iconsArr[index]
+                        TagIconCapsule(
+                            image: model.icon ?? "",
+                            title: model.name,
+                            isSelected: Binding(
+                                get: { store.sections[store.currentSectionIndex].name },
+                                set: { newName in
+                                    handleSelection(newName: newName, proxy: proxy)
+                                }
+                            ),
+                            isFirst: (model.name == iconsArr.first?.name),
+                            visited: $visited
+                        )
+                        .id(store.sections[safe: index]?.id)
+                        .onTapGesture {
+                            handleTap(index: index, proxy: proxy)
                         }
                     }
                 }
+                .padding(.horizontal, 20)
+                .animation(.linear(duration: 0.2), value: store.currentSectionIndex)
             }
-            .padding(.horizontal, 20)
-            .animation(.linear(duration: 0.2), value: store.currentSectionIndex)
+            .onChange(of: scrollTarget) { _ in
+                guard let target = scrollTarget else { return }
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(target, anchor: .center)
+                }
+                scrollTarget = nil
+            }
         }
         .onAppear() {
             // Initialize visited based on completed sections and current
@@ -110,6 +82,46 @@ struct CanvasTagBar: View {
                 visited.append(current)
             }
         }
+    }
+    
+    private func handleSelection(newName: String, proxy: ScrollViewProxy) {
+        guard let tappedIndex = iconsArr.firstIndex(where: { $0.name == newName }),
+              store.sections.indices.contains(tappedIndex) else { return }
+        
+        handleSelection(at: tappedIndex, proxy: proxy)
+    }
+    
+    private func handleTap(index: Int, proxy: ScrollViewProxy) {
+        handleSelection(at: index, proxy: proxy)
+    }
+    
+    private func handleSelection(at index: Int, proxy: ScrollViewProxy) {
+        guard store.sections.indices.contains(index) else { return }
+        
+        if index == store.currentSectionIndex {
+            onTapCurrentSection?()
+            return
+        }
+        
+        let tappedName = store.sections[index].name
+        if store.sections[index].isComplete || visited.contains(tappedName) {
+            store.currentSectionIndex = index
+            store.currentScreenIndex = 0
+            if visited.contains(tappedName) == false {
+                visited.append(tappedName)
+            }
+            if let id = store.sections[index].id as UUID? {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
+        }
+    }
+}
+
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }
 
