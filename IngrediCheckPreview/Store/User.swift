@@ -52,20 +52,20 @@ struct FamilyMember: Codable {
 
 
 struct Preferences: Codable {
-    let allergies: [String]? = nil
-    let intolerances: [String]? = nil
+    var allergies: [String]? = nil
+    var intolerances: [String]? = nil
 
-    let region: RegionPreferences? = nil
-    let avoid: AvoidPreferences? = nil
-    let lifestyle: LifestylePreferences? = nil
-    let nutrition: NutritionPreferences? = nil
+    var region: RegionPreferences? = nil
+    var avoid: AvoidPreferences? = nil
+    var lifestyle: LifestylePreferences? = nil
+    var nutrition: NutritionPreferences? = nil
 
-    let ethical: [String]? = nil
-    let taste: [String]? = nil
-    let miscellaneousNotes: [String]? = nil
+    var ethical: [String]? = nil
+    var taste: [String]? = nil
+    var miscellaneousNotes: [String]? = nil
 
-    let healthConditions: [String]? = nil
-    let lifeStage: [String]? = nil
+    var healthConditions: [String]? = nil
+    var lifeStage: [String]? = nil
 
     enum CodingKeys: String, CodingKey {
         case allergies = "Allergies"
@@ -83,13 +83,13 @@ struct Preferences: Codable {
 }
 
 struct RegionPreferences: Codable {
-    let indiaSouthAsia: [String]
-    let africa: [String]
-    let eastAsian: [String]
-    let middleEastMediterranean: [String]
-    let westernNative: [String]
-    let seventhDayAdventist: [String]
-    let other: [String]
+    var indiaSouthAsia: [String]
+    var africa: [String]
+    var eastAsian: [String]
+    var middleEastMediterranean: [String]
+    var westernNative: [String]
+    var seventhDayAdventist: [String]
+    var other: [String]
 
     enum CodingKeys: String, CodingKey {
         case indiaSouthAsia = "India & South Asia"
@@ -104,11 +104,11 @@ struct RegionPreferences: Codable {
 
 
 struct AvoidPreferences: Codable {
-    let oilsFats: [String]
-    let animalBased: [String]
-    let stimulantsSubstances: [String]
-    let additivesSweeteners: [String]
-    let plantBasedRestrictions: [String]
+    var oilsFats: [String]
+    var animalBased: [String]
+    var stimulantsSubstances: [String]
+    var additivesSweeteners: [String]
+    var plantBasedRestrictions: [String]
 
     enum CodingKeys: String, CodingKey {
         case oilsFats = "Oils & Fats"
@@ -120,9 +120,9 @@ struct AvoidPreferences: Codable {
 }
 
 struct LifestylePreferences: Codable {
-    let plantBalance: [String]
-    let qualitySource: [String]
-    let sustainableLiving: [String]
+    var plantBalance: [String]
+    var qualitySource: [String]
+    var sustainableLiving: [String]
 
     enum CodingKeys: String, CodingKey {
         case plantBalance = "Plant & Balance"
@@ -132,9 +132,9 @@ struct LifestylePreferences: Codable {
 }
 
 struct NutritionPreferences: Codable {
-    let macronutrientGoals: [String]
-    let sugarFiber: [String]
-    let dietFrameworks: [String]
+    var macronutrientGoals: [String]
+    var sugarFiber: [String]
+    var dietFrameworks: [String]
 
     enum CodingKeys: String, CodingKey {
         case macronutrientGoals = "Macronutrient Goals"

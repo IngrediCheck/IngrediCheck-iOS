@@ -9,6 +9,7 @@ import SwiftUI
 
 struct Nutrition: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Macronutrient Goals", subTitle: "Do you want to balance your proteins, carbs, and fats or focus on one?", color: .avatarPink, chips: [
             ChipsModel(name: "High Protein", icon: "chicken"),
@@ -62,5 +63,5 @@ struct Nutrition: View {
 }
 
 #Preview {
-    Nutrition(onboardingFlowType: .individual)
+    Nutrition(onboardingFlowType: .individual, preferences: .constant(Preferences()))
 }

@@ -16,7 +16,7 @@ struct IngredientsChips: View {
     var image: String? = nil
     var familyList: [String] = []
     var onClick: (() -> Void)? = nil
-    @State var isSelected: Bool = false
+    var isSelected: Bool = false
     var outlined: Bool = true
     
     var body: some View {

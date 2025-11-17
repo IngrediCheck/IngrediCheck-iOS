@@ -9,6 +9,7 @@ import SwiftUI
 
 struct Taste: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
         ChipsModel(name: "Spicy lover", icon: "red-chilli"),
         ChipsModel(name: "Avoid Spicy", icon: "stop"),
@@ -51,7 +52,16 @@ struct Taste: View {
                 ForEach(arr) { ele in
                     IngredientsChips(
                         title: ele.name,
-                        image: ele.icon
+                        image: ele.icon,
+                        onClick: {
+                            var set = Set(preferences.taste ?? [])
+                            if set.contains(ele.name) {
+                                set.remove(ele.name)
+                            } else {
+                                set.insert(ele.name)
+                            }
+                            preferences.taste = Array(set)
+                        }, isSelected: (preferences.taste ?? []).contains(ele.name)
                     )
                 }
             }
@@ -61,5 +71,5 @@ struct Taste: View {
 }
 
 #Preview {
-    Taste(onboardingFlowType: .family)
+    Taste(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

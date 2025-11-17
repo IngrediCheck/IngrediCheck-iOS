@@ -9,6 +9,9 @@ import SwiftUI
 
 struct CanvasTagBar: View {
     
+    @ObservedObject var store: Onboarding
+    var onTapCurrentSection: (() -> Void)? = nil
+    
     @State var iconsArr: [ChipsModel] = [
         ChipsModel(name: "Allergies", icon: "allergies"),
         ChipsModel(name: "Intolerances", icon: "mingcute_alert-line"),
@@ -21,8 +24,33 @@ struct CanvasTagBar: View {
         ChipsModel(name: "Ethical", icon: "streamline_recycle-1-solid"),
         ChipsModel(name: "Taste", icon: "iconoir_chocolate")
     ]
-    @State var selectedTag: ChipsModel = ChipsModel(name: "Allergies", icon: "allergies")
     @State var visited: [String] = []
+    
+    private var selectedTitleBinding: Binding<String> {
+        Binding(
+            get: { store.sections[store.currentSectionIndex].name },
+            set: { newName in
+                guard let tappedIndex = iconsArr.firstIndex(where: { $0.name == newName }),
+                      store.sections.indices.contains(tappedIndex) else { return }
+                
+                if tappedIndex == store.currentSectionIndex {
+                    onTapCurrentSection?()
+                    return
+                }
+                
+                // Allow navigation to:
+                // 1) any section that is marked complete, or
+                // 2) any section that was already visited in this session
+                if store.sections[tappedIndex].isComplete || visited.contains(store.sections[tappedIndex].name) {
+                    store.currentSectionIndex = tappedIndex
+                    store.currentScreenIndex = 0
+                    if visited.contains(store.sections[tappedIndex].name) == false {
+                        visited.append(store.sections[tappedIndex].name)
+                    }
+                }
+            }
+        )
+    }
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -31,24 +59,56 @@ struct CanvasTagBar: View {
                     TagIconCapsule(
                         image: model.icon ?? "",
                         title: model.name,
-                        isSelected: $selectedTag.name,
+                        isSelected: selectedTitleBinding,
                         isFirst: (model.name == iconsArr.first?.name),
                         visited: $visited
                     )
                     .onTapGesture {
-                        selectedTag = model
+                        guard let tappedIndex = iconsArr.firstIndex(where: { $0.id == model.id }) else { return }
                         
-                        if visited.contains(model.name) == false {
-                            visited.append(model.name)
+                        guard store.sections.indices.contains(tappedIndex) else { return }
+                        
+                        if tappedIndex == store.currentSectionIndex {
+                            onTapCurrentSection?()
+                            return
+                        }
+                        
+                        // Allow navigation to:
+                        // 1) any section that is marked complete, or
+                        // 2) any section that was already visited in this session
+                        let tappedName = store.sections[tappedIndex].name
+                        if store.sections[tappedIndex].isComplete || visited.contains(tappedName) {
+                            store.currentSectionIndex = tappedIndex
+                            store.currentScreenIndex = 0
+                            if visited.contains(tappedName) == false {
+                                visited.append(tappedName)
+                            }
                         }
                     }
                 }
             }
             .padding(.horizontal, 20)
-            .animation(.linear(duration: 0.2), value: selectedTag.name)
+            .animation(.linear(duration: 0.2), value: store.currentSectionIndex)
         }
         .onAppear() {
-            visited.append(selectedTag.name)
+            // Initialize visited based on completed sections and current
+            let completed = store.sections.filter { $0.isComplete }.map { $0.name }
+            let current = store.sections[store.currentSectionIndex].name
+            let initial = Array(Set(completed + [current]))
+            visited = initial
+        }
+        .onReceive(store.$sections) { _ in
+            // Refresh visited whenever completion state changes
+            let completed = store.sections.filter { $0.isComplete }.map { $0.name }
+            let current = store.sections[store.currentSectionIndex].name
+            let updated = Array(Set(completed + [current]))
+            visited = updated
+        }
+        .onChange(of: store.currentSectionIndex) { _ in
+            let current = store.sections[store.currentSectionIndex].name
+            if visited.contains(current) == false {
+                visited.append(current)
+            }
         }
     }
 }
@@ -93,6 +153,6 @@ struct TagIconCapsule : View {
     }
 }
 
-#Preview {
-    CanvasTagBar()
-}
+//#Preview {
+//    CanvasTagBar()
+//}

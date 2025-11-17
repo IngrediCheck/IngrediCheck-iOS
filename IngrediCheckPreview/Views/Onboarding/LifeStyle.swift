@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LifeStyle: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Plant & Balance", subTitle: "Do you follow a lant-forward or flexible eating style?", color: .avatarYellow, chips: [
             ChipsModel(name: "Vegetarian", icon: "vegetarian"),
@@ -60,5 +61,5 @@ struct LifeStyle: View {
 }
 
 #Preview {
-    LifeStyle(onboardingFlowType: .family)
+    LifeStyle(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

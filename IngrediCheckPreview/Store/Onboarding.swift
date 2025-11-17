@@ -44,7 +44,7 @@ enum OnboardingScreenId: String {
 struct OnboardingScreen: Identifiable {
     var id = UUID()
     var screenId: OnboardingScreenId
-    var view: AnyView
+    var buildView: (OnboardingFlowType, Binding<Preferences>) -> AnyView
 }
 
 struct OnboardingSection: Identifiable {
@@ -55,38 +55,58 @@ struct OnboardingSection: Identifiable {
 }
 
 struct OnboardingSectionsFactory {
-    static func sections(onboardingFlowType: OnboardingFlowType) -> [OnboardingSection] {
+    static func sections() -> [OnboardingSection] {
         return [
             OnboardingSection(name: "Allergies", screens: [
-                OnboardingScreen(screenId: .allergies, view: AnyView(Text("Allergies: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .allergies, buildView: { flow, prefs in
+                    AnyView(Allergies(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Intolerances", screens: [
-                OnboardingScreen(screenId: .intolerances, view: AnyView(Text("Intolerances: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .intolerances, buildView: { flow, prefs in
+                    AnyView(Intolerances(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Health Conditions", screens: [
-                OnboardingScreen(screenId: .healthConditions, view: AnyView(Text("Health Conditions: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .healthConditions, buildView: { flow, prefs in
+                    AnyView(HealthConditions(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
-            OnboardingSection(name: "Life stage", screens: [
-                OnboardingScreen(screenId: .lifeStage, view: AnyView(Text("Life Stage: \(onboardingFlowType.rawValue)")))
+            OnboardingSection(name: "Life Stage", screens: [
+                OnboardingScreen(screenId: .lifeStage, buildView: { flow, prefs in
+                    AnyView(LifeStage(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Region", screens: [
-                OnboardingScreen(screenId: .region, view: AnyView(Text("Region: \(onboardingFlowType.rawValue)"))),
+                OnboardingScreen(screenId: .region, buildView: { flow, prefs in
+                    AnyView(Region(onboardingFlowType: flow, preferences: prefs))
+                }),
 //                OnboardingScreen(screenId: .region, view: AnyView(Text("Inner Region: \(onboardingFlowType.rawValue)")))
             ]),
             OnboardingSection(name: "Avoid", screens: [
-                OnboardingScreen(screenId: .aviod, view: AnyView(Text("Avoid: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .aviod, buildView: { flow, prefs in
+                    AnyView(Avoid(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Life Style", screens: [
-                OnboardingScreen(screenId: .lifeStyle, view: AnyView(Text("Life Style: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .lifeStyle, buildView: { flow, prefs in
+                    AnyView(LifeStyle(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Nutrition", screens: [
-                OnboardingScreen(screenId: .nutrition, view: AnyView(Text("Nutrition: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .nutrition, buildView: { flow, prefs in
+                    AnyView(Nutrition(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Ethical", screens: [
-                OnboardingScreen(screenId: .ethical, view: AnyView(Text("Ethical: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .ethical, buildView: { flow, prefs in
+                    AnyView(Ethical(onboardingFlowType: flow, preferences: prefs))
+                })
             ]),
             OnboardingSection(name: "Taste", screens: [
-                OnboardingScreen(screenId: .taste, view: AnyView(Text("Taste: \(onboardingFlowType.rawValue)")))
+                OnboardingScreen(screenId: .taste, buildView: { flow, prefs in
+                    AnyView(Taste(onboardingFlowType: flow, preferences: prefs))
+                })
             ])
         ]
     }
@@ -113,7 +133,7 @@ class Onboarding: ObservableObject {
         onboardingFlowtype: OnboardingFlowType,
     ) {
         self.onboardingFlowtype = onboardingFlowtype
-        self.sections = OnboardingSectionsFactory.sections(onboardingFlowType: onboardingFlowtype)
+        self.sections = OnboardingSectionsFactory.sections()
     }
     
     var currentSection: OnboardingSection {

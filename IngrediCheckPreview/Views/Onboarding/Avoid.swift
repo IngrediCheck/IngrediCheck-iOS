@@ -9,6 +9,7 @@ import SwiftUI
 
 struct Avoid: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Oils & Fats", subTitle: "In fats or oils, what do you avoid?", color: .avatarYellow, chips: [
             ChipsModel(name: "Hydrogenated oils / Trans fats", icon: "hydrogenated oil"),
@@ -74,5 +75,5 @@ struct Avoid: View {
 }
 
 #Preview {
-    Avoid(onboardingFlowType: .family)
+    Avoid(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

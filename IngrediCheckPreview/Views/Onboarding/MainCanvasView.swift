@@ -53,34 +53,17 @@ struct MainCanvasView: View {
                     (min: 416, max: 417)
                 }
             }) { sheet in
-                switch sheet {
-                case .allergies:
-                    Allergies(onboardingFlowType: store.onboardingFlowtype)
-                case .intolerances:
-                    Intolerances(onboardingFlowType: store.onboardingFlowtype)
-                case .healthConditions:
-                    HealthConditions(onboardingFlowType: store.onboardingFlowtype)
-                case .lifeStage:
-                    LifeStage(onboardingFlowType: store.onboardingFlowtype)
-                case .region:
-                    Region(onboardingFlowType: store.onboardingFlowtype)
-                case .aviod:
-                    Avoid(onboardingFlowType: store.onboardingFlowtype)
-                case .lifeStyle:
-                    LifeStyle(onboardingFlowType: store.onboardingFlowtype)
-                case .nutrition:
-                    Nutrition(onboardingFlowType: store.onboardingFlowtype)
-                case .ethical:
-                    Ethical(onboardingFlowType: store.onboardingFlowtype)
-                case .taste:
-                    Taste(onboardingFlowType: store.onboardingFlowtype)
-                }
+                store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
             }
             
             VStack(spacing: 0) {
-                CustomIngrediCheckProgressBar()
+                CustomIngrediCheckProgressBar(progress: CGFloat(store.progress * 100))
+                    .animation(.smooth, value: store.progress)
                 
-                CanvasTagBar()
+                CanvasTagBar(store: store, onTapCurrentSection: {
+                    // Re-present the current sheet when tapping the active tag
+                    presentedOnboardingSheet = store.currentScreen.screenId
+                })
                     .padding(.bottom, 16)
                 
                 
