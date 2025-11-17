@@ -57,7 +57,17 @@ struct Nutrition: View {
             
             StackedCards(cards: arr)
                 .padding(.horizontal, 20)
+            
+            HStack {
+                Spacer()
+                
+                GreenCircle(circleSize: 52)
+            }
+            .padding(.horizontal, 20)
         }
+        .padding(.top, 28)
+        .padding(.bottom, 16)
+
     }
 }
 
