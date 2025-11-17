@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
@@ -208,6 +210,9 @@ struct HomeView: View {
             , alignment: .bottom
         )
         .background(Color(hex: "FFFFFF"))
+        .onAppear {
+            coordinator.setCanvasRoute(.home)
+        }
     }
     
 }

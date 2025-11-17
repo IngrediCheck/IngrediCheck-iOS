@@ -7,56 +7,36 @@
 
 import SwiftUI
 
-enum HeyThereScreenSheetOptions: String, CaseIterable, Identifiable {
-    case alreadyHaveAnAccount
-    case welcomeBack
-    
-    var id: String { self.rawValue }
-}
-
 struct HeyThereScreen: View {
-    
-    @State var heyThereScreenSheetOption: HeyThereScreenSheetOptions? = nil
-    @State var goToBlankScreen: Bool = false
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     var body: some View {
-        ZStack {
+        VStack(spacing: 24) {
+            Spacer()
             
-           CustomSheet(item: $heyThereScreenSheetOption, cornerRadius: 34, heightsForItem: { sheet in
-               switch sheet {
-               case .alreadyHaveAnAccount: return (min: 274, max: 275)
-               case .welcomeBack: return (min: 290, max: 291)
-               }
-           }, content: { sheet in
-               switch sheet {
-                   
-               case .alreadyHaveAnAccount: AlreadyHaveAnAccount {
-                   heyThereScreenSheetOption = .welcomeBack
-               } noPressed: {
-                   heyThereScreenSheetOption = nil
-                   goToBlankScreen = true
-               }
-
-               case .welcomeBack: WelcomeBack()
-                   
-               }
-           })
+            Text("Hey There 👋")
+                .font(NunitoFont.bold.size(32))
+                .foregroundStyle(.grayScale150)
             
-            VStack {
-                Text("Hey There 👋")
-                
-                NavigationLink(destination: BlankScreen(), isActive: $goToBlankScreen) {
-                    EmptyView()
-                }
-            }
-            .onAppear() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    heyThereScreenSheetOption = .alreadyHaveAnAccount
-                }
-                
-            }
+            Text("IngrediBot will help you get set up in a minute or two.")
+                .font(ManropeFont.medium.size(16))
+                .foregroundStyle(.grayScale110)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
             
+            Spacer()
             
+            Image("ingrediBot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 180, height: 180)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white)
+        .onAppear {
+            coordinator.setCanvasRoute(.heyThere)
         }
     }
 }

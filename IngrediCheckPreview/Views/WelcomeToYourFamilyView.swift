@@ -8,20 +8,9 @@
 import SwiftUI
 
 struct WelcomeToYourFamilyView: View {
-    
-    @State var showSheet: Bool = false
-    @State var goToHome: Bool = false
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     var body: some View {
-        ZStack {
-            
-            CustomBoolSheet(isPresented: $showSheet, cornerRadius: 34, heights: (min: 283, max: 284), content: {
-                AllSetToJoinYourFamily {
-                    showSheet = false
-                    goToHome = true
-                }
-            })
-            
             VStack {
                 Group {
                     Text("Welcome to your family,")
@@ -30,24 +19,16 @@ struct WelcomeToYourFamilyView: View {
                 .font(NunitoFont.bold.size(22))
                 .foregroundStyle(.grayScale150)
                 
-                Text("You’re now part of this shared space — where everyone’s preferences and safety come together.")
+            Text("You're now part of this shared space — where everyone's preferences and safety come together.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
                 
-                NavigationLink(destination: HomeView(), isActive: $goToHome) {
-                    EmptyView()
-                }
-                
                 Spacer()
             }
-            .onAppear() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    showSheet = true
-                }
-            }
+        .onAppear {
+            coordinator.setCanvasRoute(.welcomeToYourFamily)
         }
-        
     }
 }
 

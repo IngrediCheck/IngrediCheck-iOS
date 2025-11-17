@@ -14,46 +14,13 @@ extension OnboardingScreenId: Identifiable {
 struct MainCanvasView: View {
     
 	@StateObject private var store: Onboarding
-	@State private var presentedOnboardingSheet: OnboardingScreenId? = nil
+	@Environment(AppNavigationCoordinator.self) private var coordinator
 	
 	init(flow: OnboardingFlowType) {
 		_store = StateObject(wrappedValue: Onboarding(onboardingFlowtype: flow))
 	}
     
-    @State var goToHomeScreen: Bool = false
-    
     var body: some View {
-        ZStack {
-            
-			CustomSheet(item: $presentedOnboardingSheet,
-						cornerRadius: 34,
-						heightsForItem: { _ in
-							(min: 500, max: 501)
-						}) { sheet in
-                            switch sheet {
-                            case .allergies:
-                                Allergies(onboardingFlowType: store.onboardingFlowtype)
-                            case .intolerances:
-                                Intolerances(onboardingFlowType: store.onboardingFlowtype)
-                            case .healthConditions:
-                                HealthConditions(onboardingFlowType: store.onboardingFlowtype)
-                            case .lifeStage:
-                                LifeStage(onboardingFlowType: store.onboardingFlowtype)
-                            case .region:
-                                Region(onboardingFlowType: store.onboardingFlowtype)
-                            case .aviod:
-                                Avoid(onboardingFlowType: store.onboardingFlowtype)
-                            case .lifeStyle:
-                                LifeStyle(onboardingFlowType: store.onboardingFlowtype)
-                            case .nutrition:
-                                Nutrition(onboardingFlowType: store.onboardingFlowtype)
-                            case .ethical:
-                                Ethical(onboardingFlowType: store.onboardingFlowtype)
-                            case .taste:
-                                Taste(onboardingFlowType: store.onboardingFlowtype)
-                            }
-                        }
-            
             VStack(spacing: 0) {
                 CustomIngrediCheckProgressBar()
                 
@@ -67,49 +34,63 @@ struct MainCanvasView: View {
                     .frame(width: UIScreen.main.bounds.width * 0.9)
                     .overlay(
                         VStack {
-                            
                                 Button(action: {
                                     if store.currentScreen.screenId.rawValue == "taste" {
-                                        presentedOnboardingSheet = nil
-                                        goToHomeScreen = true
+                                coordinator.showCanvas(.home)
                                     } else {
                                         store.next()
                                     }
-                                    
                                 }, label: {
                                     Text("Next")
                                 })
                             
-                            
-                            
-                            
                             Spacer()
                             Spacer()
                         }
-                        
-                    )
-                
-                
-                NavigationLink(isActive: $goToHomeScreen) {
-                    HomeView()
-                } label: {
-                    EmptyView()
-                }
-
-            }
-            
+                )
         }
 		.onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                presentedOnboardingSheet = store.currentScreen.screenId
+            coordinator.setCanvasRoute(.mainCanvas(flow: store.onboardingFlowtype))
+            DispatchQueue.main.async {
+                updateBottomSheetForCurrentScreen()
             }
 		}
 		.onChange(of: store.currentScreenIndex) { _ in
-			presentedOnboardingSheet = store.currentScreen.screenId
+			updateBottomSheetForCurrentScreen()
 		}
 		.onChange(of: store.currentSectionIndex) { _ in
-			presentedOnboardingSheet = store.currentScreen.screenId
+			updateBottomSheetForCurrentScreen()
 		}
+    }
+    
+    private func updateBottomSheetForCurrentScreen() {
+        let screenId = store.currentScreen.screenId
+        let bottomSheetRoute: BottomSheetRoute
+        
+        switch screenId {
+        case .allergies:
+            bottomSheetRoute = .allergies
+        case .intolerances:
+            bottomSheetRoute = .intolerances
+        case .healthConditions:
+            bottomSheetRoute = .healthConditions
+        case .lifeStage:
+            bottomSheetRoute = .lifeStage
+        case .region:
+            bottomSheetRoute = .region
+        case .aviod:
+            bottomSheetRoute = .avoid
+        case .lifeStyle:
+            bottomSheetRoute = .lifeStyle
+        case .nutrition:
+            bottomSheetRoute = .nutrition
+        case .ethical:
+            bottomSheetRoute = .ethical
+        case .taste:
+            bottomSheetRoute = .taste
+        }
+        
+        coordinator.navigateInBottomSheet(bottomSheetRoute)
     }
 }
 
