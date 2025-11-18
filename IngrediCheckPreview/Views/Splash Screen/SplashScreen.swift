@@ -75,7 +75,7 @@ struct SplashScreen: View {
                     
                     if idx == 2 {
                         NavigationLink {
-                            HeyThereScreen()
+                            RootContainerView()
                         } label: {
                             GreenCapsule(title: "Get Started")
                                 .frame(width: 159)
