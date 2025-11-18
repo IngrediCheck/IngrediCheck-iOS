@@ -7,51 +7,11 @@
 
 import SwiftUI
 
-enum HeyThereScreenSheetOptions: String, CaseIterable, Identifiable {
-    case alreadyHaveAnAccount
-    case welcomeBack
-    
-    var id: String { self.rawValue }
-}
-
 struct HeyThereScreen: View {
     
-    @State var heyThereScreenSheetOption: HeyThereScreenSheetOptions? = nil
-    @State var goToBlankScreen: Bool = false
-    
     var body: some View {
-        ZStack {
-            
-           CustomSheet(item: $heyThereScreenSheetOption, cornerRadius: 34, content: { sheet in
-               switch sheet {
-                   
-               case .alreadyHaveAnAccount: AlreadyHaveAnAccount {
-                   
-               } noPressed: {
-                   goToBlankScreen = true
-               }
-
-
-               case .welcomeBack: WelcomeBack()
-                   
-               }
-           })
-            
-            VStack {
-                Text("Hey There 👋")
-                
-                NavigationLink(destination: BlankScreen(), isActive: $goToBlankScreen) {
-                    EmptyView()
-                }
-            }
-            .onAppear() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    heyThereScreenSheetOption = .alreadyHaveAnAccount
-                }
-                
-            }
-            
-            
+        VStack {
+            Text("Hey There 👋")
         }
     }
 }

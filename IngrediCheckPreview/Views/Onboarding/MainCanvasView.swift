@@ -15,6 +15,7 @@ struct MainCanvasView: View {
     
 	@StateObject private var store: Onboarding
 	@State private var presentedOnboardingSheet: OnboardingScreenId? = nil
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     @State var preferences: Preferences = Preferences()
     @State private var cardScrollTarget: UUID? = nil
@@ -26,8 +27,6 @@ struct MainCanvasView: View {
 	init(flow: OnboardingFlowType) {
 		_store = StateObject(wrappedValue: Onboarding(onboardingFlowtype: flow))
 	}
-    
-    @State var goToHomeScreen: Bool = false
     
     var body: some View {
         let cards = canvasCards()
@@ -45,7 +44,7 @@ struct MainCanvasView: View {
                         Button(action: {
                             if store.currentScreen.screenId.rawValue == "taste" {
                                 presentedOnboardingSheet = nil
-                                goToHomeScreen = true
+                                coordinator.showCanvas(.home)
                             } else {
                                 manuallyAdvanceToNextSheet()
                             }
@@ -85,13 +84,6 @@ struct MainCanvasView: View {
                             )
                         }
                     }
-                
-                
-                NavigationLink(isActive: $goToHomeScreen) {
-                    HomeView()
-                } label: {
-                    EmptyView()
-                }
 
             }
             

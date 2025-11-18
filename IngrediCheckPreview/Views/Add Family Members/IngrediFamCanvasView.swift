@@ -822,72 +822,61 @@ struct PreferenceAreReady: View {
 struct AlreadyHaveAnAccount: View {
     @State var yesPressed: () -> Void = { }
     @State var noPressed: () -> Void = { }
-    @State var goToNextScreen: Bool = false
 
     var body: some View {
-        
-        NavigationStack {
-            VStack(spacing: 0) {
-                VStack(spacing: 12) {
-                    Text("Already have an account?")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                        .multilineTextAlignment(.center)
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Already have an account?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
 
-                    Text("We’ll help you log in or start fresh.")
-                        .font(ManropeFont.medium.size(12))
-                        .foregroundStyle(.grayScale120)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.bottom, 40)
-
-                HStack(spacing: 16) {
-                    Button {
-                        yesPressed()
-                    } label: {
-                        Text("Yes, I have")
-                            .font(NunitoFont.semiBold.size(16))
-                            .foregroundStyle(.grayScale110)
-                            .frame(height: 52)
-                            .frame(minWidth: 152)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                Capsule()
-                                    .foregroundStyle(.grayScale40)
-                            )
-                    }
-
-                    Button {
-                        goToNextScreen = true
-                        noPressed()
-                        
-                    } label: {
-                        GreenCapsule(title: "No")
-                    }
-                    
-                }
-                .padding(.bottom, 20)
-
-                Text("You can switch anytime before continuing.")
-                    .font(ManropeFont.regular.size(12))
+                Text("We'll help you log in or start fresh.")
+                    .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
-                
-                NavigationLink(destination: DoYouHaveAnInviteCode(), isActive: $goToNextScreen) {
-                    EmptyView()
-                }
             }
-            .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(.neutral500)
-                    .frame(width: 60, height: 4)
-                    .padding(.top, 11)
-                , alignment: .top
-            )
+            .padding(.bottom, 40)
+
+            HStack(spacing: 16) {
+                Button {
+                    yesPressed()
+                } label: {
+                    Text("Yes, I have")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .frame(height: 52)
+                        .frame(minWidth: 152)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Capsule()
+                                .foregroundStyle(.grayScale40)
+                        )
+                }
+
+                Button {
+                    noPressed()
+                } label: {
+                    GreenCapsule(title: "No")
+                }
+                
+            }
+            .padding(.bottom, 20)
+
+            Text("You can switch anytime before continuing.")
+                .font(ManropeFont.regular.size(12))
+                .foregroundStyle(.grayScale120)
+                .multilineTextAlignment(.center)
         }
-        
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 

@@ -7,79 +7,15 @@
 
 import SwiftUI
 
-enum LetsMeetYourIngrediFamSheetOption: String, Identifiable {
-    case letsMeetYourIngrediFam
-    case whatsYourName
-    case addMoreMembers
-    case addMoreMembersMinimal
-    case generateAvatar
-    case bringingYourAvatar
-    case meetYourAvatar
-    
-    var id: String {
-        return self.rawValue
-    }
-}
-
 struct LetsMeetYourIngrediFamView: View {
-    @State var letsMeetYourIngrediFamSheetOption: LetsMeetYourIngrediFamSheetOption? = nil
-    @State var isExpandedMinimal: Bool = false
-    @State var goToDietartPreferenceScreen: Bool = false
+    
     var body: some View {
         ZStack {
-            
-            CustomSheet(item: $letsMeetYourIngrediFamSheetOption,
-                        cornerRadius: 34) { sheet in
-                switch sheet {
-                case .letsMeetYourIngrediFam: MeetYourIngrediFam {
-                    letsMeetYourIngrediFamSheetOption = .whatsYourName
-                }
-                case .whatsYourName: WhatsYourName {
-                    letsMeetYourIngrediFamSheetOption = .generateAvatar
-                } addMemberPressed: {
-                    letsMeetYourIngrediFamSheetOption = .addMoreMembers
-                }
-
-                case .addMoreMembers: AddMoreMembers {
-                    letsMeetYourIngrediFamSheetOption = .generateAvatar
-                } addMemberPressed: {
-                    letsMeetYourIngrediFamSheetOption = .addMoreMembersMinimal
-                }
-
-                case .addMoreMembersMinimal: AddMoreMembersMinimal {
-                    letsMeetYourIngrediFamSheetOption = nil
-                    goToDietartPreferenceScreen = true
-                } addMorePressed: {
-                    letsMeetYourIngrediFamSheetOption = .addMoreMembers
-                }
-
-                case .generateAvatar: GenerateAvatar(isExpandedMinimal: $isExpandedMinimal) {
-                    letsMeetYourIngrediFamSheetOption = .bringingYourAvatar
-                } generatePressed: {
-                    letsMeetYourIngrediFamSheetOption = .bringingYourAvatar
-                }
-
-                case .bringingYourAvatar: BringingYourAvatar {
-                    letsMeetYourIngrediFamSheetOption = .meetYourAvatar
-                }
-                case .meetYourAvatar: MeetYourAvatar {
-                    letsMeetYourIngrediFamSheetOption = .bringingYourAvatar
-                } assignedPressed: {
-                    letsMeetYourIngrediFamSheetOption = .addMoreMembersMinimal
-                }
-
-                }
-            }
-            
             VStack {
                 RoundedRectangle(cornerRadius: 24)
                     .foregroundStyle(.white)
                     .frame(width: UIScreen.main.bounds.width * 0.9)
                     .shadow(color: .gray.opacity(0.5), radius: 9, x: 0, y: 0)
-                
-                NavigationLink(destination: DietaryPreferencesAndRestrictions(isFamilyFlow: true), isActive: $goToDietartPreferenceScreen) {
-                    EmptyView()
-                }
             }
             
             VStack {
@@ -89,11 +25,6 @@ struct LetsMeetYourIngrediFamView: View {
                 Spacer()
                 Spacer()
                 Spacer()
-            }
-            .onAppear() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    letsMeetYourIngrediFamSheetOption = .letsMeetYourIngrediFam
-                }
             }
         }
     }

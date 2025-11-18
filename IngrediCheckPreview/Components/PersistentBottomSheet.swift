@@ -9,6 +9,7 @@ import SwiftUI
 
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @State private var preferences: Preferences = Preferences()
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -169,34 +170,34 @@ struct PersistentBottomSheet: View {
             }
             
         case .allergies:
-            Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: <#Binding<Preferences>#>)
+            Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .intolerances:
-            Intolerances(onboardingFlowType: getOnboardingFlowType())
+            Intolerances(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .healthConditions:
-            HealthConditions(onboardingFlowType: getOnboardingFlowType())
+            HealthConditions(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .lifeStage:
-            LifeStage(onboardingFlowType: getOnboardingFlowType())
+            LifeStage(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .region:
-            Region(onboardingFlowType: getOnboardingFlowType())
+            Region(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .avoid:
-            Avoid(onboardingFlowType: getOnboardingFlowType())
+            Avoid(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .lifeStyle:
-            LifeStyle(onboardingFlowType: getOnboardingFlowType())
+            LifeStyle(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .nutrition:
-            Nutrition(onboardingFlowType: getOnboardingFlowType())
+            Nutrition(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .ethical:
-            Ethical(onboardingFlowType: getOnboardingFlowType())
+            Ethical(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .taste:
-            Taste(onboardingFlowType: getOnboardingFlowType())
+            Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
             
         case .homeDefault:
             EmptyView()
