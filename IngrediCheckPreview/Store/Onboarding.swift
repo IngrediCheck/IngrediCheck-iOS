@@ -121,6 +121,7 @@ class Onboarding: ObservableObject {
     @Published var currentScreenIndex: Int = 0
     @Published var isUploading: Bool = false
     @Published var uploadError: String?
+    @Published var preferences: Preferences = Preferences()
 
     
     var progress: Double {

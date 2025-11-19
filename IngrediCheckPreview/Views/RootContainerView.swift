@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RootContainerView: View {
     @State private var coordinator = AppNavigationCoordinator()
+    @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -20,6 +21,7 @@ struct RootContainerView: View {
             PersistentBottomSheet()
         }
         .environment(coordinator)
+        .environmentObject(onboarding)
     }
     
     @ViewBuilder

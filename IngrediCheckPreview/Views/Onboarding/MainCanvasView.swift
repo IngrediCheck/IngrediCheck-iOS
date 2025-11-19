@@ -7,104 +7,55 @@
 
 import SwiftUI
 
-extension OnboardingScreenId: Identifiable {
-	var id: String { rawValue }
-}
-
 struct MainCanvasView: View {
     
-	@StateObject private var store: Onboarding
-	@State private var presentedOnboardingSheet: OnboardingScreenId? = nil
+    @EnvironmentObject private var store: Onboarding
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    private let flow: OnboardingFlowType
     
-    @State var preferences: Preferences = Preferences()
     @State private var cardScrollTarget: UUID? = nil
     @State private var tagBarScrollTarget: UUID? = nil
-    @State private var scrollToTopOnNewCards: Bool = false
-    @State private var previousCardIds: [UUID] = []
-    @State private var isManuallyAdvancingSheet: Bool = false
 	
 	init(flow: OnboardingFlowType) {
-		_store = StateObject(wrappedValue: Onboarding(onboardingFlowtype: flow))
+        self.flow = flow
 	}
     
     var body: some View {
         let cards = canvasCards()
         
-        ZStack {
+        VStack(spacing: 0) {
+            CustomIngrediCheckProgressBar(progress: CGFloat(store.progress * 100))
+                .animation(.smooth, value: store.progress)
             
-            CustomSheet(item: $presentedOnboardingSheet,
-                        cornerRadius: 34) { _ in
-                VStack(spacing: 0) {
-                    store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
-                        .padding(.bottom, 32)
-                    
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            if store.currentScreen.screenId.rawValue == "taste" {
-                                presentedOnboardingSheet = nil
-                                coordinator.showCanvas(.home)
-                            } else {
-                                manuallyAdvanceToNextSheet()
-                            }
-                        }, label: {
-                            GreenCircle()
-                        })
-                        .buttonStyle(.plain)
+            CanvasTagBar(
+                store: store,
+                onTapCurrentSection: {
+                    // Scroll to the current section’s cards when tapping the active tag
+                    scheduleScrollToCurrentSectionViews()
+                },
+                scrollTarget: $tagBarScrollTarget
+            )
+            .padding(.bottom, 16)
+            
+            RoundedRectangle(cornerRadius: 24)
+                .foregroundStyle(.white)
+                .shadow(color: .gray.opacity(0.3), radius: 9, x: 0, y: 0)
+                .frame(width: UIScreen.main.bounds.width * 0.9)
+                .overlay(alignment: .top) {
+                    if let cards, cards.isEmpty == false {
+                        CanvasSummaryScrollView(
+                            cards: cards,
+                            scrollTarget: $cardScrollTarget
+                        )
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
                 }
-                .padding(.top, 8)
-            }
-            
-            VStack(spacing: 0) {
-                CustomIngrediCheckProgressBar(progress: CGFloat(store.progress * 100))
-                    .animation(.smooth, value: store.progress)
-                
-                CanvasTagBar(store: store,
-                             onTapCurrentSection: {
-                    // Re-present the current sheet when tapping the active tag
-                    presentedOnboardingSheet = store.currentScreen.screenId
-                }, scrollTarget: $tagBarScrollTarget)
-                    .padding(.bottom, 16)
-                
-                
-                RoundedRectangle(cornerRadius: 24)
-                    .foregroundStyle(.white)
-                    .shadow(color: .gray.opacity(0.3), radius: 9, x: 0, y: 0)
-                    .frame(width: UIScreen.main.bounds.width * 0.9)
-                    .overlay(alignment: .top) {
-                        if let cards, cards.isEmpty == false {
-                            CanvasSummaryScrollView(
-                                cards: cards,
-                                scrollTarget: $cardScrollTarget,
-                                scrollToTopOnNewCards: $scrollToTopOnNewCards
-                            )
-                        }
-                    }
-
-            }
-            
         }
 		.onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                presentedOnboardingSheet = store.currentScreen.screenId
-            }
-            previousCardIds = cards?.map(\.id) ?? []
-		}
-		.onChange(of: store.currentScreenIndex) { _ in
-            guard isManuallyAdvancingSheet == false else { return }
-			presentedOnboardingSheet = store.currentScreen.screenId
+            store.onboardingFlowtype = flow
 		}
 		.onChange(of: store.currentSectionIndex) { _ in
-            guard isManuallyAdvancingSheet == false else { return }
-			presentedOnboardingSheet = store.currentScreen.screenId
             scheduleScrollToCurrentSectionViews()
-		}
-        .onChange(of: cards?.map(\.id) ?? []) { newIds in
-            handleCardIdsChange(newIds)
+            syncBottomSheetWithCurrentSection()
 		}
         .navigationBarBackButtonHidden(true)
     }
@@ -130,37 +81,19 @@ struct MainCanvasView: View {
         tagBarScrollTarget = currentSectionId
     }
     
-    private func handleCardIdsChange(_ newIds: [UUID]) {
-        let previous = previousCardIds
-        let added = newIds.filter { previous.contains($0) == false }
+    /// Keep the bottom sheet question in sync with the currently selected section (tag).
+    private func syncBottomSheetWithCurrentSection() {
+        guard case .mainCanvas = coordinator.currentCanvasRoute else { return }
+        guard let screenId = store.currentSection.screens.first?.screenId else { return }
         
-        if previous.isEmpty && newIds.isEmpty == false {
-            scrollToTopOnNewCards = true
-        } else if let newId = added.first {
-            cardScrollTarget = newId
-        }
-        
-        previousCardIds = newIds
-    }
-    
-    private func manuallyAdvanceToNextSheet() {
-        guard isManuallyAdvancingSheet == false else { return }
-        isManuallyAdvancingSheet = true
-        presentedOnboardingSheet = nil
-        
-        let advanceDelay: TimeInterval = 0.35
-        DispatchQueue.main.asyncAfter(deadline: .now() + advanceDelay) {
-            store.next()
-            scheduleScrollToCurrentSectionViews()
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                presentedOnboardingSheet = store.currentScreen.screenId
-                isManuallyAdvancingSheet = false
-            }
+        let targetRoute = bottomSheetRoute(for: screenId)
+        if targetRoute != coordinator.currentBottomSheetRoute {
+            coordinator.navigateInBottomSheet(targetRoute)
         }
     }
     
     private func chips(for screenId: OnboardingScreenId) -> [ChipsModel]? {
+        let preferences = store.preferences
         switch screenId {
         case .allergies:
             return chipModels(from: preferences.allergies)
@@ -224,7 +157,7 @@ struct MainCanvasView: View {
     }
     
     private func regionSectionedChips() -> [SectionedChipModel]? {
-        guard let region = preferences.region else { return nil }
+        guard let region = store.preferences.region else { return nil }
         let groups: [(String, [String])] = [
             ("India & South Asia", region.indiaSouthAsia),
             ("Africa", region.africa),
@@ -238,7 +171,7 @@ struct MainCanvasView: View {
     }
     
     private func avoidSectionedChips() -> [SectionedChipModel]? {
-        guard let avoid = preferences.avoid else { return nil }
+        guard let avoid = store.preferences.avoid else { return nil }
         let groups: [(String, [String])] = [
             ("Oils & Fats", avoid.oilsFats),
             ("Animal Based", avoid.animalBased),
@@ -250,7 +183,7 @@ struct MainCanvasView: View {
     }
     
     private func lifestyleSectionedChips() -> [SectionedChipModel]? {
-        guard let lifestyle = preferences.lifestyle else { return nil }
+        guard let lifestyle = store.preferences.lifestyle else { return nil }
         let groups: [(String, [String])] = [
             ("Plant & Balance", lifestyle.plantBalance),
             ("Quality & Source", lifestyle.qualitySource),
@@ -260,7 +193,7 @@ struct MainCanvasView: View {
     }
     
     private func nutritionSectionedChips() -> [SectionedChipModel]? {
-        guard let nutrition = preferences.nutrition else { return nil }
+        guard let nutrition = store.preferences.nutrition else { return nil }
         let groups: [(String, [String])] = [
             ("Macronutrient Goals", nutrition.macronutrientGoals),
             ("Sugar & Fiber", nutrition.sugarFiber),
@@ -277,6 +210,21 @@ struct MainCanvasView: View {
         }
         return sections.isEmpty ? nil : sections
     }
+    
+    private func bottomSheetRoute(for screenId: OnboardingScreenId) -> BottomSheetRoute {
+        switch screenId {
+        case .allergies: return .allergies
+        case .intolerances: return .intolerances
+        case .healthConditions: return .healthConditions
+        case .lifeStage: return .lifeStage
+        case .region: return .region
+        case .aviod: return .avoid
+        case .lifeStyle: return .lifeStyle
+        case .nutrition: return .nutrition
+        case .ethical: return .ethical
+        case .taste: return .taste
+        }
+    }
 }
 
 struct CanvasCardModel: Identifiable {
@@ -290,13 +238,18 @@ struct CanvasCardModel: Identifiable {
 struct CanvasSummaryScrollView: View {
     let cards: [CanvasCardModel]
     @Binding var scrollTarget: UUID?
-    @Binding var scrollToTopOnNewCards: Bool
+    @State private var previousCardCount: Int = 0
     
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
+                // Add dynamic bottom padding so content can scroll above the sheet
+                let extraBottomPadding: CGFloat = cards.count > 1
+                    ? UIScreen.main.bounds.height * 1.0
+                    : 20
+                
                 VStack(spacing: 16) {
-                    ForEach(cards, id: \.id) { card in
+                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                         CanvasCard(
                             chips: card.chips,
                             sectionedChips: card.sectionedChips,
@@ -304,38 +257,46 @@ struct CanvasSummaryScrollView: View {
                             iconName: card.icon
                         )
                         .id(card.id)
+                        // Add visual gap from the top edge so the card
+                        // never touches the top when scrolled into view.
+                        .padding(.top, index == 0 ? 16 : 0)
                     }
                 }
-                .padding(.vertical, 20)
                 .padding(.horizontal, 16)
+                // Extra bottom padding so the last items can scroll fully above the bottom sheet,
+                // but only once there is more than one card to avoid an initial jump.
+                .padding(.bottom, extraBottomPadding)
             }
             .frame(width: UIScreen.main.bounds.width * 0.9)
             .clipShape(RoundedRectangle(cornerRadius: 24))
             .onAppear {
-                handleScroll(proxy: proxy)
+                previousCardCount = cards.count
             }
             .onChange(of: cards.map(\.id)) { _ in
-                handleScroll(proxy: proxy)
+                handleCardsChange(proxy: proxy)
             }
             .onChange(of: scrollTarget) { _ in
-                handleScroll(proxy: proxy)
-            }
-            .onChange(of: scrollToTopOnNewCards) { _ in
-                handleScroll(proxy: proxy)
+                handleScrollTarget(proxy: proxy)
             }
         }
     }
     
-    private func handleScroll(proxy: ScrollViewProxy) {
-        if scrollToTopOnNewCards,
-           let first = cards.first?.id {
-            scrollTo(id: first, proxy: proxy)
-            scrollToTopOnNewCards = false
-        } else if let target = scrollTarget,
-                  cards.contains(where: { $0.id == target }) {
-            scrollTo(id: target, proxy: proxy)
-            scrollTarget = nil
+    private func handleCardsChange(proxy: ScrollViewProxy) {
+        // When a new card is added (e.g. user picks chips in a new section),
+        // automatically scroll so that the newest card is brought to the top.
+        if cards.count > previousCardCount,
+           let lastId = cards.last?.id {
+            scrollTo(id: lastId, proxy: proxy)
         }
+        previousCardCount = cards.count
+    }
+    
+    private func handleScrollTarget(proxy: ScrollViewProxy) {
+        guard let target = scrollTarget,
+              cards.contains(where: { $0.id == target }) else { return }
+        
+        scrollTo(id: target, proxy: proxy)
+        scrollTarget = nil
     }
     
     private func scrollTo(id: UUID, proxy: ScrollViewProxy) {
@@ -391,5 +352,6 @@ func onboardingSheetFamilyMemberSelectNote() -> some View {
 }
 
 #Preview {
-	MainCanvasView(flow: .individual)
+    MainCanvasView(flow: .individual)
+        .environmentObject(Onboarding(onboardingFlowtype: .individual))
 }

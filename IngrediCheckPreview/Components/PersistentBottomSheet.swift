@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @State private var preferences: Preferences = Preferences()
+    @EnvironmentObject private var store: Onboarding
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -17,9 +17,18 @@ struct PersistentBottomSheet: View {
         VStack {
             Spacer()
             
-            ZStack {
+            ZStack(alignment: .bottomTrailing) {
                 bottomSheetContent(for: coordinator.currentBottomSheetRoute)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                
+                if shouldShowOnboardingNextArrow {
+                    Button(action: handleOnboardingNextTapped) {
+                        GreenCircle()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 24)
+                }
             }
             .frame(height: getBottomSheetHeight())
             .frame(maxWidth: .infinity)
@@ -82,6 +91,67 @@ struct PersistentBottomSheet: View {
             return coordinator.onboardingFlow == .family ? 460 : 380
         case .homeDefault:
             return 0
+        }
+    }
+    
+    // MARK: - Onboarding next arrow
+    
+    private var shouldShowOnboardingNextArrow: Bool {
+        // Only show the forward arrow when we are on the main onboarding canvas
+        // and the bottom sheet is one of the preference questions.
+        guard case .mainCanvas = coordinator.currentCanvasRoute else {
+            return false
+        }
+        
+        switch coordinator.currentBottomSheetRoute {
+        case .allergies,
+             .intolerances,
+             .healthConditions,
+             .lifeStage,
+             .region,
+             .avoid,
+             .lifeStyle,
+             .nutrition,
+             .ethical,
+             .taste:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    private func handleOnboardingNextTapped() {
+        // Last question → go to Home
+        if coordinator.currentBottomSheetRoute == .taste {
+            coordinator.showCanvas(.home)
+            return
+        }
+        
+        // Advance logical onboarding progress (for progress bar & tag bar)
+        store.next()
+        
+        // Move the bottom sheet to the next onboarding question
+        switch coordinator.currentBottomSheetRoute {
+        case .allergies:
+            coordinator.navigateInBottomSheet(.intolerances)
+        case .intolerances:
+            coordinator.navigateInBottomSheet(.healthConditions)
+        case .healthConditions:
+            coordinator.navigateInBottomSheet(.lifeStage)
+        case .lifeStage:
+            coordinator.navigateInBottomSheet(.region)
+        case .region:
+            coordinator.navigateInBottomSheet(.avoid)
+        case .avoid:
+            coordinator.navigateInBottomSheet(.lifeStyle)
+        case .lifeStyle:
+            coordinator.navigateInBottomSheet(.nutrition)
+        case .nutrition:
+            coordinator.navigateInBottomSheet(.ethical)
+        case .ethical:
+            coordinator.navigateInBottomSheet(.taste)
+        default:
+            break
         }
     }
     
@@ -170,34 +240,34 @@ struct PersistentBottomSheet: View {
             }
             
         case .allergies:
-            Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .intolerances:
-            Intolerances(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Intolerances(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .healthConditions:
-            HealthConditions(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            HealthConditions(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .lifeStage:
-            LifeStage(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            LifeStage(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .region:
-            Region(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Region(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .avoid:
-            Avoid(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Avoid(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .lifeStyle:
-            LifeStyle(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            LifeStyle(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .nutrition:
-            Nutrition(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Nutrition(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .ethical:
-            Ethical(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Ethical(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .taste:
-            Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $preferences)
+            Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
             
         case .homeDefault:
             EmptyView()
