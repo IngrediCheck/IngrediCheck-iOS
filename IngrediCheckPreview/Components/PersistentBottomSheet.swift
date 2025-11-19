@@ -17,25 +17,7 @@ struct PersistentBottomSheet: View {
         VStack {
             Spacer()
             
-            ZStack(alignment: .bottomTrailing) {
-                bottomSheetContent(for: coordinator.currentBottomSheetRoute)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                
-                if shouldShowOnboardingNextArrow {
-                    Button(action: handleOnboardingNextTapped) {
-                        GreenCircle()
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 24)
-                }
-            }
-            .frame(height: getBottomSheetHeight())
-            .frame(maxWidth: .infinity)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
-            .shadow(radius: 27.5)
-            .ignoresSafeArea(edges: .bottom)
+            bottomSheetContainer()
         }
         .background(
             .clear
@@ -43,7 +25,41 @@ struct PersistentBottomSheet: View {
         .ignoresSafeArea(edges: .bottom)
     }
     
-    private func getBottomSheetHeight() -> CGFloat {
+    @ViewBuilder
+    private func bottomSheetContainer() -> some View {
+        let sheet = ZStack(alignment: .bottomTrailing) {
+            bottomSheetContent(for: coordinator.currentBottomSheetRoute)
+                .frame(maxWidth: .infinity, alignment: .top)
+            
+            if shouldShowOnboardingNextArrow {
+                Button(action: handleOnboardingNextTapped) {
+                    GreenCircle()
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.bottom, 24)
+            }
+        }
+        
+        if let height = getBottomSheetHeight() {
+            sheet
+                .frame(height: height)
+                .frame(maxWidth: .infinity)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                .shadow(radius: 27.5)
+                .ignoresSafeArea(edges: .bottom)
+        } else {
+            sheet
+                .frame(maxWidth: .infinity, alignment: .top)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                .shadow(radius: 27.5)
+                .ignoresSafeArea(edges: .bottom)
+        }
+    }
+    
+    private func getBottomSheetHeight() -> CGFloat? {
         switch coordinator.currentBottomSheetRoute {
         case .alreadyHaveAnAccount, .doYouHaveAnInviteCode:
             return 275
@@ -69,26 +85,19 @@ struct PersistentBottomSheet: View {
             return isFamilyFlow ? 501 : 351
         case .allSetToJoinYourFamily:
             return 284
-        case .allergies:
-            return coordinator.onboardingFlow == .family ? 520 : 420
-        case .intolerances:
-            return coordinator.onboardingFlow == .family ? 520 : 420
-        case .healthConditions:
-            return coordinator.onboardingFlow == .family ? 520 : 420
-        case .lifeStage:
-            return coordinator.onboardingFlow == .family ? 480 : 400
-        case .region:
-            return coordinator.onboardingFlow == .family ? 480 : 400
-        case .avoid:
-            return coordinator.onboardingFlow == .family ? 480 : 420
-        case .lifeStyle:
-            return coordinator.onboardingFlow == .family ? 480 : 400
-        case .nutrition:
-            return coordinator.onboardingFlow == .family ? 480 : 420
-        case .ethical:
-            return coordinator.onboardingFlow == .family ? 460 : 380
-        case .taste:
-            return coordinator.onboardingFlow == .family ? 460 : 380
+        // For preference sheets shown from MainCanvasView, let the
+        // content determine its own height instead of forcing a static one.
+        case .allergies,
+             .intolerances,
+             .healthConditions,
+             .lifeStage,
+             .region,
+             .avoid,
+             .lifeStyle,
+             .nutrition,
+             .ethical,
+             .taste:
+            return nil
         case .homeDefault:
             return 0
         }
@@ -241,33 +250,53 @@ struct PersistentBottomSheet: View {
             
         case .allergies:
             Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .intolerances:
             Intolerances(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .healthConditions:
             HealthConditions(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .lifeStage:
             LifeStage(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .region:
             Region(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .avoid:
             Avoid(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .lifeStyle:
             LifeStyle(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .nutrition:
             Nutrition(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .ethical:
             Ethical(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .taste:
             Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             
         case .homeDefault:
             EmptyView()
