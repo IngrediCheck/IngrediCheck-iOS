@@ -16,6 +16,7 @@ enum CanvasRoute: Hashable {
     case welcomeToYourFamily
     case mainCanvas(flow: OnboardingFlowType)
     case home
+    case productDetail
 }
 
 

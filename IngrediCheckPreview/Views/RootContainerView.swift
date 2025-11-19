@@ -41,6 +41,8 @@ struct RootContainerView: View {
             MainCanvasView(flow: flow)
         case .home:
             HomeView()
+        case .productDetail:
+            ProductDetailView()
         }
     }
 }

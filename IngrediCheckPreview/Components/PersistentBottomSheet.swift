@@ -79,6 +79,10 @@ struct PersistentBottomSheet: View {
             return coordinator.onboardingFlow == .family ? 460 : 380
         case .taste:
             return coordinator.onboardingFlow == .family ? 460 : 380
+        case .chatIntro:
+            return 540
+        case .chatConversation:
+            return UIScreen.main.bounds.height * 0.75
         case .homeDefault:
             return 0
         }
@@ -198,6 +202,10 @@ struct PersistentBottomSheet: View {
         case .taste:
             Taste(onboardingFlowType: getOnboardingFlowType())
             
+        case .chatIntro:
+            IngrediBotView()
+        case .chatConversation:
+            IngrediBotChatView()
         case .homeDefault:
             EmptyView()
         }

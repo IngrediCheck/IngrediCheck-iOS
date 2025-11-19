@@ -185,7 +185,7 @@ private struct BubbleWidthKey: PreferenceKey {
     VStack(alignment: .leading, spacing: 24) {
         // Variant A
         ChatBubble(text: "Would you like to explore a specific area next?",
-                   role: .assistant,
+                   role: .user,
                    useAlternateStyle: false)
         // Variant B
         ChatBubble(text: "Got it 👍 Keeping things natural and fresh,  noted!",

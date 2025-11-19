@@ -50,6 +50,17 @@ import Observation
          }
      }
  }
+ 
+ // Anywhere in the app
+ struct AskIngrediBotButton: View {
+     @Environment(AppNavigationCoordinator.self) private var coordinator
+     
+     var body: some View {
+         Button("Ask IngrediBot") {
+             coordinator.presentChatBot()
+         }
+     }
+ }
  ```
  */
 @Observable
@@ -58,6 +69,7 @@ class AppNavigationCoordinator {
     private(set) var currentCanvasRoute: CanvasRoute
     private(set) var currentBottomSheetRoute: BottomSheetRoute
     private(set) var onboardingFlow: OnboardingFlowType = .individual
+    private var previousBottomSheetRoute: BottomSheetRoute?
     
     init(initialRoute: CanvasRoute = .heyThere) {
         self.currentCanvasRoute = initialRoute
@@ -89,6 +101,44 @@ class AppNavigationCoordinator {
         withAnimation(.easeInOut) {
             currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: currentCanvasRoute)
         }
+        previousBottomSheetRoute = nil
+    }
+    
+    // MARK: - ChatBot Presentation
+    private var isChatRoute: Bool {
+        switch currentBottomSheetRoute {
+        case .chatIntro, .chatConversation:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    func presentChatBot(startAtConversation: Bool = false) {
+        if !isChatRoute {
+            previousBottomSheetRoute = currentBottomSheetRoute
+        }
+        
+        withAnimation(.easeInOut) {
+            currentBottomSheetRoute = startAtConversation ? .chatConversation : .chatIntro
+        }
+    }
+    
+    func showChatConversation() {
+        withAnimation(.easeInOut) {
+            currentBottomSheetRoute = .chatConversation
+        }
+    }
+    
+    func dismissChatBot() {
+        withAnimation(.easeInOut) {
+            if let previous = previousBottomSheetRoute {
+                currentBottomSheetRoute = previous
+            } else {
+                currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: currentCanvasRoute)
+            }
+        }
+        previousBottomSheetRoute = nil
     }
     
     // Get bottom sheet route for current canvas route
@@ -110,6 +160,8 @@ class AppNavigationCoordinator {
             return .allergies
         case .home:
             return .homeDefault
+        case .productDetail:
+            return .homeDefault // Hide bottom sheet on product detail
         }
     }
 }

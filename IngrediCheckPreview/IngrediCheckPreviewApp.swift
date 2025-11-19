@@ -22,7 +22,8 @@ struct IngrediCheckPreviewApp: App {
     
     var body: some Scene {
         WindowGroup {
-            SplashScreen()
+            ProductDetailView(isPlaceholderMode: false)
+                .environment(AppNavigationCoordinator())
                 .preferredColorScheme(.light)
         }
     }

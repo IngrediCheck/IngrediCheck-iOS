@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct IngrediBotView: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var other: Bool = true
     var body: some View {
         VStack(spacing: 0) {
@@ -36,7 +37,7 @@ struct IngrediBotView: View {
                 .foregroundStyle(.grayScale150)
                 .padding(.top, 12)
 
-            Spacer(minLength: 40)
+            Spacer()
             
             Text("Shall we get started?")
                 .font(NunitoFont.medium.size(20))
@@ -70,7 +71,7 @@ struct IngrediBotView: View {
             // Action buttons
             HStack(spacing: 12) {
                 Button {
-                    
+                    coordinator.dismissChatBot()
                 } label: {
                     Text("Maybe later")
                         .lineLimit(1)
@@ -83,7 +84,11 @@ struct IngrediBotView: View {
                 }
                 
 
-                GreenCapsule(title: "Yes, let's go", icon: nil, width: 152, height: 52)
+                Button {
+                    coordinator.showChatConversation()
+                } label: {
+                    GreenCapsule(title: "Yes, let's go", icon: nil, width: 152, height: 52, takeFullWidth: false)
+                }
             }
             .padding(.top, 33)
 
@@ -98,7 +103,6 @@ struct IngrediBotView: View {
                 .padding(.horizontal, 1)
                 
 
-            Spacer(minLength: 20)
         }
         .padding(.horizontal, 20)
         
@@ -107,4 +111,5 @@ struct IngrediBotView: View {
 
 #Preview {
     IngrediBotView()
+        .environment(AppNavigationCoordinator())
 }
