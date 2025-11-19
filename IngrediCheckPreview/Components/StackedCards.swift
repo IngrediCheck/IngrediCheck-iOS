@@ -38,7 +38,7 @@ struct StackedCards: View {
     }
     
     var body: some View {
-        let cardHeight = UIScreen.main.bounds.height * 0.32
+        let cardHeight = UIScreen.main.bounds.height * 0.33
         
         return ZStack {
             ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
@@ -60,50 +60,7 @@ struct StackedCards: View {
                     .opacity(isFront || isSecond ? 1 : 0)
                     .zIndex(isFront ? 1 : 0)
                     .allowsHitTesting(isFront)
-                    .gesture(
-                        isFront ?
-                        DragGesture()
-                            .onChanged { value in
-                                dragOffset.width = value.translation.width
-                            }
-                            .onEnded { value in
-                                let translation = value.translation.width
-                                let threshold: CGFloat = 150
-                                let screenWidth = UIScreen.main.bounds.width
-                                
-                                if translation < -threshold {
-                                    // Throw card to the left, then promote next card
-                                    withAnimation(.smooth(duration: 0.25)) {
-                                        dragOffset.width = -screenWidth
-                                    }
-                                    
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                        withAnimation(.smooth(duration: 0.25)) {
-                                            goToNext()
-                                            dragOffset = .zero
-                                        }
-                                    }
-                                } else if translation > threshold {
-                                    // Throw card to the right, then promote previous card
-                                    withAnimation(.smooth(duration: 0.25)) {
-                                        dragOffset.width = screenWidth
-                                    }
-                                    
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                        withAnimation(.smooth(duration: 0.25)) {
-                                            goToPrevious()
-                                            dragOffset = .zero
-                                        }
-                                    }
-                                } else {
-                                    // Not enough swipe: snap back
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        dragOffset = .zero
-                                    }
-                                }
-                            }
-                        : nil
-                    )
+                    .highPriorityGesture(dragGesture)
             }
         }
         .animation(.smooth(duration: 0.25), value: currentIndex)
@@ -120,6 +77,51 @@ struct StackedCards: View {
     private func goToPrevious() {
         guard !cards.isEmpty else { return }
         currentIndex = (currentIndex - 1 + cards.count) % cards.count
+    }
+    
+    // MARK: - Gestures
+    
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                dragOffset.width = value.translation.width
+            }
+            .onEnded { value in
+                let translation = value.translation.width
+                let threshold: CGFloat = 150
+                let screenWidth = UIScreen.main.bounds.width
+                
+                if translation < -threshold {
+                    // Throw card to the left, then promote next card
+                    withAnimation(.smooth(duration: 0.25)) {
+                        dragOffset.width = -screenWidth
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        withAnimation(.smooth(duration: 0.25)) {
+                            goToNext()
+                            dragOffset = .zero
+                        }
+                    }
+                } else if translation > threshold {
+                    // Throw card to the right, then promote previous card
+                    withAnimation(.smooth(duration: 0.25)) {
+                        dragOffset.width = screenWidth
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        withAnimation(.smooth(duration: 0.25)) {
+                            goToPrevious()
+                            dragOffset = .zero
+                        }
+                    }
+                } else {
+                    // Not enough swipe: snap back
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        dragOffset = .zero
+                    }
+                }
+            }
     }
     
     @ViewBuilder
