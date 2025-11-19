@@ -22,82 +22,77 @@ struct SplashScreen: View {
     ]
     
     @State var idx: Int = 0
-    @State var navigateToRoot: Bool = false
     
     var body: some View {
-        ZStack {
-            if navigateToRoot {
-                RootContainerView()
-            } else {
+        NavigationStack {
+            VStack {
+                
+                Spacer()
+                Spacer()
+                
+                
                 VStack {
-                    
-                    Spacer()
-                    Spacer()
-                    
-                    
-                    VStack {
-                        Text(titleArr[idx])
-                            .font(NunitoFont.bold.size(22))
-                            .foregroundStyle(.grayScale150)
-                        Text(subTitleArr[idx])
-                            .font(ManropeFont.medium.size(14))
-                            .foregroundStyle(.grayScale100)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    Spacer()
+                    Text(titleArr[idx])
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                    Text(subTitleArr[idx])
+                        .font(ManropeFont.medium.size(14))
+                        .foregroundStyle(.grayScale100)
+                        .multilineTextAlignment(.center)
+                }
+                
+                Spacer()
+                
+                HStack {
                     
                     HStack {
+                        Capsule()
+                            .frame(width: idx == 0 ? 24 : 5.5, height: 5.5)
+                            .foregroundStyle(
+                                idx == 0
+                                ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
+                                : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                            )
                         
-                        HStack {
-                            Capsule()
-                                .frame(width: idx == 0 ? 24 : 5.5, height: 5.5)
-                                .foregroundStyle(
-                                    idx == 0
-                                    ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                    : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                                )
-                            
-                            Capsule()
-                                .frame(width: idx == 1 ? 24 : 5.5, height: 5.5)
-                                .foregroundStyle(
-                                    idx == 1
-                                    ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                    : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                                )
-                            
-                            Capsule()
-                                .frame(width: idx == 2 ? 24 : 5.5, height: 5.5)
-                                .foregroundStyle(
-                                    idx == 2
-                                    ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                    : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                                )
+                        Capsule()
+                            .frame(width: idx == 1 ? 24 : 5.5, height: 5.5)
+                            .foregroundStyle(
+                                idx == 1
+                                ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
+                                : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                            )
+                        
+                        Capsule()
+                            .frame(width: idx == 2 ? 24 : 5.5, height: 5.5)
+                            .foregroundStyle(
+                                idx == 2
+                                ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
+                                : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                            )
+                    }
+                    
+                    Spacer()
+                    
+                    if idx == 2 {
+                        NavigationLink {
+                            RootContainerView()
+                        } label: {
+                            GreenCapsule(title: "Get Started")
+                                .frame(width: 159)
                         }
-                        
-                        Spacer()
-                        
-                        if idx == 2 {
-                            Button {
-                                navigateToRoot = true
-                            } label: {
-                                GreenCapsule(title: "Get Started")
-                                    .frame(width: 159)
+                    } else {
+                        Button {
+                            withAnimation(.smooth) {
+                                idx = idx + 1
                             }
-                        } else {
-                            Button {
-                                withAnimation(.smooth) {
-                                    idx = idx + 1
-                                }
-                            } label: {
-                                GreenCircle()
-                            }
+                        } label: {
+                            GreenCircle()
                         }
                     }
-                    .animation(.smooth, value: idx)
                 }
-                .padding(.horizontal, 20)
+                .animation(.smooth, value: idx)
             }
+            .padding(.horizontal, 20)
         }
     }
 }
