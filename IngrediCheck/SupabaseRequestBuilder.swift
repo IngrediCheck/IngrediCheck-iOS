@@ -11,6 +11,9 @@ enum SafeEatsEndpoint: String {
     case preference_lists_grandfathered = "preferencelists/grandfathered"
     case preference_lists_default = "preferencelists/default"
     case preference_lists_default_items = "preferencelists/default/%@"
+    case devices_register = "devices/register"
+    case devices_mark_internal = "devices/mark-internal"
+    case devices_is_internal = "devices/%@/is-internal"
 }
 
 class SupabaseRequestBuilder {

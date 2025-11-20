@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AuthenticationServices
 import Supabase
 import KeychainSwift
@@ -133,24 +134,22 @@ private enum AuthFlowMode {
     
     private static let anonUserNameKey = "anonEmail"
     private static let anonPasswordKey = "anonPassword"
-    private static let internalFlagKey = "isInternalUser"
+    private static let deviceIdKey = "deviceId"
     
     @MainActor init() {
-        let storedInternalFlag = keychain.getBool(AuthController.internalFlagKey)
-        if let storedInternalFlag {
-            isInternalUser = storedInternalFlag
-        } else {
-            isInternalUser = false
-        }
-#if targetEnvironment(simulator)
-        // Treat simulator sessions as internal by default so testers get the full toolset.
-        if storedInternalFlag == nil {
-            isInternalUser = true
-            keychain.set(true, forKey: AuthController.internalFlagKey)
-        }
-#endif
         authChangeWatcher()
         refreshAnalyticsIdentity(session: nil)
+    }
+    
+    @MainActor
+    var deviceId: String {
+        if let storedDeviceId = keychain.get(AuthController.deviceIdKey) {
+            return storedDeviceId
+        } else {
+            let newDeviceId = UUID().uuidString
+            keychain.set(newDeviceId, forKey: AuthController.deviceIdKey)
+            return newDeviceId
+        }
     }
     
     @MainActor var signedInWithApple: Bool {
@@ -289,6 +288,7 @@ private enum AuthFlowMode {
 
             let session = try await finalizeAuth(with: credentials, mode: .link)
             self.session = session
+            registerDeviceAfterLogin(session: session)
             clearAnonymousCredentials()
             isUpgradingAccount = false
         } catch {
@@ -308,7 +308,10 @@ private enum AuthFlowMode {
     
     private func signInWithLegacyGuest(email: String, password: String) async -> Bool {
         do {
-            _ = try await supabaseClient.auth.signIn(email: email, password: password)
+            let session = try await supabaseClient.auth.signIn(email: email, password: password)
+            await MainActor.run {
+                self.registerDeviceAfterLogin(session: session)
+            }
             return true
         } catch {
             print("Anonymous signin failed for stored credentials: \(error)")
@@ -320,7 +323,10 @@ private enum AuthFlowMode {
 
     private func signInWithNewAnonymousAccount() async {
         do {
-            _ = try await supabaseClient.auth.signInAnonymously()
+            let session = try await supabaseClient.auth.signInAnonymously()
+            await MainActor.run {
+                self.registerDeviceAfterLogin(session: session)
+            }
         } catch {
             print("signInAnonymously failed: \(error)")
         }
@@ -333,6 +339,7 @@ private enum AuthFlowMode {
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
                 await MainActor.run {
                     self.session = session
+                    self.registerDeviceAfterLogin(session: session)
                 }
             } catch {
                 print("Apple sign-in failed: \(error)")
@@ -495,6 +502,7 @@ private enum AuthFlowMode {
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
                 await MainActor.run {
                     self.session = session
+                    self.registerDeviceAfterLogin(session: session)
                     completion?(.success(()))
                 }
             } catch {
@@ -507,57 +515,13 @@ private enum AuthFlowMode {
     }
     
     @MainActor
-    func enableInternalMode() -> Bool {
-        guard !isInternalUser else {
-            refreshAnalyticsIdentity(session: session)
-            return false
-        }
-        
-        setInternalMode(true)
-        refreshAnalyticsIdentity(session: session)
-        
-        if let session {
-            syncInternalFlagToSupabaseIfNeeded(session: session)
-        }
-        
-        return true
-    }
-    
-    @MainActor
-    func disableInternalMode() -> Bool {
-        guard isInternalUser else {
-            return false
-        }
-        
-        setInternalMode(false)
-        refreshAnalyticsIdentity(session: session)
-        
-        if let session {
-            syncInternalFlagToSupabaseIfNeeded(session: session)
-        }
-        
-        return true
-    }
-    
-    @MainActor
-    func refreshInternalModeFromServer(_ metadata: [String: AnyJSON]) {
-        guard let serverFlag = metadata["is_internal"]?.boolValue else {
-            return
-        }
-        
-        setInternalMode(serverFlag)
-        refreshAnalyticsIdentity(session: session)
-    }
-    
-    @MainActor
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
         self.session = session
         isUpgradingAccount = false
         
         if let session {
             signInState = .signedIn
-            refreshInternalModeFromServer(session.user.userMetadata)
-            syncInternalFlagToSupabaseIfNeeded(session: session)
+            registerDeviceAfterLogin(session: session)
             refreshAnalyticsIdentity(session: session)
         } else {
             signInState = .signedOut
@@ -567,15 +531,13 @@ private enum AuthFlowMode {
     }
     
     @MainActor
-    private func setInternalMode(_ enabled: Bool) {
-        guard isInternalUser != enabled else { return }
-        isInternalUser = enabled
-        keychain.set(enabled, forKey: AuthController.internalFlagKey)
-    }
-    
-    @MainActor
-    private func refreshAnalyticsIdentity(session: Session?, reset: Bool = false) {
-        let properties: [String: Any] = ["is_internal": isInternalUser]
+    func refreshAnalyticsIdentity(session: Session?, reset: Bool = false) {
+        var properties: [String: Any] = [:]
+        
+        // Only add is_internal when it's true (from API responses)
+        if isInternalUser {
+            properties["is_internal"] = true
+        }
         
         if reset {
             PostHogSDK.shared.reset()
@@ -586,37 +548,49 @@ private enum AuthFlowMode {
             PostHogSDK.shared.identify(distinctId, userProperties: properties)
         }
         
-        PostHogSDK.shared.register(properties)
+        if !properties.isEmpty {
+            PostHogSDK.shared.register(properties)
+        }
     }
     
     @MainActor
-    private func syncInternalFlagToSupabaseIfNeeded(session: Session) {
-        let metadataFlag = session.user.userMetadata["is_internal"]?.boolValue
-        
+    private func registerDeviceAfterLogin(session: Session) {
         Task {
             do {
-                if isInternalUser {
-                    guard metadataFlag != true else { return }
-                    try await updateSupabaseInternalFlag(true)
-                } else {
-                    guard metadataFlag != false else { return }
-                    try await updateSupabaseInternalFlag(false)
+                let platform = UIDevice.current.systemName.lowercased()
+                let osVersion = UIDevice.current.systemVersion
+                let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+                
+                #if targetEnvironment(simulator) || DEBUG
+                let markInternal = true
+                #else
+                let markInternal: Bool? = nil
+                #endif
+                
+                let isInternal = try await WebService().registerDevice(
+                    deviceId: deviceId,
+                    platform: platform,
+                    osVersion: osVersion,
+                    appVersion: appVersion,
+                    markInternal: markInternal
+                )
+                
+                await MainActor.run {
+                    if isInternal != self.isInternalUser {
+                        self.isInternalUser = isInternal
+                        self.refreshAnalyticsIdentity(session: session)
+                    }
                 }
             } catch {
-                print("Failed to sync internal mode flag to Supabase: \(error)")
+                print("Failed to register device after login: \(error)")
             }
         }
     }
     
     @MainActor
-    private func updateSupabaseInternalFlag(_ enabled: Bool) async throws {
-        _ = try await supabaseClient.auth.update(
-            user: UserAttributes(data: ["is_internal": .bool(enabled)])
-        )
-        
-        if var currentSession = session {
-            currentSession.user.userMetadata["is_internal"] = .bool(enabled)
-            session = currentSession
-        }
+    func setInternalUser(_ value: Bool) {
+        guard value != isInternalUser else { return }
+        isInternalUser = value
+        refreshAnalyticsIdentity(session: session)
     }
 }

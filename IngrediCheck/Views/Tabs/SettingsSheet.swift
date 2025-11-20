@@ -10,6 +10,7 @@ struct SettingsSheet: View {
     
     @State private var showInternalModeToast = false
     @State private var internalModeToastMessage = "Internal Mode Unlocked"
+    @Environment(WebService.self) var webService
 
     var body: some View {
         @Bindable var userPreferences = userPreferences
@@ -125,14 +126,6 @@ struct SettingsSheet: View {
                             Image(systemName: "hammer")
                                 .foregroundStyle(.paletteAccent)
                         }
-                        .onTapGesture(count: 7) {
-                            let disabled = authController.disableInternalMode()
-                            if disabled {
-                                internalModeToastMessage = "Internal Mode Disabled"
-                                showInternalModeToast = false
-                                showInternalModeToast = true
-                            }
-                        }
                     }
                     Label {
                         Text("IngrediCheck for iOS \(appVersion).(\(buildNumber))")
@@ -140,11 +133,18 @@ struct SettingsSheet: View {
                         Image(systemName: "app")
                     }
                     .onTapGesture(count: 7) {
-                        let unlocked = authController.enableInternalMode()
-                        if unlocked {
-                            internalModeToastMessage = "Internal Mode Unlocked"
-                            showInternalModeToast = false
-                            showInternalModeToast = true
+                        Task {
+                            do {
+                                _ = try await webService.markDeviceInternal(deviceId: authController.deviceId)
+                                await MainActor.run {
+                                    authController.setInternalUser(true)
+                                    internalModeToastMessage = "Internal Mode Unlocked"
+                                    showInternalModeToast = false
+                                    showInternalModeToast = true
+                                }
+                            } catch {
+                                print("Failed to mark device internal: \(error)")
+                            }
                         }
                     }
                 }
@@ -163,6 +163,18 @@ struct SettingsSheet: View {
                             .foregroundStyle(.gray)
                     }
 
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                do {
+                    let isInternal = try await webService.isDeviceInternal(deviceId: authController.deviceId)
+                    await MainActor.run {
+                        authController.setInternalUser(isInternal)
+                    }
+                } catch {
+                    print("Failed to check device internal status: \(error)")
                 }
             }
         }
