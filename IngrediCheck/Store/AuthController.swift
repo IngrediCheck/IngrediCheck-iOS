@@ -578,9 +578,7 @@ private enum AuthFlowMode {
                 await MainActor.run {
                     if isInternal != self.isInternalUser {
                         self.isInternalUser = isInternal
-                        if isInternal {
-                            self.refreshAnalyticsIdentity(session: session)
-                        }
+                        self.refreshAnalyticsIdentity(session: session)
                     }
                 }
             } catch {
@@ -591,6 +589,8 @@ private enum AuthFlowMode {
     
     @MainActor
     func setInternalUser(_ value: Bool) {
+        guard value != isInternalUser else { return }
         isInternalUser = value
+        refreshAnalyticsIdentity(session: session)
     }
 }

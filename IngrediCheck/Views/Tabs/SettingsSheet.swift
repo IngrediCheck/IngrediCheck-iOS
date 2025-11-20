@@ -138,7 +138,6 @@ struct SettingsSheet: View {
                                 _ = try await webService.markDeviceInternal(deviceId: authController.deviceId)
                                 await MainActor.run {
                                     authController.setInternalUser(true)
-                                    authController.refreshAnalyticsIdentity(session: authController.session)
                                     internalModeToastMessage = "Internal Mode Unlocked"
                                     showInternalModeToast = false
                                     showInternalModeToast = true
@@ -173,9 +172,6 @@ struct SettingsSheet: View {
                     let isInternal = try await webService.isDeviceInternal(deviceId: authController.deviceId)
                     await MainActor.run {
                         authController.setInternalUser(isInternal)
-                        if isInternal {
-                            authController.refreshAnalyticsIdentity(session: authController.session)
-                        }
                     }
                 } catch {
                     print("Failed to check device internal status: \(error)")
