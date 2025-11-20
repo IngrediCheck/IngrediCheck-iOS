@@ -125,25 +125,7 @@ struct CameraScreen: View {
                 .environmentObject(camera)
             } else {
                 // Photo mode overlay: show last captured image as a floating thumbnail if available
-                VStack {
-                    Spacer()
-                    HStack {
-                        if let image = capturedPhoto {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 80, height: 80)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white.opacity(0.7), lineWidth: 1)
-                                )
-                                .padding(.leading, 24)
-                        }
-                        Spacer()
-                    }
-                    .padding(.bottom, 140)
-                }
+                EmptyView()
             }
             
             VStack {
@@ -294,36 +276,4 @@ struct CameraScreen: View {
 
 #Preview {
    CameraScreen()
-}
-struct ContentView5: View {
-    var body: some View {
-        
-            
-            
-            
-       
-                
-                // Icon + Text vertically stacked
-                HStack(spacing: 8,) {
-                    Image("lucide_scan-line"
-                    )
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                    
-                    Text("Scanning Products")
-                        .font(.system(size : 12))
-                        .foregroundColor(.white)
-                }
-                .frame(height: 36)
-                .padding(.horizontal)
-                .background(
-                    .thinMaterial ,in: .capsule
-//                    Capsule()
-//                        .fill(.thinMaterial)
-                    
-                )
-            
-            
-        }
-    
 }
