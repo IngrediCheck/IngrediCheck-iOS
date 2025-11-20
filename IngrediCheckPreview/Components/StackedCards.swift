@@ -61,7 +61,7 @@ struct StackedCards: View {
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                     .rotationEffect(
                         isFront
-                        ? .degrees(Double(dragOffset.width / 25))
+                        ? .degrees(Double(max(min(dragOffset.width / 25, 12), -12)))
                         : (isSecond ? .degrees(4) : .degrees(0))
                     )
                     .offset(x: isFront ? dragOffset.width : 0, y: 0)
