@@ -147,6 +147,7 @@ struct TagIconCapsule : View {
                 Image(image)
                     .renderingMode(.template)
                     .resizable()
+                    .aspectRatio(contentMode: .fit)
                     .foregroundStyle(visited.contains(title) ? .grayScale10 : .primary500)
                     .frame(width: (isSelected == title) ? 18 : 24, height: (isSelected == title) ? 18 : 24)
                 
