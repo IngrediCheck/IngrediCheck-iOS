@@ -58,17 +58,20 @@ struct HomeView: View {
                                 .font(ManropeFont.regular.size(12))
                                 .foregroundStyle(.grayScale100)
                         }
-                        
                         Spacer()
                         
                         AskIngrediBotButton()
                     }
-                    .frame(height: UIScreen.main.bounds.height * 0.22)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    
                     
                     Spacer()
                     
                     AllergySummaryCard()
+                        
+                        
                 }
+                .frame(height: UIScreen.main.bounds.height * 0.22)
                 .padding(.bottom, 24)
                 
                 

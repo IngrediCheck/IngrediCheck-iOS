@@ -52,6 +52,7 @@ struct AllergySummaryCard: View {
         .padding(.horizontal, 10)
         .padding(.top, 12)
         .padding(.bottom, 17)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             MyIcon()
                 .fill(.grayScale10)
@@ -69,8 +70,6 @@ struct AllergySummaryCard: View {
                 .padding(3)
             , alignment: .bottomTrailing
         )
-        .frame(height: UIScreen.main.bounds.height * 0.22)
-        
     }
 }
 
