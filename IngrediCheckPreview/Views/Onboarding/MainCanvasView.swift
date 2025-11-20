@@ -37,18 +37,13 @@ struct MainCanvasView: View {
             )
             .padding(.bottom, 16)
             
-            RoundedRectangle(cornerRadius: 24)
-                .foregroundStyle(.white)
-                .shadow(color: .gray.opacity(0.3), radius: 9, x: 0, y: 0)
-                .frame(width: UIScreen.main.bounds.width * 0.9)
-                .overlay(alignment: .top) {
-                    if let cards, cards.isEmpty == false {
-                        CanvasSummaryScrollView(
-                            cards: cards,
-                            scrollTarget: $cardScrollTarget
-                        )
-                    }
-                }
+            if let cards, cards.isEmpty == false {
+                CanvasSummaryScrollView(
+                    cards: cards,
+                    scrollTarget: $cardScrollTarget
+                )
+//                .padding(.horizontal, 20)
+            }
         }
 		.onAppear {
             store.onboardingFlowtype = flow
@@ -267,8 +262,6 @@ struct CanvasSummaryScrollView: View {
                 // but only once there is more than one card to avoid an initial jump.
                 .padding(.bottom, extraBottomPadding)
             }
-            .frame(width: UIScreen.main.bounds.width * 0.9)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
             .onAppear {
                 previousCardCount = cards.count
             }

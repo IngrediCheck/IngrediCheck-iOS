@@ -104,6 +104,6 @@ struct CanvasCard: View {
     ZStack {
 //        Color.gray.opacity(0.3).ignoresSafeArea()
         CanvasCard()
-            .padding(.horizontal)
+            .padding(.horizontal, 20)
     }
 }
