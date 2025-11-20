@@ -847,4 +847,116 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
+    
+    func registerDevice(deviceId: String, platform: String? = nil, osVersion: String? = nil, appVersion: String? = nil) async throws -> Bool {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        var requestBody: [String: Any] = ["deviceId": deviceId]
+        if let platform = platform {
+            requestBody["platform"] = platform
+        }
+        if let osVersion = osVersion {
+            requestBody["osVersion"] = osVersion
+        }
+        if let appVersion = appVersion {
+            requestBody["appVersion"] = appVersion
+        }
+        
+        let requestBodyData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        
+        let request = SupabaseRequestBuilder(endpoint: .devices_register)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setJsonBody(to: requestBodyData)
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            print("Failed to register device: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        struct RegisterDeviceResponse: Codable {
+            let is_internal: Bool
+        }
+        
+        do {
+            let response = try JSONDecoder().decode(RegisterDeviceResponse.self, from: data)
+            return response.is_internal
+        } catch {
+            print("Failed to decode register device response: \(error)")
+            throw NetworkError.decodingError
+        }
+    }
+    
+    func markDeviceInternal(deviceId: String) async throws -> (device_id: String, affected_users: Int) {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        let requestBody = ["deviceId": deviceId]
+        let requestBodyData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        
+        let request = SupabaseRequestBuilder(endpoint: .devices_mark_internal)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setJsonBody(to: requestBodyData)
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            print("Failed to mark device internal: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        struct MarkInternalResponse: Codable {
+            let device_id: String
+            let affected_users: Int
+        }
+        
+        do {
+            let response = try JSONDecoder().decode(MarkInternalResponse.self, from: data)
+            return (response.device_id, response.affected_users)
+        } catch {
+            print("Failed to decode mark device internal response: \(error)")
+            throw NetworkError.decodingError
+        }
+    }
+    
+    func isDeviceInternal(deviceId: String) async throws -> Bool {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        let request = SupabaseRequestBuilder(endpoint: .devices_is_internal, itemId: deviceId)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            print("Failed to check device internal status: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        struct IsInternalResponse: Codable {
+            let is_internal: Bool
+        }
+        
+        do {
+            let response = try JSONDecoder().decode(IsInternalResponse.self, from: data)
+            return response.is_internal
+        } catch {
+            print("Failed to decode is device internal response: \(error)")
+            throw NetworkError.decodingError
+        }
+    }
 }
