@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LifeStyle: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Plant & Balance", subTitle: "Do you follow a lant-forward or flexible eating style?", color: .avatarYellow, chips: [
             ChipsModel(name: "Vegetarian", icon: "vegetarian"),
@@ -53,12 +54,61 @@ struct LifeStyle: View {
                 .padding(.leading, 20)
             }
             
-            StackedCards(cards: arr)
-                .padding(.horizontal, 20)
+            StackedCards(
+                cards: arr,
+                isChipSelected: { card, chip in
+                    lifestyleSelection(for: card.title).contains(chip.name)
+                },
+                onChipTap: { card, chip in
+                    toggleLifestyleSelection(for: card.title, chipName: chip.name)
+                }
+            )
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func lifestyleSelection(for title: String) -> [String] {
+        guard let lifestyle = preferences.lifestyle,
+              let keyPath = lifestyleKey(for: title) else { return [] }
+        return lifestyle[keyPath: keyPath]
+    }
+    
+    private func toggleLifestyleSelection(for title: String, chipName: String) {
+        guard let keyPath = lifestyleKey(for: title) else { return }
+        
+        if preferences.lifestyle == nil {
+            preferences.lifestyle = LifestylePreferences(
+                plantBalance: [],
+                qualitySource: [],
+                sustainableLiving: []
+            )
+        }
+        
+        guard var lifestyle = preferences.lifestyle else { return }
+        var list = lifestyle[keyPath: keyPath]
+        if let idx = list.firstIndex(of: chipName) {
+            list.remove(at: idx)
+        } else {
+            list.append(chipName)
+        }
+        lifestyle[keyPath: keyPath] = list
+        preferences.lifestyle = lifestyle
+    }
+    
+    private func lifestyleKey(for title: String) -> WritableKeyPath<LifestylePreferences, [String]>? {
+        switch title {
+        case "Plant & Balance":
+            return \.plantBalance
+        case "Quality & Source":
+            return \.qualitySource
+        case "Sustainable Living":
+            return \.sustainableLiving
+        default:
+            return nil
         }
     }
 }
 
 #Preview {
-    LifeStyle(onboardingFlowType: .family)
+    LifeStyle(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

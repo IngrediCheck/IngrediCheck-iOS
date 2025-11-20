@@ -1,13 +1,13 @@
 //
-//  IngredientsChips.swift
+//  IngrediChipsForStackedCards.swift
 //  IngrediCheckPreview
 //
-//  Created by Gunjan Haider on 30/09/25.
+//  Created by Gunjan Haldar   on 17/11/25.
 //
 
 import SwiftUI
 
-struct IngredientsChips: View {
+struct IngredientsChipsForStackedCards: View {
     var title: String = "Peanuts"
     @State var bgColor: Color? = nil
     var fontColor: String = "000000"
@@ -17,7 +17,7 @@ struct IngredientsChips: View {
     var familyList: [String] = []
     var onClick: (() -> Void)? = nil
     var isSelected: Bool = false
-    var outlined: Bool = true
+    var outlined: Bool = false
     
     var body: some View {
         Button {
@@ -46,7 +46,7 @@ struct IngredientsChips: View {
             .padding(.trailing, !familyList.isEmpty ? 8 : 16)
             .padding(.leading, (image != nil) ? 12 : 16)
             .background(
-                (bgColor != nil)
+                (isSelected == false)
                 ? LinearGradient(
                     gradient: Gradient(stops: [
                         .init(color: bgColor ?? .white, location: 1.0)
@@ -54,16 +54,8 @@ struct IngredientsChips: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                : isSelected
-                    ? LinearGradient(
+                : LinearGradient(
                         colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    : LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .clear, location: 1.0)
-                        ]),
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -94,29 +86,5 @@ struct IngredientsChips: View {
 }
 
 #Preview {
-    VStack {
-        IngredientsChips(
-            title: "Peanuts",
-            image: "peanuts"
-        )
-        IngredientsChips(
-            title: "Sellfish",
-            image: "shellfish"
-        )
-        IngredientsChips(
-            title: "Wheat",
-            image: "wheat"
-        )
-        IngredientsChips(
-            title: "Sesame",
-            image: "sesame"
-        )
-        IngredientsChips(title: "India & South Asia")
-        IngredientsChips(
-            title: "Peanuts",
-            image: "peanuts",
-            familyList: ["image 1", "image 2", "image 3"]
-        )
-    }
-    
+    IngredientsChipsForStackedCards()
 }

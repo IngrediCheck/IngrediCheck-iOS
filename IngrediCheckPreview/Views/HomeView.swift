@@ -58,17 +58,20 @@ struct HomeView: View {
                                 .font(ManropeFont.regular.size(12))
                                 .foregroundStyle(.grayScale100)
                         }
-                        
                         Spacer()
                         
                         AskIngrediBotButton()
                     }
-                    .frame(height: 196)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    
                     
                     Spacer()
                     
                     AllergySummaryCard()
+                        
+                        
                 }
+                .frame(height: UIScreen.main.bounds.height * 0.22)
                 .padding(.bottom, 24)
                 
                 
@@ -139,6 +142,7 @@ struct HomeView: View {
                         .frame(height: 103)
                         
                         AverageScansCard()
+
                     }
                 }
                 .padding(.bottom, 20)
@@ -213,12 +217,7 @@ struct HomeView: View {
 }
 
 
-#Preview("iPhone 13 mini") {
+#Preview {
     HomeView()
-        .previewDevice("iPhone 13 mini")
 }
 
-#Preview("iPhone 16 Pro") {
-    HomeView()
-        .previewDevice("iPhone 16 Pro")
-}

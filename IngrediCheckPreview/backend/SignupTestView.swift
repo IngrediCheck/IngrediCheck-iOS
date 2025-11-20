@@ -11,7 +11,7 @@ struct SignupTestView: View {
     @State private var name: String = ""
     @State private var nickname: String = ""
     @State private var info: String = ""
-    @State private var color: String = ""
+    @State private var color: String = "" 
     @State private var memberID: String = ""
     @State private var inviteCode: String = ""
     

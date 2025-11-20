@@ -9,6 +9,10 @@ import SwiftUI
 
 struct CanvasTagBar: View {
     
+    @ObservedObject var store: Onboarding
+    var onTapCurrentSection: (() -> Void)? = nil
+    @Binding var scrollTarget: UUID?
+    
     @State var iconsArr: [ChipsModel] = [
         ChipsModel(name: "Allergies", icon: "allergies"),
         ChipsModel(name: "Intolerances", icon: "mingcute_alert-line"),
@@ -21,35 +25,103 @@ struct CanvasTagBar: View {
         ChipsModel(name: "Ethical", icon: "streamline_recycle-1-solid"),
         ChipsModel(name: "Taste", icon: "iconoir_chocolate")
     ]
-    @State var selectedTag: ChipsModel = ChipsModel(name: "Allergies", icon: "allergies")
     @State var visited: [String] = []
     
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: -1) {
-                ForEach(iconsArr) { model in
-                    TagIconCapsule(
-                        image: model.icon ?? "",
-                        title: model.name,
-                        isSelected: $selectedTag.name,
-                        isFirst: (model.name == iconsArr.first?.name),
-                        visited: $visited
-                    )
-                    .onTapGesture {
-                        selectedTag = model
-                        
-                        if visited.contains(model.name) == false {
-                            visited.append(model.name)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: -1) {
+                    ForEach(iconsArr.indices, id: \.self) { index in
+                        let model = iconsArr[index]
+                        TagIconCapsule(
+                            image: model.icon ?? "",
+                            title: model.name,
+                            isSelected: Binding(
+                                get: { store.sections[store.currentSectionIndex].name },
+                                set: { newName in
+                                    handleSelection(newName: newName, proxy: proxy)
+                                }
+                            ),
+                            isFirst: (model.name == iconsArr.first?.name),
+                            visited: $visited
+                        )
+                        .id(store.sections[safe: index]?.id)
+                        .onTapGesture {
+                            handleTap(index: index, proxy: proxy)
                         }
                     }
                 }
+                .padding(.horizontal, 20)
+                .animation(.linear(duration: 0.2), value: store.currentSectionIndex)
             }
-            .padding(.horizontal, 20)
-            .animation(.linear(duration: 0.2), value: selectedTag.name)
+            .onChange(of: scrollTarget) { _ in
+                guard let target = scrollTarget else { return }
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(target, anchor: .center)
+                }
+                scrollTarget = nil
+            }
         }
         .onAppear() {
-            visited.append(selectedTag.name)
+            // Initialize visited based on completed sections and current
+            let completed = store.sections.filter { $0.isComplete }.map { $0.name }
+            let current = store.sections[store.currentSectionIndex].name
+            let initial = Array(Set(completed + [current]))
+            visited = initial
         }
+        .onReceive(store.$sections) { _ in
+            // Refresh visited whenever completion state changes
+            let completed = store.sections.filter { $0.isComplete }.map { $0.name }
+            let current = store.sections[store.currentSectionIndex].name
+            let updated = Array(Set(completed + [current]))
+            visited = updated
+        }
+        .onChange(of: store.currentSectionIndex) { _ in
+            let current = store.sections[store.currentSectionIndex].name
+            if visited.contains(current) == false {
+                visited.append(current)
+            }
+        }
+    }
+    
+    private func handleSelection(newName: String, proxy: ScrollViewProxy) {
+        guard let tappedIndex = iconsArr.firstIndex(where: { $0.name == newName }),
+              store.sections.indices.contains(tappedIndex) else { return }
+        
+        handleSelection(at: tappedIndex, proxy: proxy)
+    }
+    
+    private func handleTap(index: Int, proxy: ScrollViewProxy) {
+        handleSelection(at: index, proxy: proxy)
+    }
+    
+    private func handleSelection(at index: Int, proxy: ScrollViewProxy) {
+        guard store.sections.indices.contains(index) else { return }
+        
+        if index == store.currentSectionIndex {
+            onTapCurrentSection?()
+            return
+        }
+        
+        let tappedName = store.sections[index].name
+        if store.sections[index].isComplete || visited.contains(tappedName) {
+            store.currentSectionIndex = index
+            store.currentScreenIndex = 0
+            if visited.contains(tappedName) == false {
+                visited.append(tappedName)
+            }
+            if let id = store.sections[index].id as UUID? {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
+        }
+    }
+}
+
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }
 
@@ -93,6 +165,6 @@ struct TagIconCapsule : View {
     }
 }
 
-#Preview {
-    CanvasTagBar()
-}
+//#Preview {
+//    CanvasTagBar()
+//}

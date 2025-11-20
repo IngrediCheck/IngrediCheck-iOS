@@ -9,6 +9,7 @@ import SwiftUI
 
 struct Nutrition: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Macronutrient Goals", subTitle: "Do you want to balance your proteins, carbs, and fats or focus on one?", color: .avatarPink, chips: [
             ChipsModel(name: "High Protein", icon: "chicken"),
@@ -55,12 +56,61 @@ struct Nutrition: View {
                 .padding(.leading, 20)
             }
             
-            StackedCards(cards: arr)
-                .padding(.horizontal, 20)
+            StackedCards(
+                cards: arr,
+                isChipSelected: { card, chip in
+                    nutritionSelection(for: card.title).contains(chip.name)
+                },
+                onChipTap: { card, chip in
+                    toggleNutritionSelection(for: card.title, chipName: chip.name)
+                }
+            )
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func nutritionSelection(for title: String) -> [String] {
+        guard let nutrition = preferences.nutrition,
+              let keyPath = nutritionKey(for: title) else { return [] }
+        return nutrition[keyPath: keyPath]
+    }
+    
+    private func toggleNutritionSelection(for title: String, chipName: String) {
+        guard let keyPath = nutritionKey(for: title) else { return }
+        
+        if preferences.nutrition == nil {
+            preferences.nutrition = NutritionPreferences(
+                macronutrientGoals: [],
+                sugarFiber: [],
+                dietFrameworks: []
+            )
+        }
+        
+        guard var nutrition = preferences.nutrition else { return }
+        var list = nutrition[keyPath: keyPath]
+        if let idx = list.firstIndex(of: chipName) {
+            list.remove(at: idx)
+        } else {
+            list.append(chipName)
+        }
+        nutrition[keyPath: keyPath] = list
+        preferences.nutrition = nutrition
+    }
+    
+    private func nutritionKey(for title: String) -> WritableKeyPath<NutritionPreferences, [String]>? {
+        switch title {
+        case "Macronutrient Goals":
+            return \.macronutrientGoals
+        case "Sugar & Fiber":
+            return \.sugarFiber
+        case "Diet Frameworks & Patterns":
+            return \.dietFrameworks
+        default:
+            return nil
         }
     }
 }
 
 #Preview {
-    Nutrition(onboardingFlowType: .individual)
+    Nutrition(onboardingFlowType: .individual, preferences: .constant(Preferences()))
 }

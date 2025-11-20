@@ -10,38 +10,28 @@ import SwiftUI
 
 struct CanvasCard: View {
     
-    @State var chips: [ChipsModel]? = nil
-    
-    @State var sectionedChips: [SectionedChipModel]? = [
-        SectionedChipModel(title: "Animal-Based", chips: [
-            ChipsModel(name: "Peanuts", icon: "peanut"),
-            ChipsModel(name: "Sesame", icon: "sesame"),
-            ChipsModel(name: "Wheat", icon: "wheat"),
-            ChipsModel(name: "Sellfish", icon: "sellfish")
-        ]),
-        SectionedChipModel(title: "Oils & Fats", chips: [
-            ChipsModel(name: "Peanuts", icon: "peanut"),
-            ChipsModel(name: "Sesame with almonds (in moderation) (10g)", icon: "sesame"),
-            ChipsModel(name: "Wheat", icon: "wheat"),
-            ChipsModel(name: "Sellfish", icon: "sellfish")
-        ]),
-        SectionedChipModel(title: "Additives & Sweeteners", chips: [
-            ChipsModel(name: "Peanuts", icon: "peanut"),
-            ChipsModel(name: "Sesame", icon: "sesame"),
-            ChipsModel(name: "Sellfish", icon: "sellfish")
-        ])
+    var chips: [ChipsModel]? = [
+        ChipsModel(name: "Peanuts", icon: "peanuts"),
+        ChipsModel(name: "Sesame", icon: "sesame"),
+        ChipsModel(name: "Wheat", icon: "wheat"),
+        ChipsModel(name: "Shellfish", icon: "shellfish")
     ]
+    
+    var sectionedChips: [SectionedChipModel]? = nil
+    
+    var title: String = "allergies"
+    var iconName: String = "allergies"
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image("allergies")
+                Image(iconName)
                     .resizable()
                     .renderingMode(.template)
                     .foregroundStyle(.grayScale110)
                     .frame(width: 18, height: 18)
                 
-                Text("allergies".capitalized)
+                Text(title.capitalized)
                     .font(NunitoFont.semiBold.size(14))
                     .foregroundStyle(.grayScale110)
             }
@@ -114,6 +104,6 @@ struct CanvasCard: View {
     ZStack {
 //        Color.gray.opacity(0.3).ignoresSafeArea()
         CanvasCard()
-            .padding(.horizontal)
+            .padding(.horizontal, 20)
     }
 }

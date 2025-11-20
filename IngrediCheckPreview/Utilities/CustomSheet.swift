@@ -4,18 +4,15 @@ import UIKit
 struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresentable {
     @Binding var item: Item?
     let cornerRadius: CGFloat
-    let heightsForItem: (Item) -> (min: CGFloat, max: CGFloat)
     let content: (Item) -> Content
 
     init(
         item: Binding<Item?>,
         cornerRadius: CGFloat = 16,
-        heightsForItem: @escaping (Item) -> (min: CGFloat, max: CGFloat),
         @ViewBuilder content: @escaping (Item) -> Content
     ) {
         self._item = item
         self.cornerRadius = cornerRadius
-        self.heightsForItem = heightsForItem
         self.content = content
     }
 
@@ -41,10 +38,12 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
 
         let presentSheet = {
             let hosting = UIHostingController(rootView:
-                ZStack {
-                    Color.white.ignoresSafeArea()
-                    content(newItem)
-                }
+                AnyView(
+                    ZStack {
+                        Color.white.ignoresSafeArea()
+                        content(newItem)
+                    }
+                )
             )
             hosting.view.backgroundColor = .white
             hosting.modalPresentationStyle = .pageSheet
@@ -52,26 +51,7 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
             parent.present(hosting, animated: true)
             context.coordinator.presentedID = newItem.id
 
-            DispatchQueue.main.async {
-                if let sheet = hosting.sheetPresentationController {
-                    let (minH, maxH) = heightsForItem(newItem)
-
-                    let minID = UISheetPresentationController.Detent.Identifier("custom.min.\(Int(minH))")
-                    let maxID = UISheetPresentationController.Detent.Identifier("custom.max.\(Int(maxH))")
-
-                    let minDetent = UISheetPresentationController.Detent.custom(identifier: minID) { _ in minH }
-                    let maxDetent = UISheetPresentationController.Detent.custom(identifier: maxID) { _ in maxH }
-
-                    sheet.detents = [minDetent, maxDetent]
-                    sheet.selectedDetentIdentifier = minID
-                    sheet.largestUndimmedDetentIdentifier = maxID
-                    sheet.prefersGrabberVisible = false
-                    sheet.prefersScrollingExpandsWhenScrolledToEdge = false
-                    sheet.preferredCornerRadius = cornerRadius
-
-                    hosting.presentationController?.delegate = context.coordinator
-                }
-            }
+            configureSheet(for: hosting, parent: parent, cornerRadius: cornerRadius, context: context)
         }
 
         // If a different sheet is open, dismiss first
@@ -101,6 +81,38 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
             // reset when user dismisses by swipe
             itemBinding.wrappedValue = nil
             presentedID = nil
+        }
+    }
+
+    private func configureSheet(
+        for hosting: UIHostingController<AnyView>,
+        parent: UIViewController,
+        cornerRadius: CGFloat,
+        context: Context
+    ) {
+        DispatchQueue.main.async {
+            hosting.view.layoutIfNeeded()
+
+            guard let sheet = hosting.sheetPresentationController else { return }
+
+            let targetWidth = parent.view.bounds.width
+            let fittingSize = CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
+            var measuredHeight = hosting.sizeThatFits(in: fittingSize).height
+
+            let maxHeight = parent.view.bounds.height * 0.92
+            let minHeight = parent.view.bounds.height * 0.4
+            measuredHeight = min(max(measuredHeight, minHeight), maxHeight)
+
+            let detentID = UISheetPresentationController.Detent.Identifier("dynamic.\(Int(measuredHeight))")
+            let detent = UISheetPresentationController.Detent.custom(identifier: detentID) { _ in measuredHeight }
+
+            sheet.detents = [detent]
+            sheet.selectedDetentIdentifier = detentID
+            sheet.prefersGrabberVisible = false
+            sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            sheet.preferredCornerRadius = cornerRadius
+
+            hosting.presentationController?.delegate = context.coordinator
         }
     }
 }

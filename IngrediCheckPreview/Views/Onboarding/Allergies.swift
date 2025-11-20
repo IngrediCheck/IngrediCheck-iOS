@@ -10,6 +10,7 @@ import SwiftUI
 struct Allergies: View {
     
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
         ChipsModel(name: "Peanuts", icon: "peanuts"),
         ChipsModel(name: "Tree nuts", icon: "tree nuts"),
@@ -59,7 +60,16 @@ struct Allergies: View {
                 ForEach(arr) { ele in
                     IngredientsChips(
                         title: ele.name,
-                        image: ele.icon
+                        image: ele.icon,
+                        onClick: {
+                            var set = Set(preferences.allergies ?? [])
+                            if set.contains(ele.name) {
+                                set.remove(ele.name)
+                            } else {
+                                set.insert(ele.name)
+                            }
+                            preferences.allergies = Array(set)
+                        }, isSelected: (preferences.allergies ?? []).contains(ele.name)
                     )
                 }
             }
@@ -69,5 +79,5 @@ struct Allergies: View {
 }
 
 #Preview {
-    Allergies(onboardingFlowType: .family)
+    Allergies(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

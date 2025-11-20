@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LifeStage: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
         ChipsModel(name: "Kids Baby-friendly foods", icon: "kids baby-friendly foods"),
         ChipsModel(name: "Toddler pickey-eating adaptations", icon: "toddler pickey-eating adaptations"),
@@ -49,7 +50,16 @@ struct LifeStage: View {
                 ForEach(arr) { ele in
                     IngredientsChips(
                         title: ele.name,
-                        image: ele.icon
+                        image: ele.icon,
+                        onClick: {
+                            var set = Set(preferences.lifeStage ?? [])
+                            if set.contains(ele.name) {
+                                set.remove(ele.name)
+                            } else {
+                                set.insert(ele.name)
+                            }
+                            preferences.lifeStage = Array(set)
+                        }, isSelected: (preferences.lifeStage ?? []).contains(ele.name)
                     )
                 }
             }
@@ -59,5 +69,5 @@ struct LifeStage: View {
 }
 
 #Preview {
-    LifeStage(onboardingFlowType: .family)
+    LifeStage(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CustomIngrediCheckProgressBar: View {
     
-    @State var progress: CGFloat = 0
+    var progress: CGFloat
     
     var body: some View {
         ZStack(alignment: .leading) {
@@ -24,6 +24,7 @@ struct CustomIngrediCheckProgressBar: View {
                     .fill(.secondary600)
                     .frame(width: (UIScreen.main.bounds.width - 40) * progress / 100, height: 4)
                     .padding(.horizontal, 20)
+                    .animation(.smooth(duration: 0.35), value: progress)
                 
                 VStack(spacing: 0) {
                     Text("\(Int(progress))%")
@@ -56,7 +57,7 @@ struct CustomIngrediCheckProgressBar: View {
 //                
 //                Button {
 //                    withAnimation(.smooth) {
-//                        progress += 10
+//                        // progress += 10
 //                    }
 //                } label: {
 //                    Text("Press")
@@ -69,5 +70,5 @@ struct CustomIngrediCheckProgressBar: View {
 }
 
 #Preview {
-    CustomIngrediCheckProgressBar()
+    CustomIngrediCheckProgressBar(progress: 0)
 }

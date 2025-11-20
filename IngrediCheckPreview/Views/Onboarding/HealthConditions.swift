@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HealthConditions: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
         ChipsModel(name: "Diabetes", icon: "diabetes"),
         ChipsModel(name: "Hypertension", icon: "hypertension"),
@@ -51,7 +52,16 @@ struct HealthConditions: View {
                 ForEach(arr) { ele in
                     IngredientsChips(
                         title: ele.name,
-                        image: ele.icon
+                        image: ele.icon,
+                        onClick: {
+                            var set = Set(preferences.healthConditions ?? [])
+                            if set.contains(ele.name) {
+                                set.remove(ele.name)
+                            } else {
+                                set.insert(ele.name)
+                            }
+                            preferences.healthConditions = Array(set)
+                        }, isSelected: (preferences.healthConditions ?? []).contains(ele.name)
                     )
                 }
             }
@@ -61,5 +71,5 @@ struct HealthConditions: View {
 }
 
 #Preview {
-    HealthConditions(onboardingFlowType: .individual)
+    HealthConditions(onboardingFlowType: .individual, preferences: .constant(Preferences()))
 }

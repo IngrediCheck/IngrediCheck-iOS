@@ -10,7 +10,7 @@ import SwiftUI
 struct SplashScreen: View {
     
     @State var titleArr: [String] = [
-        "Know What’s Inside, Instantly",
+        "Know What's Inside, Instantly",
         "Made for Your IngrediFam",
         "Shop & Eat with Confidence"
     ]
@@ -26,12 +26,6 @@ struct SplashScreen: View {
     var body: some View {
         NavigationStack {
             VStack {
-                HStack {
-                    Spacer()
-                    Text("Skip")
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale110)
-                }
                 
                 Spacer()
                 Spacer()
@@ -81,7 +75,7 @@ struct SplashScreen: View {
                     
                     if idx == 2 {
                         NavigationLink {
-                            HeyThereScreen()
+                            RootContainerView()
                         } label: {
                             GreenCapsule(title: "Get Started")
                                 .frame(width: 159)

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct Avoid: View {
     @State var onboardingFlowType: OnboardingFlowType
+    @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Oils & Fats", subTitle: "In fats or oils, what do you avoid?", color: .avatarYellow, chips: [
             ChipsModel(name: "Hydrogenated oils / Trans fats", icon: "hydrogenated oil"),
@@ -67,12 +68,67 @@ struct Avoid: View {
                 .padding(.leading, 20)
             }
             
-            StackedCards(cards: arr)
-                .padding(.horizontal, 20)
+            StackedCards(
+                cards: arr,
+                isChipSelected: { card, chip in
+                    avoidSelection(for: card.title).contains(chip.name)
+                },
+                onChipTap: { card, chip in
+                    toggleAvoidSelection(for: card.title, chipName: chip.name)
+                }
+            )
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func avoidSelection(for title: String) -> [String] {
+        guard let avoid = preferences.avoid,
+              let keyPath = avoidKey(for: title) else { return [] }
+        return avoid[keyPath: keyPath]
+    }
+    
+    private func toggleAvoidSelection(for title: String, chipName: String) {
+        guard let keyPath = avoidKey(for: title) else { return }
+        
+        if preferences.avoid == nil {
+            preferences.avoid = AvoidPreferences(
+                oilsFats: [],
+                animalBased: [],
+                stimulantsSubstances: [],
+                additivesSweeteners: [],
+                plantBasedRestrictions: []
+            )
+        }
+        
+        guard var avoid = preferences.avoid else { return }
+        var list = avoid[keyPath: keyPath]
+        if let idx = list.firstIndex(of: chipName) {
+            list.remove(at: idx)
+        } else {
+            list.append(chipName)
+        }
+        avoid[keyPath: keyPath] = list
+        preferences.avoid = avoid
+    }
+    
+    private func avoidKey(for title: String) -> WritableKeyPath<AvoidPreferences, [String]>? {
+        switch title {
+        case "Oils & Fats":
+            return \.oilsFats
+        case "Animal-Based":
+            return \.animalBased
+        case "Stimulants & Substances":
+            return \.stimulantsSubstances
+        case "Additives & Sweeteners":
+            return \.additivesSweeteners
+        case "Plant-Based Restrictions":
+            return \.plantBasedRestrictions
+        default:
+            return nil
         }
     }
 }
 
 #Preview {
-    Avoid(onboardingFlowType: .family)
+    Avoid(onboardingFlowType: .family, preferences: .constant(Preferences()))
 }

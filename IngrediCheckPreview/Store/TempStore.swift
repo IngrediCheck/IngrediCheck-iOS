@@ -9,9 +9,10 @@ import SwiftUI
 
 struct TempStore: View {
     @StateObject var store = Onboarding(onboardingFlowtype: .individual)
+    @State var preferences: Preferences = Preferences()
     var body: some View {
         VStack {
-            store.currentScreen.view
+            store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
             
             let _ = print("render")
             

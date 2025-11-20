@@ -17,10 +17,23 @@ struct Card: Identifiable, Equatable {
 
 struct StackedCards: View {
     
-    @State var cards: [Card]
+    var isChipSelected: (Card, ChipsModel) -> Bool
+    var onChipTap: (Card, ChipsModel) -> Void
+    
+    @State private var cards: [Card]
     @State var dragOffset: CGSize = .zero
     @State var dragValue: CGFloat = 0
     @State var tempCard: Card = Card(title: "", subTitle: "", color: .black, chips: [])
+    
+    init(
+        cards: [Card],
+        isChipSelected: @escaping (Card, ChipsModel) -> Bool = { _, _ in false },
+        onChipTap: @escaping (Card, ChipsModel) -> Void = { _, _ in }
+    ) {
+        self._cards = State(initialValue: cards)
+        self.isChipSelected = isChipSelected
+        self.onChipTap = onChipTap
+    }
     
     var body: some View {
         ZStack {
@@ -32,21 +45,30 @@ struct StackedCards: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(card.title)
                                 .font(.system(size: 20, weight: .regular))
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                             
                             Text(card.subTitle)
                                 .font(.system(size: 12, weight: .regular))
                                 .opacity(0.8)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .opacity((idx == 0) ? 1 : 0)
                         
                         FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
                             ForEach(card.chips, id: \.id) { chip in
-                                IngredientsChips(
+                                IngredientsChipsForStackedCards(
                                     title: chip.name,
-                                    bgColor: .grayScale10,
+                                    bgColor: nil,
                                     fontColor: "303030",
                                     image: chip.icon ?? "",
-                                    isSelected: false,
+                                    onClick: {
+                                        onChipTap(card, chip)
+                                    },
+                                    isSelected: isChipSelected(card, chip),
                                     outlined: false
                                 )
                             }
@@ -55,39 +77,48 @@ struct StackedCards: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 20)
+                    .frame(height: UIScreen.main.bounds.height * 0.33, alignment: .topLeading)
                     .background((idx == 0) ? card.color : tempCard.color, in: RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        Image("leaf-recycle")
+                            .padding(.trailing, 10)
+                            .offset(y: 17)
+                            .opacity((idx == 0) ? 0.5 : 0)
+                        , alignment: .bottomTrailing
+                    )
                 }
                 .blur(radius: (idx == 0) ? 0 : 4)
                 .opacity((idx == 0) ? 1 : 0.52)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .rotationEffect(.degrees((idx == 0) ? 0 : 4))
                 .offset(x: (idx == 0) ? dragOffset.width : 0, y: (idx == 0) ? dragOffset.height : 0)
-                .gesture(
-                    (idx == 0) ?
+                .highPriorityGesture(
                     DragGesture()
-                        .onChanged({ value in
+                        .onChanged { value in
+                            guard idx == 0 else { return }
+                            
                             dragOffset.width = value.translation.width
                             dragOffset.height = 0
                             
                             dragValue = value.translation.width
-                        })
-                        .onEnded({ value in
+                        }
+                        .onEnded { _ in
+                            guard idx == 0 else { return }
+                            
                             withAnimation(.smooth) {
                                 dragOffset = .zero
                                 
-                                if dragValue > 150 {
+                                if dragValue > 80 {
                                     right()
                                 }
                                 
-                                if dragValue < -150 {
+                                if dragValue < -80 {
                                     left()
                                 }
                                 
-                                
                                 dragValue = 0
                             }
-                        })
-                    : nil
+                        }
                 )
             }
         }
