@@ -848,7 +848,7 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
     }
     
-    func registerDevice(deviceId: String, platform: String? = nil, osVersion: String? = nil, appVersion: String? = nil) async throws -> Bool {
+    func registerDevice(deviceId: String, platform: String? = nil, osVersion: String? = nil, appVersion: String? = nil, markInternal: Bool? = nil) async throws -> Bool {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -862,6 +862,9 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
         if let appVersion = appVersion {
             requestBody["appVersion"] = appVersion
+        }
+        if let markInternal = markInternal {
+            requestBody["markInternal"] = markInternal
         }
         
         let requestBodyData = try JSONSerialization.data(withJSONObject: requestBody, options: [])

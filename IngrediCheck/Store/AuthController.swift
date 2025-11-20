@@ -561,11 +561,18 @@ private enum AuthFlowMode {
                 let osVersion = UIDevice.current.systemVersion
                 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
                 
+                #if targetEnvironment(simulator) || DEBUG
+                let markInternal = true
+                #else
+                let markInternal: Bool? = nil
+                #endif
+                
                 let isInternal = try await WebService().registerDevice(
                     deviceId: deviceId,
                     platform: platform,
                     osVersion: osVersion,
-                    appVersion: appVersion
+                    appVersion: appVersion,
+                    markInternal: markInternal
                 )
                 
                 await MainActor.run {
