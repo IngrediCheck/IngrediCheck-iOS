@@ -18,12 +18,11 @@ struct ProductDetailView: View {
     
     var isPlaceholderMode: Bool = false
     
-    private let productImages = ["corn-flakes", "corn-flakes", "corn-flakes", "corn-flakes"]
+    private let productImages = ["maggie1", "maggie2"]
     private let productBrand = "Nestlé"
     private let productName = "Maggi 2-Minute Noodles"
     private let productDetails = "Instant Noodles · Pack of 70g"
-    private let productStatus = "Unmatched"
-    private let productStatusColor = Color(hex: "#FF1100")
+    private let productStatus: ProductMatchStatus = .matched
     private let dietaryTags = [
         DietaryTag(name: "Dairy-free", icon: "dairy"),
         DietaryTag(name: "Vegetarian", icon: "vegetarian"),
@@ -98,7 +97,8 @@ struct ProductDetailView: View {
                 
                 IngredientsAlertCard(
                     isExpanded: $isIngredientsAlertExpanded,
-                    items: ingredientAlertItems
+                    items: ingredientAlertItems,
+                    status: productStatus
                 )
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -121,7 +121,8 @@ struct ProductDetailView: View {
                 ) {
                     IngredientDetailsView(
                         paragraphs: ingredientParagraphs,
-                        activeHighlight: $activeIngredientHighlight
+                        activeHighlight: $activeIngredientHighlight,
+                        highlightColor: productStatus.color
                     )
                 }
                 .padding(.horizontal, 20)
@@ -173,51 +174,70 @@ struct ProductDetailView: View {
         HStack(spacing: 12) {
             Image(productImages[selectedImageIndex])
                 .resizable()
-                .aspectRatio(contentMode: .fill)
-                .scaledToFill()
+                .aspectRatio(contentMode: .fit)
                 .frame(
                     width: UIScreen.main.bounds.width * 0.704,
                     height: UIScreen.main.bounds.height * 0.234
                 )
                 .cornerRadius(16)
                 .clipped()
+                .background(in: RoundedRectangle(cornerRadius: 24))
+                .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
             
-            VStack(spacing: 8) {
-                ForEach(0..<min(3, productImages.count), id: \.self) { index in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 8) {
+                    // Add Photo button at the top
                     Button {
-                        if !isPlaceholderMode {
-                            selectedImageIndex = index
-                        }
+                        // Add photo action
                     } label: {
-                        if isPlaceholderMode {
-                            Image("imagePh")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 60, height: 60)
-                                .foregroundStyle(.grayScale60)
-                                .background(Color.grayScale40)
-                                .cornerRadius(8)
-                        } else {
-                            Image(productImages[index])
-                                .resizable()
-                                .scaledToFill()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 60, height: 60)
-                                .cornerRadius(8)
-                                .clipped()
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(
-                                            selectedImageIndex == index ? Color.primary600 : .clear,
-                                            lineWidth: 2
-                                        )
-                                )
-                        }
+                        Image("addPhoto")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 60, height: 60)
+                            .foregroundStyle(.grayScale60)
+                            .background(Color.grayScale40)
+                            .cornerRadius(8)
                     }
                     .disabled(isPlaceholderMode)
+                    
+                    // Product image thumbnails
+                    ForEach(0..<productImages.count, id: \.self) { index in
+                        Button {
+                            if !isPlaceholderMode {
+                                selectedImageIndex = index
+                            }
+                        } label: {
+                            if isPlaceholderMode {
+                                Image("imagePh")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 60, height: 60)
+                                    .foregroundStyle(.grayScale60)
+                                    .background(Color.grayScale40)
+                                    .cornerRadius(8)
+                            } else {
+                                Image(productImages[index])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 60, height: 60)
+                                    .clipped()
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 11)
+                                            .stroke(
+                                                selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                lineWidth: 2
+                                            )
+                                    )
+                            }
+                        }
+                        .disabled(isPlaceholderMode)
+                    }
                 }
             }
+            .frame(width: 60, height: 196) // Height for 3 thumbnails (60 + 8 + 60 + 8 + 60 = 196)
         }
+        .padding(.horizontal, 20)
         .padding(.bottom, 20)
     }
     
@@ -241,16 +261,16 @@ struct ProductDetailView: View {
                 VStack(alignment: .trailing, spacing: 16) {
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(productStatusColor)
+                            .fill(productStatus.color)
                             .frame(width: 10, height: 10)
                         
-                        Text(productStatus)
+                        Text(productStatus.title)
                             .font(NunitoFont.bold.size(14))
-                            .foregroundStyle(productStatusColor)
+                            .foregroundStyle(productStatus.color)
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
-                    .background(productStatusColor.opacity(0.1), in: Capsule())
+                    .background(productStatus.badgeBackground, in: Capsule())
                     
                     HStack(spacing: 12) {
                         Image("thumbsup")
@@ -285,6 +305,7 @@ struct ProductDetailView: View {
     }
 }
 
+#if DEBUG
 #Preview("Normal Mode") {
     ProductDetailView(isPlaceholderMode: false)
         .environment(AppNavigationCoordinator())
@@ -293,5 +314,58 @@ struct ProductDetailView: View {
 #Preview("Placeholder Mode") {
     ProductDetailView(isPlaceholderMode: true)
         .environment(AppNavigationCoordinator())
+}
+#endif
+
+// MARK: - Product Match Status
+
+enum ProductMatchStatus {
+    case matched
+    case uncertain
+    case unmatched
+    
+    var title: String {
+        switch self {
+        case .matched: return "Matched"
+        case .uncertain: return "Uncertain"
+        case .unmatched: return "Unmatched"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .matched: return Color(hex: "#5A9C19")
+        case .uncertain: return Color(hex: "#E9A600")
+        case .unmatched: return Color(hex: "#FF4E50")
+        }
+    }
+    
+    var badgeBackground: Color {
+        switch self {
+        case .matched: return Color(hex: "#EAF6D9")
+        case .uncertain: return Color(hex: "#FFF5DA")
+        case .unmatched: return Color(hex: "#FFE3E2")
+        }
+    }
+    
+    var alertTitle: String {
+        switch self {
+        case .matched: return "Great Match"
+        case .uncertain: return "Partially Compatible"
+        case .unmatched: return "Ingredients Alerts"
+        }
+    }
+    
+    var alertCardBackground: Color {
+        switch self {
+        case .matched: return Color(hex: "#F3FAE7")
+        case .uncertain: return Color(hex: "#FFF8E8")
+        case .unmatched: return Color(hex: "#FFEAEA")
+        }
+    }
+    
+    var sectionBackground: Color {
+        badgeBackground
+    }
 }
 

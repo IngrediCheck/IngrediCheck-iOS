@@ -3,6 +3,7 @@ import SwiftUI
 struct IngredientDetailsView: View {
     let paragraphs: [IngredientParagraph]
     @Binding var activeHighlight: IngredientHighlight?
+    let highlightColor: Color
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -16,7 +17,8 @@ struct IngredientDetailsView: View {
                     
                     HighlightableParagraph(
                         paragraph: paragraph,
-                        activeHighlight: $activeHighlight
+                        activeHighlight: $activeHighlight,
+                        highlightColor: highlightColor
                     )
                 }
             }
@@ -39,6 +41,7 @@ struct IngredientDetailsView: View {
 struct HighlightableParagraph: View {
     let paragraph: IngredientParagraph
     @Binding var activeHighlight: IngredientHighlight?
+    let highlightColor: Color
     
     private var segments: [IngredientSegment] {
         segmentedText(paragraph.body, highlights: paragraph.highlights)
@@ -62,7 +65,7 @@ struct HighlightableParagraph: View {
                     } label: {
                         Text(value)
                             .font(ManropeFont.semiBold.size(14))
-                            .foregroundStyle(Color(hex: "#FF4E50"))
+                            .foregroundStyle(highlightColor)
                     }
                     .buttonStyle(.plain)
                 case .lineBreak:

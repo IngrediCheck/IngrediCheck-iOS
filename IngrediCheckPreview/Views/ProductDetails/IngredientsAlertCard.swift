@@ -3,6 +3,7 @@ import SwiftUI
 struct IngredientsAlertCard: View {
     @Binding var isExpanded: Bool
     var items: [IngredientAlertItem]
+    var status: ProductMatchStatus
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -20,7 +21,7 @@ struct IngredientsAlertCard: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color(hex: "#FFEAEA"))
+                .fill(status.alertCardBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
@@ -41,13 +42,13 @@ struct IngredientsAlertCard: View {
                     .font(.system(size: 18))
                     .foregroundStyle(.white)
                 
-                Text("Ingredients Alerts")
+                Text(status.alertTitle)
                     .font(NunitoFont.bold.size(12))
                     .foregroundStyle(.white)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 20)
-            .background(Color(hex: "#FF594E"), in: Capsule())
+            .background(status.color, in: Capsule())
             
             Spacer(minLength: 0)
         }
@@ -60,7 +61,7 @@ struct IngredientsAlertCard: View {
             Text("Made with ")
                 .foregroundStyle(.grayScale150)
             + Text("refined flour, palm oil, and flavor enhancers")
-                .foregroundStyle(Color(hex: "#FF4E50"))
+                .foregroundStyle(status.color)
                 .fontWeight(.bold)
             + Text(", not ideal for your clean and heart-friendly choices.")
                 .foregroundStyle(.grayScale150)
@@ -75,11 +76,11 @@ struct IngredientsAlertCard: View {
             HStack(spacing: 6) {
                 Text(text)
                     .font(NunitoFont.bold.size(15))
-                    .foregroundStyle(.grayScale150)
+                    .foregroundStyle(status.color)
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.grayScale150)
+                    .foregroundStyle(status.color)
             }
         }
     }
