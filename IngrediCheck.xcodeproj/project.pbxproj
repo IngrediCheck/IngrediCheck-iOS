@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -67,6 +67,7 @@
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarViewModel.swift; sourceTree = "<group>"; };
+		1FF49D412E8BAF6D0072B3F6 /* IngrediCheckPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheckPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
 		390F0D432BAE0D44009081AD /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
@@ -113,7 +114,28 @@
 		EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0CDD1DA92E93A60700DFAB1C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1FF49D402E8BAF6D0072B3F6 /* IngrediCheckPreview */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1FF49D422E8BAF6D0072B3F6 /* IngrediCheckPreview */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (0CDD1DA92E93A60700DFAB1C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = IngrediCheckPreview; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
+		1FF49D3E2E8BAF6D0072B3F6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		39F2A8772A9D3972004EBB9A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -226,6 +248,7 @@
 			isa = PBXGroup;
 			children = (
 				39F2A87C2A9D3972004EBB9A /* IngrediCheck */,
+				1FF49D422E8BAF6D0072B3F6 /* IngrediCheckPreview */,
 				39F2A87B2A9D3972004EBB9A /* Products */,
 				6129BCCF6EBB4E1C75C2304C /* Pods */,
 				693CA082C10D7643322619FF /* Frameworks */,
@@ -237,6 +260,7 @@
 			isa = PBXGroup;
 			children = (
 				39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */,
+				1FF49D412E8BAF6D0072B3F6 /* IngrediCheckPreview.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -289,6 +313,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1FF49D402E8BAF6D0072B3F6 /* IngrediCheckPreview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1FF49D4B2E8BAF6F0072B3F6 /* Build configuration list for PBXNativeTarget "IngrediCheckPreview" */;
+			buildPhases = (
+				1FF49D3D2E8BAF6D0072B3F6 /* Sources */,
+				1FF49D3E2E8BAF6D0072B3F6 /* Frameworks */,
+				1FF49D3F2E8BAF6D0072B3F6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1FF49D422E8BAF6D0072B3F6 /* IngrediCheckPreview */,
+			);
+			name = IngrediCheckPreview;
+			packageProductDependencies = (
+			);
+			productName = IngrediCheckPreview;
+			productReference = 1FF49D412E8BAF6D0072B3F6 /* IngrediCheckPreview.app */;
+			productType = "com.apple.product-type.application";
+		};
 		39F2A8792A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */;
@@ -327,9 +373,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1430;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 1520;
 				TargetAttributes = {
+					1FF49D402E8BAF6D0072B3F6 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 					39F2A8792A9D3972004EBB9A = {
 						CreatedOnToolsVersion = 14.3.1;
 					};
@@ -357,11 +406,19 @@
 			projectRoot = "";
 			targets = (
 				39F2A8792A9D3972004EBB9A /* IngrediCheck */,
+				1FF49D402E8BAF6D0072B3F6 /* IngrediCheckPreview */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		1FF49D3F2E8BAF6D0072B3F6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		39F2A8782A9D3972004EBB9A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -433,6 +490,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1FF49D3D2E8BAF6D0072B3F6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		39F2A8762A9D3972004EBB9A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -482,6 +546,85 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		1FF49D492E8BAF6F0072B3F6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 58MYNHGN72;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IngrediCheckPreview/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "\"\"";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow camera access to use barcode scanning and photo capture features.\n";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1FF49D4A2E8BAF6F0072B3F6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 58MYNHGN72;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = IngrediCheckPreview/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "\"\"";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow camera access to use barcode scanning and photo capture features.\n";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		39F2A8862A9D3974004EBB9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -620,7 +763,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -713,7 +856,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -789,6 +932,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1FF49D4B2E8BAF6F0072B3F6 /* Build configuration list for PBXNativeTarget "IngrediCheckPreview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FF49D492E8BAF6F0072B3F6 /* Debug */,
+				1FF49D4A2E8BAF6F0072B3F6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		39F2A8752A9D3972004EBB9A /* Build configuration list for PBXProject "IngrediCheck" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
