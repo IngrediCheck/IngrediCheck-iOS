@@ -45,6 +45,7 @@ struct MainCanvasView: View {
 //                .padding(.horizontal, 20)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.onAppear {
             store.onboardingFlowtype = flow
 		}

@@ -50,6 +50,14 @@ struct StackedCards: View {
                            maxHeight: cardHeight,
                            alignment: .top)
                     .background(card.color, in: RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        Image(.leafRecycle)
+                            .opacity(0.5)
+                            .offset(y: 17)
+                            .padding(.trailing, 10)
+                            .clipped()
+                        , alignment: .bottomTrailing
+                    )
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                     .rotationEffect(
                         isFront
@@ -61,6 +69,7 @@ struct StackedCards: View {
                     .zIndex(isFront ? 1 : 0)
                     .allowsHitTesting(isFront)
                     .highPriorityGesture(dragGesture)
+                    
             }
         }
         .animation(.smooth(duration: 0.25), value: currentIndex)
