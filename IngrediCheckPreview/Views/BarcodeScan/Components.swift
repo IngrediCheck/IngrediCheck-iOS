@@ -10,6 +10,7 @@ struct CameraSwipeButton: View {
     @Binding var mode: CameraMode
     @State private var isTapped = false
     @State private var isTapped1 = false
+    @GestureState private var dragOffset: CGFloat = 0
     
     var body: some View {
         VStack{
@@ -55,35 +56,21 @@ struct CameraSwipeButton: View {
                     
                     Spacer(minLength: 12)
                     
-                    // MARK: Middle icons
-                    HStack(spacing: 8) {
-                        Image("right-arrow")
-                            .resizable()
-                            .frame(width: 11, height: 21)
-                            .opacity(0.3)
-                        Image("right-arrow")
-                            .resizable()
-                            .frame(width: 11, height: 21)
-                            .opacity(0.6)
-                        Image("right-arrow")
-                            .resizable()
-                            .frame(width: 11, height: 21)
-                            .opacity(1.0)
-                    }
-                 
-                    
-                    .foregroundColor(.white)
+                    // MARK: Middle icons (sequential swipe shimmer)
+                    ArrowSwipeShimmer()
+                        .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+                        .animation(.easeInOut(duration: 0.2), value: mode)
                     
                     Spacer(minLength: 12)
                     
                     // MARK: Right circle (Camera)
                     Button(action: {
-                        withAnimation(.easeInOut(duration: 0.18)) {
+                        withAnimation(.smooth(duration: 0.18)) {
                             isTapped1 = true
                             mode = .photo
                         }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                            withAnimation(.easeInOut(duration: 0.18)) {
+                            withAnimation(.smooth(duration: 0.18)) {
                                 isTapped1 = false
                             }
                         }
@@ -109,8 +96,39 @@ struct CameraSwipeButton: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 10)
-                .frame(width: 272)
+                .frame(width: 261)
+                // subtle visual slide effect while dragging (keeps circles visually centered)
+                .offset(x: dragOffset * 0.2)
+                .animation(.spring(response: 0.25, dampingFraction: 0.8), value: dragOffset)
             }
+            .gesture(
+                DragGesture()
+                    .updating($dragOffset) { value, state, _ in
+                        // live drag translation, tightly clamped so content stays visually centered
+                        let translation = value.translation.width
+                        let clamped = max(-15, min(15, translation))
+                        state = clamped
+                    }
+                    .onEnded { value in
+                        let threshold: CGFloat = 30
+                        let translation = value.translation.width
+
+                        if translation > threshold {
+                            // swipe right -> go to photo mode (move selection to the right circle)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                mode = .photo
+                            }
+                        } else if translation < -threshold {
+                            // swipe left -> go to scanner mode (move selection to the left circle)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                mode = .scanner
+                            }
+                        }
+                    }
+            )
+            // keep circles visually inside the rounded pill while sliding
+            .clipShape(RoundedRectangle(cornerRadius: 46))
+//           .swipeShimmer()
 
             
             HStack(){
@@ -269,11 +287,103 @@ struct ContentView6: View {
     }
 }
 
+
+
+struct ArrowSwipeShimmer: View {
+    @State private var phase: CGFloat = -1
+    private let animationDuration: Double = 1.4
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<3, id: \.self) { _ in
+                Image("right-arrow")
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 11, height: 21)
+                    .foregroundColor(.white)
+                    .opacity(0.4) // base arrow look
+            }
+        }
+        .overlay(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.white.opacity(0.0),
+                    Color.white.opacity(0.6),
+                    Color.white.opacity(0.0)
+                ]),
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: 42)
+            .offset(x: phase * 42)
+        )
+        .mask(
+            HStack(spacing: 8) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Image("right-arrow")
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 11, height: 21)
+                }
+            }
+        )
+        .onAppear {
+            withAnimation(
+                Animation
+                    .linear(duration: animationDuration)
+                    .delay(0.4)
+                    .repeatForever(autoreverses: false)
+            ) {
+                phase = 1
+            }
+        }
+    }
+}
+
+struct SwipeShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.grayScale70.opacity(0.0),
+                        Color.grayScale70.opacity(0.3),
+                        Color.grayScale70.opacity(0.3),
+                        Color.grayScale70.opacity(0.8),
+                      
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .scaleEffect(x: 1.5) // wider highlight
+                .offset(x: phase * 180) // shimmer movement
+            )
+            .mask(content)
+            .onAppear {
+                withAnimation(
+                    Animation
+                        .linear(duration: 1.8)
+                        .repeatForever(autoreverses: false) // <— IMPORTANT (left-right-left)
+                ) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+extension View {
+    func swipeShimmer() -> some View {
+        self.modifier(SwipeShimmer())
+    }
+}
+
 #Preview {
     ZStack{
-        ContentView6()
+        CameraSwipeButton(mode: .constant(.photo))
+//        ContentView6()
     }.frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .background(.black)
 }
-

@@ -153,7 +153,6 @@ struct CameraScreen: View {
 
                 ContentView5()
                 Spacer()
-                CameraSwipeButton(mode: $mode)
                 if mode == .photo {
                     Button(action: {
                         camera.capturePhoto { image in
@@ -173,6 +172,7 @@ struct CameraScreen: View {
                     }
                     .padding(.top, 16)
                 }
+                CameraSwipeButton(mode: $mode)
             }
             .zIndex(2)
             
