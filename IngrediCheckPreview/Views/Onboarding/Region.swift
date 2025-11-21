@@ -248,12 +248,7 @@ private struct RegionSectionRow: View {
                         )
                     }
                 }
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity
-                    )
-                )
+                .transition(.blurReplace)
             }
         }
         .padding(.vertical, 4)
