@@ -39,7 +39,7 @@ struct Region: View {
                 ChipsModel(name: "Halal (Islamic dietary laws)", icon: "☪️"),
                 ChipsModel(name: "Kosher (Jewish dietary laws)", icon: "✡"),
                 ChipsModel(name: "Greek / Mediterranean diets", icon: "🫒"),
-                ChipsModel(name: "Other", icon: "🥖")
+                ChipsModel(name: "Other", icon: "other")
             ]
         ),
         SectionedChipModel(
@@ -103,25 +103,49 @@ struct Region: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(sections) { section in
-                        RegionSectionRow(
-                            section: section,
-                            isExpanded: expandedSectionIds.contains(section.id),
-                            onToggleExpanded: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                    if expandedSectionIds.contains(section.id) {
-                                        expandedSectionIds.remove(section.id)
-                                    } else {
-                                        expandedSectionIds.insert(section.id)
+                        if section.chips.count > 1 {
+                            RegionSectionRow(
+                                section: section,
+                                isSectionSelected: !regionSelection(for: section.title).isEmpty,
+                                isExpanded: expandedSectionIds.contains(section.id),
+                                onToggleExpanded: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                        if expandedSectionIds.contains(section.id) {
+                                            expandedSectionIds.remove(section.id)
+                                        } else {
+                                            expandedSectionIds.insert(section.id)
+                                        }
                                     }
+                                },
+                                isChipSelected: { chip in
+                                    regionSelection(for: section.title).contains(chip.name)
+                                },
+                                onChipTap: { chip in
+                                    toggleRegionSelection(for: section.title, chipName: chip.name)
                                 }
-                            },
-                            isChipSelected: { chip in
-                                regionSelection(for: section.title).contains(chip.name)
-                            },
-                            onChipTap: { chip in
-                                toggleRegionSelection(for: section.title, chipName: chip.name)
+                            )
+                        } else if let singleChip = section.chips.first {
+                            VStack(alignment: .leading, spacing: 8) {
+                                IngredientsChips(
+                                    title: singleChip.name,
+                                    image: singleChip.icon,
+                                    onClick: {
+                                        toggleRegionSelection(for: section.title, chipName: singleChip.name)
+                                    },
+                                    isSelected: regionSelection(for: section.title).contains(singleChip.name)
+                                )
+                                
+                                IngredientsChips(
+                                    title: "Other",
+                                    image: "other",
+                                    onClick: {
+                                        toggleOtherSelection(chipName: "Other")
+                                    },
+                                    isSelected: otherSelection().contains("Other")
+                                )
                             }
-                        )
+                            .padding(.vertical, 4)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -169,6 +193,25 @@ struct Region: View {
         preferences.region = region
     }
     
+    private func otherSelection() -> [String] {
+        guard let region = preferences.region else { return [] }
+        return region.other
+    }
+    
+    private func toggleOtherSelection(chipName: String) {
+        ensureRegionPreferences()
+        guard var region = preferences.region else { return }
+        
+        var list = region.other
+        if let idx = list.firstIndex(of: chipName) {
+            list.remove(at: idx)
+        } else {
+            list.append(chipName)
+        }
+        region.other = list
+        preferences.region = region
+    }
+    
     private func regionKey(for title: String) -> WritableKeyPath<RegionPreferences, [String]>? {
         switch title {
         case "India & South Asia":
@@ -193,6 +236,7 @@ struct Region: View {
 
 private struct RegionSectionRow: View {
     let section: SectionedChipModel
+    let isSectionSelected: Bool
     let isExpanded: Bool
     let onToggleExpanded: () -> Void
     let isChipSelected: (ChipsModel) -> Bool
@@ -206,11 +250,11 @@ private struct RegionSectionRow: View {
                 HStack(spacing: 40) {
                     Text(section.title)
                         .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale150)
+                        .foregroundStyle(isSectionSelected ? .primary100 : .grayScale150)
 
                     Circle()
-                        .fill(.grayScale30)
-                        .foregroundStyle(.grayScale60)
+                        .fill(isSectionSelected ? .grayScale60 : .grayScale30)
+                        .foregroundStyle(isSectionSelected ? .grayScale100 : .grayScale60)
                         .frame(width: 24, height: 24)
                         .overlay(
                             Image(systemName: "chevron.up")
@@ -222,13 +266,24 @@ private struct RegionSectionRow: View {
                 .padding(.vertical, 6)
                 .padding(.leading, 16)
                 .padding(.trailing, 4)
-                .background(
-                    Capsule()
-                        .fill(.grayScale10)
-                )
+                .background {
+                    if isSectionSelected {
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    } else {
+                        Capsule()
+                            .fill(.grayScale10)
+                    }
+                }
                 .overlay(
                     Capsule()
-                        .stroke(lineWidth: 1)
+                        .stroke(lineWidth: isSectionSelected ? 0 : 1)
                         .foregroundStyle(.grayScale60)
                 )
                 .contentShape(Rectangle())
