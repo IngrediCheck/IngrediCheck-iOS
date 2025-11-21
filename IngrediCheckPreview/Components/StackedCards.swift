@@ -78,13 +78,16 @@ struct StackedCards: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 20)
                     .frame(height: UIScreen.main.bounds.height * 0.33, alignment: .topLeading)
-                    .background((idx == 0) ? card.color : tempCard.color, in: RoundedRectangle(cornerRadius: 24))
-                    .overlay(
-                        Image("leaf-recycle")
-                            .padding(.trailing, 10)
-                            .offset(y: 17)
-                            .opacity((idx == 0) ? 0.5 : 0)
-                        , alignment: .bottomTrailing
+                    .background(
+                        ZStack(alignment: .bottomTrailing) {
+                            (idx == 0 ? card.color : tempCard.color)
+                            
+                            Image("leaf-recycle")
+                                .padding(.trailing, 10)
+                                .offset(y: 17)
+                                .opacity(idx == 0 ? 0.5 : 0)
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
                     )
                 }
                 .blur(radius: (idx == 0) ? 0 : 4)

@@ -20,16 +20,16 @@ struct Region: View {
                 ChipsModel(name: "Ayurveda", icon: "🌿"),
                 ChipsModel(name: "Hindu food traditions", icon: "🕉"),
                 ChipsModel(name: "Jain diet", icon: "🧘‍♂️"),
-                ChipsModel(name: "Other", icon: "🧘")
+                ChipsModel(name: "Other", icon: "other")
             ]
         ),
         SectionedChipModel(
             title: "Africa",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Rastafarian Ital diet", icon: "🌿"),
+                ChipsModel(name: "Rastafarian Ital diet", icon: "anti-inflammatory medical diet"),
                 ChipsModel(name: "Ethiopian Orthodox fasting", icon: "🥖"),
-                ChipsModel(name: "Other", icon: "🍙")
+                ChipsModel(name: "Other", icon: "other")
             ]
         ),
         SectionedChipModel(
@@ -46,10 +46,10 @@ struct Region: View {
             title: "East Asia",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Traditional Chinese Medicine (TCM)", icon: "🌿"),
+                ChipsModel(name: "Traditional Chinese Medicine (TCM)", icon: "🧧"),
                 ChipsModel(name: "Buddhist food rules", icon: "🧘"),
                 ChipsModel(name: "Japanese Macrobiotic diet", icon: "🍙"),
-                ChipsModel(name: "Other", icon: "🧧")
+                ChipsModel(name: "Other", icon: "other")
             ]
         ),
         SectionedChipModel(
@@ -58,7 +58,7 @@ struct Region: View {
             chips: [
                 ChipsModel(name: "Native American traditions", icon: "🪶"),
                 ChipsModel(name: "Christian traditions", icon: "✝️"),
-                ChipsModel(name: "Other", icon: "🥖")
+                ChipsModel(name: "Other", icon: "other")
             ]
         ),
         SectionedChipModel(
