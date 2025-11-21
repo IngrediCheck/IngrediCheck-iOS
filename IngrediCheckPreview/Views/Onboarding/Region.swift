@@ -17,55 +17,55 @@ struct Region: View {
             title: "India & South Asia",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Ayurveda", icon: nil),
-                ChipsModel(name: "Hindu food traditions", icon: nil),
-                ChipsModel(name: "Jain diet", icon: nil),
-                ChipsModel(name: "Other", icon: nil)
+                ChipsModel(name: "Ayurveda", icon: "🌿"),
+                ChipsModel(name: "Hindu food traditions", icon: "🕉"),
+                ChipsModel(name: "Jain diet", icon: "🧘‍♂️"),
+                ChipsModel(name: "Other", icon: "🧘")
             ]
         ),
         SectionedChipModel(
             title: "Africa",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Rastafarian Ital diet", icon: nil),
-                ChipsModel(name: "Ethiopian Orthodox fasting", icon: nil),
-                ChipsModel(name: "Other", icon: nil)
+                ChipsModel(name: "Rastafarian Ital diet", icon: "🌿"),
+                ChipsModel(name: "Ethiopian Orthodox fasting", icon: "🥖"),
+                ChipsModel(name: "Other", icon: "🍙")
             ]
         ),
         SectionedChipModel(
             title: "Middle East & Mediterranean",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Halal (Islamic dietary laws)", icon: nil),
-                ChipsModel(name: "Kosher (Jewish dietary laws)", icon: nil),
-                ChipsModel(name: "Greek / Mediterranean diets", icon: nil),
-                ChipsModel(name: "Other", icon: nil)
+                ChipsModel(name: "Halal (Islamic dietary laws)", icon: "☪️"),
+                ChipsModel(name: "Kosher (Jewish dietary laws)", icon: "✡"),
+                ChipsModel(name: "Greek / Mediterranean diets", icon: "🫒"),
+                ChipsModel(name: "Other", icon: "🥖")
             ]
         ),
         SectionedChipModel(
             title: "East Asia",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Traditional Chinese Medicine (TCM)", icon: nil),
-                ChipsModel(name: "Buddhist food rules", icon: nil),
-                ChipsModel(name: "Japanese Macrobiotic diet", icon: nil),
-                ChipsModel(name: "Other", icon: nil)
+                ChipsModel(name: "Traditional Chinese Medicine (TCM)", icon: "🌿"),
+                ChipsModel(name: "Buddhist food rules", icon: "🧘"),
+                ChipsModel(name: "Japanese Macrobiotic diet", icon: "🍙"),
+                ChipsModel(name: "Other", icon: "🧧")
             ]
         ),
         SectionedChipModel(
             title: "Western / Native traditions",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Native American traditions", icon: nil),
-                ChipsModel(name: "Christian traditions", icon: nil),
-                ChipsModel(name: "Other", icon: nil)
+                ChipsModel(name: "Native American traditions", icon: "🪶"),
+                ChipsModel(name: "Christian traditions", icon: "✝️"),
+                ChipsModel(name: "Other", icon: "🥖")
             ]
         ),
         SectionedChipModel(
             title: "Seventh-day Adventist",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Seventh-day Adventist", icon: nil)
+                ChipsModel(name: "Seventh-day Adventist", icon: "✝️")
             ]
         )
     ]
