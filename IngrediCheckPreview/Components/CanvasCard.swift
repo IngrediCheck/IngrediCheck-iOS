@@ -52,7 +52,7 @@ struct CanvasCard: View {
                                         title: chip.name,
                                         bgColor: .secondary200,
                                         image: chip.icon,
-                                        familyList: ["image 1", "image 2", "image 3"],
+//                                        familyList: ["image 1", "image 2", "image 3"],
                                         outlined: false
                                     )
                                 }
