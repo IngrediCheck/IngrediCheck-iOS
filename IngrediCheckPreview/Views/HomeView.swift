@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct HomeView: View {
+    private let chatSmallDetent: PresentationDetent = .height(260)
+    @State private var isChatSheetPresented = false
+    @State private var selectedChatDetent: PresentationDetent = .medium
+    
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
@@ -60,7 +64,10 @@ struct HomeView: View {
                         }
                         Spacer()
                         
-                        AskIngrediBotButton()
+                        AskIngrediBotButton {
+                            selectedChatDetent = .medium
+                            isChatSheetPresented = true
+                        }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     
@@ -212,6 +219,13 @@ struct HomeView: View {
             , alignment: .bottom
         )
         .background(Color(hex: "FFFFFF"))
+        .sheet(isPresented: $isChatSheetPresented) {
+            IngrediBotChatView {
+                isChatSheetPresented = false
+            }
+            .presentationDetents([chatSmallDetent, .medium, .large], selection: $selectedChatDetent)
+            .presentationDragIndicator(.visible)
+        }
     }
     
 }

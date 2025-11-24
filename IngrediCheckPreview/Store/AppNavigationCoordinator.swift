@@ -58,7 +58,8 @@ class AppNavigationCoordinator {
     private(set) var currentCanvasRoute: CanvasRoute
     private(set) var currentBottomSheetRoute: BottomSheetRoute
     private(set) var onboardingFlow: OnboardingFlowType = .individual
-    
+    private var previousBottomSheetRoute: BottomSheetRoute?
+
     init(initialRoute: CanvasRoute = .heyThere) {
         self.currentCanvasRoute = initialRoute
         self.currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: initialRoute)
@@ -91,6 +92,43 @@ class AppNavigationCoordinator {
         }
     }
     
+    // MARK: - ChatBot Presentation
+    private var isChatRoute: Bool {
+        switch currentBottomSheetRoute {
+        case .chatIntro, .chatConversation:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    func presentChatBot(startAtConversation: Bool = false) {
+        if !isChatRoute {
+            previousBottomSheetRoute = currentBottomSheetRoute
+        }
+        
+        withAnimation(.easeInOut) {
+            currentBottomSheetRoute = startAtConversation ? .chatConversation : .chatIntro
+        }
+    }
+    
+    func showChatConversation() {
+        withAnimation(.easeInOut) {
+            currentBottomSheetRoute = .chatConversation
+        }
+    }
+    
+    func dismissChatBot() {
+        withAnimation(.easeInOut) {
+            if let previous = previousBottomSheetRoute {
+                currentBottomSheetRoute = previous
+            } else {
+                currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: currentCanvasRoute)
+            }
+        }
+        previousBottomSheetRoute = nil
+    }
+
     // Get bottom sheet route for current canvas route
     private static func bottomSheetRoute(for canvasRoute: CanvasRoute) -> BottomSheetRoute {
         switch canvasRoute {
