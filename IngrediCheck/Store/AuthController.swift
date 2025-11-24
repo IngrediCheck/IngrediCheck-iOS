@@ -136,6 +136,7 @@ private enum AuthFlowMode {
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
+    private static var hasPinged = false
     
     @MainActor init() {
         authChangeWatcher()
@@ -513,12 +514,15 @@ private enum AuthFlowMode {
         if let session {
             signInState = .signedIn
             registerDeviceAfterLogin(session: session)
+            pingAfterLogin()
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
             if shouldReset {
                 AnalyticsService.shared.resetAnalytics()
+                // Reset ping flag on sign out so it can run again on next login
+                Self.hasPinged = false
             }
         }
     }
@@ -531,7 +535,12 @@ private enum AuthFlowMode {
         }
         Self.hasRegisteredDevice = true
         
-        Task {
+        // Capture deviceId before starting detached task
+        let currentDeviceId = deviceId
+        
+        Task.detached { [weak self] in
+            guard let self = self else { return }
+            
             do {
                 let platform = UIDevice.current.systemName.lowercased()
                 let osVersion = UIDevice.current.systemVersion
@@ -544,7 +553,7 @@ private enum AuthFlowMode {
                 #endif
                 
                 let isInternal = try await WebService().registerDevice(
-                    deviceId: deviceId,
+                    deviceId: currentDeviceId,
                     platform: platform,
                     osVersion: osVersion,
                     appVersion: appVersion,
@@ -558,9 +567,21 @@ private enum AuthFlowMode {
                     }
                 }
             } catch {
+                // Silently handle errors - fire-and-forget
                 print("Failed to register device after login: \(error)")
             }
         }
+    }
+    
+    @MainActor
+    private func pingAfterLogin() {
+        guard !Self.hasPinged else {
+            return
+        }
+        Self.hasPinged = true
+        
+        // Fire-and-forget ping call
+        WebService().ping()
     }
     
     @MainActor

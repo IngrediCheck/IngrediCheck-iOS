@@ -1,8 +1,11 @@
 import Foundation
 import SwiftUI
+import UIKit
 import CryptoKit
 import Supabase
 import PostHog
+import Network
+import CoreTelephony
 
 enum NetworkError: Error {
     case invalidResponse(Int)
@@ -960,6 +963,138 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         } catch {
             print("Failed to decode is device internal response: \(error)")
             throw NetworkError.decodingError
+        }
+    }
+    
+    // MARK: - Network Information Helpers
+    
+    private func getNetworkType() -> String {
+        let monitor = NWPathMonitor()
+        let semaphore = DispatchSemaphore(value: 0)
+        var networkType: String = "none"
+        
+        monitor.pathUpdateHandler = { path in
+            if path.status == .satisfied {
+                if path.usesInterfaceType(.wifi) {
+                    networkType = "wifi"
+                } else if path.usesInterfaceType(.cellular) {
+                    networkType = "cellular"
+                } else {
+                    networkType = "other"
+                }
+            } else {
+                networkType = "none"
+            }
+            semaphore.signal()
+        }
+        
+        let queue = DispatchQueue(label: "NetworkMonitor")
+        monitor.start(queue: queue)
+        _ = semaphore.wait(timeout: .now() + 0.5)
+        monitor.cancel()
+        
+        return networkType
+    }
+    
+    private func getCellularGeneration() -> String {
+        let networkInfo = CTTelephonyNetworkInfo()
+        
+        guard let serviceCurrentRadioAccessTechnology = networkInfo.serviceCurrentRadioAccessTechnology,
+              !serviceCurrentRadioAccessTechnology.isEmpty else {
+            return "none"
+        }
+        
+        // Get the first available radio access technology
+        let radioAccessTechnology = serviceCurrentRadioAccessTechnology.values.first ?? ""
+        
+        switch radioAccessTechnology {
+        case CTRadioAccessTechnologyGPRS,
+             CTRadioAccessTechnologyEdge,
+             CTRadioAccessTechnologyCDMA1x:
+            return "3g"
+        case CTRadioAccessTechnologyWCDMA,
+             CTRadioAccessTechnologyHSDPA,
+             CTRadioAccessTechnologyHSUPA,
+             CTRadioAccessTechnologyCDMAEVDORev0,
+             CTRadioAccessTechnologyCDMAEVDORevA,
+             CTRadioAccessTechnologyCDMAEVDORevB,
+             CTRadioAccessTechnologyeHRPD:
+            return "3g"
+        case CTRadioAccessTechnologyLTE:
+            return "4g"
+        case CTRadioAccessTechnologyNRNSA,
+             CTRadioAccessTechnologyNR:
+            return "5g"
+        default:
+            return "unknown"
+        }
+    }
+    
+    private func getCarrier() -> String? {
+        let networkInfo = CTTelephonyNetworkInfo()
+        
+        guard let serviceSubscriberCellularProviders = networkInfo.serviceSubscriberCellularProviders,
+              !serviceSubscriberCellularProviders.isEmpty else {
+            return nil
+        }
+        
+        // Get the first available carrier
+        if let carrier = serviceSubscriberCellularProviders.values.first {
+            return carrier.carrierName
+        }
+        
+        return nil
+    }
+    
+    // MARK: - Ping API
+    
+    func ping() {
+        Task.detached { [weak self] in
+            guard let self = self else { return }
+            
+            let startTime = Date().timeIntervalSince1970
+            
+            // Collect device and network information
+            let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+            let deviceModel = UIDevice.current.model
+            let networkType = self.getNetworkType()
+            let cellularGeneration = networkType == "cellular" ? self.getCellularGeneration() : "none"
+            let carrier = networkType == "cellular" ? self.getCarrier() : nil
+            
+            // Build request (no auth token needed per backend implementation)
+            let request = SupabaseRequestBuilder(endpoint: .ingredicheck_ping)
+                .setMethod(to: "GET")
+                .build()
+            
+            var clientLatencyMs: Double = 0
+            
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                let endTime = Date().timeIntervalSince1970
+                clientLatencyMs = (endTime - startTime) * 1000
+                
+                let httpResponse = response as? HTTPURLResponse
+                // Only log if we got a successful response
+                if httpResponse?.statusCode == 200 {
+                    var properties: [String: Any] = [
+                        "client_latency_ms": clientLatencyMs,
+                        "app_version": appVersion,
+                        "device_model": deviceModel,
+                        "network_type": networkType,
+                        "cellular_generation": cellularGeneration
+                    ]
+                    
+                    if let carrier = carrier, !carrier.isEmpty {
+                        properties["carrier"] = carrier
+                    }
+                    
+                    PostHogSDK.shared.capture("edge_ping", properties: properties)
+                }
+            } catch {
+                // Silently handle errors - fire-and-forget
+                // Optionally log error for debugging, but don't block
+                print("Ping API call failed: \(error.localizedDescription)")
+            }
         }
     }
 }

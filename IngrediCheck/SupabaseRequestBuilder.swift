@@ -4,6 +4,7 @@ import Foundation
 enum SafeEatsEndpoint: String {
     case deleteme = "deleteme"
     case ingredicheck_analyze_stream = "analyze-stream"
+    case ingredicheck_ping = "ping"
     case feedback = "feedback"
     case history = "history"
     case list_items = "lists/%@"
