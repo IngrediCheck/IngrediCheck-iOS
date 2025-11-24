@@ -139,7 +139,7 @@ private enum AuthFlowMode {
     
     @MainActor init() {
         authChangeWatcher()
-        refreshAnalyticsIdentity(session: nil)
+        registerAnalytics()
     }
     
     @MainActor
@@ -514,35 +514,45 @@ private enum AuthFlowMode {
         if let session {
             signInState = .signedIn
             registerDeviceAfterLogin(session: session)
-            refreshAnalyticsIdentity(session: session)
+            refreshAnalyticsIdentity()
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
-            refreshAnalyticsIdentity(session: nil, reset: shouldReset)
+            if shouldReset {
+                resetAnalytics()
+            }
         }
     }
     
     @MainActor
-    func refreshAnalyticsIdentity(session: Session?, reset: Bool = false) {
+    func resetAnalytics() {
+        PostHogSDK.shared.reset()
+    }
+
+    @MainActor
+    func registerAnalytics() {
         var properties: [String: Any] = [:]
         
         // Only add is_internal when it's true (from API responses)
         if isInternalUser {
             properties["is_internal"] = true
         }
+        PostHogSDK.shared.register(properties)
+    }
+
+    @MainActor
+    func refreshAnalyticsIdentity() {
         
-        if reset {
-            PostHogSDK.shared.reset()
-        }
+        guard let session = self.session else { return }
+
+        var properties: [String: Any] = [:]
         
-        if let session {
-            let distinctId = session.user.id.uuidString
-            PostHogSDK.shared.identify(distinctId, userProperties: properties)
+        // Only add is_internal when it's true (from API responses)
+        if isInternalUser {
+            properties["is_internal"] = true
         }
-        
-        if !properties.isEmpty {
-            PostHogSDK.shared.register(properties)
-        }
+        let distinctId = session.user.id.uuidString
+        PostHogSDK.shared.identify(distinctId, userProperties: properties)
     }
     
     @MainActor
@@ -575,7 +585,7 @@ private enum AuthFlowMode {
                 await MainActor.run {
                     if isInternal != self.isInternalUser {
                         self.isInternalUser = isInternal
-                        self.refreshAnalyticsIdentity(session: session)
+                        self.refreshAnalyticsIdentity()
                     }
                 }
             } catch {
@@ -588,6 +598,6 @@ private enum AuthFlowMode {
     func setInternalUser(_ value: Bool) {
         guard value != isInternalUser else { return }
         isInternalUser = value
-        refreshAnalyticsIdentity(session: session)
+        refreshAnalyticsIdentity()
     }
 }
