@@ -139,7 +139,6 @@ private enum AuthFlowMode {
     
     @MainActor init() {
         authChangeWatcher()
-        registerAnalytics()
     }
     
     @MainActor
@@ -514,46 +513,16 @@ private enum AuthFlowMode {
         if let session {
             signInState = .signedIn
             registerDeviceAfterLogin(session: session)
-            refreshAnalyticsIdentity()
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
             if shouldReset {
-                resetAnalytics()
+                AnalyticsService.shared.resetAnalytics()
             }
         }
     }
     
-    @MainActor
-    func resetAnalytics() {
-        PostHogSDK.shared.reset()
-    }
-
-    @MainActor
-    func registerAnalytics() {
-        var properties: [String: Any] = [:]
-        
-        // Only add is_internal when it's true (from API responses)
-        if isInternalUser {
-            properties["is_internal"] = true
-        }
-        PostHogSDK.shared.register(properties)
-    }
-
-    @MainActor
-    func refreshAnalyticsIdentity() {
-        
-        guard let session = self.session else { return }
-
-        var properties: [String: Any] = [:]
-        
-        // Only add is_internal when it's true (from API responses)
-        if isInternalUser {
-            properties["is_internal"] = true
-        }
-        let distinctId = session.user.id.uuidString
-        PostHogSDK.shared.identify(distinctId, userProperties: properties)
-    }
     
     @MainActor
     private func registerDeviceAfterLogin(session: Session) {
@@ -585,7 +554,7 @@ private enum AuthFlowMode {
                 await MainActor.run {
                     if isInternal != self.isInternalUser {
                         self.isInternalUser = isInternal
-                        self.refreshAnalyticsIdentity()
+                        AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
                     }
                 }
             } catch {
@@ -598,6 +567,8 @@ private enum AuthFlowMode {
     func setInternalUser(_ value: Bool) {
         guard value != isInternalUser else { return }
         isInternalUser = value
-        refreshAnalyticsIdentity()
+        if let session = session {
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value)
+        }
     }
 }
