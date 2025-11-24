@@ -307,7 +307,7 @@ private enum AuthFlowMode {
     
     private func signInWithLegacyGuest(email: String, password: String) async -> Bool {
         do {
-            let session = try await supabaseClient.auth.signIn(email: email, password: password)
+            _ = try await supabaseClient.auth.signIn(email: email, password: password)
             return true
         } catch {
             print("Anonymous signin failed for stored credentials: \(error)")
@@ -319,7 +319,7 @@ private enum AuthFlowMode {
 
     private func signInWithNewAnonymousAccount() async {
         do {
-            let session = try await supabaseClient.auth.signInAnonymously()
+            _ = try await supabaseClient.auth.signInAnonymously()
         } catch {
             print("signInAnonymously failed: \(error)")
         }
