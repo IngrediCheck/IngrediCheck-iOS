@@ -135,6 +135,7 @@ private enum AuthFlowMode {
     private static let anonUserNameKey = "anonEmail"
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
+    private static var hasRegisteredDevice = false
     
     @MainActor init() {
         authChangeWatcher()
@@ -288,7 +289,6 @@ private enum AuthFlowMode {
 
             let session = try await finalizeAuth(with: credentials, mode: .link)
             self.session = session
-            registerDeviceAfterLogin(session: session)
             clearAnonymousCredentials()
             isUpgradingAccount = false
         } catch {
@@ -309,9 +309,6 @@ private enum AuthFlowMode {
     private func signInWithLegacyGuest(email: String, password: String) async -> Bool {
         do {
             let session = try await supabaseClient.auth.signIn(email: email, password: password)
-            await MainActor.run {
-                self.registerDeviceAfterLogin(session: session)
-            }
             return true
         } catch {
             print("Anonymous signin failed for stored credentials: \(error)")
@@ -324,9 +321,6 @@ private enum AuthFlowMode {
     private func signInWithNewAnonymousAccount() async {
         do {
             let session = try await supabaseClient.auth.signInAnonymously()
-            await MainActor.run {
-                self.registerDeviceAfterLogin(session: session)
-            }
         } catch {
             print("signInAnonymously failed: \(error)")
         }
@@ -339,7 +333,6 @@ private enum AuthFlowMode {
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
                 await MainActor.run {
                     self.session = session
-                    self.registerDeviceAfterLogin(session: session)
                 }
             } catch {
                 print("Apple sign-in failed: \(error)")
@@ -502,7 +495,6 @@ private enum AuthFlowMode {
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
                 await MainActor.run {
                     self.session = session
-                    self.registerDeviceAfterLogin(session: session)
                     completion?(.success(()))
                 }
             } catch {
@@ -555,6 +547,11 @@ private enum AuthFlowMode {
     
     @MainActor
     private func registerDeviceAfterLogin(session: Session) {
+        guard !Self.hasRegisteredDevice else {
+            return
+        }
+        Self.hasRegisteredDevice = true
+        
         Task {
             do {
                 let platform = UIDevice.current.systemName.lowercased()
