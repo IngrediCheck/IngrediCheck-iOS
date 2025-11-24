@@ -135,10 +135,10 @@ private enum AuthFlowMode {
     private static let anonUserNameKey = "anonEmail"
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
+    private static var hasRegisteredDevice = false
     
     @MainActor init() {
         authChangeWatcher()
-        refreshAnalyticsIdentity(session: nil)
     }
     
     @MainActor
@@ -288,7 +288,6 @@ private enum AuthFlowMode {
 
             let session = try await finalizeAuth(with: credentials, mode: .link)
             self.session = session
-            registerDeviceAfterLogin(session: session)
             clearAnonymousCredentials()
             isUpgradingAccount = false
         } catch {
@@ -308,10 +307,7 @@ private enum AuthFlowMode {
     
     private func signInWithLegacyGuest(email: String, password: String) async -> Bool {
         do {
-            let session = try await supabaseClient.auth.signIn(email: email, password: password)
-            await MainActor.run {
-                self.registerDeviceAfterLogin(session: session)
-            }
+            _ = try await supabaseClient.auth.signIn(email: email, password: password)
             return true
         } catch {
             print("Anonymous signin failed for stored credentials: \(error)")
@@ -323,10 +319,7 @@ private enum AuthFlowMode {
 
     private func signInWithNewAnonymousAccount() async {
         do {
-            let session = try await supabaseClient.auth.signInAnonymously()
-            await MainActor.run {
-                self.registerDeviceAfterLogin(session: session)
-            }
+            _ = try await supabaseClient.auth.signInAnonymously()
         } catch {
             print("signInAnonymously failed: \(error)")
         }
@@ -339,7 +332,6 @@ private enum AuthFlowMode {
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
                 await MainActor.run {
                     self.session = session
-                    self.registerDeviceAfterLogin(session: session)
                 }
             } catch {
                 print("Apple sign-in failed: \(error)")
@@ -502,7 +494,6 @@ private enum AuthFlowMode {
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
                 await MainActor.run {
                     self.session = session
-                    self.registerDeviceAfterLogin(session: session)
                     completion?(.success(()))
                 }
             } catch {
@@ -522,39 +513,24 @@ private enum AuthFlowMode {
         if let session {
             signInState = .signedIn
             registerDeviceAfterLogin(session: session)
-            refreshAnalyticsIdentity(session: session)
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
-            refreshAnalyticsIdentity(session: nil, reset: shouldReset)
+            if shouldReset {
+                AnalyticsService.shared.resetAnalytics()
+            }
         }
     }
     
-    @MainActor
-    func refreshAnalyticsIdentity(session: Session?, reset: Bool = false) {
-        var properties: [String: Any] = [:]
-        
-        // Only add is_internal when it's true (from API responses)
-        if isInternalUser {
-            properties["is_internal"] = true
-        }
-        
-        if reset {
-            PostHogSDK.shared.reset()
-        }
-        
-        if let session {
-            let distinctId = session.user.id.uuidString
-            PostHogSDK.shared.identify(distinctId, userProperties: properties)
-        }
-        
-        if !properties.isEmpty {
-            PostHogSDK.shared.register(properties)
-        }
-    }
     
     @MainActor
     private func registerDeviceAfterLogin(session: Session) {
+        guard !Self.hasRegisteredDevice else {
+            return
+        }
+        Self.hasRegisteredDevice = true
+        
         Task {
             do {
                 let platform = UIDevice.current.systemName.lowercased()
@@ -578,7 +554,7 @@ private enum AuthFlowMode {
                 await MainActor.run {
                     if isInternal != self.isInternalUser {
                         self.isInternalUser = isInternal
-                        self.refreshAnalyticsIdentity(session: session)
+                        AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
                     }
                 }
             } catch {
@@ -591,6 +567,8 @@ private enum AuthFlowMode {
     func setInternalUser(_ value: Bool) {
         guard value != isInternalUser else { return }
         isInternalUser = value
-        refreshAnalyticsIdentity(session: session)
+        if let session = session {
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value)
+        }
     }
 }
