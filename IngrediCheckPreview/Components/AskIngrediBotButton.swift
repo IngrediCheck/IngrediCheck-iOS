@@ -8,6 +8,9 @@
 import SwiftUI
 
 struct AskIngrediBotButton: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    var action: (() -> Void)?
+    
     var body: some View {
         VStack(alignment: .leading, spacing: -16) {
             Image("ingrediBot")
@@ -17,7 +20,11 @@ struct AskIngrediBotButton: View {
             
             
             Button {
-                
+                if let action {
+                    action()
+                } else {
+                    coordinator.presentChatBot(startAtConversation: true)
+                }
             } label: {
                 HStack(spacing: 4) {
                     Image("ai-stars")
@@ -66,4 +73,5 @@ struct AskIngrediBotButton: View {
 
 #Preview {
     AskIngrediBotButton()
+        .environment(AppNavigationCoordinator())
 }

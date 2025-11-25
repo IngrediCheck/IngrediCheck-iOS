@@ -48,6 +48,11 @@ enum BottomSheetRoute: Hashable {
     
     // HomeView route (empty or default state)
     case homeDefault
+    
+    // AI ChatBot
+    case chatIntro
+    case chatConversation
+
 }
 
 
