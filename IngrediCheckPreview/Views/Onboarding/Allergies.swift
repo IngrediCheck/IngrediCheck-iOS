@@ -12,21 +12,21 @@ struct Allergies: View {
     @State var onboardingFlowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
-        ChipsModel(name: "Peanuts", icon: "peanuts"),
-        ChipsModel(name: "Tree nuts", icon: "tree nuts"),
-        ChipsModel(name: "Dairy", icon: "dairy"),
-        ChipsModel(name: "Eggs", icon: "eggs"),
-        ChipsModel(name: "Soy", icon: "soy"),
-        ChipsModel(name: "Wheat", icon: "wheat"),
-        ChipsModel(name: "Fish", icon: "fish"),
-        ChipsModel(name: "Shellfish", icon: "shellfish"),
-        ChipsModel(name: "Sesame", icon: "sesame"),
-        ChipsModel(name: "Celery", icon: "celery"),
-        ChipsModel(name: "Lupin", icon: "lupin"),
-        ChipsModel(name: "Sulphites", icon: "sulphites"),
-        ChipsModel(name: "Mustard", icon: "mustard"),
-        ChipsModel(name: "Molluscs", icon: "molluscs"),
-        ChipsModel(name: "Other", icon: "other")
+        ChipsModel(name: "Peanuts", icon: "🥜"),
+        ChipsModel(name: "Tree nuts", icon: "🌰"),
+        ChipsModel(name: "Dairy", icon: "🥛"),
+        ChipsModel(name: "Eggs", icon: "🥚"),
+        ChipsModel(name: "Soy", icon: "🌱"),
+        ChipsModel(name: "Wheat", icon: "🌾"),
+        ChipsModel(name: "Fish", icon: "🐟"),
+        ChipsModel(name: "Shellfish", icon: "🦐"),
+        ChipsModel(name: "Sesame", icon: "⚪"),
+        ChipsModel(name: "Celery", icon: "🥬"),
+        ChipsModel(name: "Lupin", icon: "🫘"),
+        ChipsModel(name: "Sulphites", icon: "🧂"),
+        ChipsModel(name: "Mustard", icon: "🟡"),
+        ChipsModel(name: "Molluscs", icon: "🐚"),
+        ChipsModel(name: "Other", icon: "✏")
     ]
     
     var body: some View {

@@ -11,14 +11,14 @@ struct HealthConditions: View {
     @State var onboardingFlowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
-        ChipsModel(name: "Diabetes", icon: "diabetes"),
-        ChipsModel(name: "Hypertension", icon: "hypertension"),
-        ChipsModel(name: "Kidney Disease", icon: "kidney disease"),
-        ChipsModel(name: "Heart Health", icon: "heart health"),
-        ChipsModel(name: "PKU (phenyalanine-sensitive)", icon: "pku (phenyalanine-sensitive)"),
-        ChipsModel(name: "Anti-inflammatory medical diet", icon: "anti-inflammatory medical diet"),
-        ChipsModel(name: "Celiac disease", icon: "celiac disease"),
-        ChipsModel(name: "Other", icon: "other")
+        ChipsModel(name: "Diabetes", icon: "🍭"),
+        ChipsModel(name: "Hypertension", icon: "💊"),
+        ChipsModel(name: "Kidney Disease", icon: "🩺"),
+        ChipsModel(name: "Heart Health", icon: "🫀"),
+        ChipsModel(name: "PKU (phenyalanine-sensitive)", icon: "🧬"),
+        ChipsModel(name: "Anti-inflammatory medical diet", icon: "🥗"),
+        ChipsModel(name: "Celiac disease", icon: "🥖"),
+        ChipsModel(name: "Other", icon: "✏️")
     ]
     
     var body: some View {

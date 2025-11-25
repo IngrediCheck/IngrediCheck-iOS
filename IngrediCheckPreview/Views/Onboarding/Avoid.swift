@@ -12,36 +12,36 @@ struct Avoid: View {
     @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Oils & Fats", subTitle: "In fats or oils, what do you avoid?", color: .avatarYellow, chips: [
-            ChipsModel(name: "Hydrogenated oils / Trans fats", icon: "hydrogenated oil"),
-            ChipsModel(name: "Canola / Seed oils", icon: "wheat"),
-            ChipsModel(name: "Palm oil", icon: "palm oil"),
-            ChipsModel(name: "Corn / High-frectose corn syrup", icon: "corn")
+            ChipsModel(name: "Hydrogenated oils / Trans fats", icon: "🧈"),
+            ChipsModel(name: "Canola / Seed oils", icon: "🌾"),
+            ChipsModel(name: "Palm oil", icon: "🌴"),
+            ChipsModel(name: "Corn / High-frectose corn syrup", icon: "🌽")
         ]),
         Card(title: "Animal-Based", subTitle: "Any animal products you don't consume?", color: .avatarPruple, chips: [
-            ChipsModel(name: "Pork", icon: "pork"),
-            ChipsModel(name: "Beef", icon: "beef"),
-            ChipsModel(name: "Honey", icon: "honey"),
-            ChipsModel(name: "Gelatin / Rennet", icon: "gelatin"),
-            ChipsModel(name: "Shellfish", icon: "shellfish"),
-            ChipsModel(name: "Insects", icon: "insects"),
-            ChipsModel(name: "Seafood (fish)", icon: "fish"),
-            ChipsModel(name: "Lard / Animal fat", icon: "lard")
+            ChipsModel(name: "Pork", icon: "🐖"),
+            ChipsModel(name: "Beef", icon: "🐄"),
+            ChipsModel(name: "Honey", icon: "🍯"),
+            ChipsModel(name: "Gelatin / Rennet", icon: "🧂"),
+            ChipsModel(name: "Shellfish", icon: "🦐"),
+            ChipsModel(name: "Insects", icon: "🐜"),
+            ChipsModel(name: "Seafood (fish)", icon: "🐟"),
+            ChipsModel(name: "Lard / Animal fat", icon: "🍖")
         ]),
         Card(title: "Stimulants & Substances", subTitle: "Do you avoid these?", color: .avatarGreen, chips: [
-            ChipsModel(name: "Alcohol", icon: "histamine"),
-            ChipsModel(name: "Caffeine", icon: "caffeine")
+            ChipsModel(name: "Alcohol", icon: "🍷"),
+            ChipsModel(name: "Caffeine", icon: "☕")
         ]),
         Card(title: "Additives & Sweeteners", subTitle: "Do you stay away from processed ingredients?", color: .avatarOrange, chips: [
-            ChipsModel(name: "MSG", icon: "msg"),
-            ChipsModel(name: "Artificial sweeteners", icon: "artificial sweeteners"),
-            ChipsModel(name: "Preservatives", icon: "gelatin"),
-            ChipsModel(name: "Refined sugar", icon: "refined sugar"),
-            ChipsModel(name: "Corn syrup / HFCS", icon: "corn"),
-            ChipsModel(name: "Stevia ? Monk fruit", icon: "stevia"),
+            ChipsModel(name: "MSG", icon: "⚗️"),
+            ChipsModel(name: "Artificial sweeteners", icon: "🍬"),
+            ChipsModel(name: "Preservatives", icon: "🧂"),
+            ChipsModel(name: "Refined sugar", icon: "🍚"),
+            ChipsModel(name: "Corn syrup / HFCS", icon: "🌽"),
+            ChipsModel(name: "Stevia ? Monk fruit", icon: "🍈"),
         ]),
         Card(title: "Plant-Based Restrictions", subTitle: "Any plant foods you avoid?", color: .avatarGreen, chips: [
-            ChipsModel(name: "Nightshades (paprika, pappers, etc.)", icon: "nightshades"),
-            ChipsModel(name: "Garlic / Onion", icon: "fodmap")
+            ChipsModel(name: "Nightshades (paprika, pappers, etc.)", icon: "🍅"),
+            ChipsModel(name: "Garlic / Onion", icon: "🧄")
         ])
     ]
     

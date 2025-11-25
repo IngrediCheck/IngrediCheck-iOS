@@ -11,12 +11,12 @@ struct LifeStage: View {
     @State var onboardingFlowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
-        ChipsModel(name: "Kids Baby-friendly foods", icon: "kids baby-friendly foods"),
-        ChipsModel(name: "Toddler pickey-eating adaptations", icon: "toddler pickey-eating adaptations"),
-        ChipsModel(name: "Pregnancy Prenatal nutrition", icon: "pregnancy prenatal nutrition"),
-        ChipsModel(name: "Breastfeeding diets", icon: "breastfeeding diets"),
-        ChipsModel(name: "Senior-friendly", icon: "senior-friendly"),
-        ChipsModel(name: "None of these apply", icon: "none of these apply")
+        ChipsModel(name: "Kids Baby-friendly foods", icon: "👶"),
+        ChipsModel(name: "Toddler pickey-eating adaptations", icon: "🙄"),
+        ChipsModel(name: "Pregnancy Prenatal nutrition", icon: "🤰"),
+        ChipsModel(name: "Breastfeeding diets", icon: "🍼"),
+        ChipsModel(name: "Senior-friendly", icon: "👴"),
+        ChipsModel(name: "None of these apply", icon: "✅")
     ]
     
     var body: some View {

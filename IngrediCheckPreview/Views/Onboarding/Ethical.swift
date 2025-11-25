@@ -11,14 +11,14 @@ struct Ethical: View {
     @State var onboardingFlowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
-        ChipsModel(name: "Animal welfare focused", icon: "beef"),
-        ChipsModel(name: "Fair trade", icon: "handshake"),
-        ChipsModel(name: "Sustainable fishing / no overfished species", icon: "fish"),
-        ChipsModel(name: "Low carbon footprint foods", icon: "recycle"),
-        ChipsModel(name: "Water footprint concerns", icon: "water-drop"),
-        ChipsModel(name: "Palm-oil free", icon: "palm oil"),
-        ChipsModel(name: "Plastic-free packaging", icon: "stop"),
-        ChipsModel(name: "Other", icon: "other")
+        ChipsModel(name: "Animal welfare focused", icon: "🐄"),
+        ChipsModel(name: "Fair trade", icon: "🤝"),
+        ChipsModel(name: "Sustainable fishing / no overfished species", icon: "🐟"),
+        ChipsModel(name: "Low carbon footprint foods", icon: "♻️"),
+        ChipsModel(name: "Water footprint concerns", icon: "💧"),
+        ChipsModel(name: "Palm-oil free", icon: "🌴"),
+        ChipsModel(name: "Plastic-free packaging", icon: "🚫"),
+        ChipsModel(name: "Other", icon: "✏️")
     ]
     
     var body: some View {

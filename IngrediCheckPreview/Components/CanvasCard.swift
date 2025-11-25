@@ -11,10 +11,10 @@ import SwiftUI
 struct CanvasCard: View {
     
     var chips: [ChipsModel]? = [
-        ChipsModel(name: "Peanuts", icon: "peanuts"),
-        ChipsModel(name: "Sesame", icon: "sesame"),
-        ChipsModel(name: "Wheat", icon: "wheat"),
-        ChipsModel(name: "Shellfish", icon: "shellfish")
+        ChipsModel(name: "Peanuts", icon: "🥜"),
+        ChipsModel(name: "Sesame", icon: "❤️"),
+        ChipsModel(name: "Wheat", icon: "🌾"),
+        ChipsModel(name: "Shellfish", icon: "🦐")
     ]
     
     var sectionedChips: [SectionedChipModel]? = nil

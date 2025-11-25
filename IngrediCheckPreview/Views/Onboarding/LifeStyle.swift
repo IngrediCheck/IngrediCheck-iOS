@@ -12,22 +12,22 @@ struct LifeStyle: View {
     @Binding var preferences: Preferences
     @State var arr: [Card] = [
         Card(title: "Plant & Balance", subTitle: "Do you follow a lant-forward or flexible eating style?", color: .avatarYellow, chips: [
-            ChipsModel(name: "Vegetarian", icon: "vegetarian"),
-            ChipsModel(name: "Vegan", icon: "soy"),
-            ChipsModel(name: "Flexitarian", icon: "flexitarian"),
-            ChipsModel(name: "Reducetarian", icon: "reducetarian"),
-            ChipsModel(name: "Pescatarian", icon: "fish"),
-            ChipsModel(name: "Other", icon: "other")
+            ChipsModel(name: "Vegetarian", icon: "🥦"),
+            ChipsModel(name: "Vegan", icon: "🌱"),
+            ChipsModel(name: "Flexitarian", icon: "🔄"),
+            ChipsModel(name: "Reducetarian", icon: "➖"),
+            ChipsModel(name: "Pescatarian", icon: "🐟"),
+            ChipsModel(name: "Other", icon: "✏️")
         ]),
         Card(title: "Quality & Source", subTitle: "Do you care about where your food comes from and how it’s grown?", color: .avatarPruple, chips: [
-            ChipsModel(name: "Organic Only", icon: "organic only"),
-            ChipsModel(name: "Non-GMO", icon: "pku (phenyalanine-sensitive)"),
-            ChipsModel(name: "Locally Sourced", icon: "locally sourced"),
-            ChipsModel(name: "Seasonal Eater", icon: "seasonal eater")
+            ChipsModel(name: "Organic Only", icon: "🌱"),
+            ChipsModel(name: "Non-GMO", icon: "🧬"),
+            ChipsModel(name: "Locally Sourced", icon: "📍"),
+            ChipsModel(name: "Seasonal Eater", icon: "🕰️")
         ]),
         Card(title: "Sustainable Living", subTitle: "Are you mindful of waste, packaging, and ingredient transparency?", color: .primary400, chips: [
-            ChipsModel(name: "Zero-Waste / Minimal Packing", icon: "globe"),
-            ChipsModel(name: "Clean Label", icon: "none of these apply")
+            ChipsModel(name: "Zero-Waste / Minimal Packing", icon: "🌍"),
+            ChipsModel(name: "Clean Label", icon: "✅")
         ])
     ]
     

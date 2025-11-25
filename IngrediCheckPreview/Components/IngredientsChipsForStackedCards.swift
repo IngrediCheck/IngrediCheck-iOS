@@ -25,8 +25,8 @@ struct IngredientsChipsForStackedCards: View {
         } label: {
             HStack(spacing: 8) {
                 if let image = image {
-                    Image(image)
-                        .resizable()
+                    Text(image)
+                        .font(.system(size: 18))
                         .frame(width: 24, height: 24)
                 }
                 

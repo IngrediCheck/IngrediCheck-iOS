@@ -11,14 +11,14 @@ struct Taste: View {
     @State var onboardingFlowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
-        ChipsModel(name: "Spicy lover", icon: "red-chilli"),
-        ChipsModel(name: "Avoid Spicy", icon: "stop"),
-        ChipsModel(name: "Sweet tooth", icon: "cheese-cake"),
-        ChipsModel(name: "Avoid slimy textures", icon: "Cucumber"),
-        ChipsModel(name: "Avoid bitter foods", icon: "bitter foods"),
-        ChipsModel(name: "Other", icon: "other"),
-        ChipsModel(name: "Crunchy / Soft preferences", icon: "cookie"),
-        ChipsModel(name: "Low-sweet preference", icon: "honey")
+        ChipsModel(name: "Spicy lover", icon: "🌶️"),
+        ChipsModel(name: "Avoid Spicy", icon: "🚫"),
+        ChipsModel(name: "Sweet tooth", icon: "🍰"),
+        ChipsModel(name: "Avoid slimy textures", icon: "🥒"),
+        ChipsModel(name: "Avoid bitter foods", icon: "🍵"),
+        ChipsModel(name: "Other", icon: "✏️"),
+        ChipsModel(name: "Crunchy / Soft preferences", icon: "🍪"),
+        ChipsModel(name: "Low-sweet preference", icon: "🍯")
     ]
     
     var body: some View {

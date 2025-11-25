@@ -20,16 +20,16 @@ struct Region: View {
                 ChipsModel(name: "Ayurveda", icon: "🌿"),
                 ChipsModel(name: "Hindu food traditions", icon: "🕉"),
                 ChipsModel(name: "Jain diet", icon: "🧘‍♂️"),
-                ChipsModel(name: "Other", icon: "other")
+                ChipsModel(name: "Other", icon: "✏️")
             ]
         ),
         SectionedChipModel(
             title: "Africa",
             subtitle: nil,
             chips: [
-                ChipsModel(name: "Rastafarian Ital diet", icon: "anti-inflammatory medical diet"),
+                ChipsModel(name: "Rastafarian Ital diet", icon: "🥗"),
                 ChipsModel(name: "Ethiopian Orthodox fasting", icon: "🥖"),
-                ChipsModel(name: "Other", icon: "other")
+                ChipsModel(name: "Other", icon: "✏️")
             ]
         ),
         SectionedChipModel(
@@ -37,9 +37,9 @@ struct Region: View {
             subtitle: nil,
             chips: [
                 ChipsModel(name: "Halal (Islamic dietary laws)", icon: "☪️"),
-                ChipsModel(name: "Kosher (Jewish dietary laws)", icon: "✡"),
+                ChipsModel(name: "Kosher (Jewish dietary laws)", icon: "✡️"),
                 ChipsModel(name: "Greek / Mediterranean diets", icon: "🫒"),
-                ChipsModel(name: "Other", icon: "other")
+                ChipsModel(name: "Other", icon: "✏️")
             ]
         ),
         SectionedChipModel(
@@ -49,7 +49,7 @@ struct Region: View {
                 ChipsModel(name: "Traditional Chinese Medicine (TCM)", icon: "🧧"),
                 ChipsModel(name: "Buddhist food rules", icon: "🧘"),
                 ChipsModel(name: "Japanese Macrobiotic diet", icon: "🍙"),
-                ChipsModel(name: "Other", icon: "other")
+                ChipsModel(name: "Other", icon: "✏️")
             ]
         ),
         SectionedChipModel(
@@ -58,7 +58,7 @@ struct Region: View {
             chips: [
                 ChipsModel(name: "Native American traditions", icon: "🪶"),
                 ChipsModel(name: "Christian traditions", icon: "✝️"),
-                ChipsModel(name: "Other", icon: "other")
+                ChipsModel(name: "Other", icon: "✏️")
             ]
         ),
         SectionedChipModel(
@@ -137,7 +137,7 @@ struct Region: View {
                                 
                                 IngredientsChips(
                                     title: "Other",
-                                    image: "other",
+                                    image: "✏️",
                                     onClick: {
                                         toggleOtherSelection(chipName: "Other")
                                     },

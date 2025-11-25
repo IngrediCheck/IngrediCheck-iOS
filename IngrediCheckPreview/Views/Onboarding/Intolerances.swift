@@ -11,12 +11,12 @@ struct Intolerances: View {
     @State var onboardingFlowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @State var arr: [ChipsModel] = [
-        ChipsModel(name: "Lactose", icon: "lactose"),
-        ChipsModel(name: "Fructose", icon: "fructose"),
-        ChipsModel(name: "Histamine", icon: "histamine"),
-        ChipsModel(name: "Gluten / wheat", icon: "wheat"),
-        ChipsModel(name: "Fodmap", icon: "fodmap"),
-        ChipsModel(name: "Other", icon: "other")
+        ChipsModel(name: "Lactose", icon: "🥛"),
+        ChipsModel(name: "Fructose", icon: "🍓"),
+        ChipsModel(name: "Histamine", icon: "🍷"),
+        ChipsModel(name: "Gluten / wheat", icon: "🌾"),
+        ChipsModel(name: "Fodmap", icon: "🧄"),
+        ChipsModel(name: "Other", icon: "✏️")
     ]
     
     var body: some View {
