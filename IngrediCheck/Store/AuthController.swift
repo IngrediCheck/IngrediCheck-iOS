@@ -136,6 +136,7 @@ private enum AuthFlowMode {
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
+    private static var hasPinged = false
     
     @MainActor init() {
         authChangeWatcher()
@@ -513,12 +514,15 @@ private enum AuthFlowMode {
         if let session {
             signInState = .signedIn
             registerDeviceAfterLogin(session: session)
+            pingAfterLogin()
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
             if shouldReset {
                 AnalyticsService.shared.resetAnalytics()
+                // Reset ping flag on sign out so it can run again on next login
+                Self.hasPinged = false
             }
         }
     }
@@ -531,36 +535,27 @@ private enum AuthFlowMode {
         }
         Self.hasRegisteredDevice = true
         
-        Task {
-            do {
-                let platform = UIDevice.current.systemName.lowercased()
-                let osVersion = UIDevice.current.systemVersion
-                let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-                
-                #if targetEnvironment(simulator) || DEBUG
-                let markInternal = true
-                #else
-                let markInternal: Bool? = nil
-                #endif
-                
-                let isInternal = try await WebService().registerDevice(
-                    deviceId: deviceId,
-                    platform: platform,
-                    osVersion: osVersion,
-                    appVersion: appVersion,
-                    markInternal: markInternal
-                )
-                
-                await MainActor.run {
-                    if isInternal != self.isInternalUser {
-                        self.isInternalUser = isInternal
-                        AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
-                    }
+        WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
+            guard let self = self, let isInternal = isInternal else { return }
+            
+            Task { @MainActor in
+                if isInternal != self.isInternalUser {
+                    self.isInternalUser = isInternal
+                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
                 }
-            } catch {
-                print("Failed to register device after login: \(error)")
             }
         }
+    }
+    
+    @MainActor
+    private func pingAfterLogin() {
+        guard !Self.hasPinged else {
+            return
+        }
+        Self.hasPinged = true
+        
+        // Fire-and-forget ping call
+        WebService().ping()
     }
     
     @MainActor
