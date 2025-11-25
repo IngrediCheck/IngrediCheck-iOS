@@ -11,6 +11,8 @@ struct HomeView: View {
     private let chatSmallDetent: PresentationDetent = .height(260)
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
+    @State private var isTabBarExpanded: Bool = true
+    @State private var previousScrollOffset: CGFloat = 0
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -149,7 +151,7 @@ struct HomeView: View {
                         .frame(height: 103)
                         
                         AverageScansCard()
-
+                    
                     }
                 }
                 .padding(.bottom, 20)
@@ -213,10 +215,33 @@ struct HomeView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 90)
             .navigationBarBackButtonHidden(true)
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            previousScrollOffset = geo.frame(in: .named("homeScroll")).minY
+                        }
+                        .onChange(of: geo.frame(in: .named("homeScroll")).minY) { newValue in
+                            let currentOffset = newValue
+                            
+                            // Match Temp2 behavior for smoothness:
+                            // - When user scrolls down (content moves up: offset decreases while < 0) -> collapse
+                            // - Otherwise keep it expanded.
+                            if currentOffset < 0 && currentOffset < previousScrollOffset {
+                                isTabBarExpanded = false
+                            } else {
+                                isTabBarExpanded = true
+                            }
+                            
+                            previousScrollOffset = currentOffset
+                        }
+                }
+            )
         }
+        .coordinateSpace(name: "homeScroll")
         .overlay(
-            TabBar(isExpanded: .constant(true))
-            , alignment: .bottom
+            TabBar(isExpanded: $isTabBarExpanded),
+            alignment: .bottom
         )
         .background(Color(hex: "FFFFFF"))
         .sheet(isPresented: $isChatSheetPresented) {

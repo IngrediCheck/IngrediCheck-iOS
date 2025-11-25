@@ -105,7 +105,7 @@ struct TabBar: View {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.smooth) {
-                        scale = 0.1
+                        scale = 1
                     }
                 }
                 
@@ -123,7 +123,7 @@ struct TabBar: View {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.smooth) {
-                        scale = 1
+                        scale = 0.1
                     }
                 }
                 
@@ -134,7 +134,6 @@ struct TabBar: View {
                 }
             }
             
-            isExpanded.toggle()
         }
 
     }
