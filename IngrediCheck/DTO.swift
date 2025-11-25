@@ -406,4 +406,13 @@ class DTO {
         let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
         return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
     }
+    
+    struct PingResponse: Codable {
+        let status: String?
+        let dc: String?
+        let country: String?
+        let city: String?
+        let region: String?
+        let timezone: String?
+    }
 }
