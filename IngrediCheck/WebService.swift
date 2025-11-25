@@ -899,6 +899,36 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
     }
     
+    func registerDeviceAfterLogin(deviceId: String, completion: @escaping (Bool?) -> Void) {
+        Task.detached {
+            do {
+                let platform = UIDevice.current.systemName.lowercased()
+                let osVersion = UIDevice.current.systemVersion
+                let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+                
+                #if targetEnvironment(simulator) || DEBUG
+                let markInternal = true
+                #else
+                let markInternal: Bool? = nil
+                #endif
+                
+                let isInternal = try await self.registerDevice(
+                    deviceId: deviceId,
+                    platform: platform,
+                    osVersion: osVersion,
+                    appVersion: appVersion,
+                    markInternal: markInternal
+                )
+                
+                completion(isInternal)
+            } catch {
+                // Silently handle errors - fire-and-forget
+                print("Failed to register device after login: \(error)")
+                completion(nil)
+            }
+        }
+    }
+    
     func markDeviceInternal(deviceId: String) async throws -> (device_id: String, affected_users: Int) {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError

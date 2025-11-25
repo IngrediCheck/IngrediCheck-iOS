@@ -535,40 +535,14 @@ private enum AuthFlowMode {
         }
         Self.hasRegisteredDevice = true
         
-        // Capture deviceId before starting detached task
-        let currentDeviceId = deviceId
-        
-        Task.detached { [weak self] in
-            guard let self = self else { return }
+        WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
+            guard let self = self, let isInternal = isInternal else { return }
             
-            do {
-                let platform = UIDevice.current.systemName.lowercased()
-                let osVersion = UIDevice.current.systemVersion
-                let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-                
-                #if targetEnvironment(simulator) || DEBUG
-                let markInternal = true
-                #else
-                let markInternal: Bool? = nil
-                #endif
-                
-                let isInternal = try await WebService().registerDevice(
-                    deviceId: currentDeviceId,
-                    platform: platform,
-                    osVersion: osVersion,
-                    appVersion: appVersion,
-                    markInternal: markInternal
-                )
-                
-                await MainActor.run {
-                    if isInternal != self.isInternalUser {
-                        self.isInternalUser = isInternal
-                        AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
-                    }
+            Task { @MainActor in
+                if isInternal != self.isInternalUser {
+                    self.isInternalUser = isInternal
+                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
                 }
-            } catch {
-                // Silently handle errors - fire-and-forget
-                print("Failed to register device after login: \(error)")
             }
         }
     }
