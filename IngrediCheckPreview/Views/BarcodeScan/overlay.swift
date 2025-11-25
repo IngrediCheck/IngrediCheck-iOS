@@ -109,7 +109,7 @@
 
 
     #Preview {
-        ScannerOverlay()
+        
     }
 
 
@@ -210,7 +210,7 @@ struct ContentView4: View {
                 
                 HStack(spacing: 47) {
                     
-                    // ✅ Gradient Circle + Icon inside ZStack
+                    // ✅  captured image or gallary image 
                     ZStack {
                         
                         RoundedRectangle(cornerRadius: 16)

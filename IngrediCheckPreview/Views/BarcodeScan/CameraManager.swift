@@ -75,6 +75,10 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
 
     private func configureSession() {
         session.beginConfiguration()
+        // Always balance begin/commit, even if we early-return.
+        defer {
+            session.commitConfiguration()
+        }
         session.sessionPreset = .medium
         guard let device = selectBackCamera(),
               let input = try? AVCaptureDeviceInput(device: device),
@@ -127,9 +131,6 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
             photoOutput.isHighResolutionCaptureEnabled = true
         }
         print("[BarcodeCameraManager] Before commit: inputs=\(session.inputs.count) outputs=\(session.outputs.count)")
-        session.commitConfiguration()
-        print("[BarcodeCameraManager] After commit: inputs=\(session.inputs.count) outputs=\(session.outputs.count)")
-        
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         preview.needsDisplayOnBoundsChange = true

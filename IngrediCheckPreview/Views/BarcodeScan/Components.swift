@@ -17,7 +17,7 @@ struct CameraSwipeButton: View {
             ZStack {
                 // Background Card
                 RoundedRectangle(cornerRadius: 46)
-                    .fill(.thinMaterial.opacity(0.5))
+                    .fill(.thinMaterial.opacity(0.4))
                     .frame(width: 261, height: 75)
                 
                 // Inner content
@@ -43,7 +43,7 @@ struct CameraSwipeButton: View {
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )) :
-                                    AnyShapeStyle(Color.white.opacity(0.15))
+                                        AnyShapeStyle(Color.white.opacity(0.15))
                                 )
                                 .frame(width: 67, height: 67)
                                 .scaleEffect(isTapped ? 0.9 : 1.0)
@@ -56,10 +56,8 @@ struct CameraSwipeButton: View {
                     
                     Spacer(minLength: 12)
                     
-                    // MARK: Middle icons (sequential swipe shimmer)
-                    ArrowSwipeShimmer()
-                        .rotationEffect(.degrees(mode == .photo ? 180 : 0))
-                        .animation(.easeInOut(duration: 0.2), value: mode)
+                    // MARK: Middle icons (shimmer + independent rotation)
+                    ArrowSwipeShimmer(mode: mode)
                     
                     Spacer(minLength: 12)
                     
@@ -84,7 +82,7 @@ struct CameraSwipeButton: View {
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )) :
-                                    AnyShapeStyle(.thinMaterial.opacity(0.5))
+                                        AnyShapeStyle(.thinMaterial.opacity(0.5))
                                 )
                                 .frame(width: 67, height: 67)
                                 .scaleEffect(isTapped1 ? 0.9 : 1.0)
@@ -112,7 +110,7 @@ struct CameraSwipeButton: View {
                     .onEnded { value in
                         let threshold: CGFloat = 30
                         let translation = value.translation.width
-
+                        
                         if translation > threshold {
                             // swipe right -> go to photo mode (move selection to the right circle)
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
@@ -128,8 +126,8 @@ struct CameraSwipeButton: View {
             )
             // keep circles visually inside the rounded pill while sliding
             .clipShape(RoundedRectangle(cornerRadius: 46))
-//           .swipeShimmer()
-
+            //           .swipeShimmer()
+            
             
             HStack(){
                 Text("Scanner")
@@ -151,66 +149,61 @@ struct CameraSwipeButton: View {
 struct ContentView5: View {
     var body: some View {
         
+        
+        
+        
+        
+        
+        // Icon + Text vertically stacked
+        HStack(spacing: 8,) {
+            Image("lucide_scan-line"
+            )
+            .font(.system(size: 20))
+            .foregroundColor(.white)
             
-            
-            
-       
-                
-                // Icon + Text vertically stacked
-                HStack(spacing: 8,) {
-                    Image("lucide_scan-line"
-                    )
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                    
-                    Text("Scanning Products")
-                        .font(.system(size : 12))
-                        .foregroundColor(.white)
-                }
-                .frame(height: 36)
-                .padding(.horizontal)
-                .background(
-                    .thinMaterial.opacity(0.5) ,in: .capsule
-//
-                    
-                )
-            
-            
+            Text("Scanning Products")
+                .font(.system(size : 12))
+                .foregroundColor(.white)
         }
+        .frame(height: 36)
+        .padding(.horizontal)
+        .background(
+            .thinMaterial.opacity(0.5) ,in: .capsule
+            //
+            
+        )
+        
+        
+    }
     
 }
 struct FoundNotFoundView : View {
     var body: some View {
         
+        // Icon + Text vertically stacked
+        HStack(spacing: 8,) {
+            Image("charm_circle-cross 1")
+                .font(.system(size: 20))
+                .foregroundColor(.white)
             
-            
-            
-       
-                
-                // Icon + Text vertically stacked
-                HStack(spacing: 8,) {
-                    Image("charm_circle-cross 1")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                    
-                    Text("Got it! Scanned Red Bull Energy Drink")
-                        .font(.system(size : 12))
-                        .foregroundColor(.white)
-                }
-                .frame(height: 36)
-                .padding(.horizontal,16)
-                .background(
-                    .thinMaterial ,in: .capsule
-
-                    
-                )
-            
-            
+            Text("Got it! Scanned Red Bull Energy Drink")
+                .font(.system(size : 12))
+                .foregroundColor(.white)
         }
+        .frame(height: 36)
+        .padding(.horizontal,16)
+        .background(
+            .thinMaterial ,in: .capsule
+            
+            
+        )
+        
+        
+    }
     
 }
 
-struct ContentView6: View {
+struct OutputCard: View {
     var body: some View {
         ZStack {
             // Background Card
@@ -219,21 +212,21 @@ struct ContentView6: View {
                 .frame(width: 300, height: 120)
             HStack{
                 
-              
+                
+                
+                // ✅ Gradient Circle + Icon inside ZStack
+                ZStack {
                     
-                    // ✅ Gradient Circle + Icon inside ZStack
-                    ZStack {
-                        
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.thinMaterial)
-                            .frame(width: 68, height: 92)
-                        
-                    }
-                    .padding(.trailing , 12)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.thinMaterial)
+                        .frame(width: 68, height: 92)
                     
-                    
-                    
-              
+                }
+                .padding(.trailing , 12)
+                
+                
+                
+                
                 VStack(alignment :.leading,){
                     
                     
@@ -245,45 +238,63 @@ struct ContentView6: View {
                     HStack(spacing : 8){
                         
                         ProgressView() // default spinner
-                              .progressViewStyle(CircularProgressViewStyle())
-//                              .foregroundStyle(.thinMaterial)
-                              .tint(.gray) // 👈 visible but still "material" looking
-
-                              .scaleEffect(1) // make it a bit bigger
-                             
-                        Text( "Fetching details")
-                            .font(.system(size : 14))
-                            .foregroundColor(.black
-//                                LinearGradient(
-//                                colors: [ Color(hex: "#9DCF10"), Color(hex: "#6B8E06")],
-//                                startPoint: .topLeading,
-//                                endPoint: .bottomTrailing
-//                            )
+                            .progressViewStyle(CircularProgressViewStyle())
+                        //                              .foregroundStyle(.thinMaterial)
+                            .tint( LinearGradient(
+                                colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .fontWeight( .semibold)
+                            ) // 👈 visible but still "material" looking
+                        
+                            .scaleEffect(1) // make it a bit bigger
+                        
+                        Text("Fetching details")
+                            .font(.system(size: 14))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .fontWeight(.semibold)
                         
                     }
-                    .frame(width: 149 , height: 36)
+                    .padding(8)
                     .background(
                         Capsule()
-                            .fill(LinearGradient(
-                                colors: [Color(hex: "#FFFFFF"), Color(hex: "#EAEAEA")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            
+                            .fill(
+                                .bar
+                            )
+                        
                     )
                     
-                  
+                    
                     
                 }
                 .padding(.trailing , 4)
                 
-                Image(systemName: "iconamoon_arrow-up-2-duotone")
+                Image("iconamoon_arrow-up-2-duotone")
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        //        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.ignoresSafeArea()) // background for contrast
+    }
+}
+
+
+// MARK: - Camera translucent bar (for use over camera preview)
+
+struct CameraTranslucentBar: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 26.75)
+            .fill(Color(hex: "#E8E8E8").opacity(0.2)) // #E8E8E833
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: 26.75)
+            )
+            .frame(height: 53.5)
     }
 }
 
@@ -292,16 +303,23 @@ struct ContentView6: View {
 struct ArrowSwipeShimmer: View {
     @State private var phase: CGFloat = -1
     private let animationDuration: Double = 1.4
-
+    var mode: CameraMode
+    
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(0..<3, id: \.self) { _ in
+            ForEach(0..<3, id: \.self) { index in
                 Image("right-arrow")
                     .renderingMode(.template)
                     .resizable()
                     .frame(width: 11, height: 21)
                     .foregroundColor(.white)
                     .opacity(0.4) // base arrow look
+                    .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+                    .animation(
+                        .easeInOut(duration: 0.24)
+                        .delay(0.04 * Double(index)),
+                        value: mode
+                    )
             }
         }
         .overlay(
@@ -319,30 +337,43 @@ struct ArrowSwipeShimmer: View {
         )
         .mask(
             HStack(spacing: 8) {
-                ForEach(0..<3, id: \.self) { _ in
+                ForEach(0..<3, id: \.self) { index in
                     Image("right-arrow")
                         .renderingMode(.template)
                         .resizable()
                         .frame(width: 11, height: 21)
+                        .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+                        .animation(
+                            .easeInOut(duration: 0.24)
+                            .delay(0.04 * Double(index)),
+                            value: mode
+                        )
                 }
             }
         )
-        .onAppear {
-            withAnimation(
-                Animation
-                    .linear(duration: animationDuration)
-                    .delay(0.4)
-                    .repeatForever(autoreverses: false)
-            ) {
-                phase = 1
-            }
+        .onAppear { startShimmer() }
+        .onChange(of: mode) { _ in
+            // Restart shimmer when mode changes so the light never "dies" after a swipe
+            startShimmer()
+        }
+    }
+    
+    private func startShimmer() {
+        phase = -1
+        withAnimation(
+            Animation
+                .linear(duration: animationDuration)
+                .delay(0.4)
+                .repeatForever(autoreverses: false)
+        ) {
+            phase = 1
         }
     }
 }
 
 struct SwipeShimmer: ViewModifier {
     @State private var phase: CGFloat = -1
-
+    
     func body(content: Content) -> some View {
         content
             .overlay(
@@ -352,13 +383,13 @@ struct SwipeShimmer: ViewModifier {
                         Color.grayScale70.opacity(0.3),
                         Color.grayScale70.opacity(0.3),
                         Color.grayScale70.opacity(0.8),
-                      
+                        
                     ]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
                 .scaleEffect(x: 1.5) // wider highlight
-                .offset(x: phase * 180) // shimmer movement
+                    .offset(x: phase * 180) // shimmer movement
             )
             .mask(content)
             .onAppear {
@@ -381,9 +412,25 @@ extension View {
 
 #Preview {
     ZStack{
-        CameraSwipeButton(mode: .constant(.photo))
-//        ContentView6()
+        OutputCard()
+        //        CameraSwipeButton(mode: .constant(.photo))
+        //        ContentView6()
     }.frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .background(.black)
+}
+
+#Preview("CameraTranslucentBar") {
+    ZStack {
+        // Simulated camera background
+        Color.black
+            .ignoresSafeArea()
+        
+        VStack {
+            Spacer()
+            CameraTranslucentBar()
+                .padding(.horizontal, 40)
+                .padding(.bottom, 40)
+        }
+    }
 }
