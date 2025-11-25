@@ -1080,7 +1080,6 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     
     func ping() {
         Task.detached { [self] in
-            let startTime = Date().timeIntervalSince1970
             let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
             let deviceModel = UIDevice.current.model
             let networkType = self.getNetworkType()
@@ -1095,14 +1094,13 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                 .setAuthorization(with: token)
                 .setMethod(to: "GET")
                 .build()
-            
-            var clientLatencyMs: Double = 0
-            
+
             do {
+                let startTime = Date().timeIntervalSince1970
                 let (_, response) = try await URLSession.shared.data(for: request)
                 let endTime = Date().timeIntervalSince1970
-                clientLatencyMs = (endTime - startTime) * 1000
-                
+                let clientLatencyMs = (endTime - startTime) * 1000
+
                 let httpResponse = response as? HTTPURLResponse
                 if httpResponse?.statusCode == 204 {
                     var properties: [String: Any] = [
@@ -1117,6 +1115,7 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                         properties["carrier"] = carrier
                     }
                     
+                    print("edge_ping properties: \(properties)")
                     PostHogSDK.shared.capture("edge_ping", properties: properties)
                 }
             } catch {
