@@ -12,23 +12,29 @@
                     // Dark overlay with a rounded-rect cutout
                     CutoutOverlay(rect: rect)
                     // Frame image
+                    Rectangle()
+                        .fill(Color.yellow)
+                        .frame(width: rect.width - 4, height: 3)
+                        .shadow(
+                            color: Color.yellow.opacity(1),
+                                radius: 12,          // no blur — keeps shadow sharp
+                                x: 0,
+                                y: 8               // positive = bottom only
+                            )
+//                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .position(x: rect.midX , y: rect.midY + scanY )
+                        .onAppear {
+                            scanY =  ( -rect.height / 2 ) + 6
+                            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                                scanY = ( rect.height / 2 ) - 6
+                            }
+                        }
                     Image("Scannerborderframe")
                         .resizable()
                         .frame(width: rect.width, height: rect.height)
                         .position(x: rect.midX, y: rect.midY)
                     // Scanning line clipped inside the rounded rect (no glow leak)
-                    Rectangle()
-                        .fill(Color.yellow)
-                        .frame(width: rect.width, height: 3)
-                        .shadow(color: Color.yellow.opacity(1), radius: 12, x: 0, y: 6)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .position(x: rect.midX, y: rect.midY + scanY)
-                        .onAppear {
-                            scanY = -rect.height / 2
-                            withAnimation(.linear(duration: 1.8).repeatForever(autoreverses: true)) {
-                                scanY = rect.height / 2
-                            }
-                        }
+                  
                     
                 }
                     
@@ -103,7 +109,7 @@
 
 
     #Preview {
-        ScannerOverlay()
+        
     }
 
 
@@ -204,7 +210,7 @@ struct ContentView4: View {
                 
                 HStack(spacing: 47) {
                     
-                    // ✅ Gradient Circle + Icon inside ZStack
+                    // ✅  captured image or gallary image 
                     ZStack {
                         
                         RoundedRectangle(cornerRadius: 16)
