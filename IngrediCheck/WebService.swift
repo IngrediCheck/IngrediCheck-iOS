@@ -1079,9 +1079,7 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     // MARK: - Ping API
     
     func ping() {
-        Task.detached { [weak self] in
-            guard let self = self else { return }
-            
+        Task.detached { [self] in
             let startTime = Date().timeIntervalSince1970
             
             // Collect device and network information
