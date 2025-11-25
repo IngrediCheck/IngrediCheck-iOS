@@ -1099,12 +1099,12 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             var clientLatencyMs: Double = 0
             
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (_, response) = try await URLSession.shared.data(for: request)
                 let endTime = Date().timeIntervalSince1970
                 clientLatencyMs = (endTime - startTime) * 1000
                 
                 let httpResponse = response as? HTTPURLResponse
-                if httpResponse?.statusCode == 200 {
+                if httpResponse?.statusCode == 204 {
                     var properties: [String: Any] = [
                         "client_latency_ms": clientLatencyMs,
                         "app_version": appVersion,
@@ -1115,24 +1115,6 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                     
                     if let carrier = carrier, !carrier.isEmpty {
                         properties["carrier"] = carrier
-                    }
-                    
-                    if let pingResponse = try? JSONDecoder().decode(DTO.PingResponse.self, from: data) {
-                        if let dc = pingResponse.dc {
-                            properties["server_dc"] = dc
-                        }
-                        if let country = pingResponse.country {
-                            properties["server_country"] = country
-                        }
-                        if let city = pingResponse.city {
-                            properties["server_city"] = city
-                        }
-                        if let region = pingResponse.region {
-                            properties["server_region"] = region
-                        }
-                        if let timezone = pingResponse.timezone {
-                            properties["server_timezone"] = timezone
-                        }
                     }
                     
                     PostHogSDK.shared.capture("edge_ping", properties: properties)
