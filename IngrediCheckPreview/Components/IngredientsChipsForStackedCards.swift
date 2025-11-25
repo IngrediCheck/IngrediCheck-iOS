@@ -33,6 +33,8 @@ struct IngredientsChipsForStackedCards: View {
                 Text(familyList.isEmpty ? title : String(title.prefix(25)) + (title.count > 25 ? "..." : ""))
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(isSelected ? .primary100 : Color(hex: fontColor))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 if !familyList.isEmpty {
                     HStack(spacing: -7) {

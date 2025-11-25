@@ -19,7 +19,7 @@ struct FlowLayout: Layout {
         var rowHeight: CGFloat = 0
 
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let size = subview.sizeThatFits(.init(width: maxWidth, height: nil))
 
             if x + size.width > maxWidth { // move to next line
                 x = 0
@@ -40,7 +40,7 @@ struct FlowLayout: Layout {
         var rowHeight: CGFloat = 0
 
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let size = subview.sizeThatFits(.init(width: bounds.width, height: nil))
 
             if x + size.width > bounds.width { // new line
                 x = 0
