@@ -1081,16 +1081,18 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     func ping() {
         Task.detached { [self] in
             let startTime = Date().timeIntervalSince1970
-            
-            // Collect device and network information
             let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
             let deviceModel = UIDevice.current.model
             let networkType = self.getNetworkType()
             let cellularGeneration = networkType == "cellular" ? self.getCellularGeneration() : "none"
             let carrier = networkType == "cellular" ? self.getCarrier() : nil
             
-            // Build request (no auth token needed per backend implementation)
+            guard let token = try? await supabaseClient.auth.session.accessToken else {
+                return
+            }
+            
             let request = SupabaseRequestBuilder(endpoint: .ingredicheck_ping)
+                .setAuthorization(with: token)
                 .setMethod(to: "GET")
                 .build()
             
@@ -1102,7 +1104,6 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                 clientLatencyMs = (endTime - startTime) * 1000
                 
                 let httpResponse = response as? HTTPURLResponse
-                // Only log if we got a successful response
                 if httpResponse?.statusCode == 200 {
                     var properties: [String: Any] = [
                         "client_latency_ms": clientLatencyMs,
@@ -1119,8 +1120,6 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                     PostHogSDK.shared.capture("edge_ping", properties: properties)
                 }
             } catch {
-                // Silently handle errors - fire-and-forget
-                // Optionally log error for debugging, but don't block
                 print("Ping API call failed: \(error.localizedDescription)")
             }
         }
