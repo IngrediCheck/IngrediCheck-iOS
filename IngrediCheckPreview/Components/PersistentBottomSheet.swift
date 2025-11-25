@@ -82,7 +82,7 @@ struct PersistentBottomSheet: View {
         case .meetYourAvatar:
             return 391
         case .dietaryPreferencesSheet(let isFamilyFlow):
-            return isFamilyFlow ? 501 : 351
+            return nil
         case .allSetToJoinYourFamily:
             return 284
         // For preference sheets shown from MainCanvasView, let the
@@ -100,6 +100,11 @@ struct PersistentBottomSheet: View {
             return nil
         case .homeDefault:
             return 0
+        case .chatIntro:
+            return 540
+        case .chatConversation:
+            return UIScreen.main.bounds.height * 0.75
+
         }
     }
     
@@ -191,6 +196,7 @@ struct PersistentBottomSheet: View {
             
         case .whosThisFor:
             WhosThisFor {
+                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
                 coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
             } addFamilyPressed: {
                 coordinator.showCanvas(.letsMeetYourIngrediFam)
@@ -297,6 +303,10 @@ struct PersistentBottomSheet: View {
             Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+        case .chatIntro:
+            IngrediBotView()
+        case .chatConversation:
+            IngrediBotChatView()
             
         case .homeDefault:
             EmptyView()

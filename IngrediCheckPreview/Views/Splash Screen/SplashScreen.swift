@@ -8,20 +8,22 @@
 import SwiftUI
 
 struct SplashScreen: View {
-    
-    @State var titleArr: [String] = [
-        "Know What's Inside, Instantly",
-        "Made for Your IngrediFam",
-        "Shop & Eat with Confidence"
+    private let slides: [SplashSlide] = [
+        .init(
+            title: "Know What's Inside, Instantly",
+            subtitle: "Scan any product and get clear, simple answers, no more confusing labels."
+        ),
+        .init(
+            title: "Made for Your IngrediFam",
+            subtitle: "Allergies, diets, or family needs, your scans adapt to everyone you care for."
+        ),
+        .init(
+            title: "Shop & Eat with Confidence",
+            subtitle: "Get healthier, safer alternatives without second-guessing."
+        )
     ]
     
-    @State var subTitleArr: [String] = [
-        "Scan any product and get clear, simple answers, no more confusing labels.",
-        "Allergies, diets, or family needs, your scans adapt to everyone you care for.",
-        "Get healthier, safer alternatives without second-guessing."
-    ]
-    
-    @State var idx: Int = 0
+    @State private var currentIndex: Int = 0
     
     var body: some View {
         NavigationStack {
@@ -30,12 +32,11 @@ struct SplashScreen: View {
                 Spacer()
                 Spacer()
                 
-                
                 VStack {
-                    Text(titleArr[idx])
+                    Text(slide.title)
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
-                    Text(subTitleArr[idx])
+                    Text(slide.subtitle)
                         .font(ManropeFont.medium.size(14))
                         .foregroundStyle(.grayScale100)
                         .multilineTextAlignment(.center)
@@ -46,34 +47,20 @@ struct SplashScreen: View {
                 HStack {
                     
                     HStack {
-                        Capsule()
-                            .frame(width: idx == 0 ? 24 : 5.5, height: 5.5)
-                            .foregroundStyle(
-                                idx == 0
-                                ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                            )
-                        
-                        Capsule()
-                            .frame(width: idx == 1 ? 24 : 5.5, height: 5.5)
-                            .foregroundStyle(
-                                idx == 1
-                                ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                            )
-                        
-                        Capsule()
-                            .frame(width: idx == 2 ? 24 : 5.5, height: 5.5)
-                            .foregroundStyle(
-                                idx == 2
-                                ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                            )
+                        ForEach(slides.indices, id: \.self) { index in
+                            Capsule()
+                                .frame(width: currentIndex == index ? 24 : 5.5, height: 5.5)
+                                .foregroundStyle(
+                                    currentIndex == index
+                                    ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
+                                    : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                                )
+                        }
                     }
                     
                     Spacer()
                     
-                    if idx == 2 {
+                    if isLastSlide {
                         NavigationLink {
                             RootContainerView()
                         } label: {
@@ -83,20 +70,36 @@ struct SplashScreen: View {
                     } else {
                         Button {
                             withAnimation(.smooth) {
-                                idx = idx + 1
+                                currentIndex = min(currentIndex + 1, slides.count - 1)
                             }
                         } label: {
                             GreenCircle()
                         }
                     }
                 }
-                .animation(.smooth, value: idx)
+                .animation(.smooth, value: currentIndex)
             }
             .padding(.horizontal, 20)
         }
+    }
+    
+    private var slide: SplashSlide {
+        guard slides.indices.contains(currentIndex) else {
+            return slides.first ?? .init(title: "", subtitle: "")
+        }
+        return slides[currentIndex]
+    }
+    
+    private var isLastSlide: Bool {
+        currentIndex >= slides.count - 1
     }
 }
 
 #Preview {
     SplashScreen()
+}
+
+private struct SplashSlide: Hashable {
+    let title: String
+    let subtitle: String
 }
