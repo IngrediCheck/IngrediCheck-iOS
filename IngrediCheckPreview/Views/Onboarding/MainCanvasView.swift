@@ -37,13 +37,13 @@ struct MainCanvasView: View {
             )
             .padding(.bottom, 16)
             
-            if let cards, cards.isEmpty == false {
-                CanvasSummaryScrollView(
-                    cards: cards,
-                    scrollTarget: $cardScrollTarget
-                )
-//                .padding(.horizontal, 20)
-            }
+            // Always show the scroll view, and let it decide whether to render
+            // real cards or a placeholder when there is no data.
+            CanvasSummaryScrollView(
+                cards: cards ?? [],
+                scrollTarget: $cardScrollTarget,
+                showPlaceholder: cards?.isEmpty ?? true
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.onAppear {
@@ -234,28 +234,38 @@ struct CanvasCardModel: Identifiable {
 struct CanvasSummaryScrollView: View {
     let cards: [CanvasCardModel]
     @Binding var scrollTarget: UUID?
+    let showPlaceholder: Bool
     @State private var previousCardCount: Int = 0
     
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 // Add dynamic bottom padding so content can scroll above the sheet
-                let extraBottomPadding: CGFloat = cards.count > 1
+                let extraBottomPadding: CGFloat = (!showPlaceholder && cards.count > 1)
                     ? UIScreen.main.bounds.height * 1.0
                     : 20
                 
                 VStack(spacing: 16) {
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        CanvasCard(
-                            chips: card.chips,
-                            sectionedChips: card.sectionedChips,
-                            title: card.title,
-                            iconName: card.icon
-                        )
-                        .id(card.id)
-                        // Add visual gap from the top edge so the card
-                        // never touches the top when scrolled into view.
-                        .padding(.top, index == 0 ? 16 : 0)
+                    if showPlaceholder {
+                        // Empty-state placeholder when there are no cards yet:
+                        // show a stack of dummy cards similar to the real layout.
+                        ForEach(0..<5, id: \.self) { index in
+                            SkeletonCanvasCard()
+                                .padding(.top, index == 0 ? 16 : 0)
+                        }
+                    } else {
+                        ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                            CanvasCard(
+                                chips: card.chips,
+                                sectionedChips: card.sectionedChips,
+                                title: card.title,
+                                iconName: card.icon
+                            )
+                            .id(card.id)
+                            // Add visual gap from the top edge so the card
+                            // never touches the top when scrolled into view.
+                            .padding(.top, index == 0 ? 16 : 0)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -299,6 +309,49 @@ struct CanvasSummaryScrollView: View {
                 proxy.scrollTo(id, anchor: .top)
             }
         }
+    }
+}
+
+/// Lightweight skeleton version of the canvas card, used as a placeholder
+/// when there is no data yet. Designed to roughly match the card layout
+/// without showing any real content.
+struct SkeletonCanvasCard: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.grayScale10)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                // Title bar
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale30)
+                    .frame(width: UIScreen.main.bounds.width * 0.46, height: UIScreen.main.bounds.height * 0.02)
+                
+                // Three rows of pill placeholders
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        HStack(spacing: 8) {
+                            Capsule()
+                                .fill(Color.grayScale30)
+                                .frame(width: CGFloat(Int.random(in: 100...150)), height: UIScreen.main.bounds.height * 0.04)
+                            
+                            Capsule()
+                                .fill(Color.grayScale30)
+                                .frame(width: CGFloat(Int.random(in: 100...150)), height: UIScreen.main.bounds.height * 0.04)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: UIScreen.main.bounds.height * 0.22)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.grayScale60, lineWidth: 0.25)
+        )
     }
 }
 
@@ -348,4 +401,16 @@ func onboardingSheetFamilyMemberSelectNote() -> some View {
 #Preview {
     MainCanvasView(flow: .individual)
         .environmentObject(Onboarding(onboardingFlowtype: .individual))
+    
+    
+//    ZStack {
+//        Color.gray
+//        VStack {
+//            SkeletonCanvasCard()
+//            SkeletonCanvasCard()
+//            SkeletonCanvasCard()
+//            SkeletonCanvasCard()
+//        }
+//        
+//    }
 }
