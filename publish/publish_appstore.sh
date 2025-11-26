@@ -114,13 +114,13 @@ mkdir -p "$EXPORT_PATH"
 echo "Incrementing build number..."
 cd "$PROJECT_ROOT/IngrediCheck.xcodeproj/.."
 CURRENT_BUILD=$(agvtool what-version -terse 2>/dev/null || echo "0")
-# Handle non-integer build numbers (e.g., "1.0" -> use timestamp instead)
-if [[ "$CURRENT_BUILD" =~ ^[0-9]+$ ]]; then
-  NEW_BUILD=$((CURRENT_BUILD + 1))
-else
-  # Use timestamp-based build number if current isn't a simple integer
-  NEW_BUILD=$(date +%Y%m%d%H%M)
+# Require build number to be a simple integer
+if [[ ! "$CURRENT_BUILD" =~ ^[0-9]+$ ]]; then
+  echo "Error: Current build number '$CURRENT_BUILD' is not a simple integer." >&2
+  echo "Build number must be a simple number (e.g., 1, 2, 3) to auto-increment." >&2
+  exit 1
 fi
+NEW_BUILD=$((CURRENT_BUILD + 1))
 agvtool new-version -all "$NEW_BUILD" >/dev/null 2>&1
 echo "Build number set to: $NEW_BUILD"
 cd "$PROJECT_ROOT"
