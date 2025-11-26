@@ -4,7 +4,7 @@
             "id": "allergies",
             "type": "type-1",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "allergies",
                 "name": "Allergies",
                 "individual": {
                     "question": "Got any allergies we should keep in mind?",
@@ -39,7 +39,7 @@
             "id": "intolerances",
             "type": "type-1",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "mingcute_alert-line",
                 "name": "Intolerances",
                 "individual": {
                     "question": "Any sensitivities that make eating tricky?",
@@ -65,7 +65,7 @@
             "id": "healthConditions",
             "type": "type-1",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "lucide_stethoscope",
                 "name": "Health Conditions",
                 "individual": {
                     "question": "Do you follow any special diets or have health conditions?",
@@ -93,7 +93,7 @@
             "id": "lifeStage",
             "type": "type-1",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "lucide_baby",
                 "name": "Life Stage",
                 "individual": {
                     "question": "Do you have special needs we should keep in mind?",
@@ -119,7 +119,7 @@
             "id": "region",
             "type": "type-3",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "nrk_globe",
                 "name": "Region",
                 "individual": {
                     "question": "Where are you from? This helps us customize your experience!",
@@ -194,7 +194,7 @@
             "id": "avoid",
             "type": "type-2",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "charm_circle-cross",
                 "name": "Avoid",
                 "individual": {
                     "question": "Anything you avoid in your diet?"
@@ -279,7 +279,7 @@
             "id": "lifeStyle",
             "type": "type-2",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "hugeicons_plant-01",
                 "name": "Life Style",
                 "individual": {
                     "question": "What’s your way of eating?"
@@ -336,7 +336,7 @@
             "id": "nutrition",
             "type": "type-2",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "fluent-emoji-high-contrast_fork-and-knife-with-plate",
                 "name": "Nutrition",
                 "individual": {
                     "question": "What’s your nutrition focus right now?"
@@ -395,7 +395,7 @@
             "id": "ethical",
             "type": "type-1",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "streamline_recycle-1-solid",
                 "name": "Ethical",
                 "individual": {
                     "question": "What ethical or environmental values are important to you?",
@@ -423,7 +423,7 @@
             "id": "taste",
             "type": "type-1",
             "header": {
-                "iconUrl": null,
+                "iconUrl": "iconoir_chocolate",
                 "name": "Taste",
                 "individual": {
                     "question": "What are your taste and texture preferences?",
