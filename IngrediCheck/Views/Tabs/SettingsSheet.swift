@@ -16,14 +16,6 @@ struct SettingsSheet: View {
         @Bindable var userPreferences = userPreferences
         NavigationStack {
             Form {
-                /*
-                Section {
-                    Picker("OCR Engine", selection: $userPreferences.ocrModel) {
-                        Text("iOS").tag(OcrModel.iOSBuiltIn)
-                        Text("Google").tag(OcrModel.googleMLKit)
-                    }
-                }
-                */
                 Section("Settings") {
                     Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
                 }

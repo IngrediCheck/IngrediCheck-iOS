@@ -14,7 +14,6 @@
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
 		1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F5987B52E30E6DA00381E32 /* StoreKit.framework */; };
 		1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */; };
-		20AB3B30C01EE217AB675B0B /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */; };
 		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
 		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
@@ -107,12 +106,9 @@
 		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
 		A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
-		C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		D35FB7F12E56E859009A5AA1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
-		EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,7 +126,6 @@
 				397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */,
 				1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */,
 				D35BCF262E27D5B600125580 /* Auth in Frameworks */,
-				20AB3B30C01EE217AB675B0B /* Pods_IngrediCheck.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -230,7 +225,6 @@
 			children = (
 				39F2A87C2A9D3972004EBB9A /* IngrediCheck */,
 				39F2A87B2A9D3972004EBB9A /* Products */,
-				6129BCCF6EBB4E1C75C2304C /* Pods */,
 				693CA082C10D7643322619FF /* Frameworks */,
 				D35FB7F02E56E704009A5AA1 /* Recovered References */,
 			);
@@ -263,20 +257,10 @@
 			path = IngrediCheck;
 			sourceTree = "<group>";
 		};
-		6129BCCF6EBB4E1C75C2304C /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */,
-				EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */,
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		693CA082C10D7643322619FF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				1F5987B52E30E6DA00381E32 /* StoreKit.framework */,
-				C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -296,12 +280,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */;
 			buildPhases = (
-				2B3F5050AAE8282CCCD8EF0D /* [CP] Check Pods Manifest.lock */,
 				39F2A8762A9D3972004EBB9A /* Sources */,
 				39F2A8772A9D3972004EBB9A /* Frameworks */,
 				39F2A8782A9D3972004EBB9A /* Resources */,
-				38035A4FFCF1BA707C9F799F /* [CP] Embed Pods Frameworks */,
-				D05D09911B5EB911156EBF36 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -377,70 +358,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		2B3F5050AAE8282CCCD8EF0D /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-IngrediCheck-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		38035A4FFCF1BA707C9F799F /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D05D09911B5EB911156EBF36 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -614,12 +531,11 @@
 		};
 		39F2A8892A9D3974004EBB9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202511251728;
+				CURRENT_PROJECT_VERSION = 202511251729;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -663,35 +579,13 @@
 					"-framework",
 					"\"Foundation\"",
 					"-framework",
-					"\"GTMSessionFetcher\"",
-					"-framework",
-					"\"GoogleDataTransport\"",
-					"-framework",
-					"\"GoogleToolboxForMac\"",
-					"-framework",
-					"\"GoogleUtilities\"",
-					"-framework",
 					"\"LocalAuthentication\"",
-					"-framework",
-					"\"MLImage\"",
-					"-framework",
-					"\"MLKitCommon\"",
-					"-framework",
-					"\"MLKitTextRecognition\"",
-					"-framework",
-					"\"MLKitTextRecognitionCommon\"",
-					"-framework",
-					"\"MLKitVision\"",
 					"-framework",
 					"\"Security\"",
 					"-framework",
 					"\"SystemConfiguration\"",
 					"-framework",
 					"\"UIKit\"",
-					"-framework",
-					"\"nanopb\"",
-					"-framework",
-					"\"FBLPromises\"",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -707,13 +601,12 @@
 		};
 		39F2A88A2A9D3974004EBB9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 202511251728;
+				CURRENT_PROJECT_VERSION = 202511251729;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
@@ -758,35 +651,13 @@
 					"-framework",
 					"\"Foundation\"",
 					"-framework",
-					"\"GTMSessionFetcher\"",
-					"-framework",
-					"\"GoogleDataTransport\"",
-					"-framework",
-					"\"GoogleToolboxForMac\"",
-					"-framework",
-					"\"GoogleUtilities\"",
-					"-framework",
 					"\"LocalAuthentication\"",
-					"-framework",
-					"\"MLImage\"",
-					"-framework",
-					"\"MLKitCommon\"",
-					"-framework",
-					"\"MLKitTextRecognition\"",
-					"-framework",
-					"\"MLKitTextRecognitionCommon\"",
-					"-framework",
-					"\"MLKitVision\"",
 					"-framework",
 					"\"Security\"",
 					"-framework",
 					"\"SystemConfiguration\"",
 					"-framework",
 					"\"UIKit\"",
-					"-framework",
-					"\"nanopb\"",
-					"-framework",
-					"\"FBLPromises\"",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";

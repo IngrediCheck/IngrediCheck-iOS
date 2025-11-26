@@ -5,13 +5,10 @@
 - Network access is handled by `WebService.swift` and `SupabaseRequestBuilder.swift`; keep API DTOs in `DTO.swift` to share models across features.
 - Assets and localized imagery are managed inside `Assets.xcassets`; update catalog groups rather than adding ad-hoc bundles.
 - Configuration constants (Supabase endpoints, analytics keys) are defined in `Config.swift`; use environment-specific overrides before shipping secrets.
-- CocoaPods outputs reside in `Pods/`; avoid editing generated files and commit only the lockfile when dependency versions change.
-
 ## Build, Test, and Development Commands
-- `pod install` — resolve iOS dependencies; run after pod updates or Xcode version bumps.
-- `xed IngrediCheck.xcworkspace` — open the CocoaPods-integrated workspace in Xcode.
-- `xcodebuild build -workspace IngrediCheck.xcworkspace -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` — CI-friendly build to catch compile issues.
-- `xcodebuild test -workspace IngrediCheck.xcworkspace -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` — execute unit/UI tests once targets exist.
+- `xed IngrediCheck.xcodeproj` — open the Xcode project.
+- `xcodebuild build -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` — CI-friendly build to catch compile issues.
+- `xcodebuild test -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` — execute unit/UI tests once targets exist.
 
 ## Coding Style & Naming Conventions
 - Follow Swift 5.9 defaults: four-space indentation, 120-char line guidance, and use trailing commas for multiline literals.
@@ -29,7 +26,7 @@
 - Prefer conventional titles with a leading area tag (`Feature:`, `Fix:`, `Chore:`) and optional issue references, mirroring recent history (`Feature: Switch to SSE API (#8)`).
 - Keep commits scoped to a single concern and include rationale in the body when touching config, analytics, or secrets.
 - PRs should summarize functional changes, list test evidence (`xcodebuild build`, `xcodebuild test`), link Supabase/issue tracker tasks, and add screenshots for UI updates.
-- Request at least one review, resolve Xcode warnings before merging, and ensure Pods/ and build settings remain in sync.
+- Request at least one review, resolve Xcode warnings before merging, and ensure build settings remain in sync.
 
 ## Work Tracking
 We track work in Beads instead of Markdown. Run \`bd quickstart\` to see how.

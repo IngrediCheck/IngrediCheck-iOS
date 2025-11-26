@@ -20,7 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PUBLISH_DIR="$SCRIPT_DIR"
-WORKSPACE="${WORKSPACE:-IngrediCheck.xcworkspace}"
+PROJECT="${PROJECT:-IngrediCheck.xcodeproj}"
 SCHEME="${SCHEME:-IngrediCheck}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 ARCHIVE_PATH="${ARCHIVE_PATH:-$PROJECT_ROOT/build/IngrediCheck.xcarchive}"
@@ -28,7 +28,7 @@ EXPORT_PATH="${EXPORT_PATH:-$PROJECT_ROOT/build/AppStoreExport}"
 IPA_NAME="${IPA_NAME:-IngrediCheck}"
 IPA_PATH="$EXPORT_PATH/$IPA_NAME.ipa"
 EXPORT_PLIST_PATH="$EXPORT_PATH/exportOptions.plist"
-WORKSPACE_PATH="$PROJECT_ROOT/$WORKSPACE"
+PROJECT_PATH="$PROJECT_ROOT/$PROJECT"
 
 if [[ -f "$PUBLISH_DIR/.env" ]]; then
   # shellcheck disable=SC1090
@@ -64,7 +64,7 @@ fi
 
 if [[ -z "${APPLE_TEAM_ID:-}" ]]; then
   echo "Detecting DEVELOPMENT_TEAM from Xcode project..."
-  APPLE_TEAM_ID="$(xcodebuild -workspace "$WORKSPACE_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | awk '/DEVELOPMENT_TEAM/ {print $3; exit}')"
+  APPLE_TEAM_ID="$(xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | awk '/DEVELOPMENT_TEAM/ {print $3; exit}')"
 fi
 
 if [[ -z "${APPLE_TEAM_ID:-}" ]]; then
@@ -125,9 +125,9 @@ agvtool new-version -all "$NEW_BUILD" >/dev/null 2>&1
 echo "Build number set to: $NEW_BUILD"
 cd "$PROJECT_ROOT"
 
-echo "Archiving $SCHEME from $WORKSPACE_PATH..."
+echo "Archiving $SCHEME from $PROJECT_PATH..."
 xcodebuild archive \
-  -workspace "$WORKSPACE_PATH" \
+  -project "$PROJECT_PATH" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
   -destination 'generic/platform=iOS' \

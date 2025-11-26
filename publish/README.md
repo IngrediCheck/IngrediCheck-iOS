@@ -54,7 +54,7 @@ This guide will help you set up the `publish_appstore.sh` script to build and up
 
 ### Configure Xcode Signing
 
-1. Open `IngrediCheck.xcworkspace` in Xcode
+1. Open `IngrediCheck.xcodeproj` in Xcode
 2. Select the **IngrediCheck** project in the navigator
 3. Select the **IngrediCheck** target
 4. Go to **Signing & Capabilities** tab
