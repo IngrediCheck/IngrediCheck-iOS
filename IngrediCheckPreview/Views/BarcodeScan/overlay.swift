@@ -154,19 +154,32 @@ struct tostmsg: View {
 
 struct Flashcapsul: View {
     @State private var isFlashon = false
+    /// When `true`, show the system torch icon; when `false`, show the custom flash asset.
+    var isScannerMode: Bool
+    
     var body: some View {
         HStack(spacing: 4) {
-            Image(isFlashon ? "flashon" : "flashoff")
-                .resizable()
-                .frame(width: 20, height: 20)
-                .foregroundColor(.white)
-
-            Text(isFlashon ? "Flash On" : "Flash Off")
-                .font(.system(size: 12))
-                .foregroundColor(.white)
-                .fontWeight(.semibold)
+            if isScannerMode {
+                // Scanner mode: show torch icon only
+                Image(systemName: isFlashon ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                
+                    .foregroundColor(.white)
+            } else {
+                // Photo mode: show custom flash asset + label
+                Image(isFlashon ? "flashon" : "flashoff")
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                    .foregroundColor(.white)
+                
+            
+            }
         }
-        .padding(7.5)
+        .frame(width: 33, height: 33)
+//        .padding(7.5)
+        
         .background(
             .thinMaterial, in: .capsule
         )
@@ -183,74 +196,158 @@ struct Flashcapsul: View {
     }
 }
 
-struct Buttoncross: View {
+struct BackButton: View {
+    @Environment(\.dismiss) private var dismiss
+    
     var body: some View {
-        ZStack {
-            Image(systemName: "xmark")
-                .font(.system(size: 10))
-                .foregroundColor(.white)
-            
-        }.padding(7.5)
+        Button {
+            dismiss()
+        } label: {
+            ZStack {
+                Image( "left-arrow")
+                    .frame(width: 24, height: 24)
+                    .foregroundColor(.white)
+            }
+            .frame(width: 33, height: 33)
+//            .padding(7.5)
             .background(
-                .thinMaterial ,in: .capsule
+                .thinMaterial, in: .capsule
             )
-        
+           
+        }
+        .buttonStyle(.plain)
     }
 }
 
-struct ContentView4: View {
+struct BarcodeDataCard: View {
     let code: String
     var body: some View {
         ZStack {
             // Background Card
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 24)
                 .fill(.thinMaterial.opacity(0.2))
                 .frame(width: 300, height: 120)
             HStack{
                 
                 HStack(spacing: 47) {
-                    
-                    // ✅  captured image or gallary image 
-                    ZStack {
-                        
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 68, height: 92)
-                        
+                    // Left-side visual changes based on whether we have a barcode yet.
+                    if code.isEmpty {
+                        // Empty card: simple placeholder block, no barcode illustration.
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.thinMaterial.opacity(0.4))
+                                .frame(width: 68, height: 92)
+                        }
+                    } else {
+                        // Barcode present: show the animated/illustrated barcode stack.
+                        ZStack {
+                            Image("barcodecorners")
+                            Image("barcode-lines")
+                            Rectangle()
+                                .fill(Color.yellow)
+                                .frame(width: 71, height: 3)
+                                .shadow(
+                                    color: Color.yellow.opacity(1),
+                                        radius: 12,
+                                        x: 0,
+                                        y: 8
+                                    )
+                            
+                        }
+                        .frame(width: 71, height: 95)
                     }
-                    
-                    
-                    
-                    
                 }
                 VStack(alignment :.leading,spacing: 8){
-                   
-                    ZStack{
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 185, height: 25)
-                        Text("Scanned: \(code)")
-                            .font(.footnote)
-                            .foregroundColor(.white)
+                    if code.isEmpty{
                         
                         
-                    }
+                        ZStack{
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(.thinMaterial.opacity(0.4))
+                                .frame(width: 185, height: 25)
+                            
+                        }
                         RoundedRectangle(cornerRadius: 4)
                             .fill(.thinMaterial.opacity(0.4))
                             .frame(width: 132, height: 20)
                             .padding(.bottom , 7)
-                   
+                        
+                        
                         RoundedRectangle(cornerRadius: 52)
                             .fill(.thinMaterial.opacity(0.4))
                             .frame(width:79    , height: 24)
                         
+                    }else{
+                        VStack(alignment: .leading){
+                            
+                            Text("Looking up this product…")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(Color.white)
+                                .padding(.bottom ,2)
+                            Text("We’re checking our database for this Product")
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(2)
+                                .font(.system(size: 10, weight: .semibold))
+                                
+                                .foregroundColor(Color.white)
+                            Spacer(minLength: 8)
+                            HStack(spacing : 8){
+                                
+                                ProgressView() // default spinner
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                //                              .foregroundStyle(.thinMaterial)
+                                    .tint( LinearGradient(
+                                        colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                    ) // 👈 visible but still "material" looking
+                                
+                                    .scaleEffect(1) // make it a bit bigger
+                                    .frame(width :16 , height: 16)
+                                
+                                Text("Fetching details")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .fontWeight(.semibold)
+                                
+                            }.frame(width: 130 , height: 22)
+                            .padding(8)
+                           
+                            .background(
+                                Capsule()
+                                    .fill(
+                                        .bar
+                                    )
+                                
+                            )
+                        }
+//                        .padding(.leading  )
+                        
+                    }
                     
+                }.frame(width :185 , height: 92 )
+                if   code.isEmpty == false  {
+                    Image("iconamoon_arrow-up-2-duotone")
                     
                 }
+               
             }
         }
 //        .frame(maxWidth: .infinity, maxHeight: .infinity)
         
     }
 }
-
+#Preview {
+    ZStack {
+        
+        
+        BarcodeDataCard(code: "123456789012")
+    }.background(Color.red.edgesIgnoringSafeArea(.all))
+}
