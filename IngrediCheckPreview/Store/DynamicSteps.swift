@@ -51,15 +51,20 @@ enum DynamicStepType: String, Codable {
 struct DynamicStepHeader: Codable {
     let iconURL: String?
     let name: String
-    let question: String
-    let description: String?
+    let individual: DynamicHeaderVariant
+    let family: DynamicHeaderVariant
 
     enum CodingKeys: String, CodingKey {
         case iconURL = "iconUrl"
         case name
-        case question
-        case description
+        case individual
+        case family
     }
+}
+
+struct DynamicHeaderVariant: Codable {
+    let question: String
+    let description: String?
 }
 
 // MARK: - Content
