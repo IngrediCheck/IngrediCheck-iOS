@@ -57,6 +57,14 @@ struct MainCanvasView: View {
     }
     
     private func icon(for screenId: OnboardingScreenId) -> String {
+        // Prefer icon from dynamic JSON if available, fall back to older
+        // static assets to avoid regressions if the config is incomplete.
+        if let step = store.step(for: screenId),
+           let icon = step.header.iconURL,
+           icon.isEmpty == false {
+            return icon
+        }
+        
         switch screenId {
         case .allergies: return "allergies"
         case .intolerances: return "mingcute_alert-line"

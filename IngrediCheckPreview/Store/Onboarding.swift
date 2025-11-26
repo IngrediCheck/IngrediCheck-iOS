@@ -117,6 +117,9 @@ class Onboarding: ObservableObject {
     @Published var isOnboardingCompleted: Bool = false
     @Published var onboardingFlowtype: OnboardingFlowType = .individual
     @Published var sections: [OnboardingSection] = []
+    /// Dynamic step configuration loaded from `dynamicJsonData.json`. Used as
+    /// the single source of truth for ordering / titles / icons.
+    @Published var dynamicSteps: [DynamicStep] = []
     @Published var currentSectionIndex: Int = 0
     @Published var currentScreenIndex: Int = 0
     @Published var isUploading: Bool = false
@@ -134,7 +137,30 @@ class Onboarding: ObservableObject {
         onboardingFlowtype: OnboardingFlowType,
     ) {
         self.onboardingFlowtype = onboardingFlowtype
-        self.sections = OnboardingSectionsFactory.sections()
+        
+        // Load dynamic steps from JSON and derive sections from them so that
+        // tag bar, progress, and canvas summary always stay in sync with the
+        // configuration file instead of hard-coded arrays.
+        let steps = DynamicStepsProvider.loadSteps()
+        self.dynamicSteps = steps
+        self.sections = steps.compactMap { step in
+            guard let screenId = OnboardingScreenId(rawValue: step.id) else {
+                return nil
+            }
+            
+            let screen = OnboardingScreen(
+                screenId: screenId,
+                // The legacy `buildView` is no longer used for rendering – the
+                // bottom sheet now drives UI via `DynamicOnboardingStepView`.
+                // We keep this closure only so existing code remains compile-safe.
+                buildView: { _, _ in AnyView(EmptyView()) }
+            )
+            
+            return OnboardingSection(
+                name: step.header.name,
+                screens: [screen]
+            )
+        }
     }
     
     var currentSection: OnboardingSection {
@@ -143,6 +169,12 @@ class Onboarding: ObservableObject {
     
     var currentScreen: OnboardingScreen {
         currentSection.screens[currentScreenIndex]
+    }
+    
+    // MARK: - Dynamic steps helpers
+    
+    func step(for screenId: OnboardingScreenId) -> DynamicStep? {
+        dynamicSteps.first { $0.id == screenId.rawValue }
     }
     
     func next() {

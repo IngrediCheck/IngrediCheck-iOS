@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Dynamic Steps Root
 
@@ -114,4 +115,26 @@ struct DynamicRegion: Codable, Identifiable {
     let subRegions: [DynamicOption]
 }
 
+// MARK: - Loader
+
+/// Helper for loading the dynamic onboarding configuration from the bundled JSON.
+enum DynamicStepsProvider {
+    static func loadSteps() -> [DynamicStep] {
+        // When this runs inside the preview target, the JSON should be part of
+        // the IngrediCheckPreview app bundle with the same filename.
+        guard let url = Bundle.main.url(forResource: "dynamicJsonData", withExtension: "json") else {
+            assertionFailure("dynamicJsonData.json not found in bundle")
+            return []
+        }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            let payload = try JSONDecoder().decode(DynamicStepsPayload.self, from: data)
+            return payload.steps
+        } catch {
+            assertionFailure("Failed to decode dynamicJsonData.json: \(error)")
+            return []
+        }
+    }
+}
 

@@ -255,54 +255,114 @@ struct PersistentBottomSheet: View {
             }
             
         case .allergies:
-            Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .allergies) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .intolerances:
-            Intolerances(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .intolerances) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .healthConditions:
-            HealthConditions(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .healthConditions) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .lifeStage:
-            LifeStage(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .lifeStage) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .region:
-            Region(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .region) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .avoid:
-            Avoid(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .aviod) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .lifeStyle:
-            LifeStyle(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .lifeStyle) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .nutrition:
-            Nutrition(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .nutrition) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .ethical:
-            Ethical(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .ethical) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
             
         case .taste:
-            Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+            if let step = store.step(for: .taste) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
+            }
         case .chatIntro:
             IngrediBotView()
         case .chatConversation:
