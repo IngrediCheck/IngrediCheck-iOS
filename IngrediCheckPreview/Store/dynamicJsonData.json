@@ -1,0 +1,451 @@
+{
+    "steps": [
+        {
+            "id": "allergies",
+            "type": "type-1",
+            "header": {
+                "iconUrl": null,
+                "name": "Allergies",
+                "individual": {
+                    "question": "Got any allergies we should keep in mind?",
+                    "description": "Choose all that apply so we can give you smarter food tips."
+                },
+                "family": {
+                    "question": "Does anyone in your IngrediFam have allergies we should know ?",
+                    "description": "Select all that apply to keep meals worry-free."
+                }
+            },
+            "content": {
+                "options": [
+                    { "name": "Peanuts", "icon": "🥜" },
+                    { "name": "Tree nuts", "icon": "🌰" },
+                    { "name": "Dairy", "icon": "🥛" },
+                    { "name": "Eggs", "icon": "🥚" },
+                    { "name": "Soy", "icon": "🌱" },
+                    { "name": "Wheat", "icon": "🌾" },
+                    { "name": "Fish", "icon": "🐟" },
+                    { "name": "Shellfish", "icon": "🦐" },
+                    { "name": "Sesame", "icon": "⚪" },
+                    { "name": "Celery", "icon": "🥬" },
+                    { "name": "Lupin", "icon": "🫘" },
+                    { "name": "Sulphites", "icon": "🧂" },
+                    { "name": "Mustard", "icon": "🟡" },
+                    { "name": "Molluscs", "icon": "🐚" },
+                    { "name": "Other", "icon": "✏" }
+                ]
+            }
+        },
+        {
+            "id": "intolerances",
+            "type": "type-1",
+            "header": {
+                "iconUrl": null,
+                "name": "Intolerances",
+                "individual": {
+                    "question": "Any sensitivities that make eating tricky?",
+                    "description": "We’ll make sure your food suggestions avoid these."
+                },
+                "family": {
+                    "question": "Any sensitivities or intolerances in your IngrediFam?",
+                    "description": "We’ll avoid foods that cause discomfort."
+                }
+            },
+            "content": {
+                "options": [
+                    { "name": "Lactose", "icon": "🥛" },
+                    { "name": "Fructose", "icon": "🍓" },
+                    { "name": "Histamine", "icon": "🍷" },
+                    { "name": "Gluten / wheat", "icon": "🌾" },
+                    { "name": "Fodmap", "icon": "🧄" },
+                    { "name": "Other", "icon": "✏️" }
+                ]
+            }
+        },
+        {
+            "id": "healthConditions",
+            "type": "type-1",
+            "header": {
+                "iconUrl": null,
+                "name": "Health Conditions",
+                "individual": {
+                    "question": "Do you follow any special diets or have health conditions?",
+                    "description": "This helps us recommend meals that work for you."
+                },
+                "family": {
+                    "question": "Any doctor diets or health conditions in your IngrediFam?",
+                    "description": "This helps us tailor recommendations better."
+                }
+            },
+            "content": {
+                "options": [
+                    { "name": "Diabetes", "icon": "🍭" },
+                    { "name": "Hypertension", "icon": "💊" },
+                    { "name": "Kidney Disease", "icon": "🩺" },
+                    { "name": "Heart Health", "icon": "🫀" },
+                    { "name": "PKU (phenyalanine-sensitive)", "icon": "🧬" },
+                    { "name": "Anti-inflammatory medical diet", "icon": "🥗" },
+                    { "name": "Celiac disease", "icon": "🥖" },
+                    { "name": "Other", "icon": "✏️" }
+                ]
+            }
+        },
+        {
+            "id": "lifeStage",
+            "type": "type-1",
+            "header": {
+                "iconUrl": null,
+                "name": "Life Stage",
+                "individual": {
+                    "question": "Do you have special needs we should keep in mind?",
+                    "description": "Select all that apply, this helps us tailor tips for you."
+                },
+                "family": {
+                    "question": "Does anyone in your IngrediFam have special life stage needs?",
+                    "description": "Select all that apply so tips match every life stage."
+                }
+            },
+            "content": {
+                "options": [
+                    { "name": "Kids Baby-friendly foods", "icon": "👶" },
+                    { "name": "Toddler pickey-eating adaptations", "icon": "🙄" },
+                    { "name": "Pregnancy Prenatal nutrition", "icon": "🤰" },
+                    { "name": "Breastfeeding diets", "icon": "🍼" },
+                    { "name": "Senior-friendly", "icon": "👴" },
+                    { "name": "None of these apply", "icon": "✅" }
+                ]
+            }
+        },
+        {
+            "id": "region",
+            "type": "type-3",
+            "header": {
+                "iconUrl": null,
+                "name": "Region",
+                "individual": {
+                    "question": "Where are you from? This helps us customize your experience!",
+                    "description": "Pick your region(s) or cultural practices."
+                },
+                "family": {
+                    "question": "Where does your IngrediFam draw its food traditions from?",
+                    "description": "Select your region or cultural roots."
+                }
+            },
+            "content": {
+                "regions": [
+                    {
+                        "name": "India & South Asia",
+                        "subRegions": [
+                            { "name": "Ayurveda", "icon": "🌿" },
+                            { "name": "Hindu food traditions", "icon": "🕉" },
+                            { "name": "Jain diet", "icon": "🧘‍♂️" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    },
+                    {
+                        "name": "Africa",
+                        "subRegions": [
+                            { "name": "Rastafarian Ital diet", "icon": "🥗" },
+                            { "name": "Ethiopian Orthodox fasting", "icon": "🥖" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    },
+                    {
+                        "name": "Middle East & Mediterranean",
+                        "subRegions": [
+                            { "name": "Halal (Islamic dietary laws)", "icon": "☪️" },
+                            { "name": "Kosher (Jewish dietary laws)", "icon": "✡️" },
+                            { "name": "Greek / Mediterranean diets", "icon": "🫒" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    },
+                    {
+                        "name": "East Asia",
+                        "subRegions": [
+                            { "name": "Traditional Chinese Medicine (TCM)", "icon": "🧧" },
+                            { "name": "Buddhist food rules", "icon": "🧘" },
+                            { "name": "Japanese Macrobiotic diet", "icon": "🍙" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    },
+                    {
+                        "name": "Western / Native traditions",
+                        "subRegions": [
+                            { "name": "Native American traditions", "icon": "🪶" },
+                            { "name": "Christian traditions", "icon": "✝️" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    },
+                    {
+                        "name": "Seventh-day Adventist",
+                        "subRegions": [
+                            { "name": "Seventh-day Adventist", "icon": "✝️" }
+                        ]
+                    },
+                    {
+                        "name": "Other",
+                        "subRegions": [
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "avoid",
+            "type": "type-2",
+            "header": {
+                "iconUrl": null,
+                "name": "Avoid",
+                "individual": {
+                    "question": "Anything you avoid in your diet?"
+                },
+                "family": {
+                    "question": "Anything your IngrediFam avoids?"
+                }
+            },
+            "content": {
+                "subSteps": [
+                    {
+                        "id": "avoid_oils_fats",
+                        "title": "Oils & Fats",
+                        "description": "In fats or oils, what do you avoid?",
+                        "color": "#FFE680",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Hydrogenated oils / Trans fats", "icon": "🧈" },
+                            { "name": "Canola / Seed oils", "icon": "🌾" },
+                            { "name": "Palm oil", "icon": "🌴" },
+                            { "name": "Corn / High-frectose corn syrup", "icon": "🌽" }
+                        ]
+                    },
+                    {
+                        "id": "avoid_animal_based",
+                        "title": "Animal-Based",
+                        "description": "Any animal products you don't consume?",
+                        "color": "#D3B5FF",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Pork", "icon": "🐖" },
+                            { "name": "Beef", "icon": "🐄" },
+                            { "name": "Honey", "icon": "🍯" },
+                            { "name": "Gelatin / Rennet", "icon": "🧂" },
+                            { "name": "Shellfish", "icon": "🦐" },
+                            { "name": "Insects", "icon": "🐜" },
+                            { "name": "Seafood (fish)", "icon": "🐟" },
+                            { "name": "Lard / Animal fat", "icon": "🍖" }
+                        ]
+                    },
+                    {
+                        "id": "avoid_stimulants_substances",
+                        "title": "Stimulants & Substances",
+                        "description": "Do you avoid these?",
+                        "color": "#A5E4B1",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Alcohol", "icon": "🍷" },
+                            { "name": "Caffeine", "icon": "☕" }
+                        ]
+                    },
+                    {
+                        "id": "avoid_additives_sweeteners",
+                        "title": "Additives & Sweeteners",
+                        "description": "Do you stay away from processed ingredients?",
+                        "color": "#FFC68A",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "MSG", "icon": "⚗️" },
+                            { "name": "Artificial sweeteners", "icon": "🍬" },
+                            { "name": "Preservatives", "icon": "🧂" },
+                            { "name": "Refined sugar", "icon": "🍚" },
+                            { "name": "Corn syrup / HFCS", "icon": "🌽" },
+                            { "name": "Stevia ? Monk fruit", "icon": "🍈" }
+                        ]
+                    },
+                    {
+                        "id": "avoid_plant_based_restrictions",
+                        "title": "Plant-Based Restrictions",
+                        "description": "Any plant foods you avoid?",
+                        "color": "#A5E4B1",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Nightshades (paprika, pappers, etc.)", "icon": "🍅" },
+                            { "name": "Garlic / Onion", "icon": "🧄" }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "lifeStyle",
+            "type": "type-2",
+            "header": {
+                "iconUrl": null,
+                "name": "Life Style",
+                "individual": {
+                    "question": "What’s your way of eating?"
+                },
+                "family": {
+                    "question": "What’s your IngrediFam’s food lifestyle?"
+                }
+            },
+            "content": {
+                "subSteps": [
+                    {
+                        "id": "lifestyle_plant_balance",
+                        "title": "Plant & Balance",
+                        "description": "Do you follow a lant-forward or flexible eating style?",
+                        "color": "#FFE680",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Vegetarian", "icon": "🥦" },
+                            { "name": "Vegan", "icon": "🌱" },
+                            { "name": "Flexitarian", "icon": "🔄" },
+                            { "name": "Reducetarian", "icon": "➖" },
+                            { "name": "Pescatarian", "icon": "🐟" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    },
+                    {
+                        "id": "lifestyle_quality_source",
+                        "title": "Quality & Source",
+                        "description": "Do you care about where your food comes from and how it’s grown?",
+                        "color": "#D3B5FF",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Organic Only", "icon": "🌱" },
+                            { "name": "Non-GMO", "icon": "🧬" },
+                            { "name": "Locally Sourced", "icon": "📍" },
+                            { "name": "Seasonal Eater", "icon": "🕰️" }
+                        ]
+                    },
+                    {
+                        "id": "lifestyle_sustainable_living",
+                        "title": "Sustainable Living",
+                        "description": "Are you mindful of waste, packaging, and ingredient transparency?",
+                        "color": "#7AC943",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Zero-Waste / Minimal Packing", "icon": "🌍" },
+                            { "name": "Clean Label", "icon": "✅" }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "nutrition",
+            "type": "type-2",
+            "header": {
+                "iconUrl": null,
+                "name": "Nutrition",
+                "individual": {
+                    "question": "What’s your nutrition focus right now?"
+                },
+                "family": {
+                    "question": "What’s your IngrediFam’s nutrition focus?"
+                }
+            },
+            "content": {
+                "subSteps": [
+                    {
+                        "id": "nutrition_macronutrient_goals",
+                        "title": "Macronutrient Goals",
+                        "description": "Do you want to balance your proteins, carbs, and fats or focus on one?",
+                        "color": "#FFB6C9",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "High Protein", "icon": "🍗" },
+                            { "name": "Low Carb", "icon": "🥒" },
+                            { "name": "Low Fat", "icon": "🥑" },
+                            { "name": "Balanced Macros", "icon": "⚖️" }
+                        ]
+                    },
+                    {
+                        "id": "nutrition_sugar_fiber",
+                        "title": "Sugar & Fiber",
+                        "description": "Do you prefer low sugar or high-fiber foods for better digestion and energy?",
+                        "color": "#A6D4FF",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Low Sugar", "icon": "🍓" },
+                            { "name": "Sugar-Free", "icon": "🍭" },
+                            { "name": "High Fiber", "icon": "🌾" }
+                        ]
+                    },
+                    {
+                        "id": "nutrition_diet_frameworks_patterns",
+                        "title": "Diet Frameworks & Patterns",
+                        "description": "Do you follow a structured eating pan or experiment with fasting?",
+                        "color": "#FFC68A",
+                        "bgImageUrl": "leaf-recycle",
+                        "options": [
+                            { "name": "Keto", "icon": "🥑" },
+                            { "name": "DASH", "icon": "💧" },
+                            { "name": "Paleo", "icon": "🥩" },
+                            { "name": "Mediterranean", "icon": "🫒" },
+                            { "name": "Whole30", "icon": "🥗" },
+                            { "name": "Fasting", "icon": "🕑" },
+                            { "name": "Other", "icon": "✏️" }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "ethical",
+            "type": "type-1",
+            "header": {
+                "iconUrl": null,
+                "name": "Ethical",
+                "individual": {
+                    "question": "What ethical or environmental values are important to you?",
+                    "description": "Select the causes that matter most when it comes to the food you eat."
+                },
+                "family": {
+                    "question": "What ethical or environmental values matter to your IngrediFam?",
+                    "description": "Select causes that shape your food choices."
+                }
+            },
+            "content": {
+                "options": [
+                    { "name": "Animal welfare focused", "icon": "🐄" },
+                    { "name": "Fair trade", "icon": "🤝" },
+                    { "name": "Sustainable fishing / no overfished species", "icon": "🐟" },
+                    { "name": "Low carbon footprint foods", "icon": "♻️" },
+                    { "name": "Water footprint concerns", "icon": "💧" },
+                    { "name": "Palm-oil free", "icon": "🌴" },
+                    { "name": "Plastic-free packaging", "icon": "🚫" },
+                    { "name": "Other", "icon": "✏️" }
+                ]
+            }
+        },
+        {
+            "id": "taste",
+            "type": "type-1",
+            "header": {
+                "iconUrl": null,
+                "name": "Taste",
+                "individual": {
+                    "question": "What are your taste and texture preferences?",
+                    "description": "Choose what you love or avoid when it comes to flavors and textures."
+                },
+                "family": {
+                    "question": "What tastes and textures does your family prefer?",
+                    "description": "Customize tastes so every plate feels just right."
+                }
+            },
+            "content": {
+                "options": [
+                    { "name": "Spicy lover", "icon": "🌶️" },
+                    { "name": "Avoid Spicy", "icon": "🚫" },
+                    { "name": "Sweet tooth", "icon": "🍰" },
+                    { "name": "Avoid slimy textures", "icon": "🥒" },
+                    { "name": "Avoid bitter foods", "icon": "🍵" },
+                    { "name": "Other", "icon": "✏️" },
+                    { "name": "Crunchy / Soft preferences", "icon": "🍪" },
+                    { "name": "Low-sweet preference", "icon": "🍯" }
+                ]
+            }
+        }
+    ]
+}
