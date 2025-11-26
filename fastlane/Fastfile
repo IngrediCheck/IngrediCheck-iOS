@@ -1,0 +1,91 @@
+default_platform(:ios)
+
+platform :ios do
+  WORKSPACE = "IngrediCheck.xcworkspace"
+  SCHEME    = "IngrediCheck"
+
+  desc "Setup code signing certificates and profiles using Match"
+  lane :setup_signing do |options|
+    match_type = options[:type] || "appstore"
+
+    match(
+      type: match_type,
+      readonly: ENV["CI"] == "true",
+      app_identifier: ["llc.fungee.ingredicheck"]
+    )
+  end
+
+  desc "Run tests for CI"
+  lane :ci_tests do
+    scan(
+      workspace: WORKSPACE,
+      scheme: SCHEME,
+      clean: true,
+      devices: ["iPhone 15"],
+      fail_build: true
+    )
+  end
+
+  desc "Run full PR validation (tests + optional lint)"
+  lane :ci_pr do
+    ci_tests
+    # Uncomment and implement when linting is available
+    # lint
+  end
+
+  desc "Stub for Swift linting (SwiftLint / SwiftFormat)"
+  lane :lint do
+    UI.message("Lint lane not yet configured. Hook in SwiftLint/SwiftFormat when ready.")
+  end
+
+  private_lane :build_app_for_distribution do |options|
+    configuration = options[:configuration] || "Release"
+
+    gym(
+      workspace: WORKSPACE,
+      scheme: SCHEME,
+      configuration: configuration,
+      clean: true
+    )
+  end
+
+  desc "Build the app for CI (archive only)"
+  lane :ci_build do
+    build_app_for_distribution(configuration: "Release")
+  end
+
+  desc "Prepare beta build and upload to TestFlight"
+  lane :beta do
+    setup_signing(type: "appstore")
+
+    increment_build_number(
+      xcodeproj: "IngrediCheck.xcodeproj"
+    )
+
+    build_app_for_distribution(configuration: "Release")
+
+    pilot(
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Submit a build to the App Store"
+  lane :release do
+    setup_signing(type: "appstore")
+
+    increment_build_number(
+      xcodeproj: "IngrediCheck.xcodeproj"
+    )
+
+    build_app_for_distribution(configuration: "Release")
+
+    deliver(
+      submit_for_review: false,
+      force: true,
+      skip_screenshots: true,
+      skip_metadata: true
+    )
+  end
+end
+

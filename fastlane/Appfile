@@ -1,0 +1,9 @@
+app_identifier "llc.fungee.ingredicheck"
+# TODO: replace with the Apple ID used for App Store Connect / CI
+apple_id ENV["APPLE_ID"] || "your-apple-id@example.com"
+
+# These should be set via environment variables in CI where possible
+itc_team_id ENV["ITC_TEAM_ID"] || ""
+team_id     ENV["DEV_PORTAL_TEAM_ID"] || ""
+
+
