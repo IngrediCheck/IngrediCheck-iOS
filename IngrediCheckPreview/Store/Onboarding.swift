@@ -54,64 +54,6 @@ struct OnboardingSection: Identifiable {
     var isComplete: Bool = false
 }
 
-struct OnboardingSectionsFactory {
-    static func sections() -> [OnboardingSection] {
-        return [
-            OnboardingSection(name: "Allergies", screens: [
-                OnboardingScreen(screenId: .allergies, buildView: { flow, prefs in
-                    AnyView(Allergies(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Intolerances", screens: [
-                OnboardingScreen(screenId: .intolerances, buildView: { flow, prefs in
-                    AnyView(Intolerances(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Health Conditions", screens: [
-                OnboardingScreen(screenId: .healthConditions, buildView: { flow, prefs in
-                    AnyView(HealthConditions(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Life Stage", screens: [
-                OnboardingScreen(screenId: .lifeStage, buildView: { flow, prefs in
-                    AnyView(LifeStage(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Region", screens: [
-                OnboardingScreen(screenId: .region, buildView: { flow, prefs in
-                    AnyView(Region(onboardingFlowType: flow, preferences: prefs))
-                }),
-//                OnboardingScreen(screenId: .region, view: AnyView(Text("Inner Region: \(onboardingFlowType.rawValue)")))
-            ]),
-            OnboardingSection(name: "Avoid", screens: [
-                OnboardingScreen(screenId: .avoid, buildView: { flow, prefs in
-                    AnyView(Avoid(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Life Style", screens: [
-                OnboardingScreen(screenId: .lifeStyle, buildView: { flow, prefs in
-                    AnyView(LifeStyle(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Nutrition", screens: [
-                OnboardingScreen(screenId: .nutrition, buildView: { flow, prefs in
-                    AnyView(Nutrition(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Ethical", screens: [
-                OnboardingScreen(screenId: .ethical, buildView: { flow, prefs in
-                    AnyView(Ethical(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Taste", screens: [
-                OnboardingScreen(screenId: .taste, buildView: { flow, prefs in
-                    AnyView(Taste(onboardingFlowType: flow, preferences: prefs))
-                })
-            ])
-        ]
-    }
-}
-
 @MainActor
 class Onboarding: ObservableObject {
     @Published var isOnboardingCompleted: Bool = false
