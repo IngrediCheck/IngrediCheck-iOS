@@ -209,7 +209,7 @@
                         "id": "avoid_oils_fats",
                         "title": "Oils & Fats",
                         "description": "In fats or oils, what do you avoid?",
-                        "color": "#FFE680",
+                        "color": "#FFF6B3",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Hydrogenated oils / Trans fats", "icon": "🧈" },
@@ -222,7 +222,7 @@
                         "id": "avoid_animal_based",
                         "title": "Animal-Based",
                         "description": "Any animal products you don't consume?",
-                        "color": "#D3B5FF",
+                        "color": "#DCC7F6",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Pork", "icon": "🐖" },
@@ -239,7 +239,7 @@
                         "id": "avoid_stimulants_substances",
                         "title": "Stimulants & Substances",
                         "description": "Do you avoid these?",
-                        "color": "#A5E4B1",
+                        "color": "#BFF0D4",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Alcohol", "icon": "🍷" },
@@ -250,7 +250,7 @@
                         "id": "avoid_additives_sweeteners",
                         "title": "Additives & Sweeteners",
                         "description": "Do you stay away from processed ingredients?",
-                        "color": "#FFC68A",
+                        "color": "#FFD9B5",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "MSG", "icon": "⚗️" },
@@ -265,7 +265,7 @@
                         "id": "avoid_plant_based_restrictions",
                         "title": "Plant-Based Restrictions",
                         "description": "Any plant foods you avoid?",
-                        "color": "#A5E4B1",
+                        "color": "#F9C6D0",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Nightshades (paprika, pappers, etc.)", "icon": "🍅" },
@@ -294,7 +294,7 @@
                         "id": "lifestyle_plant_balance",
                         "title": "Plant & Balance",
                         "description": "Do you follow a lant-forward or flexible eating style?",
-                        "color": "#FFE680",
+                        "color": "#FFF6B3",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Vegetarian", "icon": "🥦" },
@@ -309,7 +309,7 @@
                         "id": "lifestyle_quality_source",
                         "title": "Quality & Source",
                         "description": "Do you care about where your food comes from and how it’s grown?",
-                        "color": "#D3B5FF",
+                        "color": "#DCC7F6",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Organic Only", "icon": "🌱" },
@@ -322,7 +322,7 @@
                         "id": "lifestyle_sustainable_living",
                         "title": "Sustainable Living",
                         "description": "Are you mindful of waste, packaging, and ingredient transparency?",
-                        "color": "#7AC943",
+                        "color": "#D7EEB2",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Zero-Waste / Minimal Packing", "icon": "🌍" },
@@ -351,7 +351,7 @@
                         "id": "nutrition_macronutrient_goals",
                         "title": "Macronutrient Goals",
                         "description": "Do you want to balance your proteins, carbs, and fats or focus on one?",
-                        "color": "#FFB6C9",
+                        "color": "#F9C6D0",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "High Protein", "icon": "🍗" },
@@ -364,7 +364,7 @@
                         "id": "nutrition_sugar_fiber",
                         "title": "Sugar & Fiber",
                         "description": "Do you prefer low sugar or high-fiber foods for better digestion and energy?",
-                        "color": "#A6D4FF",
+                        "color": "#A7D8F0",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Low Sugar", "icon": "🍓" },
@@ -376,7 +376,7 @@
                         "id": "nutrition_diet_frameworks_patterns",
                         "title": "Diet Frameworks & Patterns",
                         "description": "Do you follow a structured eating pan or experiment with fasting?",
-                        "color": "#FFC68A",
+                        "color": "#FFD9B5",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
                             { "name": "Keto", "icon": "🥑" },
