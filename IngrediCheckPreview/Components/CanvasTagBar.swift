@@ -32,7 +32,7 @@ struct CanvasTagBar: View {
                 case .healthConditions: iconName = "lucide_stethoscope"
                 case .lifeStage: iconName = "lucide_baby"
                 case .region: iconName = "nrk_globe"
-                case .aviod: iconName = "charm_circle-cross"
+                case .avoid: iconName = "charm_circle-cross"
                 case .lifeStyle: iconName = "hugeicons_plant-01"
                 case .nutrition: iconName = "fluent-emoji-high-contrast_fork-and-knife-with-plate"
                 case .ethical: iconName = "streamline_recycle-1-solid"

@@ -310,7 +310,7 @@ struct PersistentBottomSheet: View {
             }
             
         case .avoid:
-            if let step = store.step(for: .aviod) {
+            if let step = store.step(for: .avoid) {
                 DynamicOnboardingStepView(
                     step: step,
                     flowType: getOnboardingFlowType(),

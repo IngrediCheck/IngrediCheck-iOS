@@ -71,7 +71,7 @@ struct MainCanvasView: View {
         case .healthConditions: return "lucide_stethoscope"
         case .lifeStage: return "lucide_baby"
         case .region: return "nrk_globe"
-        case .aviod: return "charm_circle-cross"
+        case .avoid: return "charm_circle-cross"
         case .lifeStyle: return "hugeicons_plant-01"
         case .nutrition: return "fluent-emoji-high-contrast_fork-and-knife-with-plate"
         case .ethical: return "streamline_recycle-1-solid"
@@ -120,7 +120,7 @@ struct MainCanvasView: View {
         switch screenId {
         case .region:
             return regionSectionedChips()
-        case .aviod:
+        case .avoid:
             return avoidSectionedChips()
         case .lifeStyle:
             return lifestyleSectionedChips()
@@ -222,7 +222,7 @@ struct MainCanvasView: View {
         case .healthConditions: return .healthConditions
         case .lifeStage: return .lifeStage
         case .region: return .region
-        case .aviod: return .avoid
+        case .avoid: return .avoid
         case .lifeStyle: return .lifeStyle
         case .nutrition: return .nutrition
         case .ethical: return .ethical

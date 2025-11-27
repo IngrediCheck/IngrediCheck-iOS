@@ -34,7 +34,7 @@ enum OnboardingScreenId: String {
     case healthConditions
     case lifeStage
     case region
-    case aviod
+    case avoid
     case lifeStyle
     case nutrition
     case ethical
@@ -84,7 +84,7 @@ struct OnboardingSectionsFactory {
 //                OnboardingScreen(screenId: .region, view: AnyView(Text("Inner Region: \(onboardingFlowType.rawValue)")))
             ]),
             OnboardingSection(name: "Avoid", screens: [
-                OnboardingScreen(screenId: .aviod, buildView: { flow, prefs in
+                OnboardingScreen(screenId: .avoid, buildView: { flow, prefs in
                     AnyView(Avoid(onboardingFlowType: flow, preferences: prefs))
                 })
             ]),
