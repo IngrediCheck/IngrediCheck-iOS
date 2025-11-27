@@ -15,7 +15,9 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>478832614549-fun4u6ep0fcv0dp8on6pd73fnaagdal5.apps.googleusercontent.com</string>
-    <key>NSCameraUsageDescription</key>
-    <string>IngrediCheck uses the camera to scan product barcodes.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>IngrediCheck uses the camera to scan product barcodes.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

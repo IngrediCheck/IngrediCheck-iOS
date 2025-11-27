@@ -9,11 +9,11 @@
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
+		110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */; };
 		1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987792E30C51E00381E32 /* TipJarView.swift */; };
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
 		1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1F5987B52E30E6DA00381E32 /* StoreKit.framework */; };
 		1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */; };
-		20AB3B30C01EE217AB675B0B /* Pods_IngrediCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */; };
 		390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */; };
 		390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */; };
 		390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */ = {isa = PBXBuildFile; productRef = 390F0CAC2BACBF14009081AD /* SimpleToast */; };
@@ -107,11 +107,9 @@
 		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.debug.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.debug.xcconfig"; sourceTree = "<group>"; };
-		C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_IngrediCheck.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
 		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		D35FB7F12E56E859009A5AA1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
-		EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-IngrediCheck.release.xcconfig"; path = "Target Support Files/Pods-IngrediCheck/Pods-IngrediCheck.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -150,7 +148,6 @@
 				397C85F82B6B537600FB9DAD /* KeychainSwift in Frameworks */,
 				1F5987B62E30E6DA00381E32 /* StoreKit.framework in Frameworks */,
 				D35BCF262E27D5B600125580 /* Auth in Frameworks */,
-				20AB3B30C01EE217AB675B0B /* Pods_IngrediCheck.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -190,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				397C85F92B6B538500FB9DAD /* AuthController.swift */,
+				A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */,
 				392D9C052B72D58400166CF1 /* UserPreferences.swift */,
 				397DA1D62B7A9BB000BFB26F /* PreferenceExamples.swift */,
 				393461CD2B93777200695FE5 /* FileCache.swift */,
@@ -250,7 +248,6 @@
 				39F2A87C2A9D3972004EBB9A /* IngrediCheck */,
 				1FF49D422E8BAF6D0072B3F6 /* IngrediCheckPreview */,
 				39F2A87B2A9D3972004EBB9A /* Products */,
-				6129BCCF6EBB4E1C75C2304C /* Pods */,
 				693CA082C10D7643322619FF /* Frameworks */,
 				D35FB7F02E56E704009A5AA1 /* Recovered References */,
 			);
@@ -284,20 +281,10 @@
 			path = IngrediCheck;
 			sourceTree = "<group>";
 		};
-		6129BCCF6EBB4E1C75C2304C /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */,
-				EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */,
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		693CA082C10D7643322619FF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				1F5987B52E30E6DA00381E32 /* StoreKit.framework */,
-				C05F396E021C68A596974856 /* Pods_IngrediCheck.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -339,12 +326,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 39F2A8882A9D3974004EBB9A /* Build configuration list for PBXNativeTarget "IngrediCheck" */;
 			buildPhases = (
-				2B3F5050AAE8282CCCD8EF0D /* [CP] Check Pods Manifest.lock */,
 				39F2A8762A9D3972004EBB9A /* Sources */,
 				39F2A8772A9D3972004EBB9A /* Frameworks */,
 				39F2A8782A9D3972004EBB9A /* Resources */,
-				38035A4FFCF1BA707C9F799F /* [CP] Embed Pods Frameworks */,
-				D05D09911B5EB911156EBF36 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -518,6 +502,7 @@
 				390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */,
 				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
+				110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */,
 				39397AF32BCB39EA0096C5E3 /* Splash.swift in Sources */,
 				392D9C062B72D58400166CF1 /* UserPreferences.swift in Sources */,
 				39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */,
@@ -753,12 +738,11 @@
 		};
 		39F2A8892A9D3974004EBB9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 733700F0FC1B31332D206DC7 /* Pods-IngrediCheck.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.0;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -776,7 +760,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -802,35 +786,13 @@
 					"-framework",
 					"\"Foundation\"",
 					"-framework",
-					"\"GTMSessionFetcher\"",
-					"-framework",
-					"\"GoogleDataTransport\"",
-					"-framework",
-					"\"GoogleToolboxForMac\"",
-					"-framework",
-					"\"GoogleUtilities\"",
-					"-framework",
 					"\"LocalAuthentication\"",
-					"-framework",
-					"\"MLImage\"",
-					"-framework",
-					"\"MLKitCommon\"",
-					"-framework",
-					"\"MLKitTextRecognition\"",
-					"-framework",
-					"\"MLKitTextRecognitionCommon\"",
-					"-framework",
-					"\"MLKitVision\"",
 					"-framework",
 					"\"Security\"",
 					"-framework",
 					"\"SystemConfiguration\"",
 					"-framework",
 					"\"UIKit\"",
-					"-framework",
-					"\"nanopb\"",
-					"-framework",
-					"\"FBLPromises\"",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -846,13 +808,14 @@
 		};
 		39F2A88A2A9D3974004EBB9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EFAA13ED47F60CAC871ECC51 /* Pods-IngrediCheck.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.0;
-				DEVELOPMENT_TEAM = 58MYNHGN72;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IngrediCheck/Info.plist;
@@ -869,7 +832,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -895,38 +858,18 @@
 					"-framework",
 					"\"Foundation\"",
 					"-framework",
-					"\"GTMSessionFetcher\"",
-					"-framework",
-					"\"GoogleDataTransport\"",
-					"-framework",
-					"\"GoogleToolboxForMac\"",
-					"-framework",
-					"\"GoogleUtilities\"",
-					"-framework",
 					"\"LocalAuthentication\"",
-					"-framework",
-					"\"MLImage\"",
-					"-framework",
-					"\"MLKitCommon\"",
-					"-framework",
-					"\"MLKitTextRecognition\"",
-					"-framework",
-					"\"MLKitTextRecognitionCommon\"",
-					"-framework",
-					"\"MLKitVision\"",
 					"-framework",
 					"\"Security\"",
 					"-framework",
 					"\"SystemConfiguration\"",
 					"-framework",
 					"\"UIKit\"",
-					"-framework",
-					"\"nanopb\"",
-					"-framework",
-					"\"FBLPromises\"",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "IngrediCheck App Store";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
