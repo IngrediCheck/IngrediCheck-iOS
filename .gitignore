@@ -65,9 +65,7 @@ fastlane/test_output
 
 iOSInjectionProject/
 
-# Config.swift - should never be committed (contains sensitive config)
 Config.swift
-**/Config.swift
 
 # CocoaPods
 Pods/
