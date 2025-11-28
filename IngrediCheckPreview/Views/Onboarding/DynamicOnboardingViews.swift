@@ -373,7 +373,7 @@ private struct DynamicRegionSectionRow: View {
                         Capsule()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color(hex: "1B9300"), Color(hex: "00961D")],
+                                    colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
