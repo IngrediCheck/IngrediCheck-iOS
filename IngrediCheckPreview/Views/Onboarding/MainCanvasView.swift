@@ -85,39 +85,32 @@ struct MainCanvasView: View {
     }
     
     private func chips(for stepId: String) -> [ChipsModel]? {
-        let preferences = store.preferences
-        // Map step IDs to preference fields dynamically
-        switch stepId {
-        case "allergies":
-            return chipModels(from: preferences.allergies)
-        case "intolerances":
-            return chipModels(from: preferences.intolerances)
-        case "healthConditions":
-            return chipModels(from: preferences.healthConditions)
-        case "lifeStage":
-            return chipModels(from: preferences.lifeStage)
-        case "ethical":
-            return chipModels(from: preferences.ethical)
-        case "taste":
-            return chipModels(from: preferences.taste)
-        default:
+        guard let step = store.step(for: stepId) else { return nil }
+        let sectionName = step.header.name
+        
+        guard let value = store.preferences.sections[sectionName],
+              case .list(let items) = value else {
             return nil
         }
+        
+        return chipModels(from: items)
     }
     
     private func sectionedChips(for stepId: String) -> [SectionedChipModel]? {
-        switch stepId {
-        case "region":
-            return regionSectionedChips()
-        case "avoid":
-            return avoidSectionedChips()
-        case "lifeStyle":
-            return lifestyleSectionedChips()
-        case "nutrition":
-            return nutritionSectionedChips()
-        default:
+        guard let step = store.step(for: stepId) else { return nil }
+        let sectionName = step.header.name
+        
+        guard let value = store.preferences.sections[sectionName],
+              case .nested(let nestedDict) = value else {
             return nil
         }
+        
+        // Convert nested dict to sectioned chips
+        let groups: [(String, [String])] = nestedDict.map { (key, value) in
+            (key, value)
+        }
+        
+        return sectionedModels(from: groups)
     }
     
     private func canvasCards() -> [CanvasCardModel]? {
@@ -144,55 +137,9 @@ struct MainCanvasView: View {
         return cards.isEmpty ? nil : cards
     }
     
-    private func chipModels(from list: [String]?) -> [ChipsModel]? {
-        guard let items = list, !items.isEmpty else { return nil }
-        return items.map { ChipsModel(name: $0, icon: nil) }
-    }
-    
-    private func regionSectionedChips() -> [SectionedChipModel]? {
-        guard let region = store.preferences.region else { return nil }
-        let groups: [(String, [String])] = [
-            ("India & South Asia", region.indiaSouthAsia),
-            ("Africa", region.africa),
-            ("East Asian", region.eastAsian),
-            ("Middle East and Mediterranean", region.middleEastMediterranean),
-            ("Western / Native traditions", region.westernNative),
-            ("Seventh-day Adventist", region.seventhDayAdventist),
-            ("Other", region.other)
-        ]
-        return sectionedModels(from: groups)
-    }
-    
-    private func avoidSectionedChips() -> [SectionedChipModel]? {
-        guard let avoid = store.preferences.avoid else { return nil }
-        let groups: [(String, [String])] = [
-            ("Oils & Fats", avoid.oilsFats),
-            ("Animal Based", avoid.animalBased),
-            ("Stimulants and Substances", avoid.stimulantsSubstances),
-            ("Additives and Sweeteners", avoid.additivesSweeteners),
-            ("Plant-Based Restrictions", avoid.plantBasedRestrictions)
-        ]
-        return sectionedModels(from: groups)
-    }
-    
-    private func lifestyleSectionedChips() -> [SectionedChipModel]? {
-        guard let lifestyle = store.preferences.lifestyle else { return nil }
-        let groups: [(String, [String])] = [
-            ("Plant & Balance", lifestyle.plantBalance),
-            ("Quality & Source", lifestyle.qualitySource),
-            ("Sustainable Living", lifestyle.sustainableLiving)
-        ]
-        return sectionedModels(from: groups)
-    }
-    
-    private func nutritionSectionedChips() -> [SectionedChipModel]? {
-        guard let nutrition = store.preferences.nutrition else { return nil }
-        let groups: [(String, [String])] = [
-            ("Macronutrient Goals", nutrition.macronutrientGoals),
-            ("Sugar & Fiber", nutrition.sugarFiber),
-            ("Diet Frameworks & Patterns", nutrition.dietFrameworks)
-        ]
-        return sectionedModels(from: groups)
+    private func chipModels(from list: [String]) -> [ChipsModel]? {
+        guard !list.isEmpty else { return nil }
+        return list.map { ChipsModel(name: $0, icon: nil) }
     }
     
     private func sectionedModels(from groups: [(String, [String])]) -> [SectionedChipModel]? {
