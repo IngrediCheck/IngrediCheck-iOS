@@ -43,7 +43,7 @@ enum OnboardingScreenId: String {
 
 struct OnboardingScreen: Identifiable {
     var id = UUID()
-    var screenId: OnboardingScreenId
+    var stepId: String  // Use step ID from JSON instead of enum
     var buildView: (OnboardingFlowType, Binding<Preferences>) -> AnyView
 }
 
@@ -85,13 +85,9 @@ class Onboarding: ObservableObject {
         // configuration file instead of hard-coded arrays.
         let steps = DynamicStepsProvider.loadSteps()
         self.dynamicSteps = steps
-        self.sections = steps.compactMap { step in
-            guard let screenId = OnboardingScreenId(rawValue: step.id) else {
-                return nil
-            }
-            
+        self.sections = steps.map { step in
             let screen = OnboardingScreen(
-                screenId: screenId,
+                stepId: step.id,  // Use step ID directly from JSON
                 // The legacy `buildView` is no longer used for rendering – the
                 // bottom sheet now drives UI via `DynamicOnboardingStepView`.
                 // We keep this closure only so existing code remains compile-safe.
@@ -115,8 +111,42 @@ class Onboarding: ObservableObject {
     
     // MARK: - Dynamic steps helpers
     
-    func step(for screenId: OnboardingScreenId) -> DynamicStep? {
-        dynamicSteps.first { $0.id == screenId.rawValue }
+    /// Get step by step ID (from JSON)
+    func step(for stepId: String) -> DynamicStep? {
+        dynamicSteps.first { $0.id == stepId }
+    }
+    
+    /// Get step by index
+    func step(at index: Int) -> DynamicStep? {
+        guard dynamicSteps.indices.contains(index) else { return nil }
+        return dynamicSteps[index]
+    }
+    
+    /// Get current step
+    var currentStep: DynamicStep? {
+        guard dynamicSteps.indices.contains(currentSectionIndex) else { return nil }
+        return dynamicSteps[currentSectionIndex]
+    }
+    
+    /// Get current step ID
+    var currentStepId: String? {
+        currentStep?.id
+    }
+    
+    /// Get next step ID (returns nil if at last step)
+    var nextStepId: String? {
+        guard currentSectionIndex < dynamicSteps.count - 1 else { return nil }
+        return dynamicSteps[currentSectionIndex + 1].id
+    }
+    
+    /// Check if current step is the last one
+    var isLastStep: Bool {
+        currentSectionIndex >= dynamicSteps.count - 1
+    }
+    
+    /// Get first step ID
+    var firstStepId: String? {
+        dynamicSteps.first?.id
     }
     
     func next() {

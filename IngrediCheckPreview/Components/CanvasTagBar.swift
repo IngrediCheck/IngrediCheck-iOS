@@ -17,27 +17,16 @@ struct CanvasTagBar: View {
     /// titles and icons always match the config.
     private var tagItems: [ChipsModel] {
         store.sections.compactMap { section in
-            guard let screenId = section.screens.first?.screenId else { return nil }
+            guard let stepId = section.screens.first?.stepId else { return nil }
             
             let iconName: String
-            if let step = store.step(for: screenId),
+            if let step = store.step(for: stepId),
                let icon = step.header.iconURL,
                icon.isEmpty == false {
                 iconName = icon
             } else {
-                // Fallback to previous static mapping
-                switch screenId {
-                case .allergies: iconName = "allergies"
-                case .intolerances: iconName = "mingcute_alert-line"
-                case .healthConditions: iconName = "lucide_stethoscope"
-                case .lifeStage: iconName = "lucide_baby"
-                case .region: iconName = "nrk_globe"
-                case .avoid: iconName = "charm_circle-cross"
-                case .lifeStyle: iconName = "hugeicons_plant-01"
-                case .nutrition: iconName = "fluent-emoji-high-contrast_fork-and-knife-with-plate"
-                case .ethical: iconName = "streamline_recycle-1-solid"
-                case .taste: iconName = "iconoir_chocolate"
-                }
+                // Fallback to a default icon if not found in JSON
+                iconName = "allergies"  // Default fallback
             }
             
             return ChipsModel(name: section.name, icon: iconName)

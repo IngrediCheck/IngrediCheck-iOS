@@ -17,11 +17,10 @@ struct DynamicOptionsQuestionView: View {
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
     
-    @State private var selectedNames: Set<String> = []
-    
     var body: some View {
         let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
         let options = step.content.options ?? []
+        let selectedNames = currentSelections()
         
         VStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
@@ -52,19 +51,33 @@ struct DynamicOptionsQuestionView: View {
             }
             .padding(.horizontal, 20)
         }
+        .id(step.id)
     }
     
-    private func toggleSelection(for name: String) {
-        if selectedNames.contains(name) {
-            selectedNames.remove(name)
-        } else {
-            selectedNames.insert(name)
+    private func currentSelections() -> Set<String> {
+        Set(valuesForCurrentStep())
+    }
+    
+    private func valuesForCurrentStep() -> [String] {
+        switch step.id {
+        case "allergies":
+            return preferences.allergies ?? []
+        case "intolerances":
+            return preferences.intolerances ?? []
+        case "healthConditions":
+            return preferences.healthConditions ?? []
+        case "lifeStage":
+            return preferences.lifeStage ?? []
+        case "ethical":
+            return preferences.ethical ?? []
+        case "taste":
+            return preferences.taste ?? []
+        default:
+            return []
         }
-        syncPreferencesFromSelection()
     }
     
-    private func syncPreferencesFromSelection() {
-        let values = Array(selectedNames)
+    private func setValues(_ values: [String]) {
         switch step.id {
         case "allergies":
             preferences.allergies = values
@@ -82,6 +95,16 @@ struct DynamicOptionsQuestionView: View {
             break
         }
     }
+    
+    private func toggleSelection(for name: String) {
+        var values = valuesForCurrentStep()
+        if let index = values.firstIndex(of: name) {
+            values.remove(at: index)
+        } else {
+            values.append(name)
+        }
+        setValues(values)
+    }
 }
 
 // MARK: - Type 2: Stacked cards with chips (Avoid/LifeStyle/Nutrition-style)
@@ -90,9 +113,6 @@ struct DynamicSubStepsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
-    
-    /// Card title -> selected option names
-    @State private var selections: [String: Set<String>] = [:]
     
     var body: some View {
         let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
@@ -135,8 +155,7 @@ struct DynamicSubStepsQuestionView: View {
             StackedCards(
                 cards: cards,
                 isChipSelected: { card, chip in
-                    let set = selections[card.title] ?? []
-                    return set.contains(chip.name)
+                    selections(for: card.title).contains(chip.name)
                 },
                 onChipTap: { card, chip in
                     toggleSelection(cardTitle: card.title, chipName: chip.name)
@@ -144,70 +163,161 @@ struct DynamicSubStepsQuestionView: View {
             )
             .padding(.horizontal, 20)
         }
+        .id(step.id)
+    }
+    
+    private func selections(for cardTitle: String) -> Set<String> {
+        switch step.id {
+        case "avoid":
+            return avoidSelections(for: cardTitle)
+        case "lifeStyle":
+            return lifestyleSelections(for: cardTitle)
+        case "nutrition":
+            return nutritionSelections(for: cardTitle)
+        default:
+            return []
+        }
     }
     
     private func toggleSelection(cardTitle: String, chipName: String) {
-        var set = selections[cardTitle] ?? []
+        var set = selections(for: cardTitle)
         if set.contains(chipName) {
             set.remove(chipName)
         } else {
             set.insert(chipName)
         }
-        selections[cardTitle] = set
-        syncPreferencesFromSelections()
+        syncPreferences(from: set, for: cardTitle)
     }
     
-    private func syncPreferencesFromSelections() {
+    private func avoidSelections(for cardTitle: String) -> Set<String> {
+        guard let avoid = preferences.avoid else { return [] }
+        switch cardTitle {
+        case "Oils & Fats":
+            return Set(avoid.oilsFats)
+        case "Animal-Based", "Animal Based":
+            return Set(avoid.animalBased)
+        case "Stimulants & Substances", "Stimulants and Substances":
+            return Set(avoid.stimulantsSubstances)
+        case "Additives & Sweeteners", "Additives and Sweeteners":
+            return Set(avoid.additivesSweeteners)
+        case "Plant-Based Restrictions":
+            return Set(avoid.plantBasedRestrictions)
+        default:
+            return []
+        }
+    }
+    
+    private func lifestyleSelections(for cardTitle: String) -> Set<String> {
+        guard let lifestyle = preferences.lifestyle else { return [] }
+        switch cardTitle {
+        case "Plant & Balance":
+            return Set(lifestyle.plantBalance)
+        case "Quality & Source":
+            return Set(lifestyle.qualitySource)
+        case "Sustainable Living":
+            return Set(lifestyle.sustainableLiving)
+        default:
+            return []
+        }
+    }
+    
+    private func nutritionSelections(for cardTitle: String) -> Set<String> {
+        guard let nutrition = preferences.nutrition else { return [] }
+        switch cardTitle {
+        case "Macronutrient Goals":
+            return Set(nutrition.macronutrientGoals)
+        case "Sugar & Fiber":
+            return Set(nutrition.sugarFiber)
+        case "Diet Frameworks & Patterns":
+            return Set(nutrition.dietFrameworks)
+        default:
+            return []
+        }
+    }
+    
+    private func syncPreferences(from set: Set<String>, for cardTitle: String) {
         switch step.id {
         case "avoid":
-            // Ensure container exists
-            if preferences.avoid == nil {
-                preferences.avoid = AvoidPreferences(
-                    oilsFats: [],
-                    animalBased: [],
-                    stimulantsSubstances: [],
-                    additivesSweeteners: [],
-                    plantBasedRestrictions: []
-                )
-            }
-            guard var avoid = preferences.avoid else { return }
-            avoid.oilsFats = Array(selections["Oils & Fats"] ?? [])
-            avoid.animalBased = Array(selections["Animal-Based"] ?? selections["Animal Based"] ?? [])
-            avoid.stimulantsSubstances = Array(selections["Stimulants & Substances"] ?? selections["Stimulants and Substances"] ?? [])
-            avoid.additivesSweeteners = Array(selections["Additives & Sweeteners"] ?? selections["Additives and Sweeteners"] ?? [])
-            avoid.plantBasedRestrictions = Array(selections["Plant-Based Restrictions"] ?? [])
-            preferences.avoid = avoid
-            
+            syncAvoidPreferences(from: set, for: cardTitle)
         case "lifeStyle":
-            if preferences.lifestyle == nil {
-                preferences.lifestyle = LifestylePreferences(
-                    plantBalance: [],
-                    qualitySource: [],
-                    sustainableLiving: []
-                )
-            }
-            guard var lifestyle = preferences.lifestyle else { return }
-            lifestyle.plantBalance = Array(selections["Plant & Balance"] ?? [])
-            lifestyle.qualitySource = Array(selections["Quality & Source"] ?? [])
-            lifestyle.sustainableLiving = Array(selections["Sustainable Living"] ?? [])
-            preferences.lifestyle = lifestyle
-            
+            syncLifestylePreferences(from: set, for: cardTitle)
         case "nutrition":
-            if preferences.nutrition == nil {
-                preferences.nutrition = NutritionPreferences(
-                    macronutrientGoals: [],
-                    sugarFiber: [],
-                    dietFrameworks: []
-                )
-            }
-            guard var nutrition = preferences.nutrition else { return }
-            nutrition.macronutrientGoals = Array(selections["Macronutrient Goals"] ?? [])
-            nutrition.sugarFiber = Array(selections["Sugar & Fiber"] ?? [])
-            nutrition.dietFrameworks = Array(selections["Diet Frameworks & Patterns"] ?? [])
-            preferences.nutrition = nutrition
+            syncNutritionPreferences(from: set, for: cardTitle)
         default:
             break
         }
+    }
+    
+    private func syncAvoidPreferences(from set: Set<String>, for cardTitle: String) {
+        if preferences.avoid == nil {
+            preferences.avoid = AvoidPreferences(
+                oilsFats: [],
+                animalBased: [],
+                stimulantsSubstances: [],
+                additivesSweeteners: [],
+                plantBasedRestrictions: []
+            )
+        }
+        guard var avoid = preferences.avoid else { return }
+        switch cardTitle {
+        case "Oils & Fats":
+            avoid.oilsFats = Array(set)
+        case "Animal-Based", "Animal Based":
+            avoid.animalBased = Array(set)
+        case "Stimulants & Substances", "Stimulants and Substances":
+            avoid.stimulantsSubstances = Array(set)
+        case "Additives & Sweeteners", "Additives and Sweeteners":
+            avoid.additivesSweeteners = Array(set)
+        case "Plant-Based Restrictions":
+            avoid.plantBasedRestrictions = Array(set)
+        default:
+            break
+        }
+        preferences.avoid = avoid
+    }
+    
+    private func syncLifestylePreferences(from set: Set<String>, for cardTitle: String) {
+        if preferences.lifestyle == nil {
+            preferences.lifestyle = LifestylePreferences(
+                plantBalance: [],
+                qualitySource: [],
+                sustainableLiving: []
+            )
+        }
+        guard var lifestyle = preferences.lifestyle else { return }
+        switch cardTitle {
+        case "Plant & Balance":
+            lifestyle.plantBalance = Array(set)
+        case "Quality & Source":
+            lifestyle.qualitySource = Array(set)
+        case "Sustainable Living":
+            lifestyle.sustainableLiving = Array(set)
+        default:
+            break
+        }
+        preferences.lifestyle = lifestyle
+    }
+    
+    private func syncNutritionPreferences(from set: Set<String>, for cardTitle: String) {
+        if preferences.nutrition == nil {
+            preferences.nutrition = NutritionPreferences(
+                macronutrientGoals: [],
+                sugarFiber: [],
+                dietFrameworks: []
+            )
+        }
+        guard var nutrition = preferences.nutrition else { return }
+        switch cardTitle {
+        case "Macronutrient Goals":
+            nutrition.macronutrientGoals = Array(set)
+        case "Sugar & Fiber":
+            nutrition.sugarFiber = Array(set)
+        case "Diet Frameworks & Patterns":
+            nutrition.dietFrameworks = Array(set)
+        default:
+            break
+        }
+        preferences.nutrition = nutrition
     }
 }
 
@@ -219,8 +329,6 @@ struct DynamicRegionsQuestionView: View {
     @Binding var preferences: Preferences
     
     @State private var sections: [SectionedChipModel] = []
-    /// Section id -> selected chip titles
-    @State private var selections: [String: Set<String>] = [:]
     @State private var expandedSectionIds: Set<String> = []
     
     init(step: DynamicStep, flowType: OnboardingFlowType, preferences: Binding<Preferences>) {
@@ -265,22 +373,23 @@ struct DynamicRegionsQuestionView: View {
                         // If a region only has a single sub-region, skip the expandable
                         // header and surface the chip directly – a dropdown for a single
                         // option doesn’t add any value.
+                        let selectedSet = selections(for: section.title)
                         if section.chips.count == 1, let chip = section.chips.first {
                             FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
                                 IngredientsChips(
                                     title: chip.name,
                                     image: chip.icon,
                                     onClick: {
-                                        toggleSelection(sectionId: section.id, chipName: chip.name)
+                                        toggleSelection(sectionTitle: section.title, chipName: chip.name)
                                     },
-                                    isSelected: (selections[section.id] ?? []).contains(chip.name)
+                                    isSelected: selectedSet.contains(chip.name)
                                 )
                             }
                             .padding(.vertical, 4)
                         } else {
                             DynamicRegionSectionRow(
                                 section: section,
-                                isSectionSelected: !(selections[section.id] ?? []).isEmpty,
+                                isSectionSelected: !selectedSet.isEmpty,
                                 isExpanded: expandedSectionIds.contains(section.id),
                                 onToggleExpanded: {
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
@@ -292,10 +401,10 @@ struct DynamicRegionsQuestionView: View {
                                     }
                                 },
                                 isChipSelected: { chip in
-                                    (selections[section.id] ?? []).contains(chip.name)
+                                    selections(for: section.title).contains(chip.name)
                                 },
                                 onChipTap: { chip in
-                                    toggleSelection(sectionId: section.id, chipName: chip.name)
+                                    toggleSelection(sectionTitle: section.title, chipName: chip.name)
                                 }
                             )
                         }
@@ -307,20 +416,42 @@ struct DynamicRegionsQuestionView: View {
             }
             .frame(height: UIScreen.main.bounds.height * 0.3)
         }
+        .id(step.id)
     }
     
-    private func toggleSelection(sectionId: String, chipName: String) {
-        var set = selections[sectionId] ?? []
+    private func selections(for sectionTitle: String) -> Set<String> {
+        guard let region = preferences.region else { return [] }
+        switch sectionTitle {
+        case "India & South Asia":
+            return Set(region.indiaSouthAsia)
+        case "Africa":
+            return Set(region.africa)
+        case "East Asia", "East Asian":
+            return Set(region.eastAsian)
+        case "Middle East & Mediterranean", "Middle East and Mediterranean":
+            return Set(region.middleEastMediterranean)
+        case "Western / Native traditions":
+            return Set(region.westernNative)
+        case "Seventh-day Adventist":
+            return Set(region.seventhDayAdventist)
+        case "Other":
+            return Set(region.other)
+        default:
+            return []
+        }
+    }
+    
+    private func toggleSelection(sectionTitle: String, chipName: String) {
+        var set = selections(for: sectionTitle)
         if set.contains(chipName) {
             set.remove(chipName)
         } else {
             set.insert(chipName)
         }
-        selections[sectionId] = set
-        syncPreferencesFromSelections()
+        syncRegionPreferences(from: set, for: sectionTitle)
     }
     
-    private func syncPreferencesFromSelections() {
+    private func syncRegionPreferences(from set: Set<String>, for sectionTitle: String) {
         if preferences.region == nil {
             preferences.region = RegionPreferences(
                 indiaSouthAsia: [],
@@ -333,22 +464,24 @@ struct DynamicRegionsQuestionView: View {
             )
         }
         guard var region = preferences.region else { return }
-        
-        // Helper to fetch selected names for a section title
-        func names(forTitle title: String) -> [String] {
-            guard let section = sections.first(where: { $0.title == title }) else { return [] }
-            let set = selections[section.id] ?? []
-            return Array(set)
+        switch sectionTitle {
+        case "India & South Asia":
+            region.indiaSouthAsia = Array(set)
+        case "Africa":
+            region.africa = Array(set)
+        case "East Asia", "East Asian":
+            region.eastAsian = Array(set)
+        case "Middle East & Mediterranean", "Middle East and Mediterranean":
+            region.middleEastMediterranean = Array(set)
+        case "Western / Native traditions":
+            region.westernNative = Array(set)
+        case "Seventh-day Adventist":
+            region.seventhDayAdventist = Array(set)
+        case "Other":
+            region.other = Array(set)
+        default:
+            break
         }
-        
-        region.indiaSouthAsia = names(forTitle: "India & South Asia")
-        region.africa = names(forTitle: "Africa")
-        region.eastAsian = names(forTitle: "East Asia") + names(forTitle: "East Asian")
-        region.middleEastMediterranean = names(forTitle: "Middle East & Mediterranean") + names(forTitle: "Middle East and Mediterranean")
-        region.westernNative = names(forTitle: "Western / Native traditions")
-        region.seventhDayAdventist = names(forTitle: "Seventh-day Adventist")
-        region.other = names(forTitle: "Other")
-        
         preferences.region = region
     }
 }

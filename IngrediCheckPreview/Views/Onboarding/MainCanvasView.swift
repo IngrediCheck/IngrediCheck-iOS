@@ -56,27 +56,15 @@ struct MainCanvasView: View {
         .navigationBarBackButtonHidden(true)
     }
     
-    private func icon(for screenId: OnboardingScreenId) -> String {
-        // Prefer icon from dynamic JSON if available, fall back to older
-        // static assets to avoid regressions if the config is incomplete.
-        if let step = store.step(for: screenId),
+    private func icon(for stepId: String) -> String {
+        // Get icon from dynamic JSON
+        if let step = store.step(for: stepId),
            let icon = step.header.iconURL,
            icon.isEmpty == false {
             return icon
         }
-        
-        switch screenId {
-        case .allergies: return "allergies"
-        case .intolerances: return "mingcute_alert-line"
-        case .healthConditions: return "lucide_stethoscope"
-        case .lifeStage: return "lucide_baby"
-        case .region: return "nrk_globe"
-        case .avoid: return "charm_circle-cross"
-        case .lifeStyle: return "hugeicons_plant-01"
-        case .nutrition: return "fluent-emoji-high-contrast_fork-and-knife-with-plate"
-        case .ethical: return "streamline_recycle-1-solid"
-        case .taste: return "iconoir_chocolate"
-        }
+        // Fallback to default icon if not found
+        return "allergies"
     }
     
     private func scheduleScrollToCurrentSectionViews() {
@@ -88,43 +76,44 @@ struct MainCanvasView: View {
     /// Keep the bottom sheet question in sync with the currently selected section (tag).
     private func syncBottomSheetWithCurrentSection() {
         guard case .mainCanvas = coordinator.currentCanvasRoute else { return }
-        guard let screenId = store.currentSection.screens.first?.screenId else { return }
+        guard let stepId = store.currentSection.screens.first?.stepId else { return }
         
-        let targetRoute = bottomSheetRoute(for: screenId)
+        let targetRoute = BottomSheetRoute.onboardingStep(stepId: stepId)
         if targetRoute != coordinator.currentBottomSheetRoute {
             coordinator.navigateInBottomSheet(targetRoute)
         }
     }
     
-    private func chips(for screenId: OnboardingScreenId) -> [ChipsModel]? {
+    private func chips(for stepId: String) -> [ChipsModel]? {
         let preferences = store.preferences
-        switch screenId {
-        case .allergies:
+        // Map step IDs to preference fields dynamically
+        switch stepId {
+        case "allergies":
             return chipModels(from: preferences.allergies)
-        case .intolerances:
+        case "intolerances":
             return chipModels(from: preferences.intolerances)
-        case .healthConditions:
+        case "healthConditions":
             return chipModels(from: preferences.healthConditions)
-        case .lifeStage:
+        case "lifeStage":
             return chipModels(from: preferences.lifeStage)
-        case .ethical:
+        case "ethical":
             return chipModels(from: preferences.ethical)
-        case .taste:
+        case "taste":
             return chipModels(from: preferences.taste)
         default:
             return nil
         }
     }
     
-    private func sectionedChips(for screenId: OnboardingScreenId) -> [SectionedChipModel]? {
-        switch screenId {
-        case .region:
+    private func sectionedChips(for stepId: String) -> [SectionedChipModel]? {
+        switch stepId {
+        case "region":
             return regionSectionedChips()
-        case .avoid:
+        case "avoid":
             return avoidSectionedChips()
-        case .lifeStyle:
+        case "lifeStyle":
             return lifestyleSectionedChips()
-        case .nutrition:
+        case "nutrition":
             return nutritionSectionedChips()
         default:
             return nil
@@ -135,16 +124,16 @@ struct MainCanvasView: View {
         var cards: [CanvasCardModel] = []
         
         for section in store.sections {
-            guard let screenId = section.screens.first?.screenId else { continue }
-            let chips = chips(for: screenId)
-            let groupedChips = sectionedChips(for: screenId)
+            guard let stepId = section.screens.first?.stepId else { continue }
+            let chips = chips(for: stepId)
+            let groupedChips = sectionedChips(for: stepId)
             
             if chips != nil || groupedChips != nil {
                 cards.append(
                     CanvasCardModel(
                         id: section.id,
                         title: section.name,
-                        icon: icon(for: screenId),
+                        icon: icon(for: stepId),
                         chips: chips,
                         sectionedChips: groupedChips
                     )
@@ -215,20 +204,6 @@ struct MainCanvasView: View {
         return sections.isEmpty ? nil : sections
     }
     
-    private func bottomSheetRoute(for screenId: OnboardingScreenId) -> BottomSheetRoute {
-        switch screenId {
-        case .allergies: return .allergies
-        case .intolerances: return .intolerances
-        case .healthConditions: return .healthConditions
-        case .lifeStage: return .lifeStage
-        case .region: return .region
-        case .avoid: return .avoid
-        case .lifeStyle: return .lifeStyle
-        case .nutrition: return .nutrition
-        case .ethical: return .ethical
-        case .taste: return .taste
-        }
-    }
 }
 
 struct CanvasCardModel: Identifiable {
