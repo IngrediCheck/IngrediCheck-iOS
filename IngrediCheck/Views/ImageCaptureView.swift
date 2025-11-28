@@ -1,8 +1,6 @@
 import SwiftUI
 import AVFoundation
 import Vision
-import MLKitTextRecognition
-import MLKitVision
 
 extension View {
     @ViewBuilder
@@ -156,13 +154,7 @@ struct ImageCaptureView: View {
     func capturePhoto() {
         cameraManager.capturePhoto { image in
             if let image = image {
-                
-                let ocrTask =
-                    if case OcrModel.googleMLKit = userPreferences.ocrModel {
-                        startMLKitOCRTask(image: image)
-                    } else {
-                        startOCRTask(image: image)
-                    }
+                let ocrTask = startOCRTask(image: image)
                 let uploadTask = startUploadTask(image: image)
                 let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
 
@@ -215,17 +207,6 @@ struct ImageCaptureView: View {
         }
     }
     
-    func startMLKitOCRTask(image: UIImage) -> Task<String, Error> {
-        Task {
-            let visionImage = VisionImage(image: image)
-            visionImage.orientation = image.imageOrientation
-            let textRecognizer = TextRecognizer.textRecognizer()
-            let result = try await textRecognizer.process(visionImage)
-            print(result)
-            return result.blocks.map({ return $0.text }).joined(separator: "\n")
-        }
-    }
-
     func startBarcodeDetectionTask(image: UIImage) -> Task<String?, Error> {
         Task {
             guard let cgImage = image.cgImage else {

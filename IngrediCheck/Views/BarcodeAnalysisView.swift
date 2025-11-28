@@ -393,8 +393,13 @@ struct IngredientsText: View {
                 ingredients: ingredients,
                 ingredientRecommendations: ingredientRecommendations
             )
-        FlowLayout(mode: .scrollable, items: decoratedFragments, itemSpacing: 0) { fragment in
-            TappableTextFragment(fragment: fragment)
+        ScrollView {
+            FlowLayout(horizontalSpacing: 0, verticalSpacing: 0) {
+                ForEach(Array(decoratedFragments.enumerated()), id: \.offset) { _, fragment in
+                    TappableTextFragment(fragment: fragment)
+                }
+            }
+            .padding()
         }
     }
 }
