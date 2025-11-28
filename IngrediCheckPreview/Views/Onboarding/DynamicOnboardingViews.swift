@@ -262,26 +262,43 @@ struct DynamicRegionsQuestionView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(sections) { section in
-                        DynamicRegionSectionRow(
-                            section: section,
-                            isSectionSelected: !(selections[section.id] ?? []).isEmpty,
-                            isExpanded: expandedSectionIds.contains(section.id),
-                            onToggleExpanded: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                    if expandedSectionIds.contains(section.id) {
-                                        expandedSectionIds.remove(section.id)
-                                    } else {
-                                        expandedSectionIds.insert(section.id)
-                                    }
-                                }
-                            },
-                            isChipSelected: { chip in
-                                (selections[section.id] ?? []).contains(chip.name)
-                            },
-                            onChipTap: { chip in
-                                toggleSelection(sectionId: section.id, chipName: chip.name)
+                        // If a region only has a single sub-region, skip the expandable
+                        // header and surface the chip directly – a dropdown for a single
+                        // option doesn’t add any value.
+                        if section.chips.count == 1, let chip = section.chips.first {
+                            FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
+                                IngredientsChips(
+                                    title: chip.name,
+                                    image: chip.icon,
+                                    onClick: {
+                                        toggleSelection(sectionId: section.id, chipName: chip.name)
+                                    },
+                                    isSelected: (selections[section.id] ?? []).contains(chip.name)
+                                )
                             }
-                        )
+                            .padding(.vertical, 4)
+                        } else {
+                            DynamicRegionSectionRow(
+                                section: section,
+                                isSectionSelected: !(selections[section.id] ?? []).isEmpty,
+                                isExpanded: expandedSectionIds.contains(section.id),
+                                onToggleExpanded: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                        if expandedSectionIds.contains(section.id) {
+                                            expandedSectionIds.remove(section.id)
+                                        } else {
+                                            expandedSectionIds.insert(section.id)
+                                        }
+                                    }
+                                },
+                                isChipSelected: { chip in
+                                    (selections[section.id] ?? []).contains(chip.name)
+                                },
+                                onChipTap: { chip in
+                                    toggleSelection(sectionId: section.id, chipName: chip.name)
+                                }
+                            )
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
