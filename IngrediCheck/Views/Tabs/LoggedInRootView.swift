@@ -88,13 +88,17 @@ struct ListsTabState {
             }
         }
         .sheet(item: $appState.feedbackConfig) { feedbackConfig in
-            let _ = print("Activating feedback sheet")
+            let _ = print("🟡 [FeedbackShortcut] Activating feedback sheet in LoggedInRootView")
             FeedbackView(
                 feedbackData: feedbackConfig.feedbackData,
                 feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
+                showReasons: feedbackConfig.showReasons,
                 onSubmit: feedbackConfig.onSubmit
             )
             .environment(userPreferences)
+        }
+        .onChange(of: appState.feedbackConfig != nil) { _, isPresented in
+            print("🟡 [FeedbackShortcut] LoggedInRootView - feedbackConfig presence changed. Is present: \(isPresented)")
         }
     }
     

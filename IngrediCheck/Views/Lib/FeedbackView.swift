@@ -26,6 +26,7 @@ enum FeedbackCaptureOptions {
 struct FeedbackConfig : Identifiable {
     let feedbackData: Binding<FeedbackData>
     let feedbackCaptureOptions: FeedbackCaptureOptions
+    var showReasons: Bool = true
     let onSubmit: () -> Void
     let id = UUID()
 }
@@ -34,6 +35,7 @@ struct FeedbackView: View {
 
     @Binding var feedbackData: FeedbackData
     let feedbackCaptureOptions: FeedbackCaptureOptions
+    var showReasons: Bool = true
     let onSubmit: () -> Void
 
     @Environment(\.dismiss) var dismiss
@@ -48,21 +50,23 @@ struct FeedbackView: View {
                 ScrollView {
                     VStack(spacing: 30) {
                         
-                        Text("What should I look into?")
-                            .padding(.horizontal)
-                        
-                        VStack(alignment: .leading, spacing: 15) {
-                            ForEach(FeedbackReason.allCases, id: \.self) { reason in
-                                HStack {
-                                    Image(systemName: feedbackData.reasons.contains(reason) ? "checkmark.square" : "square")
-                                    Text(reason.rawValue)
-                                    Spacer()
-                                }
-                                .onTapGesture {
-                                    if feedbackData.reasons.contains(reason) {
-                                        feedbackData.reasons.remove(reason)
-                                    } else {
-                                        feedbackData.reasons.insert(reason)
+                        if showReasons {
+                            Text("What should I look into?")
+                                .padding(.horizontal)
+                            
+                            VStack(alignment: .leading, spacing: 15) {
+                                ForEach(FeedbackReason.allCases, id: \.self) { reason in
+                                    HStack {
+                                        Image(systemName: feedbackData.reasons.contains(reason) ? "checkmark.square" : "square")
+                                        Text(reason.rawValue)
+                                        Spacer()
+                                    }
+                                    .onTapGesture {
+                                        if feedbackData.reasons.contains(reason) {
+                                            feedbackData.reasons.remove(reason)
+                                        } else {
+                                            feedbackData.reasons.insert(reason)
+                                        }
                                     }
                                 }
                             }
@@ -81,7 +85,7 @@ struct FeedbackView: View {
                             .overlay(
                                 Group {
                                     if !isFocused && feedbackData.note.isEmpty {
-                                        Text("Optionally, leave me a note here.")
+                                        Text("Leave me a note here.")
                                             .foregroundColor(.gray)
                                     }
                                 }

@@ -1115,7 +1115,6 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                         properties["carrier"] = carrier
                     }
                     
-                    print("edge_ping properties: \(properties)")
                     PostHogSDK.shared.capture("edge_ping", properties: properties)
                 }
             } catch {
