@@ -45,6 +45,7 @@ struct ListsTabState {
     @MainActor var activeTab: TabScreen = .home
     @MainActor var listsTabState = ListsTabState()
     @MainActor var feedbackConfig: FeedbackConfig?
+    @MainActor var showToast: Bool = false
 }
 
 @MainActor struct LoggedInRootView: View {
@@ -88,7 +89,6 @@ struct ListsTabState {
             }
         }
         .sheet(item: $appState.feedbackConfig) { feedbackConfig in
-            let _ = print("🟡 [FeedbackShortcut] Activating feedback sheet in LoggedInRootView")
             FeedbackView(
                 feedbackData: feedbackConfig.feedbackData,
                 feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
@@ -96,9 +96,6 @@ struct ListsTabState {
                 onSubmit: feedbackConfig.onSubmit
             )
             .environment(userPreferences)
-        }
-        .onChange(of: appState.feedbackConfig != nil) { _, isPresented in
-            print("🟡 [FeedbackShortcut] LoggedInRootView - feedbackConfig presence changed. Is present: \(isPresented)")
         }
     }
     
