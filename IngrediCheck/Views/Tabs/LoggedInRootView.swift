@@ -45,6 +45,7 @@ struct ListsTabState {
     @MainActor var activeTab: TabScreen = .home
     @MainActor var listsTabState = ListsTabState()
     @MainActor var feedbackConfig: FeedbackConfig?
+    @MainActor var showToast: Bool = false
 }
 
 @MainActor struct LoggedInRootView: View {
@@ -88,10 +89,10 @@ struct ListsTabState {
             }
         }
         .sheet(item: $appState.feedbackConfig) { feedbackConfig in
-            let _ = print("Activating feedback sheet")
             FeedbackView(
                 feedbackData: feedbackConfig.feedbackData,
                 feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
+                showReasons: feedbackConfig.showReasons,
                 onSubmit: feedbackConfig.onSubmit
             )
             .environment(userPreferences)

@@ -11,7 +11,6 @@ import Foundation
         monitor = NWPathMonitor()
         monitor?.pathUpdateHandler = { path in
             DispatchQueue.main.async {
-                print("NetworkMonitor: \(path)")
                 if path.status == .satisfied {
                     self.connected = true
                 } else {
