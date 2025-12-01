@@ -161,28 +161,35 @@ struct Flashcapsul: View {
         HStack(spacing: 4) {
             if isScannerMode {
                 // Scanner mode: show torch icon only
-                Image(systemName: isFlashon ? "flashlight.on.fill" : "flashlight.off.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 20, height: 20)
-                
-                    .foregroundColor(.white)
+                ZStack{
+                    Image(systemName: isFlashon ? "flashlight.on.fill" : "flashlight.off.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
+                    
+                        .foregroundColor(.white)
+                }.frame(width: 33, height: 33)
+                    .background(
+                        .thinMaterial, in: .capsule
+                    )
             } else {
                 // Photo mode: show custom flash asset + label
-                Image(isFlashon ? "flashon" : "flashoff")
-                    .resizable()
-                    .frame(width: 20, height: 20)
-                    .foregroundColor(.white)
-                
+                ZStack {
+                    Circle()
+                        .fill(.thinMaterial.opacity(0.4))
+                        .frame(width: 48, height: 48)
+                    Image(isFlashon ? "flashon" : "flashoff")
+                        .resizable()
+                        .frame(width: 28, height: 24)
+                        .foregroundColor(.white)
+                }
             
             }
         }
-        .frame(width: 33, height: 33)
+        
 //        .padding(7.5)
         
-        .background(
-            .thinMaterial, in: .capsule
-        )
+        
         .onTapGesture {
             withAnimation(.easeInOut) {
                 FlashManager.shared.toggleFlash { on in

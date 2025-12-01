@@ -45,11 +45,18 @@ struct CameraScreen: View {
     @State private var scrollTargetCode: String?
     @State private var isUserDragging: Bool = false
     @State private var lastUserDragAt: Date? = nil
+    @State private var currentCenteredCode: String? = nil
+    @State private var cardCenterData: [CardCenterPreferenceData] = []
     @State private var mode: CameraMode = .scanner
     @State private var capturedPhoto: UIImage? = nil
     @State private var capturedPhotoHistory: [UIImage] = []
     @State private var isShowingPhotoPicker: Bool = false
     @State private var isShowingPhotoModeGuide: Bool = false
+    
+    private func nearestCenteredCode(to centerX: CGFloat, in values: [CardCenterPreferenceData]) -> String? {
+        guard !values.isEmpty else { return nil }
+        return values.min(by: { abs($0.center - centerX) < abs($1.center - centerX) })?.code
+    }
     
     var body: some View {
         ZStack {
@@ -158,7 +165,7 @@ struct CameraScreen: View {
                         // Result cards directly under the frame
                         if !capturedPhotoHistory.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: 12) {
+                                LazyHStack(spacing: 8) {
                                     ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                         let image = capturedPhotoHistory[idx]
                                         PhotoContentView4(image: image)
@@ -209,10 +216,10 @@ struct CameraScreen: View {
                             ZStack {
                                 Circle()
                                     .fill(Color.white.opacity(0.9))
-                                    .frame(width: 64, height: 64)
+                                    .frame(width: 50, height: 50)
                                 Circle()
-                                    .stroke(Color.black.opacity(0.4), lineWidth: 2)
-                                    .frame(width: 70, height: 70)
+                                    .stroke(Color.white.opacity(0.4), lineWidth: 3)
+                                    .frame(width: 63, height: 63)
                             }
                         }
                         Spacer()
@@ -224,17 +231,20 @@ struct CameraScreen: View {
                             ZStack {
                                 Circle()
                                     .fill(.thinMaterial.opacity(0.4))
-                                    .frame(width: 43, height: 43)
+                                    .frame(width: 48, height: 48)
                                 Image("Gallary")
                                     .resizable()
                                     .frame(width: 24.27, height: 21.19)
+                                    .padding(.top ,4)
                             }
                         }
                     }
                     .padding(.horizontal, 32)
                     .padding(.top, 16)
+                    .padding(.bottom ,16)
                 }
                 CameraSwipeButton(mode: $mode)
+                    .padding(.bottom ,20)
             }
             .zIndex(2)
             
@@ -251,7 +261,7 @@ struct CameraScreen: View {
                         let minScale: CGFloat = 97.0 / 120.0  // off-center cards should be about 97pt tall
                         
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 12) {
+                            LazyHStack(spacing: 8) {
                                 ForEach(displayCodes, id: \.self) { code in
                                     GeometryReader { geo in
                                         let midX = geo.frame(in: .global).midX
@@ -259,9 +269,17 @@ struct CameraScreen: View {
                                         let t = min(distance / maxDistance, 1) // 0 at center, -> 1 at/maxDistance
                                         let scale = max(minScale, 1 - (1 - minScale) * t)
                                         
-                                        BarcodeDataCard(code: code)
-                                            .scaleEffect(scale)
-                                            .animation(.easeInOut(duration: 0.2), value: scale)
+                                        ZStack {
+                                            BarcodeDataCard(code: code)
+                                                .scaleEffect(x: 1.0, y: scale, anchor: .center)
+                                                .animation(.easeInOut(duration: 0.2), value: scale)
+                                        }
+                                        .background(
+                                            Color.clear.preference(
+                                                key: CardCenterPreferenceKey.self,
+                                                value: [CardCenterPreferenceData(code: code, center: midX)]
+                                            )
+                                        )
                                     }
                                     .frame(width: 300, height: 120)
                                     .id(code)
@@ -293,6 +311,12 @@ struct CameraScreen: View {
                                     if !isUserDragging { isUserDragging = true }
                                 }
                                 .onEnded { _ in
+                                    let centerX = UIScreen.main.bounds.width / 2
+                                    if let target = nearestCenteredCode(to: centerX, in: cardCenterData) {
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            proxy.scrollTo(target, anchor: .center)
+                                        }
+                                    }
                                     isUserDragging = false
                                     lastUserDragAt = Date()
                                 }
@@ -306,6 +330,13 @@ struct CameraScreen: View {
                             }()
                             guard !isUserDragging && !recentlyDragged else { return }
                             withAnimation(.easeInOut) { proxy.scrollTo(target, anchor: .center) }
+                        }
+                        .onPreferenceChange(CardCenterPreferenceKey.self) { values in
+                            cardCenterData = values
+                            let centerX = UIScreen.main.bounds.width / 2
+                            if let nearest = nearestCenteredCode(to: centerX, in: values) {
+                                currentCenteredCode = nearest
+                            }
                         }
                     }
                     .padding(.top, 243)
@@ -486,6 +517,19 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 }
             }
         }
+    }
+}
+
+struct CardCenterPreferenceData: Equatable {
+    let code: String
+    let center: CGFloat
+}
+
+struct CardCenterPreferenceKey: PreferenceKey {
+    static var defaultValue: [CardCenterPreferenceData] = []
+    
+    static func reduce(value: inout [CardCenterPreferenceData], nextValue: () -> [CardCenterPreferenceData]) {
+        value.append(contentsOf: nextValue())
     }
 }
 
