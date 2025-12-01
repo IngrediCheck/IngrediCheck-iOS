@@ -8,7 +8,7 @@ struct IngrediCheckApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppFlowRouter()
+            SplashScreen()
         }
     }
 }
