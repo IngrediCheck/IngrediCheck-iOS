@@ -34,7 +34,7 @@ enum OnboardingScreenId: String {
     case healthConditions
     case lifeStage
     case region
-    case aviod
+    case avoid
     case lifeStyle
     case nutrition
     case ethical
@@ -43,7 +43,7 @@ enum OnboardingScreenId: String {
 
 struct OnboardingScreen: Identifiable {
     var id = UUID()
-    var screenId: OnboardingScreenId
+    var stepId: String  // Use step ID from JSON instead of enum
     var buildView: (OnboardingFlowType, Binding<Preferences>) -> AnyView
 }
 
@@ -54,69 +54,14 @@ struct OnboardingSection: Identifiable {
     var isComplete: Bool = false
 }
 
-struct OnboardingSectionsFactory {
-    static func sections() -> [OnboardingSection] {
-        return [
-            OnboardingSection(name: "Allergies", screens: [
-                OnboardingScreen(screenId: .allergies, buildView: { flow, prefs in
-                    AnyView(Allergies(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Intolerances", screens: [
-                OnboardingScreen(screenId: .intolerances, buildView: { flow, prefs in
-                    AnyView(Intolerances(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Health Conditions", screens: [
-                OnboardingScreen(screenId: .healthConditions, buildView: { flow, prefs in
-                    AnyView(HealthConditions(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Life Stage", screens: [
-                OnboardingScreen(screenId: .lifeStage, buildView: { flow, prefs in
-                    AnyView(LifeStage(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Region", screens: [
-                OnboardingScreen(screenId: .region, buildView: { flow, prefs in
-                    AnyView(Region(onboardingFlowType: flow, preferences: prefs))
-                }),
-//                OnboardingScreen(screenId: .region, view: AnyView(Text("Inner Region: \(onboardingFlowType.rawValue)")))
-            ]),
-            OnboardingSection(name: "Avoid", screens: [
-                OnboardingScreen(screenId: .aviod, buildView: { flow, prefs in
-                    AnyView(Avoid(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Life Style", screens: [
-                OnboardingScreen(screenId: .lifeStyle, buildView: { flow, prefs in
-                    AnyView(LifeStyle(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Nutrition", screens: [
-                OnboardingScreen(screenId: .nutrition, buildView: { flow, prefs in
-                    AnyView(Nutrition(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Ethical", screens: [
-                OnboardingScreen(screenId: .ethical, buildView: { flow, prefs in
-                    AnyView(Ethical(onboardingFlowType: flow, preferences: prefs))
-                })
-            ]),
-            OnboardingSection(name: "Taste", screens: [
-                OnboardingScreen(screenId: .taste, buildView: { flow, prefs in
-                    AnyView(Taste(onboardingFlowType: flow, preferences: prefs))
-                })
-            ])
-        ]
-    }
-}
-
 @MainActor
 class Onboarding: ObservableObject {
     @Published var isOnboardingCompleted: Bool = false
     @Published var onboardingFlowtype: OnboardingFlowType = .individual
     @Published var sections: [OnboardingSection] = []
+    /// Dynamic step configuration loaded from `dynamicJsonData.json`. Used as
+    /// the single source of truth for ordering / titles / icons.
+    @Published var dynamicSteps: [DynamicStep] = []
     @Published var currentSectionIndex: Int = 0
     @Published var currentScreenIndex: Int = 0
     @Published var isUploading: Bool = false
@@ -134,7 +79,26 @@ class Onboarding: ObservableObject {
         onboardingFlowtype: OnboardingFlowType,
     ) {
         self.onboardingFlowtype = onboardingFlowtype
-        self.sections = OnboardingSectionsFactory.sections()
+        
+        // Load dynamic steps from JSON and derive sections from them so that
+        // tag bar, progress, and canvas summary always stay in sync with the
+        // configuration file instead of hard-coded arrays.
+        let steps = DynamicStepsProvider.loadSteps()
+        self.dynamicSteps = steps
+        self.sections = steps.map { step in
+            let screen = OnboardingScreen(
+                stepId: step.id,  // Use step ID directly from JSON
+                // The legacy `buildView` is no longer used for rendering – the
+                // bottom sheet now drives UI via `DynamicOnboardingStepView`.
+                // We keep this closure only so existing code remains compile-safe.
+                buildView: { _, _ in AnyView(EmptyView()) }
+            )
+            
+            return OnboardingSection(
+                name: step.header.name,
+                screens: [screen]
+            )
+        }
     }
     
     var currentSection: OnboardingSection {
@@ -143,6 +107,46 @@ class Onboarding: ObservableObject {
     
     var currentScreen: OnboardingScreen {
         currentSection.screens[currentScreenIndex]
+    }
+    
+    // MARK: - Dynamic steps helpers
+    
+    /// Get step by step ID (from JSON)
+    func step(for stepId: String) -> DynamicStep? {
+        dynamicSteps.first { $0.id == stepId }
+    }
+    
+    /// Get step by index
+    func step(at index: Int) -> DynamicStep? {
+        guard dynamicSteps.indices.contains(index) else { return nil }
+        return dynamicSteps[index]
+    }
+    
+    /// Get current step
+    var currentStep: DynamicStep? {
+        guard dynamicSteps.indices.contains(currentSectionIndex) else { return nil }
+        return dynamicSteps[currentSectionIndex]
+    }
+    
+    /// Get current step ID
+    var currentStepId: String? {
+        currentStep?.id
+    }
+    
+    /// Get next step ID (returns nil if at last step)
+    var nextStepId: String? {
+        guard currentSectionIndex < dynamicSteps.count - 1 else { return nil }
+        return dynamicSteps[currentSectionIndex + 1].id
+    }
+    
+    /// Check if current step is the last one
+    var isLastStep: Bool {
+        currentSectionIndex >= dynamicSteps.count - 1
+    }
+    
+    /// Get first step ID
+    var firstStepId: String? {
+        dynamicSteps.first?.id
     }
     
     func next() {

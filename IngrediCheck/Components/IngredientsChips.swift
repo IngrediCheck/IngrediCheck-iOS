@@ -25,14 +25,16 @@ struct IngredientsChips: View {
         } label: {
             HStack(spacing: 8) {
                 if let image = image {
-                    Image(image)
-                        .resizable()
+                    Text(image)
+                        .font(.system(size: 18))
                         .frame(width: 24, height: 24)
                 }
                 
                 Text(familyList.isEmpty ? title : String(title.prefix(25)) + (title.count > 25 ? "..." : ""))
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(isSelected ? .primary100 : Color(hex: fontColor))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 if !familyList.isEmpty {
                     HStack(spacing: -7) {
@@ -97,24 +99,24 @@ struct IngredientsChips: View {
     VStack {
         IngredientsChips(
             title: "Peanuts",
-            image: "peanuts"
+            image: "🥜"
         )
         IngredientsChips(
             title: "Sellfish",
-            image: "shellfish"
+            image: "🦐"
         )
         IngredientsChips(
             title: "Wheat",
-            image: "wheat"
+            image: "🌾"
         )
         IngredientsChips(
             title: "Sesame",
-            image: "sesame"
+            image: "❤️"
         )
         IngredientsChips(title: "India & South Asia")
         IngredientsChips(
             title: "Peanuts",
-            image: "peanuts",
+            image: "🥜",
             familyList: ["image 1", "image 2", "image 3"]
         )
     }

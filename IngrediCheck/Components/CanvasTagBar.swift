@@ -12,27 +12,33 @@ struct CanvasTagBar: View {
     @ObservedObject var store: Onboarding
     var onTapCurrentSection: (() -> Void)? = nil
     @Binding var scrollTarget: UUID?
-    
-    @State var iconsArr: [ChipsModel] = [
-        ChipsModel(name: "Allergies", icon: "allergies"),
-        ChipsModel(name: "Intolerances", icon: "mingcute_alert-line"),
-        ChipsModel(name: "Health Conditions", icon: "lucide_stethoscope"),
-        ChipsModel(name: "Life Stage", icon: "lucide_baby"),
-        ChipsModel(name: "Region", icon: "nrk_globe"),
-        ChipsModel(name: "Avoid", icon: "charm_circle-cross"),
-        ChipsModel(name: "Life Style", icon: "hugeicons_plant-01"),
-        ChipsModel(name: "Nutrition", icon: "fluent-emoji-high-contrast_fork-and-knife-with-plate"),
-        ChipsModel(name: "Ethical", icon: "streamline_recycle-1-solid"),
-        ChipsModel(name: "Taste", icon: "iconoir_chocolate")
-    ]
+
+    /// Derived tag items from the dynamic sections / JSON, so that ordering,
+    /// titles and icons always match the config.
+    private var tagItems: [ChipsModel] {
+        store.sections.compactMap { section in
+            guard let stepId = section.screens.first?.stepId else { return nil }
+            
+            let iconName: String
+            if let step = store.step(for: stepId),
+               let icon = step.header.iconURL,
+               icon.isEmpty == false {
+                iconName = icon
+            } else {
+                // Fallback to a default icon if not found in JSON
+                iconName = "allergies"  // Default fallback
+            }
+            
+            return ChipsModel(name: section.name, icon: iconName)
+        }
+    }
     @State var visited: [String] = []
     
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: -1) {
-                    ForEach(iconsArr.indices, id: \.self) { index in
-                        let model = iconsArr[index]
+                    ForEach(Array(tagItems.enumerated()), id: \.offset) { index, model in
                         TagIconCapsule(
                             image: model.icon ?? "",
                             title: model.name,
@@ -42,7 +48,7 @@ struct CanvasTagBar: View {
                                     handleSelection(newName: newName, proxy: proxy)
                                 }
                             ),
-                            isFirst: (model.name == iconsArr.first?.name),
+                            isFirst: (index == 0),
                             visited: $visited
                         )
                         .id(store.sections[safe: index]?.id)
@@ -85,7 +91,7 @@ struct CanvasTagBar: View {
     }
     
     private func handleSelection(newName: String, proxy: ScrollViewProxy) {
-        guard let tappedIndex = iconsArr.firstIndex(where: { $0.name == newName }),
+        guard let tappedIndex = store.sections.firstIndex(where: { $0.name == newName }),
               store.sections.indices.contains(tappedIndex) else { return }
         
         handleSelection(at: tappedIndex, proxy: proxy)
@@ -147,6 +153,7 @@ struct TagIconCapsule : View {
                 Image(image)
                     .renderingMode(.template)
                     .resizable()
+                    .aspectRatio(contentMode: .fit)
                     .foregroundStyle(visited.contains(title) ? .grayScale10 : .primary500)
                     .frame(width: (isSelected == title) ? 18 : 24, height: (isSelected == title) ? 18 : 24)
                 

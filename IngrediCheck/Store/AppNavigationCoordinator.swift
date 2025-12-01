@@ -145,7 +145,13 @@ class AppNavigationCoordinator {
         case .welcomeToYourFamily:
             return .allSetToJoinYourFamily
         case .mainCanvas:
-            return .allergies
+            // Get first step ID from JSON dynamically
+            let steps = DynamicStepsProvider.loadSteps()
+            if let firstStepId = steps.first?.id {
+                return .onboardingStep(stepId: firstStepId)
+            }
+            // Fallback (should not happen if JSON is valid)
+            return .homeDefault
         case .home:
             return .homeDefault
         }
