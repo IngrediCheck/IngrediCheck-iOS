@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
+    @State private var isProductDetailPresented = false
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -202,7 +203,9 @@ struct HomeView: View {
                 //Recent Scans List Items
                 VStack(spacing: 0) {
                     ForEach(0..<5) { ele in
-                        RecentScansRow()
+                        RecentScansRow {
+                            isProductDetailPresented = true
+                        }
                         
                         if ele != 4 {
                             Divider()
@@ -250,6 +253,9 @@ struct HomeView: View {
             }
             .presentationDetents([chatSmallDetent, .medium, .large], selection: $selectedChatDetent)
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isProductDetailPresented) {
+            ProductDetailView()
         }
     }
     

@@ -90,3 +90,7 @@ DerivedData/
 
 # beads
 .beads/*.db
+
+.env
+*.p8
+private_keys/
