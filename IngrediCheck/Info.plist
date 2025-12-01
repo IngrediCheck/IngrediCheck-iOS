@@ -15,7 +15,35 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>478832614549-fun4u6ep0fcv0dp8on6pd73fnaagdal5.apps.googleusercontent.com</string>
-    <key>NSCameraUsageDescription</key>
-    <string>IngrediCheck uses the camera to scan product barcodes.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>IngrediCheck uses the camera to scan product barcodes.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Nunito-ExtraLight.ttf</string>
+		<string>Nunito-Light.ttf</string>
+		<string>Nunito-Regular.ttf</string>
+		<string>Nunito-Medium.ttf</string>
+		<string>Nunito-SemiBold.ttf</string>
+		<string>Nunito-Bold.ttf</string>
+		<string>Nunito-ExtraBold.ttf</string>
+		<string>Nunito-Black.ttf</string>
+		<string>Nunito-ExtraLightItalic.ttf</string>
+		<string>Nunito-LightItalic.ttf</string>
+		<string>Nunito-Italic.ttf</string>
+		<string>Nunito-MediumItalic.ttf</string>
+		<string>Nunito-SemiBoldItalic.ttf</string>
+		<string>Nunito-BoldItalic.ttf</string>
+		<string>Nunito-ExtraBoldItalic.ttf</string>
+		<string>Nunito-BlackItalic.ttf</string>
+		<string>Manrope-ExtraLight.ttf</string>
+		<string>Manrope-Light.ttf</string>
+		<string>Manrope-Medium.ttf</string>
+		<string>Manrope-Regular.ttf</string>
+		<string>Manrope-SemiBold.ttf</string>
+		<string>Manrope-Bold.ttf</string>
+		<string>Manrope-ExtraBold.ttf</string>
+	</array>
 </dict>
 </plist>

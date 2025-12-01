@@ -75,7 +75,7 @@ Follow these steps on a new branch named `feature/account-upgrade`.
 
 ### 1. Preparation
 1.1 Create the branch: `git checkout -b feature/account-upgrade` (starting from `main`).  
-1.2 Run `xcodebuild build -workspace IngrediCheck.xcworkspace -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` to ensure a clean baseline.  
+1.2 Run `xcodebuild build -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` to ensure a clean baseline.  
 1.3 Skim `AuthController.swift` and `SettingsSheet.swift` to confirm no outstanding conflicts with pending work.
 
 ### 2. AuthController Refactor
@@ -124,7 +124,7 @@ Follow these steps on a new branch named `feature/account-upgrade`.
 - Mock `SupabaseClient` to assert `auth.link` is called when upgrading.  
 - Verify `keychain.delete` runs only after success.  
 - Check `isUpgradingAccount` toggles during the flow.  
-6.2 Run `xcodebuild test -workspace IngrediCheck.xcworkspace -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'`.  
+6.2 Run `xcodebuild test -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'`.  
 6.3 Manual validation:
 - Launch as anonymous, upgrade with Apple, confirm preferences persist, and `signedInWithApple` becomes true.  
 - Repeat for Google.  

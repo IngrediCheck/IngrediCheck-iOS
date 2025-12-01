@@ -10,16 +10,10 @@ enum HistoryType: String {
     case favorites = "favorites"
 }
 
-enum OcrModel: String {
-    case iOSBuiltIn = "iosbuiltin"
-    case googleMLKit = "googlemlkit"
-}
-
 @Observable class UserPreferences {
     
     @MainActor public func clearAll() {
         UserDefaults.standard.removeObject(forKey: UserPreferences.captureTypeKey)
-        UserDefaults.standard.removeObject(forKey: UserPreferences.ocrModelKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.startScanningOnAppStartKey)
         
         // Clear rating prompt tracking keys
@@ -32,7 +26,6 @@ enum OcrModel: String {
         
         // Reset properties to default values
         captureType = .barcode
-        ocrModel = .googleMLKit
         startScanningOnAppStart = false
         
         // Reset rating prompt tracking properties
@@ -66,28 +59,6 @@ enum OcrModel: String {
         }
     }
 
-    // OCR Model
-    
-    private static let ocrModelKey = "config.ocrModel"
-    
-    private static func readOcrModel() -> OcrModel {
-        guard let rawValue = UserDefaults.standard.string(forKey: ocrModelKey),
-              let ocrModel = OcrModel(rawValue: rawValue) else {
-            return .googleMLKit
-        }
-        return ocrModel
-    }
-    
-    private static func writeOcrModel(ocrModel: OcrModel) {
-        UserDefaults.standard.set(ocrModel.rawValue, forKey: ocrModelKey)
-    }
-    
-    @ObservationIgnored var ocrModel: OcrModel = UserPreferences.readOcrModel() {
-        didSet {
-            UserPreferences.writeOcrModel(ocrModel: ocrModel)
-        }
-    }
-    
     // StartScanningOnAppStart
     
     public static let startScanningOnAppStartKey = "config.startScanningOnAppStart"

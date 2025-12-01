@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AuthenticationServices
 import Supabase
 import KeychainSwift
@@ -133,24 +134,23 @@ private enum AuthFlowMode {
     
     private static let anonUserNameKey = "anonEmail"
     private static let anonPasswordKey = "anonPassword"
-    private static let internalFlagKey = "isInternalUser"
+    private static let deviceIdKey = "deviceId"
+    private static var hasRegisteredDevice = false
+    private static var hasPinged = false
     
     @MainActor init() {
-        let storedInternalFlag = keychain.getBool(AuthController.internalFlagKey)
-        if let storedInternalFlag {
-            isInternalUser = storedInternalFlag
-        } else {
-            isInternalUser = false
-        }
-#if targetEnvironment(simulator)
-        // Treat simulator sessions as internal by default so testers get the full toolset.
-        if storedInternalFlag == nil {
-            isInternalUser = true
-            keychain.set(true, forKey: AuthController.internalFlagKey)
-        }
-#endif
         authChangeWatcher()
-        refreshAnalyticsIdentity(session: nil)
+    }
+    
+    @MainActor
+    var deviceId: String {
+        if let storedDeviceId = keychain.get(AuthController.deviceIdKey) {
+            return storedDeviceId
+        } else {
+            let newDeviceId = UUID().uuidString
+            keychain.set(newDeviceId, forKey: AuthController.deviceIdKey)
+            return newDeviceId
+        }
     }
     
     @MainActor var signedInWithApple: Bool {
@@ -507,116 +507,63 @@ private enum AuthFlowMode {
     }
     
     @MainActor
-    func enableInternalMode() -> Bool {
-        guard !isInternalUser else {
-            refreshAnalyticsIdentity(session: session)
-            return false
-        }
-        
-        setInternalMode(true)
-        refreshAnalyticsIdentity(session: session)
-        
-        if let session {
-            syncInternalFlagToSupabaseIfNeeded(session: session)
-        }
-        
-        return true
-    }
-    
-    @MainActor
-    func disableInternalMode() -> Bool {
-        guard isInternalUser else {
-            return false
-        }
-        
-        setInternalMode(false)
-        refreshAnalyticsIdentity(session: session)
-        
-        if let session {
-            syncInternalFlagToSupabaseIfNeeded(session: session)
-        }
-        
-        return true
-    }
-    
-    @MainActor
-    func refreshInternalModeFromServer(_ metadata: [String: AnyJSON]) {
-        guard let serverFlag = metadata["is_internal"]?.boolValue else {
-            return
-        }
-        
-        setInternalMode(serverFlag)
-        refreshAnalyticsIdentity(session: session)
-    }
-    
-    @MainActor
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
         self.session = session
         isUpgradingAccount = false
         
         if let session {
             signInState = .signedIn
-            refreshInternalModeFromServer(session.user.userMetadata)
-            syncInternalFlagToSupabaseIfNeeded(session: session)
-            refreshAnalyticsIdentity(session: session)
+            registerDeviceAfterLogin(session: session)
+            pingAfterLogin()
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
-            refreshAnalyticsIdentity(session: nil, reset: shouldReset)
+            if shouldReset {
+                AnalyticsService.shared.resetAnalytics()
+                // Reset ping flag on sign out so it can run again on next login
+                Self.hasPinged = false
+            }
         }
     }
     
-    @MainActor
-    private func setInternalMode(_ enabled: Bool) {
-        guard isInternalUser != enabled else { return }
-        isInternalUser = enabled
-        keychain.set(enabled, forKey: AuthController.internalFlagKey)
-    }
     
     @MainActor
-    private func refreshAnalyticsIdentity(session: Session?, reset: Bool = false) {
-        let properties: [String: Any] = ["is_internal": isInternalUser]
-        
-        if reset {
-            PostHogSDK.shared.reset()
+    private func registerDeviceAfterLogin(session: Session) {
+        guard !Self.hasRegisteredDevice else {
+            return
         }
+        Self.hasRegisteredDevice = true
         
-        if let session {
-            let distinctId = session.user.id.uuidString
-            PostHogSDK.shared.identify(distinctId, userProperties: properties)
-        }
-        
-        PostHogSDK.shared.register(properties)
-    }
-    
-    @MainActor
-    private func syncInternalFlagToSupabaseIfNeeded(session: Session) {
-        let metadataFlag = session.user.userMetadata["is_internal"]?.boolValue
-        
-        Task {
-            do {
-                if isInternalUser {
-                    guard metadataFlag != true else { return }
-                    try await updateSupabaseInternalFlag(true)
-                } else {
-                    guard metadataFlag != false else { return }
-                    try await updateSupabaseInternalFlag(false)
+        WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
+            guard let self = self, let isInternal = isInternal else { return }
+            
+            Task { @MainActor in
+                if isInternal != self.isInternalUser {
+                    self.isInternalUser = isInternal
+                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
                 }
-            } catch {
-                print("Failed to sync internal mode flag to Supabase: \(error)")
             }
         }
     }
     
     @MainActor
-    private func updateSupabaseInternalFlag(_ enabled: Bool) async throws {
-        _ = try await supabaseClient.auth.update(
-            user: UserAttributes(data: ["is_internal": .bool(enabled)])
-        )
+    private func pingAfterLogin() {
+        guard !Self.hasPinged else {
+            return
+        }
+        Self.hasPinged = true
         
-        if var currentSession = session {
-            currentSession.user.userMetadata["is_internal"] = .bool(enabled)
-            session = currentSession
+        // Fire-and-forget ping call
+        WebService().ping()
+    }
+    
+    @MainActor
+    func setInternalUser(_ value: Bool) {
+        guard value != isInternalUser else { return }
+        isInternalUser = value
+        if let session = session {
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value)
         }
     }
 }
