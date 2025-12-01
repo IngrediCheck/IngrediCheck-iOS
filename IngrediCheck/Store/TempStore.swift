@@ -12,20 +12,20 @@ struct TempStore: View {
     @State var preferences: Preferences = Preferences()
     var body: some View {
         VStack {
-            store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
-            
-            let _ = print("render")
-            
-            Text("Progress: \(store.progress * 100)")
-            Text("Tag: \(store.currentScreen.screenId.rawValue)")
-            
-            Button("Next") {
-                store.next()
-            }
-            
-            Button("change") {
-                store.onboardingFlowtype = .family
-            }
+//            store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
+//            
+//            let _ = print("render")
+//            
+//            Text("Progress: \(store.progress * 100)")
+//            Text("Tag: \(store.currentScreen.screenId.rawValue)")
+//            
+//            Button("Next") {
+//                store.next()
+//            }
+//            
+//            Button("change") {
+//                store.onboardingFlowtype = .family
+//            }
         }
     }
 }

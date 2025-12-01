@@ -81,7 +81,7 @@ struct PersistentBottomSheet: View {
             return 282
         case .meetYourAvatar:
             return 391
-        case .dietaryPreferencesSheet(_):
+        case .dietaryPreferencesSheet(let isFamilyFlow):
             return nil
         case .allSetToJoinYourFamily:
             return 284

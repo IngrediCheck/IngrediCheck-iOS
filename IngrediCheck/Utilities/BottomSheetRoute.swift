@@ -34,17 +34,8 @@ enum BottomSheetRoute: Hashable {
     // WelcomeToYourFamilyView route
     case allSetToJoinYourFamily
     
-    // MainCanvasView routes (onboarding)
-    case allergies
-    case intolerances
-    case healthConditions
-    case lifeStage
-    case region
-    case avoid
-    case lifeStyle
-    case nutrition
-    case ethical
-    case taste
+    // MainCanvasView routes (onboarding) - dynamic from JSON
+    case onboardingStep(stepId: String)
     
     // HomeView route (empty or default state)
     case homeDefault

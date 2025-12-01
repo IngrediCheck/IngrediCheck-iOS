@@ -12,52 +12,49 @@ struct TabBar: View {
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
-    @State private var isCameraPresented = false
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            HStack(alignment: .center) {
-                Image("tabBar-heart")
-                    .renderingMode(.template)
-                    .resizable()
-                    .foregroundColor(Color(hex: "676A64"))
-                    .frame(width: 26, height: 26)
+//        ZStack {
+            ZStack(alignment: .bottom) {
+                HStack(alignment: .center) {
+                    Image("tabBar-heart")
+                        .renderingMode(.template)
+                        .resizable()
+                        .foregroundColor(Color(hex: "676A64"))
+                        .frame(width: 26, height: 26)
+                    
+                    Spacer()
+                    
+                    Image("tabBar-ingredibot")
+                        .renderingMode(.template)
+                        .resizable()
+                        .foregroundColor(Color(hex: "676A64"))
+                        .frame(width: 26, height: 26)
+                }
+                .padding(.horizontal, 22)
+                .padding(.vertical, 12.5)
+                .frame(width: 196)
+                .background(
+                    Capsule()
+                        .fill(.white)
+                        .shadow(color: Color(hex: "E9E9E9"), radius: 13.6, x: 0, y: 12)
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(lineWidth: 0.25)
+                        .foregroundStyle(.grayScale50)
+                )
+                .scaleEffect(scale)
+                .offset(y: offsetY)
                 
-                Spacer()
-                
-                Image("tabBar-ingredibot")
-                    .renderingMode(.template)
-                    .resizable()
-                    .foregroundColor(Color(hex: "676A64"))
-                    .frame(width: 26, height: 26)
-            }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 12.5)
-            .frame(width: 196)
-            .background(
-                Capsule()
-                    .fill(.white)
-                    .shadow(color: Color(hex: "E9E9E9"), radius: 13.6, x: 0, y: 12)
-            )
-            .overlay(
-                Capsule()
-                    .stroke(lineWidth: 0.25)
-                    .foregroundStyle(.grayScale50)
-            )
-            .scaleEffect(scale)
-            .offset(y: offsetY)
-            
-            Button {
-                isCameraPresented = true
-            } label: {
                 ZStack {
                     Circle()
                         .frame(width: 60, height: 60)
                         .foregroundStyle(
                             LinearGradient(
                                 gradient: Gradient(stops: [
-                                    .init(color: Color(hex: "91C206"), location: 0.2),
-                                    .init(color: Color(hex: "6B8E06"), location: 0.7)
+                                    .init(color: Color(hex: "91C206"), location: 0.2),   // start color at 20%
+                                    .init(color: Color(hex: "6B8E06"), location: 0.7)   // end color at 100%
                                 ]),
                                 startPoint: .top,
                                 endPoint: .bottom
@@ -71,20 +68,30 @@ struct TabBar: View {
                         )
                         .rotationEffect(.degrees(18))
                     
+                    
                     Image("tabBar-scanner")
                         .resizable()
                         .frame(width: 32, height: 32)
+                    
                 }
+                .padding(.bottom, 18)
             }
-            .buttonStyle(.plain)
-            .padding(.bottom, 18)
-        }
-        .onChange(of: isExpanded) { oldValue, newValue in
-            something()
-        }
-        .fullScreenCover(isPresented: $isCameraPresented) {
-            CameraScreen()
-        }
+            .onChange(of: isExpanded) { oldValue, newValue in
+                something()
+            }
+            
+//            VStack {
+//                
+//                Spacer()
+//                
+//                Button {
+//                    something()
+//                } label: {
+//                    Text("Toggle")
+//                }
+//                
+//            }
+//        }
     }
     
     
