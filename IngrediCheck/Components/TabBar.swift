@@ -12,6 +12,7 @@ struct TabBar: View {
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
+    @State private var isCameraPresented = false
     
     var body: some View {
 //        ZStack {
@@ -47,37 +48,43 @@ struct TabBar: View {
                 .scaleEffect(scale)
                 .offset(y: offsetY)
                 
-                ZStack {
-                    Circle()
-                        .frame(width: 60, height: 60)
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(stops: [
-                                    .init(color: Color(hex: "91C206"), location: 0.2),   // start color at 20%
-                                    .init(color: Color(hex: "6B8E06"), location: 0.7)   // end color at 100%
-                                ]),
-                                startPoint: .top,
-                                endPoint: .bottom
+                Button {
+                    isCameraPresented = true
+                } label: {
+                    ZStack {
+                        Circle()
+                            .frame(width: 60, height: 60)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(stops: [
+                                        .init(color: Color(hex: "91C206"), location: 0.2),
+                                        .init(color: Color(hex: "6B8E06"), location: 0.7)
+                                    ]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                    .shadow(
+                                        .inner(color: Color(hex: "99C712"), radius: 2.5, x: 4, y: -2.5)
+                                    )
+                                    .shadow(
+                                        .drop(color: Color(hex: "606060").opacity(0.35), radius: 3.3, x: 0, y: 4)
+                                    )
                             )
-                                .shadow(
-                                    .inner(color: Color(hex: "99C712"), radius: 2.5, x: 4, y: -2.5)
-                                )
-                                .shadow(
-                                    .drop(color: Color(hex: "606060").opacity(0.35), radius: 3.3, x: 0, y: 4)
-                                )
-                        )
-                        .rotationEffect(.degrees(18))
-                    
-                    
-                    Image("tabBar-scanner")
-                        .resizable()
-                        .frame(width: 32, height: 32)
-                    
+                            .rotationEffect(.degrees(18))
+                        
+                        Image("tabBar-scanner")
+                            .resizable()
+                            .frame(width: 32, height: 32)
+                    }
                 }
+                .buttonStyle(.plain)
                 .padding(.bottom, 18)
             }
             .onChange(of: isExpanded) { oldValue, newValue in
                 something()
+            }
+            .fullScreenCover(isPresented: $isCameraPresented) {
+                CameraScreen()
             }
             
 //            VStack {
