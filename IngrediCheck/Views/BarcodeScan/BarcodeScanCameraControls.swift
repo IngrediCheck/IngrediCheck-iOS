@@ -16,12 +16,13 @@ struct CameraSwipeButton: View {
         VStack{
             ZStack {
                 // Background Card
-                RoundedRectangle(cornerRadius: 46)
+                RoundedRectangle(cornerRadius: 41)
                     .fill(.thinMaterial.opacity(0.4))
-                    .frame(width: 261, height: 75)
+                    .frame(width: 229, height: 66)
                 
                 // Inner content
                 HStack {
+                   
                     // MARK: Left circle (Barcode)
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.18)) {
@@ -45,21 +46,31 @@ struct CameraSwipeButton: View {
                                     )) :
                                         AnyShapeStyle(Color.white.opacity(0.15))
                                 )
-                                .frame(width: 67, height: 67)
+                                .frame(width: 58.60, height: 58.60,)
                                 .scaleEffect(isTapped ? 0.9 : 1.0)
                             Image("iconoir_scan-barcode")
                                 .foregroundColor(.white)
                                 .font(.system(size: 28))
+                            
+                            Text("Scanner")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white)
+                                .offset(y: UIScreen.main.bounds.height * 0.05)
                         }
+//                        .background(.red)
                     }
                     .buttonStyle(.plain)
                     
-                    Spacer(minLength: 12)
+                    Spacer(
+//                        minLength: 12
+                    )
                     
                     // MARK: Middle icons (shimmer + independent rotation)
                     ArrowSwipeShimmer(mode: mode)
                     
-                    Spacer(minLength: 12)
+                    Spacer(
+//                        minLength: 12
+                    )
                     
                     // MARK: Right circle (Camera)
                     Button(action: {
@@ -73,7 +84,7 @@ struct CameraSwipeButton: View {
                             }
                         }
                     }) {
-                        ZStack {
+                        ZStack() {
                             Circle()
                                 .fill(
                                     mode == .photo ?
@@ -84,20 +95,28 @@ struct CameraSwipeButton: View {
                                     )) :
                                         AnyShapeStyle(.thinMaterial.opacity(0.5))
                                 )
-                                .frame(width: 67, height: 67)
+                                .frame(width: 58.60, height: 58.60)
                                 .scaleEffect(isTapped1 ? 0.9 : 1.0)
                             Image("cameracapture")
                                 .foregroundColor(.white)
-                                .font(.system(size: 22))
+                                .font(.system(size: 20))
+                            
+                            Text("Photo")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white)
+                                .offset(y: UIScreen.main.bounds.height * 0.05)
                         }
+//                        .background(.red)
                     }
                     .buttonStyle(.plain)
+                    
                 }
-                .padding(.horizontal, 10)
-                .frame(width: 261)
+                .padding(.horizontal, 3.5)
+                .frame(width: 229)
                 // subtle visual slide effect while dragging (keeps circles visually centered)
                 .offset(x: dragOffset * 0.2)
                 .animation(.spring(response: 0.25, dampingFraction: 0.8), value: dragOffset)
+                
             }
             .gesture(
                 DragGesture()
@@ -125,28 +144,31 @@ struct CameraSwipeButton: View {
                     }
             )
             // keep circles visually inside the rounded pill while sliding
-            .clipShape(RoundedRectangle(cornerRadius: 46))
+//            .clipShape(RoundedRectangle(cornerRadius: 46))
             //           .swipeShimmer()
             
             
-            HStack(){
-                Text("Scanner")
-                Spacer()
-                Text("Photo")
-            }
-            .frame(maxWidth:212)
-            .foregroundColor(Color.white)
-            .font(.system(size: 11))
-            .fontWeight(.regular)
-            .padding(.horizontal , 16)
-            .padding(.top, 4)
+//            HStack(){
+//                Text("Scanner")
+//                Spacer()
+//                Text("Photo")
+//            }
+//            
+//            .frame(maxWidth:229)
+//            .foregroundColor(Color.white)
+//            .font(.system(size: 11))
+//            .fontWeight(.regular)
+//            .padding(.leading , 40)
+//            .padding(.trailing, 40)
+          
+            
             
             
         }
     }
 }
 
-struct ContentView5: View {
+struct cameraGuidetext: View {
     var body: some View {
         
         
@@ -177,6 +199,9 @@ struct ContentView5: View {
     }
     
 }
+#Preview{
+    cameraGuidetext()
+}
 struct FoundNotFoundView : View {
     var body: some View {
         
@@ -203,7 +228,7 @@ struct FoundNotFoundView : View {
     
 }
 
-struct OutputCard: View {
+struct AnalysingCard: View {
     var body: some View {
         ZStack {
             // Background Card
@@ -283,6 +308,10 @@ struct OutputCard: View {
     }
 }
 
+// ContentView4 is defined in `overlay.swift` and reused from there.
+#Preview{
+    AnalysingCard()
+}
 
 // MARK: - Camera translucent bar (for use over camera preview)
 
@@ -410,27 +439,36 @@ extension View {
     }
 }
 
-#Preview {
-    ZStack{
-        OutputCard()
-        //        CameraSwipeButton(mode: .constant(.photo))
-        //        ContentView6()
-    }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
-        .background(.black)
-}
+//#Preview {
+//    ZStack{
+//        OutputCard()
+//        //        CameraSwipeButton(mode: .constant(.photo))
+//        //        ContentView6()
+//    }.frame(maxWidth: .infinity, maxHeight: .infinity)
+//        .ignoresSafeArea()
+//        .background(.black)
+//}
+//
+//#Preview("CameraTranslucentBar") {
+//    ZStack {
+//        // Simulated camera background
+//        Color.black
+//            .ignoresSafeArea()
+//        
+//        VStack {
+//            Spacer()
+//            CameraTranslucentBar()
+//                .padding(.horizontal, 40)
+//                .padding(.bottom, 40)
+//        }
+//    }
+//}
 
-#Preview("CameraTranslucentBar") {
+#Preview {
     ZStack {
-        // Simulated camera background
-        Color.black
-            .ignoresSafeArea()
-        
-        VStack {
-            Spacer()
-            CameraTranslucentBar()
-                .padding(.horizontal, 40)
-                .padding(.bottom, 40)
-        }
+        Color.gray
+        CameraSwipeButton(mode: .constant(.photo))
     }
 }
+
+
