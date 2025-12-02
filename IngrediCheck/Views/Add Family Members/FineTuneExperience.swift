@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct FineTuneYourExperience: View {
+struct FineTuneExperience: View {
     var allSetPressed: () -> Void
     var addPreferencesPressed: () -> Void
     
@@ -67,6 +67,5 @@ struct FineTuneYourExperience: View {
 }
 
 #Preview {
-    FineTuneYourExperience()
+    FineTuneExperience()
 }
-

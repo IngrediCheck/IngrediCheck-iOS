@@ -234,7 +234,7 @@ struct PersistentBottomSheet: View {
             }
             
         case .fineTuneYourExperience:
-            FineTuneYourExperience(
+            FineTuneExperience(
                 allSetPressed: {
                     coordinator.showCanvas(.home)
                 },
