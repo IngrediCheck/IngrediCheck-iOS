@@ -30,10 +30,11 @@ struct MainCanvasView: View {
             CanvasTagBar(
                 store: store,
                 onTapCurrentSection: {
-                    // Scroll to the current section’s cards when tapping the active tag
+                    // Scroll to the current section's cards when tapping the active tag
                     scheduleScrollToCurrentSectionViews()
                 },
-                scrollTarget: $tagBarScrollTarget
+                scrollTarget: $tagBarScrollTarget,
+                currentBottomSheetRoute: coordinator.currentBottomSheetRoute
             )
             .padding(.bottom, 16)
             

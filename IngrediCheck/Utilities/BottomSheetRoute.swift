@@ -37,6 +37,9 @@ enum BottomSheetRoute: Hashable {
     // MainCanvasView routes (onboarding) - dynamic from JSON
     case onboardingStep(stepId: String)
     
+    // FineTuneYourExperience route
+    case fineTuneYourExperience
+    
     // HomeView route (empty or default state)
     case homeDefault
     

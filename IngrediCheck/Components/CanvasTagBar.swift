@@ -12,6 +12,7 @@ struct CanvasTagBar: View {
     @ObservedObject var store: Onboarding
     var onTapCurrentSection: (() -> Void)? = nil
     @Binding var scrollTarget: UUID?
+    var currentBottomSheetRoute: BottomSheetRoute? = nil
 
     /// Derived tag items from the dynamic sections / JSON, so that ordering,
     /// titles and icons always match the config.
@@ -43,7 +44,13 @@ struct CanvasTagBar: View {
                             image: model.icon ?? "",
                             title: model.name,
                             isSelected: Binding(
-                                get: { store.sections[store.currentSectionIndex].name },
+                                get: { 
+                                    // If fineTuneYourExperience is shown, return empty string so nothing is selected
+                                    if case .fineTuneYourExperience = currentBottomSheetRoute {
+                                        return ""
+                                    }
+                                    return store.sections[store.currentSectionIndex].name
+                                },
                                 set: { newName in
                                     handleSelection(newName: newName, proxy: proxy)
                                 }
@@ -59,6 +66,7 @@ struct CanvasTagBar: View {
                 }
                 .padding(.horizontal, 20)
                 .animation(.linear(duration: 0.2), value: store.currentSectionIndex)
+                .animation(.linear(duration: 0.2), value: currentBottomSheetRoute)
             }
             .onChange(of: scrollTarget) { _ in
                 guard let target = scrollTarget else { return }

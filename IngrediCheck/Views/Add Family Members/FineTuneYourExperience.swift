@@ -8,6 +8,17 @@
 import SwiftUI
 
 struct FineTuneYourExperience: View {
+    var allSetPressed: () -> Void
+    var addPreferencesPressed: () -> Void
+    
+    init(
+        allSetPressed: @escaping () -> Void = {},
+        addPreferencesPressed: @escaping () -> Void = {}
+    ) {
+        self.allSetPressed = allSetPressed
+        self.addPreferencesPressed = addPreferencesPressed
+    }
+    
     var body: some View {
         VStack {
             VStack(spacing: 12) {
@@ -24,7 +35,7 @@ struct FineTuneYourExperience: View {
             
             HStack(spacing: 16) {
                 Button {
-                    
+                    allSetPressed()
                 } label: {
                     Text("All Set!")
                         .font(NunitoFont.semiBold.size(16))
@@ -36,7 +47,11 @@ struct FineTuneYourExperience: View {
                 }
 
                 
-                GreenCapsule(title: "Add Preferences", width: 160, height: 52)
+                Button {
+                    addPreferencesPressed()
+                } label: {
+                    GreenCapsule(title: "Add Preferences", width: 160, height: 52)
+                }
             }
             .padding(.horizontal, 20)
         }
