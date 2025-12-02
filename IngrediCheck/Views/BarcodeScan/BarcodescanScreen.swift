@@ -50,6 +50,7 @@ struct CameraScreen: View {
     @State private var mode: CameraMode = .scanner
     @State private var capturedPhoto: UIImage? = nil
     @State private var capturedPhotoHistory: [UIImage] = []
+    @State private var galleryLimitHit: Bool = false
     @State private var isShowingPhotoPicker: Bool = false
     @State private var isShowingPhotoModeGuide: Bool = false
     
@@ -528,15 +529,10 @@ struct CameraScreen: View {
                 .zIndex(3)
             }
         }
-        .sheet(isPresented: $isShowingPhotoPicker, onDismiss: {
-            if let image = capturedPhoto {
-                capturedPhotoHistory.insert(image, at: 0)
-                if capturedPhotoHistory.count > 10 {
-                    capturedPhotoHistory.removeLast(capturedPhotoHistory.count - 10)
-                }
-            }
-        }) {
-            PhotoPicker(image: $capturedPhoto)
+        .sheet(isPresented: $isShowingPhotoPicker) {
+            PhotoPicker(images: $capturedPhotoHistory,
+                        didHitLimit: $galleryLimitHit,
+                        maxTotalCount: 10)
         }
     }
 }
@@ -546,12 +542,14 @@ struct CameraScreen: View {
 struct PhotoPicker: UIViewControllerRepresentable {
     
     @Environment(\.presentationMode) var presentationMode
-    @Binding var image: UIImage?
+    @Binding var images: [UIImage]
+    @Binding var didHitLimit: Bool
+    var maxTotalCount: Int = 10
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var configuration = PHPickerConfiguration()
         configuration.filter = .images
-        configuration.selectionLimit = 1
+        configuration.selectionLimit = maxTotalCount
         
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = context.coordinator
@@ -576,13 +574,22 @@ struct PhotoPicker: UIViewControllerRepresentable {
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             parent.presentationMode.wrappedValue.dismiss()
             
-            guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else { return }
+            guard !results.isEmpty else { return }
             
-            provider.loadObject(ofClass: UIImage.self) { object, _ in
-                if let uiImage = object as? UIImage {
+            for result in results {
+                let provider = result.itemProvider
+                guard provider.canLoadObject(ofClass: UIImage.self) else { continue }
+                
+                provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    guard let uiImage = object as? UIImage else { return }
                     DispatchQueue.main.async {
-                        self.parent.image = uiImage
+                        if self.parent.images.count < self.parent.maxTotalCount {
+                            // Insert newest images at the front of the history
+                            self.parent.images.insert(uiImage, at: 0)
+                        } else {
+                            // We hit the global limit of 10 images; show a warning in the parent view.
+                            self.parent.didHitLimit = true
+                        }
                     }
                 }
             }
@@ -604,7 +611,7 @@ struct CardCenterPreferenceKey: PreferenceKey {
 }
 
 #Preview {
-   CameraScreen()
+    CameraScreen()
 }
 
 // MARK: - Photo card matching ContentView4 style
