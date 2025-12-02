@@ -234,6 +234,13 @@ struct BarcodeDataCard: View {
 
     @State private var analysisResult: BarcodeScanAnalysisResult?
     @State private var isLoading = false
+    @State private var product: DTO.Product?
+    @State private var ingredientRecommendations: [DTO.IngredientRecommendation]?
+    @State private var matchStatus: DTO.ProductRecommendation?
+    @State private var notFoundState = false
+    @State private var errorState: String?
+    @State private var hasCompleted = false
+    @State private var isAnalyzing = false
 
     var body: some View {
         ZStack {
@@ -241,8 +248,8 @@ struct BarcodeDataCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .fill(.thinMaterial.opacity(0.2))
                 .frame(width: 300, height: 120)
-            HStack {
-                HStack(spacing: 47) {
+            HStack(alignment: .center, spacing: 10) {
+                HStack(spacing: 0) {
                     // Left-side visual changes based on whether we have a barcode yet.
                     if code.isEmpty {
                         // Empty card: simple placeholder block, no barcode illustration.
@@ -251,33 +258,51 @@ struct BarcodeDataCard: View {
                                 .fill(.thinMaterial.opacity(0.4))
                                 .frame(width: 68, height: 92)
                         }
-                    } else if let product = analysisResult?.product, let firstImage = product.images.first {
-                        // After analysis: show the first product image if available.
-                        ProductImageThumbnail(imageLocation: firstImage)
-                            .frame(width: 71, height: 95)
-                    } else {
-                        // Barcode present but no image yet: show the animated/illustrated barcode stack.
-                        ZStack {
-                            Image("Barcodelinecorners")
-                        }
-                        .frame(width: 71, height: 95)
+                        
+                } else if let product = product, let firstImage = product.images.first {
+                    // After product is known: show first product image with analyzing overlay when needed.
+                    ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
+                        .frame(width: 68, height: 92)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.white, lineWidth: 0.5)
+                        )
+                } else if product != nil {
+                    // Product details were found but there is no image in the API response.
+                    // Show the default "image not found" placeholder.
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.thinMaterial.opacity(0.4))
+                            .frame(width: 68, height: 92)
+                        Image("imagenotfound1")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 39, height: 34)
                     }
+                } else {
+                    // Barcode present but product is not yet known: show the barcode placeholder stack.
+                    ZStack {
+                        Image("Barcodelinecorners")
+                    }
+                    .frame(width: 68, height: 92)
                 }
-                VStack(alignment: .leading, spacing: 8) {
+                }
+                VStack(alignment: .leading) {
                     if code.isEmpty {
-                        ZStack {
+                        
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(.thinMaterial.opacity(0.4))
-                                .frame(width: 185, height: 25)
-                        }
+                                .frame(width: 175, height: 25)
+//                                .padding(.bottom ,8)
                         RoundedRectangle(cornerRadius: 4)
                             .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 132, height: 20)
-                            .padding(.bottom, 7)
+                            .frame(width: 122, height: 20)
+                            .padding(.bottom, 8)
                         RoundedRectangle(cornerRadius: 52)
                             .fill(.thinMaterial.opacity(0.4))
                             .frame(width: 79, height: 24)
-                    } else if isLoading || analysisResult == nil {
+                        
+                    } else if isLoading && product == nil {
                         VStack(alignment: .leading) {
                             Text("Looking up this product…")
                                 .font(.system(size: 12, weight: .bold))
@@ -319,120 +344,273 @@ struct BarcodeDataCard: View {
                                     .fill(.bar)
                             )
                         }
-//                        .padding(.leading  )
-                    } else if let result = analysisResult, let product = result.product {
+                    } else if let product = product {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(product.name ?? "Product found")
-                                .font(.system(size: 14, weight: .semibold))
+                            Text(product.brand ?? "Brand not  found")
+                                .font(.system(size: 12, weight: .regular))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
-                            if let brand = product.brand, !brand.isEmpty {
-                                Text(brand)
-                                    .font(.system(size: 11, weight: .regular))
+                            if let product = product.name, !product.isEmpty {
+                                Text(product ?? "Product not Found")
+                                    .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(Color.white.opacity(0.85))
                                     .lineLimit(1)
                             }
+                            
                             Spacer(minLength: 8)
-                            if let matchStatus = result.matchStatus {
+                            if ingredientRecommendations == nil && errorState == nil && notFoundState == false {
                                 HStack(spacing: 6) {
-                                    Circle()
-                                        .fill(matchStatus.displayColor)
-                                        .frame(width: 8, height: 8)
-                                    Text(matchStatus.displayText)
-                                        .font(.system(size: 12, weight: .semibold))
+                                    Image("analysisicon")
+                                        .frame(width: 18, height: 18)
+                                    Text("Analyzing")
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.white)
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
                                     Capsule()
-                                        .fill(matchStatus.backgroundColor)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(hex: "#3DA8F5"), Color(hex: "#3DACFB")],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                )
+                            } else if let matchStatus = matchStatus {
+                                HStack(spacing: 4) {
+                                    Image(matchStatus.iconAssetName)
+                                        .frame(width: 18, height: 18)
+                                    Text(matchStatus.displayText)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: matchStatus.gradientColors,
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
                                 )
                             }
                         }
-                    } else if let result = analysisResult, result.notFound {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("We couldn’t identify this product !")
-                                .font(.system(size: 12, weight: .bold))
+                    } else if notFoundState {
+                        VStack(spacing: 4) {
+                            Spacer(minLength: 0)
+                            Text("We couldn’t identify this product ")
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(Color.white)
                             Text("Help us identify it, add a few photos of the product.")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(Color.white.opacity(0.9))
                                 .lineLimit(2)
+                            Spacer(minLength: 0)
                         }
-                    } else if let result = analysisResult, let error = result.errorMessage {
-                        VStack(alignment: .leading, spacing: 4) {
+                    } else if let error = errorState {
+                        VStack(spacing: 4) {
+                            Spacer(minLength: 0)
                             Text("Something went wrong")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 12, weight: .regular))
                                 .foregroundColor(Color.white)
                             Text(error)
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(Color.white.opacity(0.9))
                                 .lineLimit(2)
+                            Spacer(minLength: 0)
                         }
                     }
                 }
-                .frame(width: 185, height: 92)
+                // Ensure content (brand/product text + status capsule) has
+                // comfortable vertical insets inside the card: at least 12pt
+                // above the brand name and below the last capsule.
+                .padding(.vertical, 12)
+                .frame(width: 185, height: 92, alignment: .topLeading)
                 if code.isEmpty == false {
-                    Image("iconamoon_arrow-up-2-duotone")
+                    VStack {
+                        Spacer()
+                        Image("iconamoon_arrow-up-2-duotone")
+                        Spacer()
+                    }
+                    .frame(height: 120)
                 }
             }
+            .frame(height: 120)
+            .padding(.leading, 8)
         }
 //        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: code) {
             guard !code.isEmpty else { return }
 
-            // If we already have a cached result for this barcode, reuse it and
-            // avoid re-triggering a network call when swiping back to the card.
+            // If we already analyzed this barcode in this app session, reuse
+            // the cached result immediately so we don't block the UI.
             if let cached = BarcodeScanAnalysisService.cachedResult(for: code) {
                 analysisResult = cached
+                product = cached.product
+                ingredientRecommendations = cached.ingredientRecommendations
+                matchStatus = cached.matchStatus
+                notFoundState = cached.notFound
+                errorState = cached.errorMessage
                 isLoading = false
+                isAnalyzing = false
                 return
             }
 
+            // Reset local UI state before kicking off background analysis.
             isLoading = true
-            let service = BarcodeScanAnalysisService(webService: webService, userPreferenceText: "None")
-            let result = await service.analyze(barcode: code)
-            analysisResult = result
-            isLoading = false
+            isAnalyzing = false
+            product = nil
+            ingredientRecommendations = nil
+            matchStatus = nil
+            notFoundState = false
+            errorState = nil
+
+            let codeToAnalyze = code
+            let clientActivityId = UUID().uuidString
+            let preferenceText = DietaryPreferenceConfig.defaultText
+            let service = webService
+
+            // Run the streaming analysis on a detached background task so
+            // camera preview + scan-line animation stay responsive.
+            Task.detached {
+                do {
+                    try await service.streamUnifiedAnalysis(
+                        input: .barcode(codeToAnalyze),
+                        clientActivityId: clientActivityId,
+                        userPreferenceText: preferenceText,
+                        onProduct: { value in
+                            // onProduct/onAnalysis/onError are already
+                            // dispatched to the MainActor inside
+                            // WebService.streamUnifiedAnalysis.
+                            product = value
+                            isAnalyzing = true
+                        },
+                        onAnalysis: { recs in
+                            ingredientRecommendations = recs
+                            if let p = product {
+                                matchStatus = p.calculateMatch(ingredientRecommendations: recs)
+                            }
+                            let result = BarcodeScanAnalysisResult(
+                                product: product,
+                                ingredientRecommendations: ingredientRecommendations,
+                                matchStatus: matchStatus,
+                                notFound: false,
+                                errorMessage: nil,
+                                barcode: codeToAnalyze,
+                                clientActivityId: clientActivityId
+                            )
+                            // Cache update must happen on the main actor because
+                            // BarcodeScanAnalysisService is @MainActor.
+                            Task { @MainActor in
+                                BarcodeScanAnalysisService.storeResult(result)
+                                isAnalyzing = false
+                                isLoading = false
+                            }
+                        },
+                        onError: { streamError in
+                            if streamError.statusCode == 404 {
+                                // Cache a not-found result so revisiting this
+                                // barcode shows the not-found message instead
+                                // of re-fetching every time.
+                                let result = BarcodeScanAnalysisResult(
+                                    product: nil,
+                                    ingredientRecommendations: nil,
+                                    matchStatus: nil,
+                                    notFound: true,
+                                    errorMessage: nil,
+                                    barcode: codeToAnalyze,
+                                    clientActivityId: clientActivityId
+                                )
+                                Task { @MainActor in
+                                    BarcodeScanAnalysisService.storeResult(result)
+                                    notFoundState = true
+                                    isAnalyzing = false
+                                    isLoading = false
+                                }
+                            } else {
+                                errorState = streamError.message
+                                isAnalyzing = false
+                                isLoading = false
+                            }
+                        }
+                    )
+                } catch NetworkError.notFound(_) {
+                    let result = BarcodeScanAnalysisResult(
+                        product: nil,
+                        ingredientRecommendations: nil,
+                        matchStatus: nil,
+                        notFound: true,
+                        errorMessage: nil,
+                        barcode: codeToAnalyze,
+                        clientActivityId: clientActivityId
+                    )
+                    await MainActor.run {
+                        BarcodeScanAnalysisService.storeResult(result)
+                        notFoundState = true
+                        isAnalyzing = false
+                        isLoading = false
+                    }
+                } catch {
+                    await MainActor.run {
+                        errorState = error.localizedDescription
+                        isAnalyzing = false
+                        isLoading = false
+                    }
+                }
+            }
         }
     }
 }
 
 private struct ProductImageThumbnail: View {
     let imageLocation: DTO.ImageLocationInfo
+    let isAnalyzing: Bool
 
     @Environment(WebService.self) private var webService
     @State private var image: UIImage?
 
     var body: some View {
         ZStack {
-            // Background block, matching the placeholder size.
             RoundedRectangle(cornerRadius: 16)
                 .fill(.thinMaterial.opacity(0.4))
                 .frame(width: 68, height: 92)
 
             if let image {
-                // Explicitly size and clip the product image so it never
-                // bleeds outside the visual frame.
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 64, height: 88)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
             } else {
-                Image("Barcodelinecorners")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
+                // When the image cannot be loaded from the server, fall back to
+                // the default "imagenotfound1" asset.
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.thinMaterial.opacity(0.4))
+                        .frame(width: 68, height: 92)
+                    Image("imagenotfound1")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 39, height: 34)
+                }
+            }
+
+            if isAnalyzing {
+                Color.black.opacity(0.25)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     .frame(width: 68, height: 92)
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .tint(.white)
             }
         }
-        // Outer frame still matches the original 71x95 footprint used by the
-        // barcode illustration state.
-        .frame(width: 71, height: 95)
         .clipped()
         .task(id: imageLocationKey) {
-            // Avoid refetching if already loaded
             guard image == nil else { return }
             if let uiImage = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .small) {
                 image = uiImage
@@ -454,14 +632,15 @@ private extension DTO.ProductRecommendation {
     var displayText: String {
         switch self {
         case .match:
-            return "Match"
+            return "Matched"
         case .needsReview:
-            return "Needs review"
+            return "Uncertain"
         case .notMatch:
-            return "Not a match"
+            return "UnMatch"
         }
     }
 
+    // Keep legacy colors in case other parts of the app still reference them.
     var displayColor: Color {
         switch self {
         case .match:
@@ -481,6 +660,33 @@ private extension DTO.ProductRecommendation {
             return Color.warning25
         case .notMatch:
             return Color.fail25
+        }
+    }
+
+    // New gradient colors for the status pill.
+    var gradientColors: [Color] {
+        switch self {
+        case .match:
+            return [Color(hex: "#91B640"), Color(hex: "#89BF12")]
+        case .needsReview:
+            return [Color(hex: "#FAB222"), Color(hex: "#E8AF3E")]
+        case .notMatch:
+            return [Color(hex: "#FF594E"), Color(hex: "#FF3225")]
+        }
+    }
+
+    // Icons per state.
+  
+
+    // Asset icons per state (provided in Assets.xcassets)
+    var iconAssetName: String {
+        switch self {
+        case .match:
+            return "charm_circle-tick"
+        case .needsReview:
+            return "famicons_warning-outline"
+        case .notMatch:
+            return "maki_cross"
         }
     }
 }
