@@ -239,16 +239,19 @@ struct PersistentBottomSheet: View {
                     coordinator.showCanvas(.home)
                 },
                 addPreferencesPressed: {
+                    // Check if there's a next step available before advancing
+                    // If lifeStyle is the final step, clicking "Add Preferences" should complete onboarding
+                    guard let nextStepId = store.nextStepId else {
+                        // No next step available, complete onboarding by going to home
+                        coordinator.showCanvas(.home)
+                        return
+                    }
+                    
                     // Advance logical onboarding progress (for progress bar & tag bar)
                     store.next()
                     
-                    // Move to the current step (which is now the next step after advancing)
-                    if let currentStepId = store.currentStepId {
-                        coordinator.navigateInBottomSheet(.onboardingStep(stepId: currentStepId))
-                    } else {
-                        // If no current step, go to home
-                        coordinator.showCanvas(.home)
-                    }
+                    // Navigate to the next step
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
                 }
             )
             
