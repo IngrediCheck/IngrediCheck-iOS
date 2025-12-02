@@ -212,7 +212,7 @@ struct BackButton: View {
             dismiss()
         } label: {
             ZStack {
-                Image( "left-arrow")
+                Image( "angle-left-arrow")
                     .frame(width: 24, height: 24)
                     .foregroundColor(.white)
             }
