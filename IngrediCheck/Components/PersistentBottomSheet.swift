@@ -89,6 +89,8 @@ struct PersistentBottomSheet: View {
         // content determine its own height instead of forcing a static one.
         case .onboardingStep:
             return nil
+        case .fineTuneYourExperience:
+            return 271
         case .homeDefault:
             return 0
         case .chatIntro:
@@ -108,7 +110,7 @@ struct PersistentBottomSheet: View {
             return false
         }
         
-        // Show arrow for any onboarding step
+        // Show arrow for any onboarding step, but not for fineTuneYourExperience
         if case .onboardingStep = coordinator.currentBottomSheetRoute {
             return true
         }
@@ -118,6 +120,12 @@ struct PersistentBottomSheet: View {
     private func handleOnboardingNextTapped() {
         // Get current step ID from route
         guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
+            return
+        }
+        
+        // Check if current step is "lifeStyle" → show FineTuneYourExperience
+        if currentStepId == "lifeStyle" {
+            coordinator.navigateInBottomSheet(.fineTuneYourExperience)
             return
         }
         
@@ -224,6 +232,28 @@ struct PersistentBottomSheet: View {
             AllSetToJoinYourFamily {
                 coordinator.showCanvas(.home)
             }
+            
+        case .fineTuneYourExperience:
+            FineTuneExperience(
+                allSetPressed: {
+                    coordinator.showCanvas(.home)
+                },
+                addPreferencesPressed: {
+                    // Check if there's a next step available before advancing
+                    // If lifeStyle is the final step, clicking "Add Preferences" should complete onboarding
+                    guard let nextStepId = store.nextStepId else {
+                        // No next step available, complete onboarding by going to home
+                        coordinator.showCanvas(.home)
+                        return
+                    }
+                    
+                    // Advance logical onboarding progress (for progress bar & tag bar)
+                    store.next()
+                    
+                    // Navigate to the next step
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                }
+            )
             
         case .onboardingStep(let stepId):
             // Dynamically load step from JSON using step ID
