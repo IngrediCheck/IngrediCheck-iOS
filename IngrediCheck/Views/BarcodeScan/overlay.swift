@@ -354,45 +354,40 @@ struct BarcodeDataCard: View {
                 .fill(.thinMaterial)
                 .opacity(0.4)
                 .frame(width: 300, height: 120)
-            HStack(alignment: .center, spacing: 10) {
+            HStack() {
                 // Left-side visual changes based on whether we have a barcode yet.
-                if code.isEmpty {
-                    // Empty card: simple placeholder block, no barcode illustration.
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.thinMaterial)
-                            .opacity(0.4)
+                ZStack (){
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.thinMaterial)
+                        .opacity(0.4)
+                    if code.isEmpty {
+                        // Empty card: simple placeholder block, no barcode illustration.
+                        // The material background itself is the placeholder.
+                    } else if let product = product, let firstImage = product.images.first {
+                        // After product is known: show first product image with analyzing overlay when needed.
+                        ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
                             .frame(width: 68, height: 92)
-                    }
-                    
-                } else if let product = product, let firstImage = product.images.first {
-                    // After product is known: show first product image with analyzing overlay when needed.
-                    ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
-                        .frame(width: 68, height: 92)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.white, lineWidth: 0.5)
-                        )
-                } else if product != nil {
-                    // Product details were found but there is no image in the API response.
-                    // Show the default "image not found" placeholder.
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.thinMaterial)
-                            .opacity(0.4)
-                            .frame(width: 68, height: 92)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white, lineWidth: 0.5)
+                            )
+                    } else if product != nil {
+                        // Product details were found but there is no image in the API response.
+                        // Show the default "image not found" placeholder.
                         Image("imagenotfound1")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 39, height: 34)
-                    }
-                } else {
-                    // Barcode present but product is not yet known: show the barcode placeholder stack.
-                    ZStack {
+                    } else {
+                        // Barcode present but product is not yet known: show the barcode placeholder stack.
                         Image("Barcodelinecorners")
                     }
-                    .frame(width: 68, height: 92)
                 }
+                .frame(width: 68, height: 92 )
+                .padding(.horizontal , 14 )
+               
+                
                 VStack(alignment: .leading) {
                     if code.isEmpty {
                         
@@ -400,12 +395,12 @@ struct BarcodeDataCard: View {
                                 .fill(.thinMaterial)
                                 .opacity(0.4)
                                 .frame(width: 185, height: 25)
-                                .padding(.bottom, 14)
+                                .padding(.bottom, 8)
                         RoundedRectangle(cornerRadius: 4)
                             .fill(.thinMaterial)
                             .opacity(0.4)
                             .frame(width: 132, height: 20)
-                            .padding(.bottom, 14)
+                            .padding(.bottom, 10)
                         RoundedRectangle(cornerRadius: 52)
                             .fill(.thinMaterial)
                             .opacity(0.4)
@@ -446,7 +441,7 @@ struct BarcodeDataCard: View {
                                     )
                             }
                             .frame(width: 130, height: 22)
-                            .padding(8)
+                            .padding(4)
                             .background(
                                 Capsule()
                                     .fill(.bar)
@@ -568,8 +563,11 @@ struct BarcodeDataCard: View {
                 // Ensure content (brand/product text + status capsule) has
                 // comfortable vertical insets inside the card: at least 12pt
                 // above the brand name and below the last capsule.
-                .padding(.vertical, 12)
-                .frame(width: 185, height: 92, alignment: .topLeading)
+//                .padding(.vertical, 12)
+                .frame(width: 185, height: 92,
+                       alignment:
+                        .leading
+                )
                 .onChange(of: errorState) { newErrorState in
                     // Hide callout when error is cleared (analysis succeeded or retry clicked)
                     if newErrorState == nil && product != nil {
@@ -583,16 +581,18 @@ struct BarcodeDataCard: View {
                     }
                 }
                 if code.isEmpty == false {
-                    VStack {
-                        Spacer()
+                   HStack {
+                        
                         Image("iconamoon_arrow-up-2-duotone")
-                        Spacer()
+                           .frame(width: 24, height: 13)
+                        
                     }
-                    .frame(height: 120)
+                    
+                    .padding(.trailing, 14)
                 }
             }
-            .frame(height: 120)
-            .padding(.leading, 14)
+//            .frame(height: 120)
+//            .padding(.leading, 14)
         }
 //        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: code) {
