@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct IngrediCheckPreviewApp: App {
+    @State private var webService = WebService()
     
     init() {
         for family in UIFont.familyNames {
@@ -28,6 +29,7 @@ struct IngrediCheckPreviewApp: App {
            
 
             SplashScreen()
+                .environment(webService)
                 .preferredColorScheme(.light)
 
         }

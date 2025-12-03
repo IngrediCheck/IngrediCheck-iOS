@@ -355,17 +355,16 @@ struct BarcodeDataCard: View {
                 .opacity(0.4)
                 .frame(width: 300, height: 120)
             HStack(alignment: .center, spacing: 10) {
-                HStack(spacing: 0) {
-                    // Left-side visual changes based on whether we have a barcode yet.
-                    if code.isEmpty {
-                        // Empty card: simple placeholder block, no barcode illustration.
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(.thinMaterial)
-                                .opacity(0.4)
-                                .frame(width: 68, height: 92)
-                        }
-                        
+                // Left-side visual changes based on whether we have a barcode yet.
+                if code.isEmpty {
+                    // Empty card: simple placeholder block, no barcode illustration.
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.thinMaterial)
+                            .opacity(0.4)
+                            .frame(width: 68, height: 92)
+                    }
+                    
                 } else if let product = product, let firstImage = product.images.first {
                     // After product is known: show first product image with analyzing overlay when needed.
                     ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
@@ -394,20 +393,19 @@ struct BarcodeDataCard: View {
                     }
                     .frame(width: 68, height: 92)
                 }
-                }
                 VStack(alignment: .leading) {
                     if code.isEmpty {
                         
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(.thinMaterial)
                                 .opacity(0.4)
-                                .frame(width: 175, height: 25)
-//                                .padding(.bottom ,8)
+                                .frame(width: 185, height: 25)
+                                .padding(.bottom, 14)
                         RoundedRectangle(cornerRadius: 4)
                             .fill(.thinMaterial)
                             .opacity(0.4)
-                            .frame(width: 122, height: 20)
-                            .padding(.bottom, 8)
+                            .frame(width: 132, height: 20)
+                            .padding(.bottom, 14)
                         RoundedRectangle(cornerRadius: 52)
                             .fill(.thinMaterial)
                             .opacity(0.4)
@@ -594,7 +592,7 @@ struct BarcodeDataCard: View {
                 }
             }
             .frame(height: 120)
-            .padding(.leading, 8)
+            .padding(.leading, 14)
         }
 //        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: code) {
