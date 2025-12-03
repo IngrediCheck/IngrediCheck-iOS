@@ -54,7 +54,72 @@ struct CameraScreen: View {
     @State private var isShowingPhotoPicker: Bool = false
     @State private var isShowingPhotoModeGuide: Bool = false
     @State private var showRetryCallout: Bool = false
+    @State private var toastState: ToastScanState = .scanning
     
+    private func updateToastState() {
+        // When in photo mode, show a dedicated guidance toast
+        if mode == .photo {
+            toastState = .photoGuide
+            return
+        }
+        
+        // Only show these scan-related toasts in scanner mode
+        guard mode == .scanner else {
+            toastState = .scanning
+            return
+        }
+
+        // No codes yet: user is aligning/scanning. Only consider the centered card.
+        guard let activeCode = currentCenteredCode, !activeCode.isEmpty else {
+            toastState = .scanning
+            return
+        }
+        
+        // If we have a cached analysis result for this barcode, derive state from it.
+        if let result = BarcodeScanAnalysisService.cachedResult(for: activeCode) {
+            if result.notFound {
+                toastState = .notIdentified
+                return
+            }
+            
+            if let match = result.matchStatus {
+                switch match {
+                case .match:
+                    toastState = .match
+                case .notMatch:
+                    toastState = .notMatch
+                case .needsReview:
+                    toastState = .uncertain
+                }
+                return
+            }
+            
+            if result.product != nil && result.ingredientRecommendations == nil {
+                // Product known but ingredients/recs still streaming in
+                toastState = .analyzing
+                return
+            }
+            
+            if let error = result.errorMessage, !error.isEmpty {
+                // Generic fallback: suggest retry
+                toastState = .retry
+                return
+            }
+            
+            // Default when product exists but no final match status yet
+            if result.product != nil {
+                toastState = .analyzing
+                return
+            }
+        } else {
+            // We have a code but no cached result yet: barcode extracted, fetching data.
+            toastState = .extractionSuccess
+            return
+        }
+        
+        // Fallback
+        toastState = .scanning
+    }
     private func nearestCenteredCode(to centerX: CGFloat, in values: [CardCenterPreferenceData]) -> String? {
         guard !values.isEmpty else { return nil }
         return values.min(by: { abs($0.center - centerX) < abs($1.center - centerX) })?.code
@@ -97,6 +162,7 @@ struct CameraScreen: View {
                     }
                     camera.scanningEnabled = (mode == .scanner)
                     isCaptured = UIScreen.main.isCaptured
+                    updateToastState()
                 }
                 .onDisappear { camera.stopSession() }
                 .onChange(of: scenePhase) { newPhase in
@@ -116,6 +182,7 @@ struct CameraScreen: View {
                             UserDefaults.standard.set(true, forKey: key)
                         }
                     }
+                    updateToastState()
                 }
                 .onChange(of: camera.isSessionRunning) { running in
                     if running {
@@ -132,6 +199,7 @@ struct CameraScreen: View {
                             scrollTargetCode = code
                         }
                     }
+                    updateToastState()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
                     isCaptured = UIScreen.main.isCaptured
@@ -214,7 +282,11 @@ struct CameraScreen: View {
                 .padding(.horizontal,20)
                 .padding(.bottom,42)
 
-                cameraGuidetext()
+//                cameraGuidetext()
+                tostmsg(state: toastState)
+                    .onAppear {
+                        updateToastState()
+                    }
                 Spacer()
                 if mode == .photo {
                     HStack {
@@ -300,11 +372,20 @@ struct CameraScreen: View {
                                                     },
                                                     onRetryHidden: {
                                                         showRetryCallout = false
+                                                    },
+                                                    onResultUpdated: {
+                                                        updateToastState()
                                                     }
                                                 )
                                                     .scaleEffect(x: 1.0, y: scale, anchor: .center)
                                                     .animation(.easeInOut(duration: 0.2), value: scale)
                                             }
+                                            .background(
+                                                Color.clear.preference(
+                                                    key: CardCenterPreferenceKey.self,
+                                                    value: [CardCenterPreferenceData(code: code, center: midX)]
+                                                )
+                                            )
                                         }
                                         .frame(width: 300, height: 120)
                                         .id(code)
@@ -335,6 +416,14 @@ struct CameraScreen: View {
                                 guard let target else { return }
                                 withAnimation(.easeInOut) {
                                     proxy.scrollTo(target, anchor: .center)
+                                }
+                            }
+                            .onPreferenceChange(CardCenterPreferenceKey.self) { values in
+                                cardCenterData = values
+                                let centerX = UIScreen.main.bounds.width / 2
+                                if let nearest = nearestCenteredCode(to: centerX, in: values) {
+                                    currentCenteredCode = nearest
+                                    updateToastState()
                                 }
                             }
                         } else {
@@ -423,6 +512,7 @@ struct CameraScreen: View {
                                 let centerX = UIScreen.main.bounds.width / 2
                                 if let nearest = nearestCenteredCode(to: centerX, in: values) {
                                     currentCenteredCode = nearest
+                                    updateToastState()
                                 }
                             }
                         }

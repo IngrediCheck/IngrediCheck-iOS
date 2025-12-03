@@ -18,7 +18,8 @@ struct CameraSwipeButton: View {
             ZStack {
                 // Background Card
                 RoundedRectangle(cornerRadius: 41)
-                    .fill(.thinMaterial.opacity(0.4))
+                    .fill(.thinMaterial)
+                    .opacity(0.4)
                     .frame(width: 229, height: 66)
                 
                 // Inner content
@@ -133,8 +134,7 @@ struct CameraSwipeButton: View {
                 }
                 .padding(.horizontal, 3.5)
                 .frame(width: 229)
-                // subtle visual slide effect while dragging (keeps circles visually centered)
-                .offset(x: dragOffset * 0.2)
+                // Keep circles visually centered; drag is used only to switch modes.
                 .animation(.spring(response: 0.25, dampingFraction: 0.8), value: dragOffset)
                 
             }
@@ -198,8 +198,7 @@ struct cameraGuidetext: View {
         
         // Icon + Text vertically stacked
         HStack(spacing: 8,) {
-            Image("lucide_scan-line"
-            )
+            Image("lucide_scan-line")
             .font(.system(size: 20))
             .foregroundColor(.white)
             
@@ -210,7 +209,7 @@ struct cameraGuidetext: View {
         .frame(height: 36)
         .padding(.horizontal)
         .background(
-            .thinMaterial.opacity(0.5) ,in: .capsule
+            .thinMaterial.opacity(0.4) ,in: .capsule
             //
             
         )
@@ -238,7 +237,7 @@ struct FoundNotFoundView : View {
         .frame(height: 36)
         .padding(.horizontal,16)
         .background(
-            .thinMaterial ,in: .capsule
+            .thinMaterial.opacity(0.4) ,in: .capsule
             
             
         )
@@ -253,7 +252,8 @@ struct AnalysingCard: View {
         ZStack {
             // Background Card
             RoundedRectangle(cornerRadius: 24)
-                .fill(.thinMaterial.opacity(0.5))
+                .fill(.thinMaterial)
+                .opacity(0.4)
                 .frame(width: 300, height: 120)
             HStack{
                 
@@ -264,6 +264,7 @@ struct AnalysingCard: View {
                     
                     RoundedRectangle(cornerRadius: 12)
                         .fill(.thinMaterial)
+                        .opacity(0.4)
                         .frame(width: 68, height: 92)
                     
                 }
@@ -382,7 +383,7 @@ struct ArrowSwipeShimmer: View {
                 endPoint: .trailing
             )
             .frame(width: 42)
-            .offset(x: phase * 42)
+            .offset(x: phase * 42 * (mode == .photo ? -1 : 1))
         )
         .mask(
             HStack(spacing: 8) {
@@ -400,19 +401,19 @@ struct ArrowSwipeShimmer: View {
                 }
             }
         )
-        .onAppear { startShimmer() }
+        .onAppear { startShimmer(withDelay: 0.4) }
         .onChange(of: mode) { _ in
-            // Restart shimmer when mode changes so the light never "dies" after a swipe
-            startShimmer()
+            // Restart shimmer immediately when direction flips
+            startShimmer(withDelay: 0.0)
         }
     }
     
-    private func startShimmer() {
+    private func startShimmer(withDelay delay: Double) {
         phase = -1
         withAnimation(
             Animation
                 .linear(duration: animationDuration)
-                .delay(0.4)
+                .delay(delay)
                 .repeatForever(autoreverses: false)
         ) {
             phase = 1
@@ -484,21 +485,25 @@ extension View {
 //    }
 //}
 
-#Preview {
-//    ZStack {
-//        Color.gray
-//        CameraSwipeButton(mode: .constant(.photo))
-//    }
-    ZStack {
-        // Your camera/scan UI here
-        
-        VStack {
-            Spacer()
-            CalloutBubble(text: "Try again or switch\n to photo mode .")
-                .padding(.bottom, 80)
+struct CameraSwipeButtonPreviewWrapper: View {
+    @State private var mode: CameraMode = .scanner
+    @State private var showRetryCallout = false
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VStack {
+                Spacer()
+                CameraSwipeButton(mode: $mode, showRetryCallout: $showRetryCallout)
+                Spacer()
+            }
         }
     }
+}
 
+#Preview {
+    CameraSwipeButtonPreviewWrapper()
 }
 
 

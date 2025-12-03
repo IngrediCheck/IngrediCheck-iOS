@@ -114,44 +114,146 @@
     }
 
 
+enum ToastScanState {
+    case scanning               // user is scanning / live camera
+    case extractionSuccess      // barcode extracted successfully
+    case notIdentified          // product could not be identified
+    case analyzing              // product detected, reading ingredients
+    case match                  // product matches preferences
+    case notMatch               // product does not match preferences
+    case uncertain              // some ingredients are unclear
+    case retry                  // retry / retake photo
+    case photoGuide             // camera/photo mode guidance
+}
+
 struct tostmsg: View {
-    var body: some View {
-       
-            
-            
-            
-            ZStack {
-                // Background rounded rectangle with material effect
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.thinMaterial)
-                    .frame(width: 280, height: 36) // Adjust as needed
-                
-                
-                // Icon + Text vertically stacked
-                HStack(spacing: 8,) {
-                    Image("ic_round-tips-and-updates")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                    
-                    Text("Ensure good lighting and steady hands")
-                        .font(.system(size : 12))
-                        .foregroundColor(.white)
-                }.padding(.horizontal)
-            }
-
-            // Icon + Text vertically stacked
-            HStack(spacing: 8,) {
-                Image("ic_round-tips-and-updates")
-                    .font(.system(size: 20))
-                    .foregroundColor(.white)
-
-                Text("Ensure good lighting and steady hands")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
-            }.padding(.horizontal)
+    let state: ToastScanState
+    
+    @State private var shimmerPhase: CGFloat = -1
+    // Wider and slower shimmer so it's very visible to the eye.
+    private let shimmerGradientWidth: CGFloat = 110
+    private let animationDuration: Double = 1.8
+    
+    private var iconName: String {
+        switch state {
+        case .scanning:
+            return "ic_round-tips-and-updates"
+        default:
+            // For all non-scanning states we use the analysis icon
+            return "analysisicon"
         }
     }
+    
+    private var message: String {
+        switch state {
+        case .scanning:
+            return "Ensure good lighting and steady hands"
+        case .extractionSuccess:
+            return "Scanning successful. Fetching data…"
+        case .notIdentified:
+            return "Scan again or add photos for better results."
+        case .analyzing:
+            return "Product detected, reading ingredients."
+        case .match:
+            return "Good news! This product matches your preferences."
+        case .notMatch:
+            return "This product contains ingredients you avoid."
+        case .uncertain:
+            return "Some ingredients are unclear."
+        case .retry:
+            return "Retake the photo for a clearer scan."
+        case .photoGuide:
+            return "Capture clear photos of the product and ingredients."
+        }
+    }
+    
+    var body: some View {
+        labelContent
+            .padding(.horizontal, 12)
+            .frame(height: 36)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.thinMaterial)
+                    .opacity(0.4)
+            )
+            .overlay(
+                // Shimmer effect - moves left to right across the dynamic content width
+                GeometryReader { geo in
+                    let width = geo.size.width
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.0),
+                            Color.white.opacity(0.9),
+                            Color.white.opacity(1.0),
+                            Color.white.opacity(0.9),
+                            Color.white.opacity(0.0)
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: shimmerGradientWidth)
+                    // Move the shimmer a bit farther so it fully covers
+                    // the last characters instead of stopping short.
+                    .offset(x: shimmerPhase * (width + shimmerGradientWidth))
+                    // Screen blend mode makes the highlight much more visible
+                    // over the dimmed base text/icon.
+                    .blendMode(.screen)
+                }
+                .mask(
+                    labelContent
+                        .padding(.horizontal, 12)
+                        .frame(height: 36)
+                )
+            )
+            .onAppear {
+                startShimmer()
+            }
+            .onChange(of: state) { _ in
+                startShimmer()
+            }
+            .animation(.easeInOut(duration: 0.2), value: state)
+    }
+    
+    @ViewBuilder
+    private var labelContent: some View {
+        HStack(spacing: 8) {
+            Image(iconName)
+                .resizable()
+                .renderingMode(.template)
+                .frame(width: 19, height: 19)
+                .foregroundColor(.white.opacity(0.6))
+            
+            Text(message)
+                .font(ManropeFont.medium.size(12))
+                .foregroundColor(.white.opacity(0.6))
+        }
+    }
+    
+    private func startShimmer() {
+        shimmerPhase = -1
+        withAnimation(
+            Animation
+                .linear(duration: animationDuration)
+                .delay(0.1)
+                .repeatForever(autoreverses: false)
+        ) {
+            shimmerPhase = 1
+        }
+    }
+}
 
+#Preview {
+    ZStack{
+        VStack(spacing: 12) {
+            tostmsg(state: .scanning)
+            tostmsg(state: .extractionSuccess)
+            tostmsg(state: .match)
+            tostmsg(state: .notMatch)
+            tostmsg(state: .uncertain)
+            tostmsg(state: .retry)
+        }
+    }
+}
 
 struct Flashcapsul: View {
     @State private var isFlashon = false
@@ -171,7 +273,7 @@ struct Flashcapsul: View {
                         .foregroundColor(.white)
                 }.frame(width: 33, height: 33)
                     .background(
-                        .thinMaterial, in: .capsule
+                        .thinMaterial.opacity(0.4), in: .capsule
                     )
             } else {
                 // Photo mode: show custom flash asset + label
@@ -219,7 +321,7 @@ struct BackButton: View {
             .frame(width: 33, height: 33)
 //            .padding(7.5)
             .background(
-                .thinMaterial, in: .capsule
+                .thinMaterial.opacity(0.4), in: .capsule
             )
            
         }
@@ -231,6 +333,7 @@ struct BarcodeDataCard: View {
     let code: String
     var onRetryShown: (() -> Void)? = nil
     var onRetryHidden: (() -> Void)? = nil
+    var onResultUpdated: (() -> Void)? = nil
 
     @Environment(WebService.self) private var webService
 
@@ -248,7 +351,8 @@ struct BarcodeDataCard: View {
         ZStack {
             // Background Card
             RoundedRectangle(cornerRadius: 24)
-                .fill(.thinMaterial.opacity(0.2))
+                .fill(.thinMaterial)
+                .opacity(0.4)
                 .frame(width: 300, height: 120)
             HStack(alignment: .center, spacing: 10) {
                 HStack(spacing: 0) {
@@ -257,7 +361,8 @@ struct BarcodeDataCard: View {
                         // Empty card: simple placeholder block, no barcode illustration.
                         ZStack {
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(.thinMaterial.opacity(0.4))
+                                .fill(.thinMaterial)
+                                .opacity(0.4)
                                 .frame(width: 68, height: 92)
                         }
                         
@@ -274,7 +379,8 @@ struct BarcodeDataCard: View {
                     // Show the default "image not found" placeholder.
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(.thinMaterial.opacity(0.4))
+                            .fill(.thinMaterial)
+                            .opacity(0.4)
                             .frame(width: 68, height: 92)
                         Image("imagenotfound1")
                             .resizable()
@@ -293,15 +399,18 @@ struct BarcodeDataCard: View {
                     if code.isEmpty {
                         
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(.thinMaterial.opacity(0.4))
+                                .fill(.thinMaterial)
+                                .opacity(0.4)
                                 .frame(width: 175, height: 25)
 //                                .padding(.bottom ,8)
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial.opacity(0.4))
+                            .fill(.thinMaterial)
+                            .opacity(0.4)
                             .frame(width: 122, height: 20)
                             .padding(.bottom, 8)
                         RoundedRectangle(cornerRadius: 52)
-                            .fill(.thinMaterial.opacity(0.4))
+                            .fill(.thinMaterial)
+                            .opacity(0.4)
                             .frame(width: 79, height: 24)
                         
                     } else if isLoading && product == nil {
@@ -502,6 +611,7 @@ struct BarcodeDataCard: View {
                 errorState = cached.errorMessage
                 isLoading = false
                 isAnalyzing = false
+                onResultUpdated?()
                 return
             }
 
@@ -533,6 +643,23 @@ struct BarcodeDataCard: View {
                             // WebService.streamUnifiedAnalysis.
                             product = value
                             isAnalyzing = true
+                            
+                            // Cache an intermediate result so UI like the toast
+                            // can reflect that a product was detected and we're
+                            // now reading ingredients.
+                            let intermediate = BarcodeScanAnalysisResult(
+                                product: product,
+                                ingredientRecommendations: nil,
+                                matchStatus: nil,
+                                notFound: false,
+                                errorMessage: nil,
+                                barcode: codeToAnalyze,
+                                clientActivityId: clientActivityId
+                            )
+                            Task { @MainActor in
+                                BarcodeScanAnalysisService.storeResult(intermediate)
+                                onResultUpdated?()
+                            }
                         },
                         onAnalysis: { recs in
                             ingredientRecommendations = recs
@@ -554,6 +681,7 @@ struct BarcodeDataCard: View {
                                 BarcodeScanAnalysisService.storeResult(result)
                                 isAnalyzing = false
                                 isLoading = false
+                                onResultUpdated?()
                             }
                         },
                         onError: { streamError in
@@ -575,11 +703,27 @@ struct BarcodeDataCard: View {
                                     notFoundState = true
                                     isAnalyzing = false
                                     isLoading = false
+                                    onResultUpdated?()
                                 }
                             } else {
-                                errorState = streamError.message
-                                isAnalyzing = false
-                                isLoading = false
+                                // For non-404 errors, cache an error result so
+                                // the toast and other UI can show a retry hint.
+                                let result = BarcodeScanAnalysisResult(
+                                    product: product,
+                                    ingredientRecommendations: ingredientRecommendations,
+                                    matchStatus: matchStatus,
+                                    notFound: false,
+                                    errorMessage: streamError.message,
+                                    barcode: codeToAnalyze,
+                                    clientActivityId: clientActivityId
+                                )
+                                Task { @MainActor in
+                                    BarcodeScanAnalysisService.storeResult(result)
+                                    errorState = streamError.message
+                                    isAnalyzing = false
+                                    isLoading = false
+                                    onResultUpdated?()
+                                }
                             }
                         }
                     )
@@ -598,12 +742,26 @@ struct BarcodeDataCard: View {
                         notFoundState = true
                         isAnalyzing = false
                         isLoading = false
+                        onResultUpdated?()
                     }
                 } catch {
+                    // Generic failure: cache an error result so the toast can
+                    // show a retry message for this barcode.
+                    let result = BarcodeScanAnalysisResult(
+                        product: product,
+                        ingredientRecommendations: ingredientRecommendations,
+                        matchStatus: matchStatus,
+                        notFound: false,
+                        errorMessage: error.localizedDescription,
+                        barcode: codeToAnalyze,
+                        clientActivityId: clientActivityId
+                    )
                     await MainActor.run {
+                        BarcodeScanAnalysisService.storeResult(result)
                         errorState = error.localizedDescription
                         isAnalyzing = false
                         isLoading = false
+                        onResultUpdated?()
                     }
                 }
             }
@@ -658,6 +816,7 @@ struct BarcodeDataCard: View {
                             BarcodeScanAnalysisService.storeResult(result)
                             isAnalyzing = false
                             isLoading = false
+                            onResultUpdated?()
                         }
                     },
                     onError: { streamError in
@@ -676,11 +835,25 @@ struct BarcodeDataCard: View {
                                 notFoundState = true
                                 isAnalyzing = false
                                 isLoading = false
+                                onResultUpdated?()
                             }
                         } else {
-                            errorState = streamError.message
-                            isAnalyzing = false
-                            isLoading = false
+                            let result = BarcodeScanAnalysisResult(
+                                product: product,
+                                ingredientRecommendations: ingredientRecommendations,
+                                matchStatus: matchStatus,
+                                notFound: false,
+                                errorMessage: streamError.message,
+                                barcode: codeToAnalyze,
+                                clientActivityId: clientActivityId
+                            )
+                            Task { @MainActor in
+                                BarcodeScanAnalysisService.storeResult(result)
+                                errorState = streamError.message
+                                isAnalyzing = false
+                                isLoading = false
+                                onResultUpdated?()
+                            }
                         }
                     }
                 )
@@ -699,12 +872,24 @@ struct BarcodeDataCard: View {
                     notFoundState = true
                     isAnalyzing = false
                     isLoading = false
+                    onResultUpdated?()
                 }
             } catch {
+                let result = BarcodeScanAnalysisResult(
+                    product: product,
+                    ingredientRecommendations: ingredientRecommendations,
+                    matchStatus: matchStatus,
+                    notFound: false,
+                    errorMessage: error.localizedDescription,
+                    barcode: codeToAnalyze,
+                    clientActivityId: clientActivityId
+                )
                 await MainActor.run {
+                    BarcodeScanAnalysisService.storeResult(result)
                     errorState = error.localizedDescription
                     isAnalyzing = false
                     isLoading = false
+                    onResultUpdated?()
                 }
             }
         }
