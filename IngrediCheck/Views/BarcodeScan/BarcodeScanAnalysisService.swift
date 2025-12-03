@@ -33,6 +33,10 @@ final class BarcodeScanAnalysisService {
     static func storeResult(_ result: BarcodeScanAnalysisResult) {
         resultCache[result.barcode] = result
     }
+    
+    static func clearResult(for barcode: String) {
+        resultCache.removeValue(forKey: barcode)
+    }
 
     func analyze(barcode: String) async -> BarcodeScanAnalysisResult {
         let clientActivityId = UUID().uuidString

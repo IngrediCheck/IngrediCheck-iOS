@@ -8,6 +8,7 @@ enum CameraMode {
 
 struct CameraSwipeButton: View {
     @Binding var mode: CameraMode
+    @Binding var showRetryCallout: Bool
     @State private var isTapped = false
     @State private var isTapped1 = false
     @GestureState private var dragOffset: CGFloat = 0
@@ -53,7 +54,7 @@ struct CameraSwipeButton: View {
                                 .font(.system(size: 28))
                             
                             Text("Scanner")
-                                .font(.system(size: 11))
+                                .font(ManropeFont.regular.size(11))
                                 .foregroundStyle(.white)
                                 .offset(y: UIScreen.main.bounds.height * 0.05)
                         }
@@ -73,42 +74,61 @@ struct CameraSwipeButton: View {
                     )
                     
                     // MARK: Right circle (Camera)
-                    Button(action: {
-                        withAnimation(.smooth(duration: 0.18)) {
-                            isTapped1 = true
-                            mode = .photo
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                    ZStack {
+                        Button(action: {
                             withAnimation(.smooth(duration: 0.18)) {
-                                isTapped1 = false
+                                isTapped1 = true
+                                mode = .photo
                             }
-                        }
-                    }) {
-                        ZStack() {
-                            Circle()
-                                .fill(
-                                    mode == .photo ?
-                                    AnyShapeStyle(LinearGradient(
-                                        colors: [Color(hex: "#9DCF10"), Color(hex: "#6B8E06")],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )) :
-                                        AnyShapeStyle(.thinMaterial.opacity(0.5))
-                                )
-                                .frame(width: 58.60, height: 58.60)
-                                .scaleEffect(isTapped1 ? 0.9 : 1.0)
-                            Image("cameracapture")
-                                .foregroundColor(.white)
-                                .font(.system(size: 20))
-                            
-                            Text("Photo")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white)
-                                .offset(y: UIScreen.main.bounds.height * 0.05)
-                        }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                                withAnimation(.smooth(duration: 0.18)) {
+                                    isTapped1 = false
+                                }
+                            }
+                        }) {
+                            ZStack() {
+                                Circle()
+                                    .fill(
+                                        mode == .photo ?
+                                        AnyShapeStyle(LinearGradient(
+                                            colors: [Color(hex: "#9DCF10"), Color(hex: "#6B8E06")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )) :
+                                            AnyShapeStyle(.thinMaterial.opacity(0.5))
+                                    )
+                                    .frame(width: 58.60, height: 58.60)
+                                    .scaleEffect(isTapped1 ? 0.9 : 1.0)
+                                Image("cameracapture")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 20))
+                                
+                                Text("Photo")
+                                    .font(ManropeFont.regular.size(11))
+                                    .foregroundStyle(.white)
+                                    .offset(y: UIScreen.main.bounds.height * 0.05)
+                            }
 //                        .background(.red)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // Callout bubble above the photo circle when retry is shown
+                        if showRetryCallout {
+                            VStack(spacing: 0) {
+                                CalloutBubble(text: "Try again or switch\n to photo mode .")
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut) {
+                                            showRetryCallout = false
+                                        }
+                                    }
+                                Spacer()
+                                    .frame(height: 0)
+                            }
+                            .offset(y: -80) // Position above the circle
+                            .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showRetryCallout)
+                        }
                     }
-                    .buttonStyle(.plain)
                     
                 }
                 .padding(.horizontal, 3.5)
@@ -184,7 +204,7 @@ struct cameraGuidetext: View {
             .foregroundColor(.white)
             
             Text("Scanning Products")
-                .font(.system(size : 12))
+                .font(ManropeFont.regular.size(12))
                 .foregroundColor(.white)
         }
         .frame(height: 36)
@@ -465,10 +485,55 @@ extension View {
 //}
 
 #Preview {
+//    ZStack {
+//        Color.gray
+//        CameraSwipeButton(mode: .constant(.photo))
+//    }
     ZStack {
-        Color.gray
-        CameraSwipeButton(mode: .constant(.photo))
+        // Your camera/scan UI here
+        
+        VStack {
+            Spacer()
+            CalloutBubble(text: "Try again or switch\n to photo mode .")
+                .padding(.bottom, 80)
+        }
+    }
+
+}
+
+
+struct CalloutBubble: View {
+    var text: String
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(text)
+                .font(ManropeFont.medium.size(12))
+
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+
+                .background(Color(hex: "#75990E"))
+                .cornerRadius(12)
+            
+            Triangle()
+                .fill(Color(hex: "#75990E"))
+                .frame(width: 20, height: 14.5)
+        }
+//        .frame(width: 131, height: 60)  // full bubble size
     }
 }
 
+// Triangle shape
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.closeSubpath()
+        }
+    }
+}
 

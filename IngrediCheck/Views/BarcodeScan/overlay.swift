@@ -46,7 +46,7 @@
                         .frame(width: 220, height: 42)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(ManropeFont.medium.size(14))
                         .foregroundColor(Color.grayScale10)
                         .position(x: rect.midX, y: rect.maxY + 28)
                 }.padding(.top ,24)
@@ -229,6 +229,8 @@ struct BackButton: View {
 
 struct BarcodeDataCard: View {
     let code: String
+    var onRetryShown: (() -> Void)? = nil
+    var onRetryHidden: (() -> Void)? = nil
 
     @Environment(WebService.self) private var webService
 
@@ -305,13 +307,13 @@ struct BarcodeDataCard: View {
                     } else if isLoading && product == nil {
                         VStack(alignment: .leading) {
                             Text("Looking up this product…")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(ManropeFont.bold.size(12))
                                 .foregroundColor(Color.white)
                                 .padding(.bottom, 2)
-                            Text("We’re checking our database for this Product")
+                            Text("We're checking our database for this Product")
                                 .multilineTextAlignment(.leading)
                                 .lineLimit(2)
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(ManropeFont.semiBold.size(10))
                                 .foregroundColor(Color.white)
                             Spacer(minLength: 8)
                             HStack(spacing: 8) {
@@ -327,7 +329,7 @@ struct BarcodeDataCard: View {
                                     .scaleEffect(1) // make it a bit bigger
                                     .frame(width: 16, height: 16)
                                 Text("Fetching details")
-                                    .font(.system(size: 12))
+                                    .font(NunitoFont.semiBold.size(12))
                                     .foregroundStyle(
                                         LinearGradient(
                                             colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
@@ -335,7 +337,6 @@ struct BarcodeDataCard: View {
                                             endPoint: .trailing
                                         )
                                     )
-                                    .fontWeight(.semibold)
                             }
                             .frame(width: 130, height: 22)
                             .padding(8)
@@ -347,12 +348,12 @@ struct BarcodeDataCard: View {
                     } else if let product = product {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(product.brand ?? "Brand not  found")
-                                .font(.system(size: 12, weight: .regular))
+                                .font(ManropeFont.regular.size(12))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
                             if let product = product.name, !product.isEmpty {
                                 Text(product ?? "Product not Found")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(NunitoFont.semiBold.size(16))
                                     .foregroundColor(Color.white.opacity(0.85))
                                     .lineLimit(1)
                             }
@@ -383,7 +384,7 @@ struct BarcodeDataCard: View {
                                     Image(matchStatus.iconAssetName)
                                         .frame(width: 18, height: 18)
                                     Text(matchStatus.displayText)
-                                        .font(.system(size: 12, weight: .medium))
+                                        .font(NunitoFont.medium.size(12))
                                         .foregroundColor(.white)
                                 }
                                 .padding(.horizontal, 12)
@@ -398,21 +399,52 @@ struct BarcodeDataCard: View {
                                             )
                                         )
                                 )
+                            } else if errorState != nil && product != nil {
+                                // Analysis failed but product was found - show Retry button
+                                Button(action: {
+                                    retryAnalysis()
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image("stasharrow-retry")
+                                            .frame(width: 18, height: 18)
+                                        Text("Retry")
+                                            .font(NunitoFont.medium.size(12))
+                                            .foregroundColor(.white)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color(hex: "#B5B5B5"), Color(hex: "#D3D3D3")],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .onAppear {
+                                    // Show callout bubble when retry button appears
+                                    onRetryShown?()
+                                }
                             }
                         }
                     } else if notFoundState {
                         VStack(spacing: 4) {
                             Spacer(minLength: 0)
-                            Text("We couldn’t identify this product ")
-                                .font(.system(size: 11, weight: .bold))
+                            Text("We couldn't identify this product ")
+                                .font(ManropeFont.bold.size(11))
                                 .foregroundColor(Color.white)
                             Text("Help us identify it, add a few photos of the product.")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(ManropeFont.semiBold.size(10))
                                 .foregroundColor(Color.white.opacity(0.9))
                                 .lineLimit(2)
                             Spacer(minLength: 0)
                         }
-                    } else if let error = errorState {
+                    } else if let error = errorState, product == nil {
+                        // Only show error text if we don't have a product (no retry option)
                         VStack(spacing: 4) {
                             Spacer(minLength: 0)
                             Text("Something went wrong")
@@ -431,6 +463,18 @@ struct BarcodeDataCard: View {
                 // above the brand name and below the last capsule.
                 .padding(.vertical, 12)
                 .frame(width: 185, height: 92, alignment: .topLeading)
+                .onChange(of: errorState) { newErrorState in
+                    // Hide callout when error is cleared (analysis succeeded or retry clicked)
+                    if newErrorState == nil && product != nil {
+                        onRetryHidden?()
+                    }
+                }
+                .onChange(of: matchStatus) { newMatchStatus in
+                    // Hide callout when analysis completes successfully
+                    if newMatchStatus != nil {
+                        onRetryHidden?()
+                    }
+                }
                 if code.isEmpty == false {
                     VStack {
                         Spacer()
@@ -561,6 +605,106 @@ struct BarcodeDataCard: View {
                         isAnalyzing = false
                         isLoading = false
                     }
+                }
+            }
+        }
+    }
+    
+    /// Retry the analysis when it fails
+    private func retryAnalysis() {
+        guard !code.isEmpty else { return }
+        
+        // Clear error state and reset analysis flags
+        errorState = nil
+        ingredientRecommendations = nil
+        matchStatus = nil
+        isAnalyzing = false
+        isLoading = true
+        
+        // Clear cached result so we force a fresh analysis
+        BarcodeScanAnalysisService.clearResult(for: code)
+        
+        let codeToAnalyze = code
+        let clientActivityId = UUID().uuidString
+        let preferenceText = DietaryPreferenceConfig.defaultText
+        let service = webService
+        
+        // Re-run the streaming analysis
+        Task.detached {
+            do {
+                try await service.streamUnifiedAnalysis(
+                    input: .barcode(codeToAnalyze),
+                    clientActivityId: clientActivityId,
+                    userPreferenceText: preferenceText,
+                    onProduct: { value in
+                        product = value
+                        isAnalyzing = true
+                    },
+                    onAnalysis: { recs in
+                        ingredientRecommendations = recs
+                        if let p = product {
+                            matchStatus = p.calculateMatch(ingredientRecommendations: recs)
+                        }
+                        let result = BarcodeScanAnalysisResult(
+                            product: product,
+                            ingredientRecommendations: ingredientRecommendations,
+                            matchStatus: matchStatus,
+                            notFound: false,
+                            errorMessage: nil,
+                            barcode: codeToAnalyze,
+                            clientActivityId: clientActivityId
+                        )
+                        Task { @MainActor in
+                            BarcodeScanAnalysisService.storeResult(result)
+                            isAnalyzing = false
+                            isLoading = false
+                        }
+                    },
+                    onError: { streamError in
+                        if streamError.statusCode == 404 {
+                            let result = BarcodeScanAnalysisResult(
+                                product: nil,
+                                ingredientRecommendations: nil,
+                                matchStatus: nil,
+                                notFound: true,
+                                errorMessage: nil,
+                                barcode: codeToAnalyze,
+                                clientActivityId: clientActivityId
+                            )
+                            Task { @MainActor in
+                                BarcodeScanAnalysisService.storeResult(result)
+                                notFoundState = true
+                                isAnalyzing = false
+                                isLoading = false
+                            }
+                        } else {
+                            errorState = streamError.message
+                            isAnalyzing = false
+                            isLoading = false
+                        }
+                    }
+                )
+            } catch NetworkError.notFound(_) {
+                let result = BarcodeScanAnalysisResult(
+                    product: nil,
+                    ingredientRecommendations: nil,
+                    matchStatus: nil,
+                    notFound: true,
+                    errorMessage: nil,
+                    barcode: codeToAnalyze,
+                    clientActivityId: clientActivityId
+                )
+                await MainActor.run {
+                    BarcodeScanAnalysisService.storeResult(result)
+                    notFoundState = true
+                    isAnalyzing = false
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorState = error.localizedDescription
+                    isAnalyzing = false
+                    isLoading = false
                 }
             }
         }

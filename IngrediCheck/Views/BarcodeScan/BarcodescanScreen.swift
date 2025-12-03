@@ -53,6 +53,7 @@ struct CameraScreen: View {
     @State private var galleryLimitHit: Bool = false
     @State private var isShowingPhotoPicker: Bool = false
     @State private var isShowingPhotoModeGuide: Bool = false
+    @State private var showRetryCallout: Bool = false
     
     private func nearestCenteredCode(to centerX: CGFloat, in values: [CardCenterPreferenceData]) -> String? {
         guard !values.isEmpty else { return nil }
@@ -263,7 +264,7 @@ struct CameraScreen: View {
                     .padding(.top, 16)
                     .padding(.bottom ,16)
                 }
-                CameraSwipeButton(mode: $mode)
+                CameraSwipeButton(mode: $mode, showRetryCallout: $showRetryCallout)
                     .padding(.bottom ,20)
             }
             .zIndex(2)
@@ -292,7 +293,15 @@ struct CameraScreen: View {
                                             let scale = max(minScale, 1 - (1 - minScale) * t)
                                             
                                             ZStack {
-                                                BarcodeDataCard(code: code)
+                                                BarcodeDataCard(
+                                                    code: code,
+                                                    onRetryShown: {
+                                                        showRetryCallout = true
+                                                    },
+                                                    onRetryHidden: {
+                                                        showRetryCallout = false
+                                                    }
+                                                )
                                                     .scaleEffect(x: 1.0, y: scale, anchor: .center)
                                                     .animation(.easeInOut(duration: 0.2), value: scale)
                                             }
@@ -340,7 +349,15 @@ struct CameraScreen: View {
                                             let scale = max(minScale, 1 - (1 - minScale) * t)
                                             
                                             ZStack {
-                                                BarcodeDataCard(code: code)
+                                                BarcodeDataCard(
+                                                    code: code,
+                                                    onRetryShown: {
+                                                        showRetryCallout = true
+                                                    },
+                                                    onRetryHidden: {
+                                                        showRetryCallout = false
+                                                    }
+                                                )
                                                     .scaleEffect(x: 1.0, y: scale, anchor: .center)
                                                     .animation(.easeInOut(duration: 0.2), value: scale)
                                             }
