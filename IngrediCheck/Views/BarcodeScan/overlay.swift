@@ -358,15 +358,41 @@ struct BarcodeDataCard: View {
                 if code.isEmpty {
                     // Empty card: simple placeholder block, no barcode illustration.
                     // The material background itself is the placeholder.
-                } else if let product = product, let firstImage = product.images.first {
+                } else if let product = product, !product.images.isEmpty {
                     // After product is known: show first product image with analyzing overlay when needed.
-                    ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
-                        .frame(width: 68, height: 92)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.white, lineWidth: 0.5)
-                        )
+                    if product.images.count == 1, let firstImage = product.images.first {
+                        ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
+                            .frame(width: 68, height: 92)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white, lineWidth: 0.5)
+                            )
+                    } else {
+                        let firstImage = product.images[0]
+                        let secondImage = product.images[1]
+                        ZStack(alignment: .leading) {
+                            ProductImageThumbnail(imageLocation: secondImage, isAnalyzing: isAnalyzing)
+                                .frame(width: 68, height: 88)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.white, lineWidth: 0.3)
+                                )
+                            ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
+                                .frame(width: 68, height: 92)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.white, lineWidth: 0.3)
+                                )
+                                .shadow(color: Color.black.opacity(0.50	), radius: 6, x: -2, y: 4)
+                                
+                                .padding(.leading, 5)
+                        }
+                        .frame(width: 68, height: 92, alignment: .leading)
+                       
+                    }
                 } else if product != nil {
                     // Product details were found but there is no image in the API response.
                     // Show the default "image not found" placeholder.

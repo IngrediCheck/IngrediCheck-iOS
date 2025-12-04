@@ -389,7 +389,7 @@ struct CameraScreen: View {
                                         }
                                         .frame(width: 300, height: 120)
                                         .id(code)
-                                        .transition(.move(edge: .leading).combined(with: .opacity))
+                                        .transition(.opacity)
                                         .simultaneousGesture(
                                             DragGesture(minimumDistance: 15, coordinateSpace: .local)
                                                 .onEnded { value in
@@ -459,7 +459,7 @@ struct CameraScreen: View {
                                         }
                                         .frame(width: 300, height: 120)
                                         .id(code)
-                                        .transition(.move(edge: .leading).combined(with: .opacity))
+                                        .transition(.opacity)
                                         .simultaneousGesture(
                                             DragGesture(minimumDistance: 15, coordinateSpace: .local)
                                                 .onEnded { value in
