@@ -462,8 +462,8 @@ struct BarcodeDataCard: View {
                             .font(ManropeFont.regular.size(12))
                             .foregroundColor(.white)
                             .lineLimit(1)
-                        if let product = product.name, !product.isEmpty {
-                            Text(product ?? "Product not Found")
+                        if let productName = product.name, !productName.isEmpty {
+                            Text(productName)
                                 .font(NunitoFont.semiBold.size(16))
                                 .foregroundColor(Color.white.opacity(0.85))
                                 .lineLimit(1)

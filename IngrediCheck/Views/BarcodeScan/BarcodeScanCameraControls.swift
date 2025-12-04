@@ -226,11 +226,12 @@ struct ArrowSwipeShimmer: View {
         .mask(
             HStack(spacing: 8) {
                 ForEach(0..<3, id: \.self) { index in
-                    Image("right-arrow")
+                    Image("right-arrow1")
                         .renderingMode(.template)
                         .resizable()
                         .frame(width: 11, height: 21)
                         .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+                    
                         .animation(
                             .easeInOut(duration: 0.24)
                             .delay(0.04 * Double(index)),

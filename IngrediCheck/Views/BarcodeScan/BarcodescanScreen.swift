@@ -294,7 +294,8 @@ struct CameraScreen: View {
                         
                         Spacer()
                         
-                        // Center: Capture photo button
+                        // MARK: - Image Capturing Button
+                        // Center: Capture photo button - captures a photo from the camera and adds it to the photo history
                         Button(action: {
                             camera.capturePhoto { image in
                                 if let image = image {
