@@ -146,18 +146,6 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
             print("[BarcodeCameraManager] Bumped session preset to .high")
         }
     }
-
-    func refreshPreviewLayer() {
-        DispatchQueue.main.async {
-            let preview = AVCaptureVideoPreviewLayer(session: self.session)
-            preview.videoGravity = .resizeAspectFill
-            self.previewLayer = preview
-            if let connection = preview.connection, connection.isVideoOrientationSupported {
-                connection.videoOrientation = .portrait
-            }
-            print("[BarcodeCameraManager] Preview layer refreshed")
-        }
-    }
     
     func updateRectOfInterest(overlayRect: CGRect, containerSize: CGSize) {
         // Use full-frame recognition so barcodes can be detected anywhere

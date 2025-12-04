@@ -109,10 +109,6 @@
 
 
 
-    #Preview {
-        
-    }
-
 
 enum ToastScanState {
     case scanning               // user is scanning / live camera
@@ -238,19 +234,6 @@ struct tostmsg: View {
                 .repeatForever(autoreverses: false)
         ) {
             shimmerPhase = 1
-        }
-    }
-}
-
-#Preview {
-    ZStack{
-        VStack(spacing: 12) {
-            tostmsg(state: .scanning)
-            tostmsg(state: .extractionSuccess)
-            tostmsg(state: .match)
-            tostmsg(state: .notMatch)
-            tostmsg(state: .uncertain)
-            tostmsg(state: .retry)
         }
     }
 }
@@ -562,11 +545,14 @@ struct BarcodeDataCard: View {
                         }
                     }
                 } else if notFoundState {
-                    VStack(spacing: 4) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Spacer(minLength: 0)
-                        Text("We couldn't identify this product ")
+                        Text("We couldn't identify this product")
                             .font(ManropeFont.bold.size(11))
                             .foregroundColor(Color.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                        
                         Text("Help us identify it, add a few photos of the product.")
                             .font(ManropeFont.semiBold.size(10))
                             .foregroundColor(Color.white.opacity(0.9))
@@ -1053,27 +1039,4 @@ private extension DTO.ProductRecommendation {
             return "maki_cross"
         }
     }
-}
-
-// MARK: - Preview
-#Preview("Empty State") {
-    ZStack {
-        // Dark background to match camera overlay appearance
-        Color.black.opacity(0.8)
-            .ignoresSafeArea()
-        
-        BarcodeDataCard(code: "")
-    }
-    .environment(WebService())
-}
-
-#Preview("With Barcode") {
-    ZStack {
-        // Dark background to match camera overlay appearance
-        Color.black.opacity(0.8)
-            .ignoresSafeArea()
-        
-        BarcodeDataCard(code: "123456789012")
-    }
-    .environment(WebService())
 }

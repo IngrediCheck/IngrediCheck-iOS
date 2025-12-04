@@ -241,7 +241,7 @@ struct CameraScreen: View {
                                         ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                             let image = capturedPhotoHistory[idx]
                                             PhotoContentView4(image: image)
-                                                .transition(.move(edge: .leading).combined(with: .opacity))
+                                                .transition(.opacity)
                                         }
                                     }
                                     .scrollTargetLayout() // each card acts as a scroll target
@@ -257,7 +257,7 @@ struct CameraScreen: View {
                                         ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                             let image = capturedPhotoHistory[idx]
                                             PhotoContentView4(image: image)
-                                                .transition(.move(edge: .leading).combined(with: .opacity))
+                                                .transition(.opacity)
                                         }
                                     }
                                     .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
@@ -716,11 +716,6 @@ struct CardCenterPreferenceKey: PreferenceKey {
         value.append(contentsOf: nextValue())
     }
 }
-
-#Preview {
-    CameraScreen()
-}
-
 // MARK: - Photo card matching ContentView4 style
 
 struct PhotoContentView4: View {
