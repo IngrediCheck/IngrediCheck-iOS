@@ -26,9 +26,6 @@ struct YourBarcodeScans: View {
             Button {
                 isCameraPresented = true
             } label: {
-            
-                
-                
                 HStack(spacing: 4) {
                     Image("your-barcode-scan")
                         .resizable()

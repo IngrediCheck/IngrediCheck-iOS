@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
+		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
+		0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */; };
+		0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */; };
 		110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */; };
 		1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987792E30C51E00381E32 /* TipJarView.swift */; };
 		1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */; };
@@ -82,22 +85,15 @@
 		D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC982ED98EA10088E044 /* Temp4.swift */; };
 		D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC912ED98EA10088E044 /* CustomSheet.swift */; };
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
-		D3BECF672ED9970A0088E044 /* Intolerances.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF602ED9970A0088E044 /* Intolerances.swift */; };
-		D3BECF682ED9970A0088E044 /* Nutrition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF642ED9970A0088E044 /* Nutrition.swift */; };
-		D3BECF692ED9970A0088E044 /* Allergies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF5C2ED9970A0088E044 /* Allergies.swift */; };
-		D3BECF6A2ED9970A0088E044 /* Region.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF652ED9970A0088E044 /* Region.swift */; };
-		D3BECF6B2ED9970A0088E044 /* Taste.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF662ED9970A0088E044 /* Taste.swift */; };
-		D3BECF6C2ED9970A0088E044 /* Ethical.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF5E2ED9970A0088E044 /* Ethical.swift */; };
-		D3BECF6D2ED9970A0088E044 /* HealthConditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF5F2ED9970A0088E044 /* HealthConditions.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
-		D3BECF6F2ED9970A0088E044 /* LifeStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF622ED9970A0088E044 /* LifeStyle.swift */; };
-		D3BECF702ED9970A0088E044 /* LifeStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF612ED9970A0088E044 /* LifeStage.swift */; };
-		D3BECF712ED9970A0088E044 /* Avoid.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF5D2ED9970A0088E044 /* Avoid.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
+		0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
+		0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicSteps.swift; sourceTree = "<group>"; };
 		1F5987792E30C51E00381E32 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -167,17 +163,7 @@
 		D3BECC962ED98EA10088E044 /* Temp2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp2.swift; sourceTree = "<group>"; };
 		D3BECC972ED98EA10088E044 /* Temp3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp3.swift; sourceTree = "<group>"; };
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
-		D3BECF5C2ED9970A0088E044 /* Allergies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Allergies.swift; sourceTree = "<group>"; };
-		D3BECF5D2ED9970A0088E044 /* Avoid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avoid.swift; sourceTree = "<group>"; };
-		D3BECF5E2ED9970A0088E044 /* Ethical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ethical.swift; sourceTree = "<group>"; };
-		D3BECF5F2ED9970A0088E044 /* HealthConditions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthConditions.swift; sourceTree = "<group>"; };
-		D3BECF602ED9970A0088E044 /* Intolerances.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intolerances.swift; sourceTree = "<group>"; };
-		D3BECF612ED9970A0088E044 /* LifeStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeStage.swift; sourceTree = "<group>"; };
-		D3BECF622ED9970A0088E044 /* LifeStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeStyle.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
-		D3BECF642ED9970A0088E044 /* Nutrition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nutrition.swift; sourceTree = "<group>"; };
-		D3BECF652ED9970A0088E044 /* Region.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Region.swift; sourceTree = "<group>"; };
-		D3BECF662ED9970A0088E044 /* Taste.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Taste.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -269,6 +255,8 @@
 				3976C4222BC32ED50026991A /* DietaryPreferences.swift */,
 				39705AE92BD47DEB000E487D /* OnboardingState.swift */,
 				39705AF22BD49794000E487D /* NetworkState.swift */,
+				0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */,
+				0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -292,17 +280,8 @@
 		39705AED2BD490BC000E487D /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				D3BECF5C2ED9970A0088E044 /* Allergies.swift */,
-				D3BECF5D2ED9970A0088E044 /* Avoid.swift */,
-				D3BECF5E2ED9970A0088E044 /* Ethical.swift */,
-				D3BECF5F2ED9970A0088E044 /* HealthConditions.swift */,
-				D3BECF602ED9970A0088E044 /* Intolerances.swift */,
-				D3BECF612ED9970A0088E044 /* LifeStage.swift */,
-				D3BECF622ED9970A0088E044 /* LifeStyle.swift */,
 				D3BECF632ED9970A0088E044 /* MainCanvasView.swift */,
-				D3BECF642ED9970A0088E044 /* Nutrition.swift */,
-				D3BECF652ED9970A0088E044 /* Region.swift */,
-				D3BECF662ED9970A0088E044 /* Taste.swift */,
+				0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */,
 				39705AEB2BD48E2C000E487D /* UseCasesView.swift */,
 				39705AEE2BD490D0000E487D /* DisclaimerView.swift */,
 				39705AF02BD490DA000E487D /* SignInView.swift */,
@@ -492,6 +471,7 @@
 			files = (
 				39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */,
 				1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */,
+				0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -509,17 +489,8 @@
 				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
 				39397AED2BC6DA320096C5E3 /* SearchBar.swift in Sources */,
 				D3BECC8B2ED98E860088E044 /* TempStore.swift in Sources */,
-				D3BECF672ED9970A0088E044 /* Intolerances.swift in Sources */,
-				D3BECF682ED9970A0088E044 /* Nutrition.swift in Sources */,
-				D3BECF692ED9970A0088E044 /* Allergies.swift in Sources */,
-				D3BECF6A2ED9970A0088E044 /* Region.swift in Sources */,
-				D3BECF6B2ED9970A0088E044 /* Taste.swift in Sources */,
-				D3BECF6C2ED9970A0088E044 /* Ethical.swift in Sources */,
-				D3BECF6D2ED9970A0088E044 /* HealthConditions.swift in Sources */,
 				D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */,
-				D3BECF6F2ED9970A0088E044 /* LifeStyle.swift in Sources */,
-				D3BECF702ED9970A0088E044 /* LifeStage.swift in Sources */,
-				D3BECF712ED9970A0088E044 /* Avoid.swift in Sources */,
+				0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */,
 				D3BECC8C2ED98E860088E044 /* Onboarding.swift in Sources */,
 				D3BECC8D2ED98E860088E044 /* AppNavigationCoordinator.swift in Sources */,
 				D3BECC8E2ED98E860088E044 /* User.swift in Sources */,
@@ -550,6 +521,7 @@
 				D3BECC822ED98D320088E044 /* RootContainerView.swift in Sources */,
 				D3BECC832ED98D320088E044 /* LetsMeetYourIngrediFamView.swift in Sources */,
 				D3BECC842ED98D320088E044 /* LetsGetStartedView.swift in Sources */,
+				0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */,
 				1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */,
 				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,
 				397C86062B6C22B900FB9DAD /* BarcodeAnalysisView.swift in Sources */,

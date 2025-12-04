@@ -81,23 +81,16 @@ struct PersistentBottomSheet: View {
             return 282
         case .meetYourAvatar:
             return 391
-        case .dietaryPreferencesSheet(_):
+        case .dietaryPreferencesSheet(let isFamilyFlow):
             return nil
         case .allSetToJoinYourFamily:
             return 284
         // For preference sheets shown from MainCanvasView, let the
         // content determine its own height instead of forcing a static one.
-        case .allergies,
-             .intolerances,
-             .healthConditions,
-             .lifeStage,
-             .region,
-             .avoid,
-             .lifeStyle,
-             .nutrition,
-             .ethical,
-             .taste:
+        case .onboardingStep:
             return nil
+        case .fineTuneYourExperience:
+            return 271
         case .homeDefault:
             return 0
         case .chatIntro:
@@ -117,26 +110,27 @@ struct PersistentBottomSheet: View {
             return false
         }
         
-        switch coordinator.currentBottomSheetRoute {
-        case .allergies,
-             .intolerances,
-             .healthConditions,
-             .lifeStage,
-             .region,
-             .avoid,
-             .lifeStyle,
-             .nutrition,
-             .ethical,
-             .taste:
+        // Show arrow for any onboarding step, but not for fineTuneYourExperience
+        if case .onboardingStep = coordinator.currentBottomSheetRoute {
             return true
-        default:
-            return false
         }
+        return false
     }
     
     private func handleOnboardingNextTapped() {
-        // Last question → go to Home
-        if coordinator.currentBottomSheetRoute == .taste {
+        // Get current step ID from route
+        guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
+            return
+        }
+        
+        // Check if current step is "lifeStyle" → show FineTuneYourExperience
+        if currentStepId == "lifeStyle" {
+            coordinator.navigateInBottomSheet(.fineTuneYourExperience)
+            return
+        }
+        
+        // Check if this is the last step → go to Home
+        if store.isLastStep {
             coordinator.showCanvas(.home)
             return
         }
@@ -144,28 +138,9 @@ struct PersistentBottomSheet: View {
         // Advance logical onboarding progress (for progress bar & tag bar)
         store.next()
         
-        // Move the bottom sheet to the next onboarding question
-        switch coordinator.currentBottomSheetRoute {
-        case .allergies:
-            coordinator.navigateInBottomSheet(.intolerances)
-        case .intolerances:
-            coordinator.navigateInBottomSheet(.healthConditions)
-        case .healthConditions:
-            coordinator.navigateInBottomSheet(.lifeStage)
-        case .lifeStage:
-            coordinator.navigateInBottomSheet(.region)
-        case .region:
-            coordinator.navigateInBottomSheet(.avoid)
-        case .avoid:
-            coordinator.navigateInBottomSheet(.lifeStyle)
-        case .lifeStyle:
-            coordinator.navigateInBottomSheet(.nutrition)
-        case .nutrition:
-            coordinator.navigateInBottomSheet(.ethical)
-        case .ethical:
-            coordinator.navigateInBottomSheet(.taste)
-        default:
-            break
+        // Move the bottom sheet to the next onboarding question using JSON order
+        if let nextStepId = store.nextStepId {
+            coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
         }
     }
     
@@ -245,7 +220,11 @@ struct PersistentBottomSheet: View {
             
         case .dietaryPreferencesSheet(let isFamilyFlow):
             DietaryPreferencesSheetContent(isFamilyFlow: isFamilyFlow) {
-                coordinator.navigateInBottomSheet(.allergies)
+                // Get first step ID from JSON dynamically
+                let steps = DynamicStepsProvider.loadSteps()
+                if let firstStepId = steps.first?.id {
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: firstStepId))
+                }
                 coordinator.showCanvas(.mainCanvas(flow: isFamilyFlow ? .family : .individual))
             }
             
@@ -254,55 +233,39 @@ struct PersistentBottomSheet: View {
                 coordinator.showCanvas(.home)
             }
             
-        case .allergies:
-            Allergies(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
+        case .fineTuneYourExperience:
+            FineTuneExperience(
+                allSetPressed: {
+                    coordinator.showCanvas(.home)
+                },
+                addPreferencesPressed: {
+                    // Check if there's a next step available before advancing
+                    // If lifeStyle is the final step, clicking "Add Preferences" should complete onboarding
+                    guard let nextStepId = store.nextStepId else {
+                        // No next step available, complete onboarding by going to home
+                        coordinator.showCanvas(.home)
+                        return
+                    }
+                    
+                    // Advance logical onboarding progress (for progress bar & tag bar)
+                    store.next()
+                    
+                    // Navigate to the next step
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                }
+            )
             
-        case .intolerances:
-            Intolerances(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
+        case .onboardingStep(let stepId):
+            // Dynamically load step from JSON using step ID
+            if let step = store.step(for: stepId) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: getOnboardingFlowType(),
+                    preferences: $store.preferences
+                )
                 .padding(.top, 24)
                 .padding(.bottom, 80)
-            
-        case .healthConditions:
-            HealthConditions(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .lifeStage:
-            LifeStage(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .region:
-            Region(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .avoid:
-            Avoid(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .lifeStyle:
-            LifeStyle(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .nutrition:
-            Nutrition(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .ethical:
-            Ethical(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
-            
-        case .taste:
-            Taste(onboardingFlowType: getOnboardingFlowType(), preferences: $store.preferences)
-                .padding(.top, 24)
-                .padding(.bottom, 80)
+            }
         case .chatIntro:
             IngrediBotView()
         case .chatConversation:

@@ -8,19 +8,10 @@
 import SwiftUI
 
 struct RecentScansRow: View {
+    
     @State var feedback: Bool? = nil
-    var onTap: (() -> Void)?
     
     var body: some View {
-        Button {
-            onTap?()
-        } label: {
-            rowContent
-        }
-        .buttonStyle(.plain)
-    }
-    
-    private var rowContent: some View {
         HStack(spacing: 12) {
             Image("corn-flakes")
                 .resizable()
@@ -51,12 +42,7 @@ struct RecentScansRow: View {
             }
             .padding(.vertical, 5)
             .padding(.horizontal, 8)
-            .background(
-                feedback == nil
-                ? Color(hex: "#FFF9CE")
-                : feedback == true ? .primary200 : Color(hex: "#FFE3E2"),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
+            .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 }

@@ -12,6 +12,9 @@ struct HomeView: View {
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isProductDetailPresented = false
+    @State private var isTabBarExpanded: Bool = true
+    @State private var previousScrollOffset: CGFloat = 0
+    @State private var collapseReferenceOffset: CGFloat = 0
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -150,7 +153,7 @@ struct HomeView: View {
                         .frame(height: 103)
                         
                         AverageScansCard()
-
+                    
                     }
                 }
                 .padding(.bottom, 20)
@@ -201,9 +204,12 @@ struct HomeView: View {
                 //Recent Scans List Items
                 VStack(spacing: 0) {
                     ForEach(0..<5) { ele in
-                        RecentScansRow {
+                        Button {
                             isProductDetailPresented = true
+                        } label: {
+                            RecentScansRow()
                         }
+                        .buttonStyle(.plain)
                         
                         if ele != 4 {
                             Divider()
@@ -216,10 +222,67 @@ struct HomeView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 90)
             .navigationBarBackButtonHidden(true)
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            previousScrollOffset = geo.frame(in: .named("homeScroll")).minY
+                            collapseReferenceOffset = previousScrollOffset
+                        }
+                        .onChange(of: geo.frame(in: .named("homeScroll")).minY) { newValue in
+                            let currentOffset = newValue
+                            let threshold: CGFloat = 8           // minimum meaningful movement per frame
+                            let topGuardOffset: CGFloat = -12    // how far past top before we consider expansion
+                            let requiredLiftFromBottom: CGFloat = 180 // distance user must scroll up from bottom to expand
+
+                            // Only react to scroll changes when we're within the "normal"
+                            // scroll range (offset <= 0). This avoids reacting to rubber-band
+                            // stretching at the very top (offset > 0).
+                            if currentOffset <= 0 && previousScrollOffset <= 0 {
+                                let delta = currentOffset - previousScrollOffset
+
+                                // When user scrolls down with a meaningful movement -> collapse.
+                                // When user scrolls up with a meaningful movement -> expand.
+                                // Ignore tiny bounces so the tab bar doesn't flicker or auto-expand.
+                                if delta < -threshold {
+                                    isTabBarExpanded = false
+
+                                    // Track the deepest (most negative) offset reached since we
+                                    // last collapsed; this is our "bottom reference" to compare
+                                    // against when deciding whether an upward motion is just a
+                                    // spring-back or a real intent to scroll up.
+                                    if collapseReferenceOffset == 0 {
+                                        collapseReferenceOffset = currentOffset
+                                    } else {
+                                        collapseReferenceOffset = min(collapseReferenceOffset, currentOffset)
+                                    }
+                                } else if delta > threshold {
+                                    // Only allow expansion when:
+                                    // - we're safely away from the very top, AND
+                                    // - the user has moved a meaningful distance up from the
+                                    //   deepest offset reached since collapsing (to avoid
+                                    //   spring-back-at-bottom from expanding the tab bar).
+                                    let distanceFromBottom = currentOffset - collapseReferenceOffset
+                                    
+                                    if distanceFromBottom > requiredLiftFromBottom,
+                                       currentOffset < topGuardOffset,
+                                       previousScrollOffset < topGuardOffset {
+                                        isTabBarExpanded = true
+                                        // Reset the reference for the next cycle.
+                                        collapseReferenceOffset = currentOffset
+                                    }
+                                }
+                            }
+
+                            previousScrollOffset = currentOffset
+                        }
+                }
+            )
         }
+        .coordinateSpace(name: "homeScroll")
         .overlay(
-            TabBar(isExpanded: .constant(true))
-            , alignment: .bottom
+            TabBar(isExpanded: $isTabBarExpanded),
+            alignment: .bottom
         )
         .background(Color(hex: "FFFFFF"))
         .sheet(isPresented: $isChatSheetPresented) {
