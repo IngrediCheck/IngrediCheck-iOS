@@ -50,9 +50,76 @@ struct CameraScreen: View {
     @State private var mode: CameraMode = .scanner
     @State private var capturedPhoto: UIImage? = nil
     @State private var capturedPhotoHistory: [UIImage] = []
+    @State private var galleryLimitHit: Bool = false
     @State private var isShowingPhotoPicker: Bool = false
     @State private var isShowingPhotoModeGuide: Bool = false
+    @State private var showRetryCallout: Bool = false
+    @State private var toastState: ToastScanState = .scanning
     
+    private func updateToastState() {
+        // When in photo mode, show a dedicated guidance toast
+        if mode == .photo {
+            toastState = .photoGuide
+            return
+        }
+        
+        // Only show these scan-related toasts in scanner mode
+        guard mode == .scanner else {
+            toastState = .scanning
+            return
+        }
+
+        // No codes yet: user is aligning/scanning. Only consider the centered card.
+        guard let activeCode = currentCenteredCode, !activeCode.isEmpty else {
+            toastState = .scanning
+            return
+        }
+        
+        // If we have a cached analysis result for this barcode, derive state from it.
+        if let result = BarcodeScanAnalysisService.cachedResult(for: activeCode) {
+            if result.notFound {
+                toastState = .notIdentified
+                return
+            }
+            
+            if let match = result.matchStatus {
+                switch match {
+                case .match:
+                    toastState = .match
+                case .notMatch:
+                    toastState = .notMatch
+                case .needsReview:
+                    toastState = .uncertain
+                }
+                return
+            }
+            
+            if result.product != nil && result.ingredientRecommendations == nil {
+                // Product known but ingredients/recs still streaming in
+                toastState = .analyzing
+                return
+            }
+            
+            if let error = result.errorMessage, !error.isEmpty {
+                // Generic fallback: suggest retry
+                toastState = .retry
+                return
+            }
+            
+            // Default when product exists but no final match status yet
+            if result.product != nil {
+                toastState = .analyzing
+                return
+            }
+        } else {
+            // We have a code but no cached result yet: barcode extracted, fetching data.
+            toastState = .extractionSuccess
+            return
+        }
+        
+        // Fallback
+        toastState = .scanning
+    }
     private func nearestCenteredCode(to centerX: CGFloat, in values: [CardCenterPreferenceData]) -> String? {
         guard !values.isEmpty else { return nil }
         return values.min(by: { abs($0.center - centerX) < abs($1.center - centerX) })?.code
@@ -95,6 +162,7 @@ struct CameraScreen: View {
                     }
                     camera.scanningEnabled = (mode == .scanner)
                     isCaptured = UIScreen.main.isCaptured
+                    updateToastState()
                 }
                 .onDisappear { camera.stopSession() }
                 .onChange(of: scenePhase) { newPhase in
@@ -114,6 +182,7 @@ struct CameraScreen: View {
                             UserDefaults.standard.set(true, forKey: key)
                         }
                     }
+                    updateToastState()
                 }
                 .onChange(of: camera.isSessionRunning) { running in
                     if running {
@@ -130,6 +199,7 @@ struct CameraScreen: View {
                             scrollTargetCode = code
                         }
                     }
+                    updateToastState()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
                     isCaptured = UIScreen.main.isCaptured
@@ -164,18 +234,37 @@ struct CameraScreen: View {
                         
                         // Result cards directly under the frame
                         if !capturedPhotoHistory.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: 8) {
-                                    ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
-                                        let image = capturedPhotoHistory[idx]
-                                        PhotoContentView4(image: image)
-                                            .transition(.move(edge: .leading).combined(with: .opacity))
+                            if #available(iOS 17.0, *) {
+                                // iOS 17+ smooth snapping carousel
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 8) {
+                                        ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
+                                            let image = capturedPhotoHistory[idx]
+                                            PhotoContentView4(image: image)
+                                                .transition(.opacity)
+                                        }
                                     }
+                                    .scrollTargetLayout() // each card acts as a scroll target
+                                    .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
                                 }
-                                .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
+                                .scrollTargetBehavior(.viewAligned) // snap nearest card to center
+                                .frame(height: cardHeight)
+                                .position(x: centerX, y: cardCenterY)
+                            } else {
+                                // iOS 16 and earlier: keep existing non-snapping behavior
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 8) {
+                                        ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
+                                            let image = capturedPhotoHistory[idx]
+                                            PhotoContentView4(image: image)
+                                                .transition(.opacity)
+                                        }
+                                    }
+                                    .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
+                                }
+                                .frame(height: cardHeight)
+                                .position(x: centerX, y: cardCenterY)
                             }
-                            .frame(height: cardHeight)
-                            .position(x: centerX, y: cardCenterY)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -193,7 +282,11 @@ struct CameraScreen: View {
                 .padding(.horizontal,20)
                 .padding(.bottom,42)
 
-                cameraGuidetext()
+//                cameraGuidetext()
+                tostmsg(state: toastState)
+                    .onAppear {
+                        updateToastState()
+                    }
                 Spacer()
                 if mode == .photo {
                     HStack {
@@ -201,7 +294,8 @@ struct CameraScreen: View {
                         
                         Spacer()
                         
-                        // Center: Capture photo button
+                        // MARK: - Image Capturing Button
+                        // Center: Capture photo button - captures a photo from the camera and adds it to the photo history
                         Button(action: {
                             camera.capturePhoto { image in
                                 if let image = image {
@@ -243,7 +337,7 @@ struct CameraScreen: View {
                     .padding(.top, 16)
                     .padding(.bottom ,16)
                 }
-                CameraSwipeButton(mode: $mode)
+                CameraSwipeButton(mode: $mode, showRetryCallout: $showRetryCallout)
                     .padding(.bottom ,20)
             }
             .zIndex(2)
@@ -260,82 +354,167 @@ struct CameraScreen: View {
                         let maxDistance: CGFloat = 220        // distance after which we clamp to minimum scale
                         let minScale: CGFloat = 97.0 / 120.0  // off-center cards should be about 97pt tall
                         
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 8) {
-                                ForEach(displayCodes, id: \.self) { code in
-                                    GeometryReader { geo in
-                                        let midX = geo.frame(in: .global).midX
-                                        let distance = abs(midX - screenCenterX)
-                                        let t = min(distance / maxDistance, 1) // 0 at center, -> 1 at/maxDistance
-                                        let scale = max(minScale, 1 - (1 - minScale) * t)
-                                        
-                                        ZStack {
-                                            BarcodeDataCard(code: code)
-                                                .scaleEffect(x: 1.0, y: scale, anchor: .center)
-                                                .animation(.easeInOut(duration: 0.2), value: scale)
-                                        }
-                                        .background(
-                                            Color.clear.preference(
-                                                key: CardCenterPreferenceKey.self,
-                                                value: [CardCenterPreferenceData(code: code, center: midX)]
+                        if #available(iOS 17.0, *) {
+                            // iOS 17+ native snapping using scrollTarget APIs
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: 8) {
+                                    ForEach(displayCodes, id: \.self) { code in
+                                        GeometryReader { geo in
+                                            let midX = geo.frame(in: .global).midX
+                                            let distance = abs(midX - screenCenterX)
+                                            let t = min(distance / maxDistance, 1)
+                                            let scale = max(minScale, 1 - (1 - minScale) * t)
+                                            
+                                            ZStack {
+                                                BarcodeDataCard(
+                                                    code: code,
+                                                    onRetryShown: {
+                                                        showRetryCallout = true
+                                                    },
+                                                    onRetryHidden: {
+                                                        showRetryCallout = false
+                                                    },
+                                                    onResultUpdated: {
+                                                        updateToastState()
+                                                    }
+                                                )
+                                                    .scaleEffect(x: 1.0, y: scale, anchor: .center)
+                                                    .animation(.easeInOut(duration: 0.2), value: scale)
+                                            }
+                                            .background(
+                                                Color.clear.preference(
+                                                    key: CardCenterPreferenceKey.self,
+                                                    value: [CardCenterPreferenceData(code: code, center: midX)]
+                                                )
                                             )
-                                        )
-                                    }
-                                    .frame(width: 300, height: 120)
-                                    .id(code)
-                                    .transition(.move(edge: .leading).combined(with: .opacity))
-                                    .simultaneousGesture(
-                                        DragGesture(minimumDistance: 15, coordinateSpace: .local)
-                                            .onEnded { value in
-                                                let t = value.translation
-                                                let promote: () -> Void = {
-                                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                                        if let idx = codes.firstIndex(of: code) { codes.remove(at: idx) }
-                                                        codes.insert(code, at: 0)
+                                        }
+                                        .frame(width: 300, height: 120)
+                                        .id(code)
+                                        .transition(.opacity)
+                                        .simultaneousGesture(
+                                            DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                                                .onEnded { value in
+                                                    let t = value.translation
+                                                    let promote: () -> Void = {
+                                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                                            if let idx = codes.firstIndex(of: code) { codes.remove(at: idx) }
+                                                            codes.insert(code, at: 0)
+                                                        }
+                                                    }
+                                                    // Only allow vertical swipe-up to promote to avoid fighting horizontal scroll
+                                                    if abs(t.height) > 30 && abs(t.height) > abs(t.width) && t.height < 0 {
+                                                        promote(); return
                                                     }
                                                 }
-                                                // Only allow vertical swipe-up to promote to avoid fighting horizontal scroll
-                                                if abs(t.height) > 30 && abs(t.height) > abs(t.width) && t.height < 0 {
-                                                    promote(); return
-                                                }
-                                            }
-                                    )
+                                        )
+                                    }
+                                }
+                                .scrollTargetLayout() // mark each card as a scroll target
+                                .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
+                            }
+                            .scrollTargetBehavior(.viewAligned) // snap nearest card to center
+                            .onChange(of: scrollTargetCode) { target in
+                                guard let target else { return }
+                                withAnimation(.easeInOut) {
+                                    proxy.scrollTo(target, anchor: .center)
                                 }
                             }
-                            .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
-                        }
-                        // Track user drag on the scroll view to suppress auto-scroll while interacting
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 1, coordinateSpace: .local)
-                                .onChanged { _ in
-                                    if !isUserDragging { isUserDragging = true }
+                            .onPreferenceChange(CardCenterPreferenceKey.self) { values in
+                                cardCenterData = values
+                                let centerX = UIScreen.main.bounds.width / 2
+                                if let nearest = nearestCenteredCode(to: centerX, in: values) {
+                                    currentCenteredCode = nearest
+                                    updateToastState()
                                 }
-                                .onEnded { _ in
-                                    let centerX = UIScreen.main.bounds.width / 2
-                                    if let target = nearestCenteredCode(to: centerX, in: cardCenterData) {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            proxy.scrollTo(target, anchor: .center)
+                            }
+                        } else {
+                            // iOS 16 and earlier: keep existing custom snapping using drag + geometry
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: 8) {
+                                    ForEach(displayCodes, id: \.self) { code in
+                                        GeometryReader { geo in
+                                            let midX = geo.frame(in: .global).midX
+                                            let distance = abs(midX - screenCenterX)
+                                            let t = min(distance / maxDistance, 1) // 0 at center, -> 1 at/maxDistance
+                                            let scale = max(minScale, 1 - (1 - minScale) * t)
+                                            
+                                            ZStack {
+                                                BarcodeDataCard(
+                                                    code: code,
+                                                    onRetryShown: {
+                                                        showRetryCallout = true
+                                                    },
+                                                    onRetryHidden: {
+                                                        showRetryCallout = false
+                                                    }
+                                                )
+                                                    .scaleEffect(x: 1.0, y: scale, anchor: .center)
+                                                    .animation(.easeInOut(duration: 0.2), value: scale)
+                                            }
+                                            .background(
+                                                Color.clear.preference(
+                                                    key: CardCenterPreferenceKey.self,
+                                                    value: [CardCenterPreferenceData(code: code, center: midX)]
+                                                )
+                                            )
                                         }
+                                        .frame(width: 300, height: 120)
+                                        .id(code)
+                                        .transition(.opacity)
+                                        .simultaneousGesture(
+                                            DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                                                .onEnded { value in
+                                                    let t = value.translation
+                                                    let promote: () -> Void = {
+                                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                                            if let idx = codes.firstIndex(of: code) { codes.remove(at: idx) }
+                                                            codes.insert(code, at: 0)
+                                                        }
+                                                    }
+                                                    // Only allow vertical swipe-up to promote to avoid fighting horizontal scroll
+                                                    if abs(t.height) > 30 && abs(t.height) > abs(t.width) && t.height < 0 {
+                                                        promote(); return
+                                                    }
+                                                }
+                                        )
                                     }
-                                    isUserDragging = false
-                                    lastUserDragAt = Date()
                                 }
-                        )
-                        .onChange(of: scrollTargetCode) { target in
-                            guard let target else { return }
-                            // Suppress auto-scroll if user is actively dragging or just dragged recently
-                            let recentlyDragged: Bool = {
-                                guard let last = lastUserDragAt else { return false }
-                                return Date().timeIntervalSince(last) < 1.0
-                            }()
-                            guard !isUserDragging && !recentlyDragged else { return }
-                            withAnimation(.easeInOut) { proxy.scrollTo(target, anchor: .center) }
-                        }
-                        .onPreferenceChange(CardCenterPreferenceKey.self) { values in
-                            cardCenterData = values
-                            let centerX = UIScreen.main.bounds.width / 2
-                            if let nearest = nearestCenteredCode(to: centerX, in: values) {
-                                currentCenteredCode = nearest
+                                .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
+                            }
+                            // Track user drag on the scroll view to suppress auto-scroll while interacting
+                            .simultaneousGesture(
+                                DragGesture(minimumDistance: 1, coordinateSpace: .local)
+                                    .onChanged { _ in
+                                        if !isUserDragging { isUserDragging = true }
+                                    }
+                                    .onEnded { _ in
+                                        let centerX = UIScreen.main.bounds.width / 2
+                                        if let target = nearestCenteredCode(to: centerX, in: cardCenterData) {
+                                            withAnimation(.easeInOut(duration: 0.25)) {
+                                                proxy.scrollTo(target, anchor: .center)
+                                            }
+                                        }
+                                        isUserDragging = false
+                                        lastUserDragAt = Date()
+                                    }
+                            )
+                            .onChange(of: scrollTargetCode) { target in
+                                guard let target else { return }
+                                // Suppress auto-scroll if user is actively dragging or just dragged recently
+                                let recentlyDragged: Bool = {
+                                    guard let last = lastUserDragAt else { return false }
+                                    return Date().timeIntervalSince(last) < 1.0
+                                }()
+                                guard !isUserDragging && !recentlyDragged else { return }
+                                withAnimation(.easeInOut) { proxy.scrollTo(target, anchor: .center) }
+                            }
+                            .onPreferenceChange(CardCenterPreferenceKey.self) { values in
+                                cardCenterData = values
+                                let centerX = UIScreen.main.bounds.width / 2
+                                if let nearest = nearestCenteredCode(to: centerX, in: values) {
+                                    currentCenteredCode = nearest
+                                    updateToastState()
+                                }
                             }
                         }
                     }
@@ -458,15 +637,10 @@ struct CameraScreen: View {
                 .zIndex(3)
             }
         }
-        .sheet(isPresented: $isShowingPhotoPicker, onDismiss: {
-            if let image = capturedPhoto {
-                capturedPhotoHistory.insert(image, at: 0)
-                if capturedPhotoHistory.count > 10 {
-                    capturedPhotoHistory.removeLast(capturedPhotoHistory.count - 10)
-                }
-            }
-        }) {
-            PhotoPicker(image: $capturedPhoto)
+        .sheet(isPresented: $isShowingPhotoPicker) {
+            PhotoPicker(images: $capturedPhotoHistory,
+                        didHitLimit: $galleryLimitHit,
+                        maxTotalCount: 10)
         }
     }
 }
@@ -476,12 +650,14 @@ struct CameraScreen: View {
 struct PhotoPicker: UIViewControllerRepresentable {
     
     @Environment(\.presentationMode) var presentationMode
-    @Binding var image: UIImage?
+    @Binding var images: [UIImage]
+    @Binding var didHitLimit: Bool
+    var maxTotalCount: Int = 10
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var configuration = PHPickerConfiguration()
         configuration.filter = .images
-        configuration.selectionLimit = 1
+        configuration.selectionLimit = maxTotalCount
         
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = context.coordinator
@@ -506,13 +682,22 @@ struct PhotoPicker: UIViewControllerRepresentable {
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             parent.presentationMode.wrappedValue.dismiss()
             
-            guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else { return }
+            guard !results.isEmpty else { return }
             
-            provider.loadObject(ofClass: UIImage.self) { object, _ in
-                if let uiImage = object as? UIImage {
+            for result in results {
+                let provider = result.itemProvider
+                guard provider.canLoadObject(ofClass: UIImage.self) else { continue }
+                
+                provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    guard let uiImage = object as? UIImage else { return }
                     DispatchQueue.main.async {
-                        self.parent.image = uiImage
+                        if self.parent.images.count < self.parent.maxTotalCount {
+                            // Insert newest images at the front of the history
+                            self.parent.images.insert(uiImage, at: 0)
+                        } else {
+                            // We hit the global limit of 10 images; show a warning in the parent view.
+                            self.parent.didHitLimit = true
+                        }
                     }
                 }
             }
@@ -532,11 +717,6 @@ struct CardCenterPreferenceKey: PreferenceKey {
         value.append(contentsOf: nextValue())
     }
 }
-
-#Preview {
-   CameraScreen()
-}
-
 // MARK: - Photo card matching ContentView4 style
 
 struct PhotoContentView4: View {

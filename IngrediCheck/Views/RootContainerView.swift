@@ -10,6 +10,7 @@ import SwiftUI
 struct RootContainerView: View {
     @State private var coordinator = AppNavigationCoordinator()
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
+    @State private var webService = WebService()
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -22,6 +23,7 @@ struct RootContainerView: View {
         }
         .environment(coordinator)
         .environmentObject(onboarding)
+        .environment(webService)
     }
     
     @ViewBuilder
