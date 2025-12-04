@@ -359,6 +359,7 @@ struct BarcodeDataCard: View {
                 ZStack (){
                     RoundedRectangle(cornerRadius: 16)
                         .fill(.thinMaterial)
+                        .frame(width: 68, height: 92)
                         .opacity(0.4)
                     if code.isEmpty {
                         // Empty card: simple placeholder block, no barcode illustration.
@@ -366,7 +367,7 @@ struct BarcodeDataCard: View {
                     } else if let product = product, let firstImage = product.images.first {
                         // After product is known: show first product image with analyzing overlay when needed.
                         ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
-                            .frame(width: 68, height: 92)
+                            .frame(width: 67, height: 91)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
@@ -385,7 +386,7 @@ struct BarcodeDataCard: View {
                     }
                 }
                 .frame(width: 68, height: 92 )
-                .padding(.horizontal , 14 )
+                .padding(.horizontal , 10 )
                
                 
                 VStack(alignment: .leading) {
@@ -395,12 +396,12 @@ struct BarcodeDataCard: View {
                                 .fill(.thinMaterial)
                                 .opacity(0.4)
                                 .frame(width: 185, height: 25)
-                                .padding(.bottom, 8)
+                                .padding(.bottom, 4)
                         RoundedRectangle(cornerRadius: 4)
                             .fill(.thinMaterial)
                             .opacity(0.4)
                             .frame(width: 132, height: 20)
-                            .padding(.bottom, 10)
+                            .padding(.bottom, 6)
                         RoundedRectangle(cornerRadius: 52)
                             .fill(.thinMaterial)
                             .opacity(0.4)
@@ -1018,9 +1019,25 @@ private extension DTO.ProductRecommendation {
     }
 }
 
-#Preview {
+// MARK: - Preview
+#Preview("Empty State") {
     ZStack {
+        // Dark background to match camera overlay appearance
+        Color.black.opacity(0.8)
+            .ignoresSafeArea()
+        
+        BarcodeDataCard(code: "")
+    }
+    .environment(WebService())
+}
+
+#Preview("With Barcode") {
+    ZStack {
+        // Dark background to match camera overlay appearance
+        Color.black.opacity(0.8)
+            .ignoresSafeArea()
+        
         BarcodeDataCard(code: "123456789012")
     }
-    .background(Color.red.edgesIgnoringSafeArea(.all))
+    .environment(WebService())
 }
