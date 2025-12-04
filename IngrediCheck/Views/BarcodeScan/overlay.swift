@@ -348,253 +348,263 @@ struct BarcodeDataCard: View {
     @State private var isAnalyzing = false
 
     var body: some View {
-        ZStack {
-            // Background Card
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.thinMaterial)
-                .opacity(0.4)
-                .frame(width: 300, height: 120)
-            HStack() {
-                // Left-side visual changes based on whether we have a barcode yet.
-                ZStack (){
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(.thinMaterial)
+        HStack(spacing: 14) {
+            // Left-side visual changes based on whether we have a barcode yet.
+            ZStack (){
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.thinMaterial)
+                    .frame(width: 68, height: 92)
+                    .opacity(0.4)
+                if code.isEmpty {
+                    // Empty card: simple placeholder block, no barcode illustration.
+                    // The material background itself is the placeholder.
+                } else if let product = product, let firstImage = product.images.first {
+                    // After product is known: show first product image with analyzing overlay when needed.
+                    ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
                         .frame(width: 68, height: 92)
-                        .opacity(0.4)
-                    if code.isEmpty {
-                        // Empty card: simple placeholder block, no barcode illustration.
-                        // The material background itself is the placeholder.
-                    } else if let product = product, let firstImage = product.images.first {
-                        // After product is known: show first product image with analyzing overlay when needed.
-                        ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
-                            .frame(width: 67, height: 91)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.white, lineWidth: 0.5)
-                            )
-                    } else if product != nil {
-                        // Product details were found but there is no image in the API response.
-                        // Show the default "image not found" placeholder.
-                        Image("imagenotfound1")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 39, height: 34)
-                    } else {
-                        // Barcode present but product is not yet known: show the barcode placeholder stack.
-                        Image("Barcodelinecorners")
-                    }
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.white, lineWidth: 0.5)
+                        )
+                } else if product != nil {
+                    // Product details were found but there is no image in the API response.
+                    // Show the default "image not found" placeholder.
+                    Image("imagenotfound1")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 39, height: 34)
+                } else {
+                    // Barcode present but product is not yet known: show the barcode placeholder stack.
+                    Image("Barcodelinecorners")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 64, height: 88)
+                        .clipped()
                 }
-                .frame(width: 68, height: 92 )
-                .padding(.horizontal , 10 )
-               
-                
-                VStack(alignment: .leading) {
-                    if code.isEmpty {
-                        
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(.thinMaterial)
-                                .opacity(0.4)
-                                .frame(width: 185, height: 25)
-                                .padding(.bottom, 4)
+            }
+            .frame(width: 68, height: 92 )
+            .padding(.leading , 14 )
+            .layoutPriority(1)
+           
+            
+            VStack(alignment: .leading) {
+                if code.isEmpty {
+                    
                         RoundedRectangle(cornerRadius: 4)
                             .fill(.thinMaterial)
                             .opacity(0.4)
-                            .frame(width: 132, height: 20)
-                            .padding(.bottom, 6)
-                        RoundedRectangle(cornerRadius: 52)
-                            .fill(.thinMaterial)
-                            .opacity(0.4)
-                            .frame(width: 79, height: 24)
-                        
-                    } else if isLoading && product == nil {
-                        VStack(alignment: .leading) {
-                            Text("Looking up this product…")
-                                .font(ManropeFont.bold.size(12))
-                                .foregroundColor(Color.white)
-                                .padding(.bottom, 2)
-                            Text("We're checking our database for this Product")
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(2)
-                                .font(ManropeFont.semiBold.size(10))
-                                .foregroundColor(Color.white)
-                            Spacer(minLength: 8)
-                            HStack(spacing: 8) {
-                                ProgressView() // default spinner
-                                    .progressViewStyle(CircularProgressViewStyle())
-                                    .tint(
-                                        LinearGradient(
-                                            colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    ) // 👈 visible but still "material" looking
-                                    .scaleEffect(1) // make it a bit bigger
-                                    .frame(width: 16, height: 16)
-                                Text("Fetching details")
-                                    .font(NunitoFont.semiBold.size(12))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
+                            .frame(width: 185, height: 25)
+                            .padding(.bottom, 4)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(.thinMaterial)
+                        .opacity(0.4)
+                        .frame(width: 132, height: 20)
+                        .padding(.bottom, 6)
+                    RoundedRectangle(cornerRadius: 52)
+                        .fill(.thinMaterial)
+                        .opacity(0.4)
+                        .frame(width: 79, height: 24)
+                    
+                } else if isLoading && product == nil {
+                    VStack(alignment: .leading) {
+                        Text("Looking up this product…")
+                            .font(ManropeFont.bold.size(12))
+                            .foregroundColor(Color.white)
+                            .padding(.bottom, 2)
+                        Text("We're checking our database for this Product")
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                            .font(ManropeFont.semiBold.size(10))
+                            .foregroundColor(Color.white)
+                        Spacer(minLength: 8)
+                        HStack(spacing: 8) {
+                            ProgressView() // default spinner
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .tint(
+                                    LinearGradient(
+                                        colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
                                     )
+                                ) // 👈 visible but still "material" looking
+                                .scaleEffect(1) // make it a bit bigger
+                                .frame(width: 16, height: 16)
+                            Text("Fetching details")
+                                .font(NunitoFont.semiBold.size(12))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        }
+                        .frame(width: 130, height: 22)
+                        .padding(4)
+                        .background(
+                            Capsule()
+                                .fill(.bar)
+                        )
+                    }
+                } else if let product = product {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(product.brand ?? "Brand not  found")
+                            .font(ManropeFont.regular.size(12))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        if let product = product.name, !product.isEmpty {
+                            Text(product ?? "Product not Found")
+                                .font(NunitoFont.semiBold.size(16))
+                                .foregroundColor(Color.white.opacity(0.85))
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer(minLength: 8)
+                        if ingredientRecommendations == nil && errorState == nil && notFoundState == false {
+                            HStack(spacing: 4) {
+                                Image("analysisicon")
+                                    .frame(width: 18, height: 18)
+                                Text("Analyzing")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
                             }
-                            .frame(width: 130, height: 22)
-                            .padding(4)
+                            .padding(.leading ,8)
+                            .padding(.trailing ,12)
+                            .padding(.vertical, 6)
                             .background(
                                 Capsule()
-                                    .fill(.bar)
-                            )
-                        }
-                    } else if let product = product {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(product.brand ?? "Brand not  found")
-                                .font(ManropeFont.regular.size(12))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                            if let product = product.name, !product.isEmpty {
-                                Text(product ?? "Product not Found")
-                                    .font(NunitoFont.semiBold.size(16))
-                                    .foregroundColor(Color.white.opacity(0.85))
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer(minLength: 8)
-                            if ingredientRecommendations == nil && errorState == nil && notFoundState == false {
-                                HStack(spacing: 6) {
-                                    Image("analysisicon")
-                                        .frame(width: 18, height: 18)
-                                    Text("Analyzing")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.white)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "#3DA8F5"), Color(hex: "#3DACFB")],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color(hex: "#3DA8F5"), Color(hex: "#3DACFB")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
                                         )
-                                )
-                            } else if let matchStatus = matchStatus {
-                                HStack(spacing: 4) {
-                                    Image(matchStatus.iconAssetName)
-                                        .frame(width: 18, height: 18)
-                                    Text(matchStatus.displayText)
-                                        .font(NunitoFont.medium.size(12))
-                                        .foregroundColor(.white)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: matchStatus.gradientColors,
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                )
-                            } else if errorState != nil && product != nil {
-                                // Analysis failed but product was found - show Retry button
-                                Button(action: {
-                                    retryAnalysis()
-                                }) {
-                                    HStack(spacing: 4) {
-                                        Image("stasharrow-retry")
-                                            .frame(width: 18, height: 18)
-                                        Text("Retry")
-                                            .font(NunitoFont.medium.size(12))
-                                            .foregroundColor(.white)
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Capsule()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [Color(hex: "#B5B5B5"), Color(hex: "#D3D3D3")],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
-                                            )
                                     )
+                            )
+                        } else if let matchStatus = matchStatus {
+                            HStack(spacing: 4) {
+                                Image(matchStatus.iconAssetName)
+                                    .frame(width: 18, height: 18)
+                                Text(matchStatus.displayText)
+                                    .font(NunitoFont.bold.size(14))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.leading ,8)
+                            .padding(.trailing ,12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: matchStatus.gradientColors,
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                        } else if errorState != nil && product != nil {
+                            // Analysis failed but product was found - show Retry button
+                            Button(action: {
+                                retryAnalysis()
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image("stasharrow-retry")
+                                        .frame(width: 18, height: 18)
+                                    Text("Retry")
+                                        .font(NunitoFont.bold.size(12))
+                                        .foregroundColor(.white)
                                 }
-                                .buttonStyle(.plain)
-                                .onAppear {
-                                    // Show callout bubble when retry button appears
-                                    onRetryShown?()
-                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(hex: "#B5B5B5"), Color(hex: "#D3D3D3")],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .onAppear {
+                                // Show callout bubble when retry button appears
+                                onRetryShown?()
                             }
                         }
-                    } else if notFoundState {
-                        VStack(spacing: 4) {
-                            Spacer(minLength: 0)
-                            Text("We couldn't identify this product ")
-                                .font(ManropeFont.bold.size(11))
-                                .foregroundColor(Color.white)
-                            Text("Help us identify it, add a few photos of the product.")
-                                .font(ManropeFont.semiBold.size(10))
-                                .foregroundColor(Color.white.opacity(0.9))
-                                .lineLimit(2)
-                            Spacer(minLength: 0)
-                        }
-                    } else if let error = errorState, product == nil {
-                        // Only show error text if we don't have a product (no retry option)
-                        VStack(spacing: 4) {
-                            Spacer(minLength: 0)
-                            Text("Something went wrong")
-                                .font(.system(size: 12, weight: .regular))
-                                .foregroundColor(Color.white)
-                            Text(error)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(Color.white.opacity(0.9))
-                                .lineLimit(2)
-                            Spacer(minLength: 0)
-                        }
                     }
-                }
-                // Ensure content (brand/product text + status capsule) has
-                // comfortable vertical insets inside the card: at least 12pt
-                // above the brand name and below the last capsule.
-//                .padding(.vertical, 12)
-                .frame(width: 185, height: 92,
-                       alignment:
-                        .leading
-                )
-                .onChange(of: errorState) { newErrorState in
-                    // Hide callout when error is cleared (analysis succeeded or retry clicked)
-                    if newErrorState == nil && product != nil {
-                        onRetryHidden?()
+                } else if notFoundState {
+                    VStack(spacing: 4) {
+                        Spacer(minLength: 0)
+                        Text("We couldn't identify this product ")
+                            .font(ManropeFont.bold.size(11))
+                            .foregroundColor(Color.white)
+                        Text("Help us identify it, add a few photos of the product.")
+                            .font(ManropeFont.semiBold.size(10))
+                            .foregroundColor(Color.white.opacity(0.9))
+                            .lineLimit(2)
+                        Spacer(minLength: 0)
                     }
-                }
-                .onChange(of: matchStatus) { newMatchStatus in
-                    // Hide callout when analysis completes successfully
-                    if newMatchStatus != nil {
-                        onRetryHidden?()
+                } else if let error = errorState, product == nil {
+                    // Only show error text if we don't have a product (no retry option)
+                    VStack(spacing: 4) {
+                        Spacer(minLength: 0)
+                        Text("Something went wrong")
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(Color.white)
+                        Text(error)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color.white.opacity(0.9))
+                            .lineLimit(2)
+                        Spacer(minLength: 0)
                     }
-                }
-                if code.isEmpty == false {
-                   HStack {
-                        
-                        Image("iconamoon_arrow-up-2-duotone")
-                           .frame(width: 24, height: 13)
-                        
-                    }
-                    
-                    .padding(.trailing, 14)
                 }
             }
+            // Ensure content (brand/product text + status capsule) has
+            // comfortable vertical insets inside the card: at least 12pt
+            // above the brand name and below the last capsule.
+//                .padding(.vertical, 12)
+            .frame(maxWidth: .infinity,
+                   minHeight: 92,
+                   maxHeight: 92,
+                   alignment: .leading
+            )
+            .onChange(of: errorState) { newErrorState in
+                // Hide callout when error is cleared (analysis succeeded or retry clicked)
+                if newErrorState == nil && product != nil {
+                    onRetryHidden?()
+                }
+            }
+            .onChange(of: matchStatus) { newMatchStatus in
+                // Hide callout when analysis completes successfully
+                if newMatchStatus != nil {
+                    onRetryHidden?()
+                }
+            }
+            if code.isEmpty == false {
+               HStack {
+                    
+                    Image("iconamoon_arrow-up-2-duotone")
+                       .frame(width: 24, height: 13)
+                    
+                }
+                
+                .padding(.trailing, 14)
+            }
+        }
 //            .frame(height: 120)
 //            .padding(.leading, 14)
-        }
+        .frame(width: 300, height: 120)
+        
+        .background(
+            // Background Card
+            RoundedRectangle(cornerRadius: 24)
+                .fill(.ultraThinMaterial)
+                .opacity(0.4)
+        )
+        .clipped()
 //        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: code) {
             guard !code.isEmpty else { return }
@@ -964,7 +974,7 @@ private extension DTO.ProductRecommendation {
         case .needsReview:
             return "Uncertain"
         case .notMatch:
-            return "UnMatch"
+            return "Unmatched"
         }
     }
 
@@ -995,11 +1005,11 @@ private extension DTO.ProductRecommendation {
     var gradientColors: [Color] {
         switch self {
         case .match:
-            return [Color(hex: "#91B640"), Color(hex: "#89BF12")]
+            return [Color(hex: "#89BF12"), Color(hex: "#91b640")]
         case .needsReview:
             return [Color(hex: "#FAB222"), Color(hex: "#E8AF3E")]
         case .notMatch:
-            return [Color(hex: "#FF594E"), Color(hex: "#FF3225")]
+            return [Color(hex: "#FF3225"), Color(hex: "#FF3C2F")]
         }
     }
 
