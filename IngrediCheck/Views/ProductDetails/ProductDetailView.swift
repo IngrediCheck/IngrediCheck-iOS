@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProductDetailView: View {
-    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(\.dismiss) private var dismiss
     @State private var isFavorite = false
     @State private var isDescriptionExpanded = false
     @State private var isIngredientsExpanded = false
@@ -16,13 +16,16 @@ struct ProductDetailView: View {
     @State private var selectedImageIndex = 0
     @State private var activeIngredientHighlight: IngredientHighlight?
     
+    var product: DTO.Product? = nil
+    var matchStatus: DTO.ProductRecommendation? = nil
+    var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
     var isPlaceholderMode: Bool = false
     
-    private let productImages = ["maggie1", "maggie2"]
-    private let productBrand = "Nestlé"
-    private let productName = "Maggi 2-Minute Noodles"
-    private let productDetails = "Instant Noodles · Pack of 70g"
-    private let productStatus: ProductMatchStatus = .matched
+    private let fallbackProductImages = ["maggie1", "maggie2"]
+    private let fallbackProductBrand = "Nestlé"
+    private let fallbackProductName = "Maggi 2-Minute Noodles"
+    private let fallbackProductDetails = "Instant Noodles · Pack of 70g"
+    private let fallbackProductStatus: ProductMatchStatus = .matched
     private let dietaryTags = [
         DietaryTag(name: "Dairy-free", icon: "dairy"),
         DietaryTag(name: "Vegetarian", icon: "vegetarian"),
@@ -86,6 +89,38 @@ struct ProductDetailView: View {
         )
     ]
     
+    private var resolvedBrand: String {
+        if let brand = product?.brand, !brand.isEmpty {
+            return brand
+        }
+        return fallbackProductBrand
+    }
+    
+    private var resolvedName: String {
+        if let name = product?.name, !name.isEmpty {
+            return name
+        }
+        return fallbackProductName
+    }
+    
+    private var resolvedDetails: String {
+        fallbackProductDetails
+    }
+    
+    private var resolvedStatus: ProductMatchStatus {
+        guard let matchStatus else {
+            return fallbackProductStatus
+        }
+        switch matchStatus {
+        case .match:
+            return .matched
+        case .needsReview:
+            return .uncertain
+        case .notMatch:
+            return .unmatched
+        }
+    }
+    
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
@@ -98,7 +133,7 @@ struct ProductDetailView: View {
                 IngredientsAlertCard(
                     isExpanded: $isIngredientsAlertExpanded,
                     items: ingredientAlertItems,
-                    status: productStatus
+                    status: resolvedStatus
                 )
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -122,7 +157,7 @@ struct ProductDetailView: View {
                     IngredientDetailsView(
                         paragraphs: ingredientParagraphs,
                         activeHighlight: $activeIngredientHighlight,
-                        highlightColor: productStatus.color
+                        highlightColor: resolvedStatus.color
                     )
                 }
                 .padding(.horizontal, 20)
@@ -142,7 +177,7 @@ struct ProductDetailView: View {
     private var header: some View {
         HStack {
             Button {
-                coordinator.showCanvas(.home)
+                dismiss()
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
@@ -172,70 +207,151 @@ struct ProductDetailView: View {
     
     private var productGallery: some View {
         HStack(spacing: 12) {
-            Image(productImages[selectedImageIndex])
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+            if let product, !product.images.isEmpty {
+                HeaderImage(imageLocation: product.images[selectedImageIndex])
+                    .frame(
+                        width: UIScreen.main.bounds.width * 0.704,
+                        height: UIScreen.main.bounds.height * 0.234
+                    )
+                    .cornerRadius(16)
+                    .clipped()
+                    .background(in: RoundedRectangle(cornerRadius: 24))
+                    .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 8) {
+                        Button {
+                        } label: {
+                            HStack{
+                                Image("addimageiconingreen")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 30, height: 30)
+                                    
+                                    
+                            }.frame(width: 60, height: 60)
+                                .background(Color(hex: "#F6FCED"))
+                                .cornerRadius(8)
+                        }
+                        .disabled(isPlaceholderMode)
+                        
+                        ForEach(product.images.indices, id: \.self) { index in
+                            Button {
+                                if !isPlaceholderMode {
+                                    selectedImageIndex = index
+                                }
+                            } label: {
+                                if isPlaceholderMode {
+                                    Image("C")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 60, height: 60)
+                                        .foregroundStyle(.grayScale60)
+                                        .background(Color.grayScale40)
+                                        .cornerRadius(8)
+                                } else {
+                                    HeaderImage(imageLocation: product.images[index])
+                                        .frame(width: 60, height: 60)
+                                        .clipped()
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 11)
+                                                .stroke(
+                                                    selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                    lineWidth: 2
+                                                )
+                                        )
+                                }
+                            }
+                            .disabled(isPlaceholderMode)
+                        }
+                    }
+                }
+                .frame(width: 60, height: 196)
+            } else {
+                // When there is no real product image, use a generic add-image icon
+                // for the large image area in normal mode, but keep the Maggi
+                // placeholders for design/preview (placeholder mode).
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.white)
+                        .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+                    if isPlaceholderMode {
+                        Image(fallbackProductImages[selectedImageIndex])
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .cornerRadius(16)
+                            .clipped()
+                    } else {
+                        Image("addimageiconsmall")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 85, height: 79)
+                    }
+                }
                 .frame(
                     width: UIScreen.main.bounds.width * 0.704,
                     height: UIScreen.main.bounds.height * 0.234
                 )
-                .cornerRadius(16)
-                .clipped()
-                .background(in: RoundedRectangle(cornerRadius: 24))
-                .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 8) {
-                    // Add Photo button at the top
-                    Button {
-                        // Add photo action
-                    } label: {
-                        Image("addPhoto")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 60, height: 60)
-                            .foregroundStyle(.grayScale60)
-                            .background(Color.grayScale40)
-                            .cornerRadius(8)
-                    }
-                    .disabled(isPlaceholderMode)
-                    
-                    // Product image thumbnails
-                    ForEach(0..<productImages.count, id: \.self) { index in
-                        Button {
-                            if !isPlaceholderMode {
-                                selectedImageIndex = index
-                            }
-                        } label: {
-                            if isPlaceholderMode {
-                                Image("imagePh")
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 8) {
+                        if isPlaceholderMode {
+                            // Placeholder mode: show the add-photo tile followed by
+                            // the static Maggi thumbnails, like the original design.
+                            Button {
+                                // Add photo action
+                            } label: {
+                                Image("addimageiconsmall")
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 60, height: 60)
                                     .foregroundStyle(.grayScale60)
                                     .background(Color.grayScale40)
                                     .cornerRadius(8)
-                            } else {
-                                Image(productImages[index])
+                            }
+                            .disabled(isPlaceholderMode)
+                            
+                            ForEach(0..<fallbackProductImages.count, id: \.self) { index in
+                                Button {
+                                    if !isPlaceholderMode {
+                                        selectedImageIndex = index
+                                    }
+                                } label: {
+                                    Image(fallbackProductImages[index])
+                                        .resizable()
+                                        .scaledToFill()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 60, height: 60)
+                                        .clipped()
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 11)
+                                                .stroke(
+                                                    selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                    lineWidth: 2
+                                                )
+                                        )
+                                }
+                                .disabled(isPlaceholderMode)
+                            }
+                        } else {
+                            // Real-data mode with no images: just show a single
+                            // add-image tile at the top.
+                            Button {
+                                // Add photo action
+                            } label: {
+                                Image("addimageiconsmall")
                                     .resizable()
-                                    .scaledToFill()
-                                    .aspectRatio(contentMode: .fill)
+                                    .scaledToFit()
                                     .frame(width: 60, height: 60)
-                                    .clipped()
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 11)
-                                            .stroke(
-                                                selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
-                                                lineWidth: 2
-                                            )
-                                    )
+                                    .foregroundStyle(.grayScale60)
+                                    .background(Color.grayScale40)
+                                    .cornerRadius(8)
                             }
                         }
-                        .disabled(isPlaceholderMode)
                     }
                 }
+                .frame(width: 60, height: 196)
             }
-            .frame(width: 60, height: 196) // Height for 3 thumbnails (60 + 8 + 60 + 8 + 60 = 196)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
@@ -243,17 +359,17 @@ struct ProductDetailView: View {
     
     private var productInformation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(productBrand)
+            Text(resolvedBrand)
                 .font(ManropeFont.regular.size(14))
                 .foregroundStyle(.grayScale100)
             
             HStack(alignment: .top, spacing: 24) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(productName)
+                    Text(resolvedName)
                         .font(NunitoFont.bold.size(20))
                         .foregroundStyle(.grayScale150)
                     
-                    Text(productDetails)
+                    Text(resolvedDetails)
                         .font(ManropeFont.medium.size(14))
                         .foregroundStyle(.grayScale100)
                 }
@@ -261,16 +377,16 @@ struct ProductDetailView: View {
                 VStack(alignment: .trailing, spacing: 16) {
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(productStatus.color)
+                            .fill(resolvedStatus.color)
                             .frame(width: 10, height: 10)
                         
-                        Text(productStatus.title)
+                        Text(resolvedStatus.title)
                             .font(NunitoFont.bold.size(14))
-                            .foregroundStyle(productStatus.color)
+                            .foregroundStyle(resolvedStatus.color)
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
-                    .background(productStatus.badgeBackground, in: Capsule())
+                    .background(resolvedStatus.badgeBackground, in: Capsule())
                     
                     HStack(spacing: 12) {
                         Image("thumbsup")

@@ -15,6 +15,12 @@ struct HomeView: View {
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
     @State private var collapseReferenceOffset: CGFloat = 0
+    @State private var selectedProduct: DTO.Product? = nil
+    @State private var selectedMatchStatus: DTO.ProductRecommendation? = nil
+    @State private var selectedIngredientRecommendations: [DTO.IngredientRecommendation]? = nil
+    
+    @Environment(AppState.self) var appState
+    @Environment(WebService.self) var webService
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -202,20 +208,32 @@ struct HomeView: View {
                 .padding(.bottom, 20)
                 
                 //Recent Scans List Items
-                VStack(spacing: 0) {
-                    ForEach(0..<5) { ele in
-                        Button {
-                            isProductDetailPresented = true
-                        } label: {
-                            RecentScansRow()
+                if let historyItems = appState.listsTabState.historyItems {
+                    let items = Array(historyItems.prefix(5))
+                    VStack(spacing: 0) {
+                        ForEach(Array(items.enumerated()), id: \.element.client_activity_id) { index, item in
+                            Button {
+                                let product = DTO.Product(
+                                    barcode: item.barcode,
+                                    brand: item.brand,
+                                    name: item.name,
+                                    ingredients: item.ingredients,
+                                    images: item.images
+                                )
+                                selectedProduct = product
+                                selectedMatchStatus = item.calculateMatch()
+                                selectedIngredientRecommendations = item.ingredient_recommendations
+                                isProductDetailPresented = true
+                            } label: {
+                                HomeRecentScanRow(item: item)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            if index != items.count - 1 {
+                                Divider()
+                                    .padding(.vertical, 14)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        
-                        if ele != 4 {
-                            Divider()
-                                .padding(.vertical, 14)
-                        }
-                        
                     }
                 }
             }
@@ -285,6 +303,17 @@ struct HomeView: View {
             alignment: .bottom
         )
         .background(Color(hex: "FFFFFF"))
+        .task {
+            // If history hasn't been loaded yet (e.g., when showing Home from
+            // RootContainerView), fetch it so Recent Scans has data.
+            if appState.listsTabState.historyItems == nil {
+                if let history = try? await webService.fetchHistory() {
+                    await MainActor.run {
+                        appState.listsTabState.historyItems = history
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $isChatSheetPresented) {
             IngrediBotChatView {
                 isChatSheetPresented = false
@@ -293,7 +322,16 @@ struct HomeView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isProductDetailPresented) {
-            ProductDetailView()
+            if let product = selectedProduct {
+                ProductDetailView(
+                    product: product,
+                    matchStatus: selectedMatchStatus,
+                    ingredientRecommendations: selectedIngredientRecommendations,
+                    isPlaceholderMode: false
+                )
+            } else {
+                ProductDetailView(isPlaceholderMode: true)
+            }
         }
     }
     

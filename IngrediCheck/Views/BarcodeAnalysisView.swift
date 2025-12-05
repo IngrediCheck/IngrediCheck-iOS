@@ -16,10 +16,12 @@ struct HeaderImage: View {
                 .aspectRatio(contentMode: .fit)
         } else {
             ProgressView()
-                .task {
-                    if let image = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
-                        DispatchQueue.main.async {
-                            self.image = image
+                .task(id: imageLocation) {
+                    // Reset before loading a new image when imageLocation changes
+                    image = nil
+                    if let loaded = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
+                        await MainActor.run {
+                            self.image = loaded
                         }
                     }
                 }

@@ -133,6 +133,35 @@ class DTO {
             let localDateString = dateFormatter.string(from: date)
             return localDateString
         }
+
+        func relativeTimeDescription(now: Date = Date()) -> String {
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            guard let date = isoFormatter.date(from: created_at) else {
+                return ""
+            }
+
+            let interval = now.timeIntervalSince(date)
+            let seconds = Int(interval)
+
+            if seconds < 60 {
+                return "Just now"
+            }
+
+            let minutes = seconds / 60
+            if minutes < 60 {
+                return "\(minutes) min ago"
+            }
+
+            let hours = minutes / 60
+            if hours < 24 {
+                return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
+            }
+
+            let days = hours / 24
+            return days == 1 ? "1 day ago" : "\(days) days ago"
+        }
     }
     
     struct ListItem: Codable, Hashable, Equatable {

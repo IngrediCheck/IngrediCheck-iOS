@@ -55,6 +55,10 @@ struct CameraScreen: View {
     @State private var isShowingPhotoModeGuide: Bool = false
     @State private var showRetryCallout: Bool = false
     @State private var toastState: ToastScanState = .scanning
+    @State private var selectedProduct: DTO.Product? = nil
+    @State private var selectedMatchStatus: DTO.ProductRecommendation? = nil
+    @State private var selectedIngredientRecommendations: [DTO.IngredientRecommendation]? = nil
+    @State private var isProductDetailPresented: Bool = false
     
     private func updateToastState() {
         // When in photo mode, show a dedicated guidance toast
@@ -204,6 +208,16 @@ struct CameraScreen: View {
                 .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
                     isCaptured = UIScreen.main.isCaptured
                 }
+                .onChange(of: isProductDetailPresented) { presented in
+                    // When the Product Detail sheet is shown, pause the camera
+                    // session to reduce memory pressure. Resume when the sheet
+                    // is dismissed.
+                    if presented {
+                        camera.stopSession()
+                    } else if cameraStatus == .authorized && scenePhase == .active {
+                        camera.startSession()
+                    }
+                }
             
             if mode == .scanner {
                 ScannerOverlay(onRectChange: { rect, size in
@@ -326,7 +340,7 @@ struct CameraScreen: View {
                                 Circle()
                                     .fill(.thinMaterial.opacity(0.4))
                                     .frame(width: 48, height: 48)
-                                Image("Gallary")
+                                Image("gallary1")
                                     .resizable()
                                     .frame(width: 24.27, height: 21.19)
                                     .padding(.top ,4)
@@ -376,6 +390,12 @@ struct CameraScreen: View {
                                                     },
                                                     onResultUpdated: {
                                                         updateToastState()
+                                                    },
+                                                    onTap: { product, matchStatus, recs in
+                                                        selectedProduct = product
+                                                        selectedMatchStatus = matchStatus
+                                                        selectedIngredientRecommendations = recs
+                                                        isProductDetailPresented = true
                                                     }
                                                 )
                                                     .scaleEffect(x: 1.0, y: scale, anchor: .center)
@@ -446,6 +466,12 @@ struct CameraScreen: View {
                                                     },
                                                     onRetryHidden: {
                                                         showRetryCallout = false
+                                                    },
+                                                    onTap: { product, matchStatus, recs in
+                                                        selectedProduct = product
+                                                        selectedMatchStatus = matchStatus
+                                                        selectedIngredientRecommendations = recs
+                                                        isProductDetailPresented = true
                                                     }
                                                 )
                                                     .scaleEffect(x: 1.0, y: scale, anchor: .center)
@@ -635,6 +661,18 @@ struct CameraScreen: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.easeInOut, value: isShowingPhotoModeGuide)
                 .zIndex(3)
+            }
+        }
+        .sheet(isPresented: $isProductDetailPresented) {
+            if let product = selectedProduct {
+                ProductDetailView(
+                    product: product,
+                    matchStatus: selectedMatchStatus,
+                    ingredientRecommendations: selectedIngredientRecommendations,
+                    isPlaceholderMode: false
+                )
+            } else {
+                ProductDetailView(isPlaceholderMode: true)
             }
         }
         .sheet(isPresented: $isShowingPhotoPicker) {

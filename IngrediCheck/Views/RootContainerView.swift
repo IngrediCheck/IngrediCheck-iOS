@@ -11,6 +11,7 @@ struct RootContainerView: View {
     @State private var coordinator = AppNavigationCoordinator()
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     @State private var webService = WebService()
+    @State private var appState = AppState()
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -24,6 +25,7 @@ struct RootContainerView: View {
         .environment(coordinator)
         .environmentObject(onboarding)
         .environment(webService)
+        .environment(appState)
     }
     
     @ViewBuilder
