@@ -24,6 +24,7 @@ struct SplashScreen: View {
     ]
     
     @State private var currentIndex: Int = 0
+    @Environment(AuthController.self) private var authController
     
     var body: some View {
         NavigationStack {
@@ -80,6 +81,13 @@ struct SplashScreen: View {
                 .animation(.smooth, value: currentIndex)
             }
             .padding(.horizontal, 20)
+        }
+        .task {
+            // Ensure the user is authenticated for preview flow so that
+            // subsequent Supabase-backed features (e.g., family) work.
+            if authController.signInState == .signedOut {
+                await authController.signIn()
+            }
         }
     }
     

@@ -11,6 +11,7 @@ struct RootContainerView: View {
     @State private var coordinator = AppNavigationCoordinator()
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     @State private var webService = WebService()
+    @Environment(FamilyStore.self) private var familyStore
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -24,6 +25,10 @@ struct RootContainerView: View {
         .environment(coordinator)
         .environmentObject(onboarding)
         .environment(webService)
+        .task {
+            // Load family state when the preview container becomes active.
+            await familyStore.loadCurrentFamily()
+        }
     }
     
     @ViewBuilder

@@ -45,9 +45,16 @@ struct FamilyAPI {
         if let otherMembers = otherMembers {
             body["otherMembers"] = otherMembers
         }
+        
+        // Log request body for debugging
+        if let jsonData = try? JSONSerialization.data(withJSONObject: body, options: .prettyPrinted),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            print("[FamilyAPI] createFamily request body: \(jsonString)")
+        }
+        
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family",
+            path: "family",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -63,7 +70,7 @@ struct FamilyAPI {
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family",
+            path: "family",
             method: "GET",
             apiKey: apiKey,
             jwt: jwt,
@@ -81,7 +88,7 @@ struct FamilyAPI {
         let body: [String: Any] = ["memberID": memberID]
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family/invite",
+            path: "family/invite",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -99,7 +106,7 @@ struct FamilyAPI {
         let body: [String: Any] = ["inviteCode": inviteCode]
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family/join",
+            path: "family/join",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -115,7 +122,7 @@ struct FamilyAPI {
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family/leave",
+            path: "family/leave",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -132,7 +139,7 @@ struct FamilyAPI {
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family/members",
+            path: "family/members",
             method: "POST",
             apiKey: apiKey,
             jwt: jwt,
@@ -150,7 +157,7 @@ struct FamilyAPI {
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family/members/\(memberID)",
+            path: "family/members/\(memberID)",
             method: "PATCH",
             apiKey: apiKey,
             jwt: jwt,
@@ -167,7 +174,7 @@ struct FamilyAPI {
     ) async throws -> (statusCode: Int, body: String) {
         return try await makeRequest(
             baseURL: baseURL,
-            path: "ingredicheck/family/members/\(memberID)",
+            path: "family/members/\(memberID)",
             method: "DELETE",
             apiKey: apiKey,
             jwt: jwt,
