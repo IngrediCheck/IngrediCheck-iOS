@@ -90,6 +90,7 @@
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
+		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -171,6 +172,7 @@
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -302,6 +304,7 @@
 			isa = PBXGroup;
 			children = (
 				D3BED0612ED997490088E044 /* HomeView.swift */,
+				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
 				D3BECC752ED98D320088E044 /* AppFlowRouter.swift */,
 				D3BECC762ED98D320088E044 /* BlankScreen.swift */,
 				D3BECC772ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift */,
@@ -511,6 +514,7 @@
 				D3BECC9C2ED98EA10088E044 /* CanvasRoute.swift in Sources */,
 				D3BECC9D2ED98EA10088E044 /* FlowLayout.swift in Sources */,
 				D3BED0622ED997490088E044 /* HomeView.swift in Sources */,
+				D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */,
 				D3BECC9E2ED98EA10088E044 /* Temp2.swift in Sources */,
 				D3BECC9F2ED98EA10088E044 /* Temp3.swift in Sources */,
 				D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */,
