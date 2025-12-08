@@ -14,6 +14,8 @@ struct EditableCanvasView: View {
     @State private var editingStepId: String? = nil
     @State private var isEditSheetPresented: Bool = false
     @State private var tagBarScrollTarget: UUID? = nil
+    @State private var currentEditingSectionIndex: Int = 0
+    @State private var isProgrammaticChange: Bool = false
     
     var body: some View {
         let cards = selectedCards()
@@ -25,11 +27,20 @@ struct EditableCanvasView: View {
                     CanvasTagBar(
                         store: store,
                         onTapCurrentSection: {
-                            // No-op for single section view
+                            // Open edit sheet for current section when tapped
+                            openEditSheetForCurrentSection()
                         },
                         scrollTarget: $tagBarScrollTarget,
                         currentBottomSheetRoute: nil
                     )
+                    .onChange(of: store.currentSectionIndex) { newIndex in
+                        // When section changes via tag bar tap, update/edit sheet for that section
+                        if !isProgrammaticChange {
+                            // Always update the sheet to show the tapped section's content
+                            openEditSheetForSection(at: newIndex)
+                        }
+                        isProgrammaticChange = false
+                    }
                     .padding(.top, 32)
                     .padding(.bottom, 16)
                     
@@ -44,6 +55,13 @@ struct EditableCanvasView: View {
                                         title: card.title,
                                         iconName: card.icon,
                                         onEdit: {
+                                            // Find the section index for this card
+                                            if let sectionIndex = store.sections.firstIndex(where: { section in
+                                                section.screens.first?.stepId == card.stepId
+                                            }) {
+                                                currentEditingSectionIndex = sectionIndex
+                                                store.currentSectionIndex = sectionIndex
+                                            }
                                             editingStepId = card.stepId
                                             isEditSheetPresented = true
                                         }
@@ -73,10 +91,14 @@ struct EditableCanvasView: View {
                 // Custom bottom sheet overlay (similar to PersistentBottomSheet)
                 if isEditSheetPresented, let stepId = editingStepId {
                     EditSectionBottomSheet(
-                        isPresented: $isEditSheetPresented, stepId: stepId
+                        isPresented: $isEditSheetPresented,
+                        stepId: stepId,
+                        currentSectionIndex: currentEditingSectionIndex,
+                        onNext: {
+                            handleNextSection()
+                        }
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.easeInOut(duration: 0.3), value: isEditSheetPresented)
                 }
             }
             .edgesIgnoringSafeArea(.bottom)
@@ -184,6 +206,48 @@ struct EditableCanvasView: View {
         }
         
         return cards.isEmpty ? nil : cards
+    }
+    
+    private func openEditSheetForCurrentSection() {
+        if let stepId = store.currentSection.screens.first?.stepId {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                currentEditingSectionIndex = store.currentSectionIndex
+                editingStepId = stepId
+                isEditSheetPresented = true
+            }
+        }
+    }
+    
+    private func openEditSheetForSection(at index: Int) {
+        guard store.sections.indices.contains(index),
+              let stepId = store.sections[index].screens.first?.stepId else { return }
+        
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentEditingSectionIndex = index
+            editingStepId = stepId
+            isEditSheetPresented = true
+        }
+    }
+    
+    private func handleNextSection() {
+        // Move to next section
+        if currentEditingSectionIndex < store.sections.count - 1 {
+            let nextIndex = currentEditingSectionIndex + 1
+            if let nextStepId = store.sections[nextIndex].screens.first?.stepId {
+                isProgrammaticChange = true
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    currentEditingSectionIndex = nextIndex
+                    store.currentSectionIndex = nextIndex
+                    editingStepId = nextStepId
+                }
+                // Sheet will update automatically via editingStepId change
+            }
+        } else {
+            // Last section, close the sheet
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isEditSheetPresented = false
+            }
+        }
     }
 }
 
@@ -299,6 +363,12 @@ struct EditSectionBottomSheet: View {
     @Binding var isPresented: Bool
     
     let stepId: String
+    let currentSectionIndex: Int
+    var onNext: (() -> Void)? = nil
+    
+    private var isLastSection: Bool {
+        currentSectionIndex >= store.sections.count - 1
+    }
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -311,6 +381,17 @@ struct EditSectionBottomSheet: View {
                 .frame(maxWidth: .infinity, alignment: .top)
                 .padding(.top, 24)
                 .padding(.bottom, 40)
+                .transition(.opacity)
+            }
+            
+            // Next button (GreenCircle)
+            if let onNext = onNext {
+                Button(action: onNext) {
+                    GreenCircle()
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.bottom, 24)
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
@@ -318,6 +399,7 @@ struct EditSectionBottomSheet: View {
         .cornerRadius(36, corners: [.topLeft, .topRight])
         .shadow(radius: 27.5)
         .ignoresSafeArea(edges: .bottom)
+        .animation(.easeInOut(duration: 0.2), value: stepId)
     }
 }
 

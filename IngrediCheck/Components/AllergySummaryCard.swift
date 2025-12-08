@@ -30,6 +30,8 @@ struct MyIcon: Shape {
 }
 
 struct AllergySummaryCard: View {
+    @State private var isEditableCanvasPresented: Bool = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             
@@ -66,10 +68,18 @@ struct AllergySummaryCard: View {
                 .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
         )
         .overlay(
-            GreenCircle(iconName: "arrow-up-right",iconSize: 20, circleSize: 37)
-                .padding(3)
+            Button(action: {
+                isEditableCanvasPresented = true
+            }) {
+                GreenCircle(iconName: "arrow-up-right",iconSize: 20, circleSize: 37)
+                    .padding(3)
+            }
+            .buttonStyle(.plain)
             , alignment: .bottomTrailing
         )
+        .sheet(isPresented: $isEditableCanvasPresented) {
+            EditableCanvasView()
+        }
     }
 }
 
