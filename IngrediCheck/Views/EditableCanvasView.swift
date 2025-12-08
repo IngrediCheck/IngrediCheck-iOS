@@ -19,55 +19,67 @@ struct EditableCanvasView: View {
         let cards = selectedCards()
         
         NavigationView {
-            VStack(spacing: 0) {
-                // CanvasTagBar
-                CanvasTagBar(
-                    store: store,
-                    onTapCurrentSection: {
-                        // No-op for single section view
-                    },
-                    scrollTarget: $tagBarScrollTarget,
-                    currentBottomSheetRoute: nil
-                )
-                .padding(.top, 32)
-                .padding(.bottom, 16)
-                
-                // Selected items scroll view
-                if let cards = cards, !cards.isEmpty {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 16) {
-                            ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                                EditableCanvasCard(
-                                    chips: card.chips,
-                                    sectionedChips: card.sectionedChips,
-                                    title: card.title,
-                                    iconName: card.icon,
-                                    onEdit: {
-                                        editingStepId = card.stepId
-                                        isEditSheetPresented = true
-                                    }
-                                )
-                                .padding(.top, index == 0 ? 16 : 0)
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 0) {
+                    // CanvasTagBar
+                    CanvasTagBar(
+                        store: store,
+                        onTapCurrentSection: {
+                            // No-op for single section view
+                        },
+                        scrollTarget: $tagBarScrollTarget,
+                        currentBottomSheetRoute: nil
+                    )
+                    .padding(.top, 32)
+                    .padding(.bottom, 16)
+                    
+                    // Selected items scroll view
+                    if let cards = cards, !cards.isEmpty {
+                        ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 16) {
+                                ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                                    EditableCanvasCard(
+                                        chips: card.chips,
+                                        sectionedChips: card.sectionedChips,
+                                        title: card.title,
+                                        iconName: card.icon,
+                                        onEdit: {
+                                            editingStepId = card.stepId
+                                            isEditSheetPresented = true
+                                        }
+                                    )
+                                    .padding(.top, index == 0 ? 16 : 0)
+                                }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, isEditSheetPresented ? UIScreen.main.bounds.height * 0.5 : 80)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 80)
-                    }
-                } else {
-                    // Empty state
-                    VStack(spacing: 16) {
-                        Spacer()
-                        Text("No selections yet")
-                            .font(ManropeFont.regular.size(16))
-                            .foregroundStyle(.grayScale100)
-                        Text("Complete onboarding to see your preferences here")
-                            .font(ManropeFont.regular.size(14))
-                            .foregroundStyle(.grayScale130)
-                        Spacer()
+                    } else {
+                        // Empty state
+                        VStack(spacing: 16) {
+                            Spacer()
+                            Text("No selections yet")
+                                .font(ManropeFont.regular.size(16))
+                                .foregroundStyle(.grayScale100)
+                            Text("Complete onboarding to see your preferences here")
+                                .font(ManropeFont.regular.size(14))
+                                .foregroundStyle(.grayScale130)
+                            Spacer()
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                
+                // Custom bottom sheet overlay (similar to PersistentBottomSheet)
+                if isEditSheetPresented, let stepId = editingStepId {
+                    EditSectionBottomSheet(
+                        isPresented: $isEditSheetPresented, stepId: stepId
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: isEditSheetPresented)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .edgesIgnoringSafeArea(.bottom)
             .navigationBarTitleDisplayMode(.inline)
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
@@ -76,15 +88,6 @@ struct EditableCanvasView: View {
                     .padding(.top, 12)
                 , alignment: .top
             )
-        }
-        .sheet(isPresented: $isEditSheetPresented) {
-            if let stepId = editingStepId {
-                EditSectionSheet(
-                    isPresented: $isEditSheetPresented, stepId: stepId
-                )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
         }
     }
     
@@ -289,24 +292,32 @@ struct EditableCanvasCard: View {
     }
 }
 
-// MARK: - Edit Section Sheet
+// MARK: - Edit Section Bottom Sheet
 
-struct EditSectionSheet: View {
+struct EditSectionBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @Binding var isPresented: Bool
     
     let stepId: String
     
     var body: some View {
-        if let step = store.step(for: stepId) {
-            DynamicOnboardingStepView(
-                step: step,
-                flowType: store.onboardingFlowtype,
-                preferences: $store.preferences
-            )
-            .padding(.top, 24)
-            .padding(.bottom, 40)
+        ZStack(alignment: .bottomTrailing) {
+            if let step = store.step(for: stepId) {
+                DynamicOnboardingStepView(
+                    step: step,
+                    flowType: store.onboardingFlowtype,
+                    preferences: $store.preferences
+                )
+                .frame(maxWidth: .infinity, alignment: .top)
+                .padding(.top, 24)
+                .padding(.bottom, 40)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .background(Color.white)
+        .cornerRadius(36, corners: [.topLeft, .topRight])
+        .shadow(radius: 27.5)
+        .ignoresSafeArea(edges: .bottom)
     }
 }
 
