@@ -93,6 +93,7 @@ struct ChipCategory {
 struct DietaryPreferencesSheetContent: View {
     let isFamilyFlow: Bool
     let letsGoPressed: () -> Void
+    @Environment(FamilyStore.self) private var familyStore
     
     
     var body: some View {
@@ -109,31 +110,36 @@ struct DietaryPreferencesSheetContent: View {
             }
             
             if isFamilyFlow {
-                HStack(spacing: -8) {
-                    Image(.imageBg1)
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                    
-                    Image(.imageBg2)
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                    
-                    Image(.imageBg3)
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                    
-                    Image(.imageBg4)
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                    
-                    Image(.imageBg5)
-                        .resizable()
-                        .frame(width: 36, height: 36)
-                        .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+                let members = familyStore.family.map { [$0.selfMember] + $0.otherMembers } ?? []
+                if members.isEmpty {
+                    // Fallback visuals while family data is loading
+                    HStack(spacing: -8) {
+                        Image(.imageBg1)
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+                        Image(.imageBg2)
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+                        Image(.imageBg3)
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+                    }
+                } else {
+                    HStack(spacing: -8) {
+                        ForEach(members, id: \.id) { member in
+                            Circle()
+                                .fill(Color(hex: member.color))
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Circle()
+                                        .stroke(lineWidth: 1)
+                                        .foregroundStyle(Color.white)
+                                )
+                        }
+                    }
                 }
             }
             
@@ -144,9 +150,9 @@ struct DietaryPreferencesSheetContent: View {
             } label: {
                 GreenCapsule(title: "Let's Go!", takeFullWidth: false)
             }
-            .padding(.top, 32)
+            .padding(.top, isFamilyFlow ? 8 : 32)
         }
-        .padding(.vertical, 32)
+        .padding(.vertical, isFamilyFlow ? 16 : 32)
         .padding(.horizontal, 20)
     }
 }
@@ -191,7 +197,7 @@ struct PhysicsContainerView: UIViewRepresentable {
 }
 
 // MARK: - Physics Controller
-class PhysicsController: NSObject, UIDynamicAnimatorDelegate {
+class PhysicsController: NSObject, UIDynamicAnimatorDelegate, UICollisionBehaviorDelegate {
     private let containerView: UIView
     private let categories: [ChipCategory]
     private var animator: UIDynamicAnimator?
@@ -201,12 +207,43 @@ class PhysicsController: NSObject, UIDynamicAnimatorDelegate {
     private var chips: [UIView] = []
     private var expectedChipCount: Int = 0
     private var createdChipCount: Int = 0
+    private let hapticGenerator = UIImpactFeedbackGenerator(style: .light)
+    private var lastHapticTime: Date = Date.distantPast
+    private var hapticsEnabled: Bool = true
+    private var hapticFeedbackCount: Int = 0
+    private let maxHapticFeedbackCount: Int = 3
+    private var notificationObserver: NSObjectProtocol?
+    
+    static let stopHapticsNotification = Notification.Name("StopDietaryPreferencesHaptics")
     
     init(containerView: UIView, categories: [ChipCategory]) {
         self.containerView = containerView
         self.categories = categories
         super.init()
+        hapticGenerator.prepare()
         setupPhysics()
+        setupNotificationObserver()
+    }
+    
+    deinit {
+        if let observer = notificationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    
+    private func setupNotificationObserver() {
+        notificationObserver = NotificationCenter.default.addObserver(
+            forName: Self.stopHapticsNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.stopHaptics()
+        }
+    }
+    
+    func stopHaptics() {
+        hapticsEnabled = false
+        collision?.collisionDelegate = nil
     }
     
     private func setupPhysics() {
@@ -221,6 +258,7 @@ class PhysicsController: NSObject, UIDynamicAnimatorDelegate {
         // Create collision behavior (manual boundaries; no top so items can fall in)
         collision = UICollisionBehavior()
         collision?.translatesReferenceBoundsIntoBoundary = false
+        collision?.collisionDelegate = self
         
         // Create item behavior for bounciness and rotation
         itemBehavior = UIDynamicItemBehavior()
@@ -285,6 +323,23 @@ class PhysicsController: NSObject, UIDynamicAnimatorDelegate {
         // Remove push after a short period
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             animator.removeBehavior(push)
+        }
+    }
+    
+    // MARK: - UICollisionBehaviorDelegate
+    func collisionBehavior(_ behavior: UICollisionBehavior, beganContactFor item: UIDynamicItem, withBoundaryIdentifier identifier: NSCopying?, at p: CGPoint) {
+        // Trigger mild haptic feedback when chip hits the bottom surface
+        // Only if haptics are still enabled and we haven't exceeded the limit
+        guard hapticsEnabled, hapticFeedbackCount < maxHapticFeedbackCount else { return }
+        
+        // Throttle to prevent too many rapid haptics
+        if let boundaryIdentifier = identifier as? String, boundaryIdentifier == "bottomBoundary" {
+            let now = Date()
+            if now.timeIntervalSince(lastHapticTime) > 0.1 { // Throttle to max 10 per second
+                hapticGenerator.impactOccurred(intensity: 0.5)
+                lastHapticTime = now
+                hapticFeedbackCount += 1
+            }
         }
     }
     
@@ -359,7 +414,7 @@ class PhysicsController: NSObject, UIDynamicAnimatorDelegate {
             }
         }
 
-        print("Created chip: \(category.title) at start position: \(chipView.center), container bounds: \(containerView.bounds)")
+//        print("Created chip: \(category.title) at start position: \(chipView.center), container bounds: \(containerView.bounds)")
     }
     
     private func createChipView(category: ChipCategory) -> UIView {

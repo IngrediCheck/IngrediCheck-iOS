@@ -1086,6 +1086,8 @@ struct AllSetToJoinYourFamily: View {
 }
 
 struct EnterYourInviteCode : View {
+    @Environment(FamilyStore.self) private var familyStore
+    @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
     @State var yesPressed: (() -> Void)? = nil
@@ -1135,18 +1137,46 @@ struct EnterYourInviteCode : View {
                 }
                 
                 Button {
-                    let entered = code.joined()
-                    // Demo validation – change to your real backend check
-                    if entered.count == 6 && entered != "ABCXYZ" {
-                        isError = true
-                    } else {
-                        isError = false
+                    let entered = code.joined().trimmingCharacters(in: .whitespacesAndNewlines)
+                    Task {
+                        // Require a full 6-character code
+                        guard entered.count == 6 else {
+                            print("[EnterYourInviteCode] Invalid code length: \(entered.count)")
+                            await MainActor.run { isError = true }
+                            return
+                        }
                         
+                        await MainActor.run {
+                            isVerifying = true
+                            isError = false
+                        }
+                        
+                        print("[EnterYourInviteCode] Calling familyStore.join with code=\(entered.uppercased())")
+                        await familyStore.join(inviteCode: entered.uppercased())
+                        
+                        await MainActor.run {
+                            isVerifying = false
+                            
+                            if familyStore.family != nil, familyStore.errorMessage == nil {
+                                print("[EnterYourInviteCode] Join success, proceeding to next step")
+                                isError = false
+                                yesPressed?()
+                            } else {
+                                print("[EnterYourInviteCode] Join failed, error=\(familyStore.errorMessage ?? "nil")")
+                                isError = true
+                            }
+                        }
                     }
-                    yesPressed?()
                 } label: {
-                    GreenCapsule(title: "Verify & Continue")
+                    ZStack {
+                        GreenCapsule(title: isVerifying ? "Verifying..." : "Verify & Continue")
+                        if isVerifying {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    }
                 }
+                .disabled(isVerifying)
             }
             .padding(.bottom, 20)
             

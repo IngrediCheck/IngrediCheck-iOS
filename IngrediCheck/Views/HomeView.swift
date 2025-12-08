@@ -15,6 +15,16 @@ struct HomeView: View {
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
     @State private var collapseReferenceOffset: CGFloat = 0
+    @Environment(FamilyStore.self) private var familyStore
+    
+    private var familyMembers: [FamilyMember] {
+        guard let family = familyStore.family else { return [] }
+        return [family.selfMember] + family.otherMembers
+    }
+    
+    private var primaryMemberName: String {
+        familyStore.family?.selfMember.name ?? "IngrediFriend"
+    }
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -34,7 +44,7 @@ struct HomeView: View {
                         }
                         .frame(height: 16)
                         
-                        Text("Ritika")
+                        Text(primaryMemberName)
                             .font(NunitoFont.semiBold.size(32))
                             .foregroundStyle(.grayScale150)
                             .frame(height: 28)
@@ -105,44 +115,36 @@ struct HomeView: View {
                             
                             HStack {
                                 ZStack(alignment: .bottomTrailing) {
+                                    let membersToShow = Array(familyMembers.prefix(3))
                                     HStack(spacing: -8) {
-                                        Image(.imageBg1)
-                                            .resizable()
-                                            .frame(width: 36, height: 36)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(Color(hex: "FFFFFF"))
-                                            )
-                                        
-                                        Image(.imageBg2)
-                                            .resizable()
-                                            .frame(width: 36, height: 36)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(Color(hex: "FFFFFF"))
-                                            )
-                                        
-                                        Image(.imageBg3)
-                                            .resizable()
-                                            .frame(width: 36, height: 36)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(Color(hex: "FFFFFF"))
-                                            )
+                                        ForEach(membersToShow, id: \.id) { member in
+                                            Circle()
+                                                .fill(Color(hex: member.color))
+                                                .frame(width: 36, height: 36)
+                                                .overlay(
+                                                    Text(String(member.name.prefix(1)))
+                                                        .font(NunitoFont.semiBold.size(14))
+                                                        .foregroundStyle(.white)
+                                                )
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(lineWidth: 1)
+                                                        .foregroundStyle(Color(hex: "FFFFFF"))
+                                                )
+                                        }
                                     }
                                     
-                                    Text("+3")
-                                        .font(NunitoFont.semiBold.size(12))
-                                        .foregroundStyle(.grayScale100)
-                                        .background(
-                                            Circle()
-                                                .frame(width: 20, height: 20)
-                                                .foregroundStyle(.grayScale60)
-                                        )
-                                        .offset(x: 10, y: -2)
+                                    if familyMembers.count > 3 {
+                                        Text("+\(familyMembers.count - 3)")
+                                            .font(NunitoFont.semiBold.size(12))
+                                            .foregroundStyle(.grayScale100)
+                                            .background(
+                                                Circle()
+                                                    .frame(width: 20, height: 20)
+                                                    .foregroundStyle(.grayScale60)
+                                            )
+                                            .offset(x: 10, y: -2)
+                                    }
                                 }
                                 
                                 Spacer()

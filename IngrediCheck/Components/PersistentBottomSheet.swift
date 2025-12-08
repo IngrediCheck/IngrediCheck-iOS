@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
     @EnvironmentObject private var store: Onboarding
+    @State private var keyboardHeight: CGFloat = 0
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -22,12 +25,31 @@ struct PersistentBottomSheet: View {
         .background(
             .clear
         )
+        .padding(.bottom, keyboardHeight)
         .ignoresSafeArea(edges: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            guard let userInfo = notification.userInfo,
+                  let frameValue = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+            else { return }
+            
+            let screenHeight = UIScreen.main.bounds.height
+            let keyboardVisibleHeight = max(0, screenHeight - frameValue.origin.y)
+            
+            withAnimation(.easeInOut(duration: 0.25)) {
+                keyboardHeight = keyboardVisibleHeight
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                keyboardHeight = 0
+            }
+        }
     }
     
     @ViewBuilder
     private func bottomSheetContainer() -> some View {
         let sheet = ZStack(alignment: .bottomTrailing) {
+            let _ = print("[PersistentBottomSheet] currentCanvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
             bottomSheetContent(for: coordinator.currentBottomSheetRoute)
                 .frame(maxWidth: .infinity, alignment: .top)
             
@@ -46,14 +68,14 @@ struct PersistentBottomSheet: View {
                 .frame(height: height)
                 .frame(maxWidth: .infinity)
                 .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                .cornerRadius(36, corners: [.topLeft, .topRight])
                 .shadow(radius: 27.5)
                 .ignoresSafeArea(edges: .bottom)
         } else {
             sheet
                 .frame(maxWidth: .infinity, alignment: .top)
                 .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                .cornerRadius(36, corners: [.topLeft, .topRight])
                 .shadow(radius: 27.5)
                 .ignoresSafeArea(edges: .bottom)
         }
@@ -165,9 +187,14 @@ struct PersistentBottomSheet: View {
             }
             
         case .enterInviteCode:
-            EnterYourInviteCode(yesPressed: {
-                coordinator.showCanvas(.welcomeToYourFamily)
-            })
+            EnterYourInviteCode(
+                yesPressed: {
+                    coordinator.showCanvas(.welcomeToYourFamily)
+                },
+                noPressed: {
+                    coordinator.navigateInBottomSheet(.whosThisFor)
+                }
+            )
             
         case .whosThisFor:
             WhosThisFor {
@@ -198,7 +225,10 @@ struct PersistentBottomSheet: View {
             
         case .addMoreMembersMinimal:
             AddMoreMembersMinimal {
-                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
+                Task {
+                    await familyStore.createFamilyFromPendingIfNeeded()
+                    coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
+                }
             } addMorePressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembers)
             }
@@ -220,6 +250,9 @@ struct PersistentBottomSheet: View {
             
         case .dietaryPreferencesSheet(let isFamilyFlow):
             DietaryPreferencesSheetContent(isFamilyFlow: isFamilyFlow) {
+                // Stop haptic feedback when "Let's Go" is pressed
+                NotificationCenter.default.post(name: PhysicsController.stopHapticsNotification, object: nil)
+                
                 // Get first step ID from JSON dynamically
                 let steps = DynamicStepsProvider.loadSteps()
                 if let firstStepId = steps.first?.id {

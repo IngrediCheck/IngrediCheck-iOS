@@ -24,6 +24,8 @@ struct SplashScreen: View {
     ]
     
     @State private var currentIndex: Int = 0
+    @Environment(AuthController.self) private var authController
+    @Environment(FamilyStore.self) private var familyStore
     
     var body: some View {
         NavigationStack {
@@ -63,6 +65,8 @@ struct SplashScreen: View {
                     if isLastSlide {
                         NavigationLink {
                             RootContainerView()
+                                .environment(authController)
+                                .environment(familyStore)
                         } label: {
                             GreenCapsule(title: "Get Started")
                                 .frame(width: 159)
@@ -80,6 +84,13 @@ struct SplashScreen: View {
                 .animation(.smooth, value: currentIndex)
             }
             .padding(.horizontal, 20)
+        }
+        .task {
+            // Ensure the user is authenticated for preview flow so that
+            // subsequent Supabase-backed features (e.g., family) work.
+            if authController.signInState == .signedOut {
+                await authController.signIn()
+            }
         }
     }
     
