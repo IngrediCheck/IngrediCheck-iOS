@@ -25,6 +25,7 @@ struct SplashScreen: View {
     
     @State private var currentIndex: Int = 0
     @Environment(AuthController.self) private var authController
+    @Environment(FamilyStore.self) private var familyStore
     
     var body: some View {
         NavigationStack {
@@ -64,6 +65,8 @@ struct SplashScreen: View {
                     if isLastSlide {
                         NavigationLink {
                             RootContainerView()
+                                .environment(authController)
+                                .environment(familyStore)
                         } label: {
                             GreenCapsule(title: "Get Started")
                                 .frame(width: 159)

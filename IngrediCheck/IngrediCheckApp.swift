@@ -9,8 +9,7 @@ struct IngrediCheckApp: App {
 
     var body: some Scene {
         WindowGroup {
-            SplashScreen()
-                .environment(webService)
+            AppFlowRouter()
         }
     }
 }
