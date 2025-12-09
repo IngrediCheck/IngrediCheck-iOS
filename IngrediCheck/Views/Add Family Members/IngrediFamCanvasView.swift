@@ -174,13 +174,13 @@ struct GenerateAvatar: View {
     ]
     
     @State var familyMember: [UserModel] = [
-        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
+        UserModel(familyMemberName: "grandfather", familyMemberImage: "image-bg3"),
+        UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2"),
+        UserModel(familyMemberName: "young-daughter", familyMemberImage: "image-bg5"),
+        UserModel(familyMemberName: "father", familyMemberImage: "image-bg4")
     ]
     
-    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "Son", familyMemberImage: "image-bg1")
+    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
     
     @State var selectedTool: String = "family-member"
     @Binding var isExpandedMinimal: Bool
@@ -254,8 +254,51 @@ struct GenerateAvatar: View {
     
     @State var idx: Int = 0
     
+    // Track selected icons for each tool category
+    @State var selectedGestureIcon: String? = nil
+    @State var selectedHairStyleIcon: String? = nil
+    @State var selectedSkinToneIcon: String? = nil
+    @State var selectedAccessoriesIcon: String? = nil
+    @State var selectedColorThemeIcon: String? = nil
+    
     var randomPressed: () -> Void = { }
     var generatePressed: () -> Void = { }
+    
+    // Helper function to get selected icon for a tool category
+    func getSelectedIcon(for toolIcon: String) -> String? {
+        switch toolIcon {
+        case "gesture":
+            return selectedGestureIcon
+        case "hair-style":
+            return selectedHairStyleIcon
+        case "skin-tone":
+            return selectedSkinToneIcon
+        case "accessories":
+            return selectedAccessoriesIcon
+        case "color-theme":
+            return selectedColorThemeIcon
+        default:
+            return nil
+        }
+    }
+    
+    // Helper function to set selected icon for a tool category
+    func setSelectedIcon(for toolIcon: String, icon: String?) {
+        switch toolIcon {
+        case "gesture":
+            selectedGestureIcon = icon
+        case "hair-style":
+            selectedHairStyleIcon = icon
+        case "skin-tone":
+            selectedSkinToneIcon = icon
+        case "accessories":
+            selectedAccessoriesIcon = icon
+        case "color-theme":
+            selectedColorThemeIcon = icon
+        default:
+            break
+        }
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -407,7 +450,12 @@ struct GenerateAvatar: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
                                         ForEach(toolIcons, id: \.self) { ele in
-                                            GenerateAvatarToolPill(icon: ele, title: ele, isSelected: $selectedTool) {
+                                            GenerateAvatarToolPill(
+                                                icon: ele,
+                                                title: ele,
+                                                isSelected: $selectedTool,
+                                                selectedItemIcon: getSelectedIcon(for: ele)
+                                            ) {
                                                 idx = 0
                                                 selectedTool = ele
                                             }
@@ -490,9 +538,15 @@ struct GenerateAvatar: View {
     
     @ViewBuilder
     func minimalToolsSelector(toolIdx: Int) -> some View {
+        // Map toolIdx to toolIcons: 0->gesture, 1->hair-style, 2->skin-tone, 3->accessories, 4->color-theme
+        let toolCategory = toolIcons[toolIdx + 1] // +1 because toolIcons[0] is "family-member"
+        let selectedIcon = getSelectedIcon(for: toolCategory)
+        let currentTool = tools[toolIdx].tools[idx]
+        let isCurrentSelected = selectedIcon == currentTool.icon
+        
         HStack {
             Button {
-                idx = idx - 1
+                idx = max(0, idx - 1)
             } label: {
                 Circle()
                     .fill(.grayScale60)
@@ -508,20 +562,30 @@ struct GenerateAvatar: View {
 
             Spacer()
             
-            VStack {
-                Image(tools[toolIdx].tools[idx].icon ?? "")
-                    .resizable()
-                    .frame(width: 56, height: 50)
-                
-                Text(tools[toolIdx].tools[idx].name)
-                    .font(ManropeFont.medium.size(14))
-                    .foregroundStyle(.grayScale140)
+            Button {
+                // Select the currently highlighted tool
+                setSelectedIcon(for: toolCategory, icon: currentTool.icon)
+            } label: {
+                VStack {
+                    if let icon = currentTool.icon {
+                        Image(icon)
+                            .resizable()
+                            .frame(width: 56, height: 50)
+                    }
+                    
+                    Text(currentTool.name)
+                        .font(ManropeFont.medium.size(14))
+                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
             }
+            .buttonStyle(.plain)
             
             Spacer()
             
             Button {
-                idx = idx + 1
+                idx = min(idx + 1, tools[toolIdx].tools.count - 1)
             } label: {
                 Circle()
                     .fill(.grayScale60)
@@ -534,6 +598,7 @@ struct GenerateAvatar: View {
             }
             .disabled(idx == tools[toolIdx].tools.count - 1)
         }
+        .padding(.horizontal, 20)
     }
     
     @ViewBuilder
