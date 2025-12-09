@@ -8,10 +8,18 @@ struct AppFlowRouter: View {
     @State private var appState = AppState()
     @State private var onboardingState = OnboardingState()
     @State private var authController = AuthController()
+    @State private var familyStore = FamilyStore()
     
     var body: some View {
         if Config.usePreviewFlow {
             PreviewFlowView()
+                .environment(authController)
+                .environment(webService)
+                .environment(userPreferences)
+                .environment(appState)
+                .environment(dietaryPreferences)
+                .environment(onboardingState)
+                .environment(familyStore)
         } else {
             ProductionFlowView()
                 .environment(authController)
@@ -43,4 +51,8 @@ private struct PreviewFlowView: View {
         SplashScreen()
             .preferredColorScheme(.light)
     }
+}
+
+#Preview {
+    AppFlowRouter()
 }

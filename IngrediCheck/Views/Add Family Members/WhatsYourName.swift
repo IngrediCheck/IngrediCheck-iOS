@@ -9,7 +9,9 @@ import SwiftUI
 
 struct WhatsYourName: View {
     
+    @Environment(FamilyStore.self) private var familyStore
     @State var name: String = ""
+    @State var showError: Bool = false
     @State var familyMembersList: [UserModel] = [
         UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
         UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
@@ -39,17 +41,31 @@ struct WhatsYourName: View {
                 .padding(.horizontal, 20)
                 
                 
-                TextField("Enter your Name", text: $name)
-                    .padding(16)
-                    .background(.grayScale10)
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(lineWidth: 0.5)
-                            .foregroundStyle(.grayScale60)
-                    )
-                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                    .padding(.horizontal, 20)
+                VStack(alignment: .leading, spacing: 8) {
+                    TextField("Enter your Name", text: $name)
+                        .padding(16)
+                        .background(.grayScale10)
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(lineWidth: showError ? 2 : 0.5)
+                                .foregroundStyle(showError ? .red : .grayScale60)
+                        )
+                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                        .onChange(of: name) { _, newValue in
+                            if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                showError = false
+                            }
+                        }
+                    
+                    if showError {
+                        Text("Please enter your name")
+                            .font(ManropeFont.medium.size(12))
+                            .foregroundStyle(.red)
+                            .padding(.leading, 4)
+                    }
+                }
+                .padding(.horizontal, 20)
                 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Choose Avatar (Optional)")
@@ -101,7 +117,14 @@ struct WhatsYourName: View {
                 }
                 
                 Button {
-                    addMemberPressed()
+                    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty {
+                        showError = true
+                    } else {
+                        print("[WhatsYourName] Add Member tapped with name=\(trimmed)")
+                        familyStore.setPendingSelfMember(name: trimmed)
+                        addMemberPressed()
+                    }
                 } label: {
                     GreenCapsule(title: "Add Member")
                 }

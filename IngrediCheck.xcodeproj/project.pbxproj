@@ -62,6 +62,9 @@
 		D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = D35F3C232E2A25FB0002CDE7 /* GoogleSignIn */; };
 		D35F3C262E2A25FB0002CDE7 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */; };
 		D35FB7F22E56E85C009A5AA1 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35FB7F12E56E859009A5AA1 /* Config.swift */; };
+		D382E0602EDEE4B600F139B2 /* FamilyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */; };
+		D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05E2EDEE4B600F139B2 /* FamilyService.swift */; };
+		D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */; };
 		D3BECC7D2ED98D320088E044 /* WelcomeToYourFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC7C2ED98D320088E044 /* WelcomeToYourFamilyView.swift */; };
 		D3BECC7E2ED98D320088E044 /* HeyThereScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC782ED98D320088E044 /* HeyThereScreen.swift */; };
 		D3BECC7F2ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC772ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift */; };
@@ -87,6 +90,8 @@
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
+		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
+		D3BED0662ED9974A00088E044 /* RecentScansFullView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -140,6 +145,9 @@
 		A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
 		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		D35FB7F12E56E859009A5AA1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyModels.swift; sourceTree = "<group>"; };
+		D382E05E2EDEE4B600F139B2 /* FamilyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyService.swift; sourceTree = "<group>"; };
+		D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyStore.swift; sourceTree = "<group>"; };
 		D3BECC752ED98D320088E044 /* AppFlowRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlowRouter.swift; sourceTree = "<group>"; };
 		D3BECC762ED98D320088E044 /* BlankScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlankScreen.swift; sourceTree = "<group>"; };
 		D3BECC772ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferencesAndRestrictions.swift; sourceTree = "<group>"; };
@@ -165,6 +173,8 @@
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
+		D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentScansFullView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -243,6 +253,9 @@
 		392D9C042B72D56700166CF1 /* Store */ = {
 			isa = PBXGroup;
 			children = (
+				D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */,
+				D382E05E2EDEE4B600F139B2 /* FamilyService.swift */,
+				D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */,
 				D3BECC872ED98E860088E044 /* AppNavigationCoordinator.swift */,
 				D3BECC882ED98E860088E044 /* Onboarding.swift */,
 				D3BECC892ED98E860088E044 /* TempStore.swift */,
@@ -293,6 +306,8 @@
 			isa = PBXGroup;
 			children = (
 				D3BED0612ED997490088E044 /* HomeView.swift */,
+				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
+				D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */,
 				D3BECC752ED98D320088E044 /* AppFlowRouter.swift */,
 				D3BECC762ED98D320088E044 /* BlankScreen.swift */,
 				D3BECC772ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift */,
@@ -502,6 +517,8 @@
 				D3BECC9C2ED98EA10088E044 /* CanvasRoute.swift in Sources */,
 				D3BECC9D2ED98EA10088E044 /* FlowLayout.swift in Sources */,
 				D3BED0622ED997490088E044 /* HomeView.swift in Sources */,
+				D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */,
+				D3BED0662ED9974A00088E044 /* RecentScansFullView.swift in Sources */,
 				D3BECC9E2ED98EA10088E044 /* Temp2.swift in Sources */,
 				D3BECC9F2ED98EA10088E044 /* Temp3.swift in Sources */,
 				D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */,
@@ -521,6 +538,9 @@
 				D3BECC822ED98D320088E044 /* RootContainerView.swift in Sources */,
 				D3BECC832ED98D320088E044 /* LetsMeetYourIngrediFamView.swift in Sources */,
 				D3BECC842ED98D320088E044 /* LetsGetStartedView.swift in Sources */,
+				D382E0602EDEE4B600F139B2 /* FamilyModels.swift in Sources */,
+				D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */,
+				D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */,
 				0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */,
 				1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */,
 				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,

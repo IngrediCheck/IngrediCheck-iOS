@@ -33,24 +33,6 @@ struct UserModel: Identifiable {
 }
 
 
-struct FamilyResponse: Codable {
-    let family: Family
-    let members: [FamilyMember]
-}
-
-struct Family: Codable {
-    let id: String
-    let name: String
-    let preferences: Preferences
-}
-
-struct FamilyMember: Codable {
-    let memberId: String
-    let name: String
-    let preferences: Preferences
-}
-
-
 struct Preferences: Codable {
     var sections: [String: PreferenceValue] = [:]
     

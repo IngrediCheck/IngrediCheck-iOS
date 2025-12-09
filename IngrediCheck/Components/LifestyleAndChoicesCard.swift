@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct LifestyleAndChoicesCard: View {
+    @State private var isEditableCanvasPresented: Bool = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
@@ -32,7 +34,12 @@ struct LifestyleAndChoicesCard: View {
             
             HStack {
                 Spacer()
-                Image("leaf")
+                Button(action: {
+                    isEditableCanvasPresented = true
+                }) {
+                    Image("leaf")
+                }
+                .buttonStyle(.plain)
             }
             .padding(.top, 20)
         }
@@ -48,6 +55,9 @@ struct LifestyleAndChoicesCard: View {
                 .stroke(lineWidth: 0.25)
                 .foregroundStyle(.grayScale60)
         )
+        .sheet(isPresented: $isEditableCanvasPresented) {
+            EditableCanvasView()
+        }
     }
 }
 
