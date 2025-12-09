@@ -9,7 +9,11 @@ import SwiftUI
 
 struct RecentScansRow: View {
     
-    @State var feedback: Bool? = nil
+    @State var feedback: Bool?
+    
+    init(feedback: Bool? = nil) {
+        _feedback = State(initialValue: feedback)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -38,7 +42,7 @@ struct RecentScansRow: View {
                 
                 Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
                     .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(feedback == nil ? Color(hex: "#FF594E") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                    .foregroundStyle(feedback == nil ? Color(hex: "#FAB222") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
             }
             .padding(.vertical, 5)
             .padding(.horizontal, 8)

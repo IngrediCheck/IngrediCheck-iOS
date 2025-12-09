@@ -27,7 +27,8 @@ struct HomeView: View {
     }
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 
                 // Greeting and profilecard
@@ -196,10 +197,14 @@ struct HomeView: View {
                     
                     Spacer()
                     
-                    Text("View All")
-                        .underline()
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(Color(hex: "B6B6B6"))
+                    NavigationLink {
+                        RecentScansFullView()
+                    } label: {
+                        Text("View All")
+                            .underline()
+                            .font(ManropeFont.medium.size(14))
+                            .foregroundStyle(Color(hex: "B6B6B6"))
+                    }
                 }
                 .padding(.bottom, 20)
                 
@@ -280,22 +285,23 @@ struct HomeView: View {
                         }
                 }
             )
-        }
-        .coordinateSpace(name: "homeScroll")
-        .overlay(
-            TabBar(isExpanded: $isTabBarExpanded),
-            alignment: .bottom
-        )
-        .background(Color(hex: "FFFFFF"))
-        .sheet(isPresented: $isChatSheetPresented) {
-            IngrediBotChatView {
-                isChatSheetPresented = false
             }
-            .presentationDetents([chatSmallDetent, .medium, .large], selection: $selectedChatDetent)
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $isProductDetailPresented) {
-            ProductDetailView()
+            .coordinateSpace(name: "homeScroll")
+            .overlay(
+                TabBar(isExpanded: $isTabBarExpanded),
+                alignment: .bottom
+            )
+            .background(Color(hex: "FFFFFF"))
+            .sheet(isPresented: $isChatSheetPresented) {
+                IngrediBotChatView {
+                    isChatSheetPresented = false
+                }
+                .presentationDetents([chatSmallDetent, .medium, .large], selection: $selectedChatDetent)
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $isProductDetailPresented) {
+                ProductDetailView()
+            }
         }
     }
     

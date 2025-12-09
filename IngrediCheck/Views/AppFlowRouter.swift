@@ -52,3 +52,7 @@ private struct PreviewFlowView: View {
             .preferredColorScheme(.light)
     }
 }
+
+#Preview {
+    AppFlowRouter()
+}
