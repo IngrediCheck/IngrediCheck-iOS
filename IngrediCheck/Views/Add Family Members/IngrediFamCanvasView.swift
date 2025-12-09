@@ -132,7 +132,11 @@ struct IngrediFamCanvasView: View {
             case .whatsYourName:
                 WhatsYourName()
             case .generateAvatar:
-                GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
+                GenerateAvatar(
+                    isExpandedMinimal: $isExpandedMinimal,
+                    randomPressed: { },
+                    generatePressed: { }
+                )
             case .bringingYourAvatar:
                 BringingYourAvatar()
             case .meetYourAvatar:
@@ -250,8 +254,8 @@ struct GenerateAvatar: View {
     
     @State var idx: Int = 0
     
-    @State var randomPressed: () -> Void = { }
-    @State var generatePressed: () -> Void = { }
+    var randomPressed: () -> Void = { }
+    var generatePressed: () -> Void = { }
     
     var body: some View {
         GeometryReader { geometry in
@@ -1363,5 +1367,9 @@ struct BringingYourAvatar: View {
 }
 
 #Preview {
-    GenerateAvatar(isExpandedMinimal: .constant(false))
+    GenerateAvatar(
+        isExpandedMinimal: .constant(false),
+        randomPressed: { },
+        generatePressed: { }
+    )
 }

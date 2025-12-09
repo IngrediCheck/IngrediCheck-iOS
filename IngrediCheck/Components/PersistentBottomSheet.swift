@@ -235,11 +235,19 @@ struct PersistentBottomSheet: View {
             }
             
         case .generateAvatar:
-            GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
-                .onAppear {
-                    // Reset to collapsed state when appearing
-                    isExpandedMinimal = false
+            GenerateAvatar(
+                isExpandedMinimal: $isExpandedMinimal,
+                randomPressed: {
+                    coordinator.navigateInBottomSheet(.bringingYourAvatar)
+                },
+                generatePressed: {
+                    coordinator.navigateInBottomSheet(.bringingYourAvatar)
                 }
+            )
+            .onAppear {
+                // Reset to collapsed state when appearing
+                isExpandedMinimal = false
+            }
             
         case .bringingYourAvatar:
             BringingYourAvatar {
