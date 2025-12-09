@@ -7,65 +7,86 @@
 
 import UIKit
 
-struct SignResponse: Decodable { let timestamp: String; let signature: String }
-struct GenerateCached: Decodable { let success: Bool; let imageUrl: String? }
-struct ImageData: Decodable { let b64_json: String? }
-struct GenerateFresh: Decodable { let data: [ImageData]? }
-
-func memojiRequestBody() -> [String: Any] {
-    return [
-        "userId": UUID().uuidString,
-        "subscriptionTier": "monthly_basic",
-        "familyType": "mother",
-        "gesture": "heart", // examples: "wave", "heart-hands", "thumbs-up", "peace-sign", "pointing"
-        "hair": "long",
-        "skinTone": "light",
-        "background": "auto", // or "auto"
-        "size": "1024x1024",
-        "model": "gpt-image-1"
-    ]
+private struct MemojiRequest: Encodable {
+    let familyType: String
+    let gesture: String
+    let hair: String
+    let skinTone: String
+    let accessories: [String]
+    let background: String
+    let size: String
+    let model: String
+    let subscriptionTier: String
 }
 
-func postJSON<T: Decodable>(_ url: URL, body: [String: Any], headers: [String: String] = [:]) async throws -> T {
-    var req = URLRequest(url: url)
-    req.httpMethod = "POST"
-    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    headers.forEach { req.setValue($0.value, forHTTPHeaderField: $0.key) }
-    req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-    let (data, resp) = try await URLSession.shared.data(for: req)
-    guard (resp as? HTTPURLResponse)?.statusCode ?? 500 < 300 else {
-        throw NSError(domain: "memoji", code: 1, userInfo: [NSLocalizedDescriptionKey: String(data: data, encoding: .utf8) ?? "Error"])
-    }
-    return try JSONDecoder().decode(T.self, from: data)
+private struct MemojiResponse: Decodable {
+    let success: Bool
+    let cached: Bool?
+    let imageUrl: String?
 }
 
-func generateMemojiImage(baseURL: String) async throws -> UIImage {
-    // 1) Sign
-    let signURL = URL(string: "\(baseURL)/api/sign")!
-    let body = memojiRequestBody()
-    let signResp: SignResponse = try await postJSON(signURL, body: ["body": body])
+enum AIMemojiError: LocalizedError {
+    case notAuthenticated
+    case invalidResponse(String)
+    case missingImage
 
-    // 2) Generate
-    let genURL = URL(string: "\(baseURL)/api/generate-memoji")!
-    var headers = [String: String]()
-    headers["X-Timestamp"] = signResp.timestamp
-    headers["X-Signature"] = signResp.signature
-    headers["X-Client-Version"] = "ios-1.0.0"
+    var errorDescription: String? {
+        switch self {
+        case .notAuthenticated:
+            return "Please sign in to generate a memoji."
+        case .invalidResponse(let message):
+            return "Memoji request failed: \(message)"
+        case .missingImage:
+            return "Memoji response did not include an image."
+        }
+    }
+}
 
-    // Try parse as cached (imageUrl)
-    if let cached: GenerateCached = try? await postJSON(genURL, body: body, headers: headers),
-       let urlStr = cached.imageUrl, let url = URL(string: urlStr) {
-        let (pngData, _) = try await URLSession.shared.data(from: url)
-        if let img = UIImage(data: pngData) { return img }
+func generateMemojiImage() async throws -> UIImage {
+    guard let token = try? await supabaseClient.auth.session.accessToken else {
+        throw AIMemojiError.notAuthenticated
     }
 
-    // Else parse fresh base64
-    let fresh: GenerateFresh = try await postJSON(genURL, body: body, headers: headers)
-    if let b64 = fresh.data?.first?.b64_json,
-       let imgData = Data(base64Encoded: b64),
-       let img = UIImage(data: imgData) {
-        return img
+    let requestBody = MemojiRequest(
+        familyType: "father",
+        gesture: "wave",
+        hair: "long",
+        skinTone: "light",
+        accessories: ["sunglass"],
+        background: "transparent",
+        size: "1024x1024",
+        model: "gpt-image-1",
+        subscriptionTier: "monthly_basic"
+    )
+
+    let bodyData = try JSONEncoder().encode(requestBody)
+
+    let request = SupabaseRequestBuilder(endpoint: .memoji)
+        .setAuthorization(with: token)
+        .setMethod(to: "POST")
+        .setJsonBody(to: bodyData)
+        .build()
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw AIMemojiError.invalidResponse("No HTTP response.")
     }
 
-    throw NSError(domain: "memoji", code: 2, userInfo: [NSLocalizedDescriptionKey: "No image in response"])
+    guard httpResponse.statusCode == 200 else {
+        let message = String(data: data, encoding: .utf8) ?? "status \(httpResponse.statusCode)"
+        throw AIMemojiError.invalidResponse(message)
+    }
+
+    let decoded = try JSONDecoder().decode(MemojiResponse.self, from: data)
+    guard let urlString = decoded.imageUrl, let url = URL(string: urlString) else {
+        throw AIMemojiError.missingImage
+    }
+
+    let (pngData, _) = try await URLSession.shared.data(from: url)
+    guard let image = UIImage(data: pngData) else {
+        throw AIMemojiError.missingImage
+    }
+
+    return image
 }
