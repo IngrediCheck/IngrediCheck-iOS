@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isProductDetailPresented = false
+    @State private var isRecentScansPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
     @State private var collapseReferenceOffset: CGFloat = 0
@@ -21,6 +22,7 @@ struct HomeView: View {
     
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(UserPreferences.self) var userPreferences
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -200,10 +202,15 @@ struct HomeView: View {
                     
                     Spacer()
                     
-                    Text("View All")
-                        .underline()
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(Color(hex: "B6B6B6"))
+                    Button {
+                        isRecentScansPresented = true
+                    } label: {
+                        Text("View All")
+                            .underline()
+                            .font(ManropeFont.medium.size(14))
+                            .foregroundStyle(Color(hex: "B6B6B6"))
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.bottom, 20)
                 
@@ -321,7 +328,7 @@ struct HomeView: View {
             .presentationDetents([chatSmallDetent, .medium, .large], selection: $selectedChatDetent)
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isProductDetailPresented) {
+        .fullScreenCover(isPresented: $isProductDetailPresented) {
             if let product = selectedProduct {
                 ProductDetailView(
                     product: product,
@@ -332,6 +339,24 @@ struct HomeView: View {
             } else {
                 ProductDetailView(isPlaceholderMode: true)
             }
+        }
+        .fullScreenCover(isPresented: $isRecentScansPresented) {
+            NavigationStack {
+                RecentScansPageView()
+            }
+            .navigationDestination(for: HistoryRouteItem.self) { item in
+                switch item {
+                case .historyItem(let historyItem):
+                    HistoryItemDetailView(item: historyItem)
+                case .listItem(let listItem):
+                    FavoriteItemDetailView(item: listItem)
+                case .favoritesAll:
+                    FavoritesPageView()
+                case .recentScansAll:
+                    RecentScansPageView()
+                }
+            }
+            .environment(userPreferences)
         }
     }
     

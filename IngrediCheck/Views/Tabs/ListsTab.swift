@@ -179,6 +179,7 @@ import SimpleToast
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         Group {
@@ -205,15 +206,30 @@ import SimpleToast
         }
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Recent Scans")
+        .navigationTitle("")
+        .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    isSearching = true
-                }, label: {
-                    Image(systemName: "magnifyingglass")
-                })
+            ToolbarItem(placement: .topBarLeading) {
+                HStack(spacing: 12) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image("back-arrow1")
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                    }
+                    Text("Recent Scans")
+                        .font(ManropeFont.semiBold.size(18))
+                }
+                .padding(.leading, 10)
             }
+//            ToolbarItem(placement: .topBarTrailing) {
+//                Button(action: {
+//                    isSearching = true
+//                }, label: {
+//                    Image(systemName: "magnifyingglass")
+//                })
+//            }
         }
     }
 }
@@ -287,15 +303,30 @@ import SimpleToast
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 10) {
+            VStack(spacing: 0) {
                 ForEach(Array(historyItems.enumerated()), id: \.element.client_activity_id) { index, item in
-                    NavigationLink(value: HistoryRouteItem.historyItem(item)) {
-                        HistoryItemCardView(item: item)
+                    NavigationLink {
+                        let product = DTO.Product(
+                            barcode: item.barcode,
+                            brand: item.brand,
+                            name: item.name,
+                            ingredients: item.ingredients,
+                            images: item.images
+                        )
+                        ProductDetailView(
+                            product: product,
+                            matchStatus: item.calculateMatch(),
+                            ingredientRecommendations: item.ingredient_recommendations,
+                            isPlaceholderMode: false
+                        )
+                    } label: {
+                        HomeRecentScanRow(item: item)
                     }
                     .foregroundStyle(.primary)
 
                     if index != historyItems.count - 1 {
                         Divider()
+                            .padding(.vertical, 14)
                     }
                 }
             }

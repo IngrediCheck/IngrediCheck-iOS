@@ -12,6 +12,7 @@ struct RootContainerView: View {
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     @State private var webService = WebService()
     @State private var appState = AppState()
+    @State private var userPreferences = UserPreferences()
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -26,6 +27,7 @@ struct RootContainerView: View {
         .environmentObject(onboarding)
         .environment(webService)
         .environment(appState)
+        .environment(userPreferences)
     }
     
     @ViewBuilder

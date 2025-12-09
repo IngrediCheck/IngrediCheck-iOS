@@ -15,6 +15,8 @@ struct ProductDetailView: View {
     @State private var isIngredientsAlertExpanded = false
     @State private var selectedImageIndex = 0
     @State private var activeIngredientHighlight: IngredientHighlight?
+    @State private var thumbSelection: ThumbSelection? = nil
+    @State private var isCameraPresentedFromDetail = false
     
     var product: DTO.Product? = nil
     var matchStatus: DTO.ProductRecommendation? = nil
@@ -172,6 +174,9 @@ struct ProductDetailView: View {
                 activeIngredientHighlight = nil
             }
         }
+        .fullScreenCover(isPresented: $isCameraPresentedFromDetail) {
+            CameraScreen()
+        }
     }
     
     private var header: some View {
@@ -221,35 +226,27 @@ struct ProductDetailView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 8) {
                         Button {
+                            isCameraPresentedFromDetail = true
                         } label: {
-                            HStack{
+                            HStack {
                                 Image("addimageiconingreen")
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 30, height: 30)
-                                    
-                                    
-                            }.frame(width: 60, height: 60)
+                            }
+                            .frame(width: 60, height: 60)
                                 .background(Color(hex: "#F6FCED"))
                                 .cornerRadius(8)
                         }
                         .disabled(isPlaceholderMode)
                         
-                        ForEach(product.images.indices, id: \.self) { index in
-                            Button {
-                                if !isPlaceholderMode {
-                                    selectedImageIndex = index
-                                }
-                            } label: {
-                                if isPlaceholderMode {
-                                    Image("C")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 60, height: 60)
-                                        .foregroundStyle(.grayScale60)
-                                        .background(Color.grayScale40)
-                                        .cornerRadius(8)
-                                } else {
+                        ForEach(0..<2, id: \.self) { index in
+                            if index < product.images.count {
+                                Button {
+                                    if !isPlaceholderMode {
+                                        selectedImageIndex = index
+                                    }
+                                } label: {
                                     HeaderImage(imageLocation: product.images[index])
                                         .frame(width: 60, height: 60)
                                         .clipped()
@@ -261,8 +258,18 @@ struct ProductDetailView: View {
                                                 )
                                         )
                                 }
+                                .disabled(isPlaceholderMode)
+                            } else {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 11)
+                                        .fill(Color(hex: "#F7F7F7"))
+                                    Image("addimageiconsmall")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 30, height: 30)
+                                }
+                                .frame(width: 60, height: 60)
                             }
-                            .disabled(isPlaceholderMode)
                         }
                     }
                 }
@@ -282,7 +289,7 @@ struct ProductDetailView: View {
                             .cornerRadius(16)
                             .clipped()
                     } else {
-                        Image("addimageiconsmall")
+                        Image("addimageiconlarge")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 85, height: 79)
@@ -337,15 +344,29 @@ struct ProductDetailView: View {
                             // Real-data mode with no images: just show a single
                             // add-image tile at the top.
                             Button {
-                                // Add photo action
+                                isCameraPresentedFromDetail = true
                             } label: {
-                                Image("addimageiconsmall")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 60, height: 60)
-                                    .foregroundStyle(.grayScale60)
-                                    .background(Color.grayScale40)
-                                    .cornerRadius(8)
+                                HStack {
+                                    Image("addimageiconingreen")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 30, height: 30)
+                                }
+                                .frame(width: 60, height: 60)
+                                .background(Color(hex: "#F6FCED"))
+                                .cornerRadius(8)
+                            }
+                            
+                            ForEach(0..<2, id: \.self) { _ in
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 11)
+                                        .fill(Color(hex: "#F7F7F7"))
+                                    Image("addimageiconsmall")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 30, height: 30)
+                                }
+                                .frame(width: 60, height: 60)
                             }
                         }
                     }
@@ -368,10 +389,11 @@ struct ProductDetailView: View {
                     Text(resolvedName)
                         .font(NunitoFont.bold.size(20))
                         .foregroundStyle(.grayScale150)
+              
+                        Text(resolvedDetails)
+                            .font(ManropeFont.medium.size(14))
+                            .foregroundStyle(.grayScale100)
                     
-                    Text(resolvedDetails)
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale100)
                 }
                 
                 VStack(alignment: .trailing, spacing: 16) {
@@ -389,17 +411,43 @@ struct ProductDetailView: View {
                     .background(resolvedStatus.badgeBackground, in: Capsule())
                     
                     HStack(spacing: 12) {
-                        Image("thumbsup")
-                            .resizable()
-                            .scaledToFit()
+                        Button {
+                            thumbSelection = .up
+                        } label: {
+                            let isSelected = thumbSelection == .up
+                            let color = isSelected ? Color(hex: "#FBCB7F") : Color.grayScale100
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(color, lineWidth: 0.5)
+                                Image("thumbsup")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 18)
+                                    .foregroundStyle(color)
+                            }
                             .frame(width: 32, height: 28)
-                            .foregroundStyle(.grayScale100)
-                        
-                        Image("thumbsdown")
-                            .resizable()
-                            .scaledToFit()
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            thumbSelection = .down
+                        } label: {
+                            let isSelected = thumbSelection == .down
+                            let color = isSelected ? Color(hex: "#FF594E") : Color.grayScale100
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(color, lineWidth: 0.5)
+                                Image("thumbsdown")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 18)
+                                    .foregroundStyle(color)
+                            }
                             .frame(width: 32, height: 28)
-                            .foregroundStyle(.grayScale100)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -424,6 +472,11 @@ struct ProductDetailView: View {
 #if DEBUG
 #Preview("Normal Mode") {
     ProductDetailView(isPlaceholderMode: false)
+        .environment(AppNavigationCoordinator())
+}
+
+#Preview("Recent Scan Empty State") {
+    ProductDetailView(isPlaceholderMode: true)
         .environment(AppNavigationCoordinator())
 }
 
@@ -485,3 +538,7 @@ enum ProductMatchStatus {
     }
 }
 
+enum ThumbSelection {
+    case up
+    case down
+}

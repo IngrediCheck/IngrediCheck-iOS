@@ -663,7 +663,7 @@ struct CameraScreen: View {
                 .zIndex(3)
             }
         }
-        .sheet(isPresented: $isProductDetailPresented) {
+        .fullScreenCover(isPresented: $isProductDetailPresented) {
             if let product = selectedProduct {
                 ProductDetailView(
                     product: product,
