@@ -13,6 +13,7 @@ struct PersistentBottomSheet: View {
     @Environment(FamilyStore.self) private var familyStore
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
+    @State private var isExpandedMinimal: Bool = false
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -98,7 +99,7 @@ struct PersistentBottomSheet: View {
         case .addMoreMembersMinimal:
             return 271
         case .generateAvatar:
-            return 642
+            return 379
         case .bringingYourAvatar:
             return 282
         case .meetYourAvatar:
@@ -234,7 +235,11 @@ struct PersistentBottomSheet: View {
             }
             
         case .generateAvatar:
-            GenerateAvatar(isExpandedMinimal: .constant(false))
+            GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
+                .onAppear {
+                    // Reset to collapsed state when appearing
+                    isExpandedMinimal = false
+                }
             
         case .bringingYourAvatar:
             BringingYourAvatar {
