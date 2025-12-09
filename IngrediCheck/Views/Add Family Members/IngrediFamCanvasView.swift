@@ -267,6 +267,8 @@ struct GenerateAvatar: View {
     // Helper function to get selected icon for a tool category
     func getSelectedIcon(for toolIcon: String) -> String? {
         switch toolIcon {
+        case "family-member":
+            return selectedFamilyMember.image
         case "gesture":
             return selectedGestureIcon
         case "hair-style":
