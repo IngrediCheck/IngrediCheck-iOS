@@ -234,21 +234,55 @@ struct ProductDetailView: View {
                                     .scaledToFit()
                                     .frame(width: 30, height: 30)
                             }
-                            .frame(width: 60, height: 60)
+                            .frame(width: 50, height: 50)
                                 .background(Color(hex: "#F6FCED"))
                                 .cornerRadius(8)
                         }
                         .disabled(isPlaceholderMode)
-                        
-                        ForEach(0..<2, id: \.self) { index in
-                            if index < product.images.count {
+
+                        if product.images.count <= 2 {
+                            // Up to three slots: real images first (if any), then placeholder(s)
+                            ForEach(0..<3, id: \.self) { index in
+                                if index < product.images.count {
+                                    Button {
+                                        if !isPlaceholderMode {
+                                            selectedImageIndex = index
+                                        }
+                                    } label: {
+                                        HeaderImage(imageLocation: product.images[index])
+                                            .frame(width: 50, height: 50)
+                                            .clipped()
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 11)
+                                                    .stroke(
+                                                        selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                        lineWidth: 2
+                                                    )
+                                            )
+                                    }
+                                    .disabled(isPlaceholderMode)
+                                } else {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 11)
+                                            .fill(Color(hex: "#F7F7F7"))
+                                        Image("addimageiconsmall")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 30, height: 30)
+                                    }
+                                    .frame(width: 50, height: 50)
+                                }
+                            }
+                        } else {
+                            // Multiple images: show all as scrollable thumbnails
+                            ForEach(product.images.indices, id: \.self) { index in
                                 Button {
                                     if !isPlaceholderMode {
                                         selectedImageIndex = index
                                     }
                                 } label: {
                                     HeaderImage(imageLocation: product.images[index])
-                                        .frame(width: 60, height: 60)
+                                        .frame(width: 50, height: 50)
                                         .clipped()
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 11)
@@ -259,16 +293,6 @@ struct ProductDetailView: View {
                                         )
                                 }
                                 .disabled(isPlaceholderMode)
-                            } else {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 11)
-                                        .fill(Color(hex: "#F7F7F7"))
-                                    Image("addimageiconsmall")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 30, height: 30)
-                                }
-                                .frame(width: 60, height: 60)
                             }
                         }
                     }
@@ -311,7 +335,7 @@ struct ProductDetailView: View {
                                 Image("addimageiconsmall")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: 60, height: 60)
+                                    .frame(width: 50, height: 50)
                                     .foregroundStyle(.grayScale60)
                                     .background(Color.grayScale40)
                                     .cornerRadius(8)
@@ -328,7 +352,7 @@ struct ProductDetailView: View {
                                         .resizable()
                                         .scaledToFill()
                                         .aspectRatio(contentMode: .fill)
-                                        .frame(width: 60, height: 60)
+                                        .frame(width: 50, height: 50)
                                         .clipped()
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 11)
@@ -341,8 +365,7 @@ struct ProductDetailView: View {
                                 .disabled(isPlaceholderMode)
                             }
                         } else {
-                            // Real-data mode with no images: just show a single
-                            // add-image tile at the top.
+                            // Real-data mode with no images: show green tile + three placeholders
                             Button {
                                 isCameraPresentedFromDetail = true
                             } label: {
@@ -352,12 +375,12 @@ struct ProductDetailView: View {
                                         .scaledToFit()
                                         .frame(width: 30, height: 30)
                                 }
-                                .frame(width: 60, height: 60)
+                                .frame(width: 50, height: 50)
                                 .background(Color(hex: "#F6FCED"))
                                 .cornerRadius(8)
                             }
                             
-                            ForEach(0..<2, id: \.self) { _ in
+                            ForEach(0..<3, id: \.self) { _ in
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 11)
                                         .fill(Color(hex: "#F7F7F7"))
@@ -366,7 +389,7 @@ struct ProductDetailView: View {
                                         .scaledToFit()
                                         .frame(width: 30, height: 30)
                                 }
-                                .frame(width: 60, height: 60)
+                                .frame(width: 50, height: 50)
                             }
                         }
                     }
