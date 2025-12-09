@@ -6,7 +6,7 @@ enum TabScreen {
     case lists
 }
 
-enum Sheets: Identifiable {
+enum Sheets: Identifiable, Equatable {
 
     case settings
     case scan
@@ -53,6 +53,7 @@ struct ListsTabState {
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
+    @State private var lastPresentedSheet: Sheets? = nil
 
     var body: some View {
         @Bindable var appState = appState
@@ -76,6 +77,7 @@ struct ListsTabState {
                !dietaryPreferences.preferences.isEmpty {
                 appState.activeSheet = .scan
             }
+            refreshHistory()
         }
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {
@@ -95,6 +97,14 @@ struct ListsTabState {
                 onSubmit: feedbackConfig.onSubmit
             )
             .environment(userPreferences)
+        }
+        .onChange(of: appState.activeSheet) { newSheet in
+            // When the scan sheet is closed, refresh history so Home/Lists
+            // recent scans reflect the latest product immediately.
+            if lastPresentedSheet == .scan && newSheet == nil {
+                refreshHistory()
+            }
+            lastPresentedSheet = newSheet
         }
     }
     

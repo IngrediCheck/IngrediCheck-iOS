@@ -11,28 +11,36 @@ struct RootContainerView: View {
     @State private var coordinator = AppNavigationCoordinator()
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     @State private var webService = WebService()
+
+    // --- HEAD BRANCH (keep these)
+    @State private var appState = AppState()
+    @State private var userPreferences = UserPreferences()
+
+    // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AuthController.self) private var authController
-    
+
     var body: some View {
         @Bindable var coordinator = coordinator
-        
+
         ZStack(alignment: .bottom) {
             canvasContent(for: coordinator.currentCanvasRoute)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
+
             PersistentBottomSheet()
         }
         .environment(coordinator)
         .environmentObject(onboarding)
         .environment(webService)
+        .environment(appState)
+        .environment(userPreferences)
         .environment(authController)
         .task {
             // Load family state when the preview container becomes active.
             await familyStore.loadCurrentFamily()
         }
     }
-    
+
     @ViewBuilder
     private func canvasContent(for route: CanvasRoute) -> some View {
         switch route {
@@ -55,4 +63,3 @@ struct RootContainerView: View {
         }
     }
 }
-

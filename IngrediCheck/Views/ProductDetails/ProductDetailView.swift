@@ -8,21 +8,26 @@
 import SwiftUI
 
 struct ProductDetailView: View {
-    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(\.dismiss) private var dismiss
     @State private var isFavorite = false
     @State private var isDescriptionExpanded = false
     @State private var isIngredientsExpanded = false
     @State private var isIngredientsAlertExpanded = false
     @State private var selectedImageIndex = 0
     @State private var activeIngredientHighlight: IngredientHighlight?
+    @State private var thumbSelection: ThumbSelection? = nil
+    @State private var isCameraPresentedFromDetail = false
     
+    var product: DTO.Product? = nil
+    var matchStatus: DTO.ProductRecommendation? = nil
+    var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
     var isPlaceholderMode: Bool = false
     
-    private let productImages = ["maggie1", "maggie2"]
-    private let productBrand = "Nestlé"
-    private let productName = "Maggi 2-Minute Noodles"
-    private let productDetails = "Instant Noodles · Pack of 70g"
-    private let productStatus: ProductMatchStatus = .matched
+    private let fallbackProductImages = ["maggie1", "maggie2"]
+    private let fallbackProductBrand = "Nestlé"
+    private let fallbackProductName = "Maggi 2-Minute Noodles"
+    private let fallbackProductDetails = "Instant Noodles · Pack of 70g"
+    private let fallbackProductStatus: ProductMatchStatus = .matched
     private let dietaryTags = [
         DietaryTag(name: "Dairy-free", icon: "dairy"),
         DietaryTag(name: "Vegetarian", icon: "vegetarian"),
@@ -86,6 +91,38 @@ struct ProductDetailView: View {
         )
     ]
     
+    private var resolvedBrand: String {
+        if let brand = product?.brand, !brand.isEmpty {
+            return brand
+        }
+        return fallbackProductBrand
+    }
+    
+    private var resolvedName: String {
+        if let name = product?.name, !name.isEmpty {
+            return name
+        }
+        return fallbackProductName
+    }
+    
+    private var resolvedDetails: String {
+        fallbackProductDetails
+    }
+    
+    private var resolvedStatus: ProductMatchStatus {
+        guard let matchStatus else {
+            return fallbackProductStatus
+        }
+        switch matchStatus {
+        case .match:
+            return .matched
+        case .needsReview:
+            return .uncertain
+        case .notMatch:
+            return .unmatched
+        }
+    }
+    
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
@@ -98,7 +135,7 @@ struct ProductDetailView: View {
                 IngredientsAlertCard(
                     isExpanded: $isIngredientsAlertExpanded,
                     items: ingredientAlertItems,
-                    status: productStatus
+                    status: resolvedStatus
                 )
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -122,7 +159,7 @@ struct ProductDetailView: View {
                     IngredientDetailsView(
                         paragraphs: ingredientParagraphs,
                         activeHighlight: $activeIngredientHighlight,
-                        highlightColor: productStatus.color
+                        highlightColor: resolvedStatus.color
                     )
                 }
                 .padding(.horizontal, 20)
@@ -137,12 +174,15 @@ struct ProductDetailView: View {
                 activeIngredientHighlight = nil
             }
         }
+        .fullScreenCover(isPresented: $isCameraPresentedFromDetail) {
+            CameraScreen()
+        }
     }
     
     private var header: some View {
         HStack {
             Button {
-                coordinator.showCanvas(.home)
+                dismiss()
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
@@ -172,70 +212,190 @@ struct ProductDetailView: View {
     
     private var productGallery: some View {
         HStack(spacing: 12) {
-            Image(productImages[selectedImageIndex])
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+            if let product, !product.images.isEmpty {
+                HeaderImage(imageLocation: product.images[selectedImageIndex])
+                    .frame(
+                        width: UIScreen.main.bounds.width * 0.704,
+                        height: UIScreen.main.bounds.height * 0.234
+                    )
+                    .cornerRadius(16)
+                    .clipped()
+                    .background(in: RoundedRectangle(cornerRadius: 24))
+                    .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 8) {
+                        Button {
+                            isCameraPresentedFromDetail = true
+                        } label: {
+                            HStack {
+                                Image("addimageiconingreen")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 30, height: 30)
+                            }
+                            .frame(width: 50, height: 50)
+                                .background(Color(hex: "#F6FCED"))
+                                .cornerRadius(8)
+                        }
+                        .disabled(isPlaceholderMode)
+
+                        if product.images.count <= 2 {
+                            // Up to three slots: real images first (if any), then placeholder(s)
+                            ForEach(0..<3, id: \.self) { index in
+                                if index < product.images.count {
+                                    Button {
+                                        if !isPlaceholderMode {
+                                            selectedImageIndex = index
+                                        }
+                                    } label: {
+                                        HeaderImage(imageLocation: product.images[index])
+                                            .frame(width: 50, height: 50)
+                                            .clipped()
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 11)
+                                                    .stroke(
+                                                        selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                        lineWidth: 2
+                                                    )
+                                            )
+                                    }
+                                    .disabled(isPlaceholderMode)
+                                } else {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 11)
+                                            .fill(Color(hex: "#F7F7F7"))
+                                        Image("addimageiconsmall")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 30, height: 30)
+                                    }
+                                    .frame(width: 50, height: 50)
+                                }
+                            }
+                        } else {
+                            // Multiple images: show all as scrollable thumbnails
+                            ForEach(product.images.indices, id: \.self) { index in
+                                Button {
+                                    if !isPlaceholderMode {
+                                        selectedImageIndex = index
+                                    }
+                                } label: {
+                                    HeaderImage(imageLocation: product.images[index])
+                                        .frame(width: 50, height: 50)
+                                        .clipped()
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 11)
+                                                .stroke(
+                                                    selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                    lineWidth: 2
+                                                )
+                                        )
+                                }
+                                .disabled(isPlaceholderMode)
+                            }
+                        }
+                    }
+                }
+                .frame(width: 60, height: 196)
+            } else {
+                // When there is no real product image, use a generic add-image icon
+                // for the large image area in normal mode, but keep the Maggi
+                // placeholders for design/preview (placeholder mode).
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.white)
+                        .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+                    if isPlaceholderMode {
+                        Image(fallbackProductImages[selectedImageIndex])
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .cornerRadius(16)
+                            .clipped()
+                    } else {
+                        Image("addimageiconlarge")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 85, height: 79)
+                    }
+                }
                 .frame(
                     width: UIScreen.main.bounds.width * 0.704,
                     height: UIScreen.main.bounds.height * 0.234
                 )
-                .cornerRadius(16)
-                .clipped()
-                .background(in: RoundedRectangle(cornerRadius: 24))
-                .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 8) {
-                    // Add Photo button at the top
-                    Button {
-                        // Add photo action
-                    } label: {
-                        Image("addPhoto")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 60, height: 60)
-                            .foregroundStyle(.grayScale60)
-                            .background(Color.grayScale40)
-                            .cornerRadius(8)
-                    }
-                    .disabled(isPlaceholderMode)
-                    
-                    // Product image thumbnails
-                    ForEach(0..<productImages.count, id: \.self) { index in
-                        Button {
-                            if !isPlaceholderMode {
-                                selectedImageIndex = index
-                            }
-                        } label: {
-                            if isPlaceholderMode {
-                                Image("imagePh")
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 8) {
+                        if isPlaceholderMode {
+                            // Placeholder mode: show the add-photo tile followed by
+                            // the static Maggi thumbnails, like the original design.
+                            Button {
+                                // Add photo action
+                            } label: {
+                                Image("addimageiconsmall")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: 60, height: 60)
+                                    .frame(width: 50, height: 50)
                                     .foregroundStyle(.grayScale60)
                                     .background(Color.grayScale40)
                                     .cornerRadius(8)
-                            } else {
-                                Image(productImages[index])
-                                    .resizable()
-                                    .scaledToFill()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 60, height: 60)
-                                    .clipped()
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 11)
-                                            .stroke(
-                                                selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
-                                                lineWidth: 2
-                                            )
-                                    )
+                            }
+                            .disabled(isPlaceholderMode)
+                            
+                            ForEach(0..<fallbackProductImages.count, id: \.self) { index in
+                                Button {
+                                    if !isPlaceholderMode {
+                                        selectedImageIndex = index
+                                    }
+                                } label: {
+                                    Image(fallbackProductImages[index])
+                                        .resizable()
+                                        .scaledToFill()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 50, height: 50)
+                                        .clipped()
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 11)
+                                                .stroke(
+                                                    selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
+                                                    lineWidth: 2
+                                                )
+                                        )
+                                }
+                                .disabled(isPlaceholderMode)
+                            }
+                        } else {
+                            // Real-data mode with no images: show green tile + three placeholders
+                            Button {
+                                isCameraPresentedFromDetail = true
+                            } label: {
+                                HStack {
+                                    Image("addimageiconingreen")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 30, height: 30)
+                                }
+                                .frame(width: 50, height: 50)
+                                .background(Color(hex: "#F6FCED"))
+                                .cornerRadius(8)
+                            }
+                            
+                            ForEach(0..<3, id: \.self) { _ in
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 11)
+                                        .fill(Color(hex: "#F7F7F7"))
+                                    Image("addimageiconsmall")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 30, height: 30)
+                                }
+                                .frame(width: 50, height: 50)
                             }
                         }
-                        .disabled(isPlaceholderMode)
                     }
                 }
+                .frame(width: 60, height: 196)
             }
-            .frame(width: 60, height: 196) // Height for 3 thumbnails (60 + 8 + 60 + 8 + 60 = 196)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
@@ -243,47 +403,74 @@ struct ProductDetailView: View {
     
     private var productInformation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(productBrand)
+            Text(resolvedBrand)
                 .font(ManropeFont.regular.size(14))
                 .foregroundStyle(.grayScale100)
             
             HStack(alignment: .top, spacing: 24) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(productName)
+                    Text(resolvedName)
                         .font(NunitoFont.bold.size(20))
                         .foregroundStyle(.grayScale150)
+              
+                        Text(resolvedDetails)
+                            .font(ManropeFont.medium.size(14))
+                            .foregroundStyle(.grayScale100)
                     
-                    Text(productDetails)
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale100)
                 }
                 
                 VStack(alignment: .trailing, spacing: 16) {
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(productStatus.color)
+                            .fill(resolvedStatus.color)
                             .frame(width: 10, height: 10)
                         
-                        Text(productStatus.title)
+                        Text(resolvedStatus.title)
                             .font(NunitoFont.bold.size(14))
-                            .foregroundStyle(productStatus.color)
+                            .foregroundStyle(resolvedStatus.color)
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
-                    .background(productStatus.badgeBackground, in: Capsule())
+                    .background(resolvedStatus.badgeBackground, in: Capsule())
                     
                     HStack(spacing: 12) {
-                        Image("thumbsup")
-                            .resizable()
-                            .scaledToFit()
+                        Button {
+                            thumbSelection = .up
+                        } label: {
+                            let isSelected = thumbSelection == .up
+                            let color = isSelected ? Color(hex: "#FBCB7F") : Color.grayScale100
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(color, lineWidth: 0.5)
+                                Image("thumbsup")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 18)
+                                    .foregroundStyle(color)
+                            }
                             .frame(width: 32, height: 28)
-                            .foregroundStyle(.grayScale100)
-                        
-                        Image("thumbsdown")
-                            .resizable()
-                            .scaledToFit()
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            thumbSelection = .down
+                        } label: {
+                            let isSelected = thumbSelection == .down
+                            let color = isSelected ? Color(hex: "#FF594E") : Color.grayScale100
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(color, lineWidth: 0.5)
+                                Image("thumbsdown")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 18)
+                                    .foregroundStyle(color)
+                            }
                             .frame(width: 32, height: 28)
-                            .foregroundStyle(.grayScale100)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -308,6 +495,11 @@ struct ProductDetailView: View {
 #if DEBUG
 #Preview("Normal Mode") {
     ProductDetailView(isPlaceholderMode: false)
+        .environment(AppNavigationCoordinator())
+}
+
+#Preview("Recent Scan Empty State") {
+    ProductDetailView(isPlaceholderMode: true)
         .environment(AppNavigationCoordinator())
 }
 
@@ -369,3 +561,7 @@ enum ProductMatchStatus {
     }
 }
 
+enum ThumbSelection {
+    case up
+    case down
+}
