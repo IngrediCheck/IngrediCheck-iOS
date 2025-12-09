@@ -134,8 +134,8 @@ struct IngrediFamCanvasView: View {
             case .generateAvatar:
                 GenerateAvatar(
                     isExpandedMinimal: $isExpandedMinimal,
-                    randomPressed: { },
-                    generatePressed: { }
+                    randomPressed: { _ in },
+                    generatePressed: { _ in }
                 )
             case .bringingYourAvatar:
                 BringingYourAvatar()
@@ -261,8 +261,8 @@ struct GenerateAvatar: View {
     @State var selectedAccessoriesIcon: String? = nil
     @State var selectedColorThemeIcon: String? = nil
     
-    var randomPressed: () -> Void = { }
-    var generatePressed: () -> Void = { }
+    var randomPressed: (MemojiSelection) -> Void = { _ in }
+    var generatePressed: (MemojiSelection) -> Void = { _ in }
     
     // Helper function to get selected icon for a tool category
     func getSelectedIcon(for toolIcon: String) -> String? {
@@ -300,6 +300,23 @@ struct GenerateAvatar: View {
         default:
             break
         }
+    }
+    
+    private func buildMemojiSelection() -> MemojiSelection {
+        let gesture = selectedGestureIcon ?? tools[0].tools.first?.icon ?? "wave"
+        let hair = selectedHairStyleIcon ?? tools[1].tools.first?.icon ?? "short-hair"
+        let skinTone = selectedSkinToneIcon ?? tools[2].tools.first?.icon ?? "light"
+        let accessory = selectedAccessoriesIcon ?? tools[3].tools.first?.icon
+        let colorTheme = selectedColorThemeIcon ?? tools[4].tools.first?.icon
+        
+        return MemojiSelection(
+            familyType: selectedFamilyMember.name.lowercased(),
+            gesture: gesture,
+            hair: hair,
+            skinTone: skinTone,
+            accessory: accessory,
+            colorThemeIcon: colorTheme
+        )
     }
     
     var body: some View {
@@ -504,14 +521,14 @@ struct GenerateAvatar: View {
                             
                             HStack(spacing: 16) {
                                 Button {
-                                    randomPressed()
+                                    randomPressed(buildMemojiSelection())
                                 } label: {
                                     GreenOutlinedCapsule(image: "ai-stick", title: "Random")
                                 }
 
                                 
                                 Button {
-                                    generatePressed()
+                                    generatePressed(buildMemojiSelection())
                                 } label: {
                                     GreenCapsule(title: "Generate", icon: "stars-generate")
                                 }
@@ -705,14 +722,28 @@ struct GenerateAvatar: View {
 }
 
 struct MeetYourAvatar: View {
+    var image: UIImage? = nil
+    var backgroundColorHex: String? = nil
     @State var regeneratePressed: () -> Void = { }
     @State var assignedPressed: () -> Void = { }
     var body: some View {
+        let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
+        
         VStack(spacing: 20) {
             // Avatar placeholder
             Circle()
-                .fill(.gray)
+                .fill(circleColor)
                 .frame(width: 137, height: 137)
+                .overlay {
+                    if let image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .background(Color.clear)
+                            .clipShape(Circle())
+                    }
+                }
 
             VStack(spacing: 40) {
                 Text("Meet your dad’s avatar,\nlooking good!")
@@ -1436,7 +1467,7 @@ struct BringingYourAvatar: View {
 #Preview {
     GenerateAvatar(
         isExpandedMinimal: .constant(false),
-        randomPressed: { },
-        generatePressed: { }
+        randomPressed: { _ in },
+        generatePressed: { _ in }
     )
 }

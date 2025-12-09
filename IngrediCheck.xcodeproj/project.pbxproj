@@ -181,7 +181,7 @@
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
-		D3BECC0C2ED98A3E0088E044 /* AI Memoji  */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "AI Memoji "; sourceTree = "<group>"; };
+		D3BECC0C2ED98A3E0088E044 /* AI Memoji  */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "AI Memoji"; sourceTree = "<group>"; };
 		D3BECC0E2ED98A3E0088E044 /* AI Summary */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "AI Summary"; sourceTree = "<group>"; };
 		D3BECC142ED98A3E0088E044 /* BarcodeScan */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BarcodeScan; sourceTree = "<group>"; };
 		D3BECC172ED98A3E0088E044 /* ChatBot */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ChatBot; sourceTree = "<group>"; };

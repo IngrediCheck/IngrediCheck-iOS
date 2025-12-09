@@ -14,6 +14,7 @@ struct PersistentBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
+    @StateObject private var memojiViewModel = MemojiViewModel()
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -237,11 +238,11 @@ struct PersistentBottomSheet: View {
         case .generateAvatar:
             GenerateAvatar(
                 isExpandedMinimal: $isExpandedMinimal,
-                randomPressed: {
-                    coordinator.navigateInBottomSheet(.bringingYourAvatar)
+                randomPressed: { selection in
+                    memojiViewModel.generate(selection: selection, coordinator: coordinator)
                 },
-                generatePressed: {
-                    coordinator.navigateInBottomSheet(.bringingYourAvatar)
+                generatePressed: { selection in
+                    memojiViewModel.generate(selection: selection, coordinator: coordinator)
                 }
             )
             .onAppear {
@@ -250,12 +251,13 @@ struct PersistentBottomSheet: View {
             }
             
         case .bringingYourAvatar:
-            BringingYourAvatar {
-                coordinator.navigateInBottomSheet(.meetYourAvatar)
-            }
+            BringingYourAvatar()
             
         case .meetYourAvatar:
-            MeetYourAvatar {
+            MeetYourAvatar(
+                image: memojiViewModel.image,
+                backgroundColorHex: memojiViewModel.backgroundColorHex
+            ) {
                 coordinator.navigateInBottomSheet(.bringingYourAvatar)
             } assignedPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
