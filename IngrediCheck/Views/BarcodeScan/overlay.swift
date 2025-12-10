@@ -297,7 +297,7 @@ struct BackButton: View {
             dismiss()
         } label: {
             ZStack {
-                Image( "angle-left-arrow")
+                Image("angle-left-arrow")
                     .frame(width: 24, height: 24)
                     .foregroundColor(.white)
             }
@@ -306,7 +306,6 @@ struct BackButton: View {
             .background(
                 .thinMaterial.opacity(0.4), in: .capsule
             )
-           
         }
         .buttonStyle(.plain)
     }
@@ -317,8 +316,10 @@ struct BarcodeDataCard: View {
     var onRetryShown: (() -> Void)? = nil
     var onRetryHidden: (() -> Void)? = nil
     var onResultUpdated: (() -> Void)? = nil
+    var onTap: ((DTO.Product, DTO.ProductRecommendation?, [DTO.IngredientRecommendation]?) -> Void)? = nil
 
     @Environment(WebService.self) private var webService
+    @Environment(AppState.self) private var appState
 
     @State private var analysisResult: BarcodeScanAnalysisResult?
     @State private var isLoading = false
@@ -370,11 +371,9 @@ struct BarcodeDataCard: View {
                                         .stroke(Color.white, lineWidth: 0.3)
                                 )
                                 .shadow(color: Color.black.opacity(0.50	), radius: 6, x: -2, y: 4)
-                                
                                 .padding(.leading, 5)
                         }
                         .frame(width: 68, height: 92, alignment: .leading)
-                       
                     }
                 } else if product != nil {
                     // Product details were found but there is no image in the API response.
@@ -399,12 +398,11 @@ struct BarcodeDataCard: View {
             
             VStack(alignment: .leading) {
                 if code.isEmpty {
-                    
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial)
-                            .opacity(0.4)
-                            .frame(width: 185, height: 25)
-                            .padding(.bottom, 4)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(.thinMaterial)
+                        .opacity(0.4)
+                        .frame(width: 185, height: 25)
+                        .padding(.bottom, 4)
                     RoundedRectangle(cornerRadius: 4)
                         .fill(.thinMaterial)
                         .opacity(0.4)
@@ -414,7 +412,6 @@ struct BarcodeDataCard: View {
                         .fill(.thinMaterial)
                         .opacity(0.4)
                         .frame(width: 79, height: 24)
-                    
                 } else if isLoading && product == nil {
                     VStack(alignment: .leading) {
                         Text("Looking up this product…")
@@ -574,15 +571,12 @@ struct BarcodeDataCard: View {
                     }
                 }
             }
-            // Ensure content (brand/product text + status capsule) has
-            // comfortable vertical insets inside the card: at least 12pt
-            // above the brand name and below the last capsule.
-//                .padding(.vertical, 12)
             .frame(maxWidth: .infinity,
                    minHeight: 92,
                    maxHeight: 92,
                    alignment: .leading
             )
+//                .padding(.vertical, 12)
             .onChange(of: errorState) { newErrorState in
                 // Hide callout when error is cleared (analysis succeeded or retry clicked)
                 if newErrorState == nil && product != nil {
@@ -606,10 +600,20 @@ struct BarcodeDataCard: View {
                 .padding(.trailing, 14)
             }
         }
-//            .frame(height: 120)
-//            .padding(.leading, 14)
         .frame(width: 300, height: 120)
-        
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Prefer the cached unified analysis result for this barcode so
+            // we always pass the freshest data through to ProductDetailView.
+            if let cached = BarcodeScanAnalysisService.cachedResult(for: code),
+               let cachedProduct = cached.product {
+                onTap?(cachedProduct, cached.matchStatus, cached.ingredientRecommendations)
+            } else if let product {
+                // Fallback: use the local state if, for some reason, the cache
+                // is not yet populated but we already have a product.
+                onTap?(product, matchStatus, ingredientRecommendations)
+            }
+        }
         .background(
             // Background Card
             RoundedRectangle(cornerRadius: 24)
@@ -617,7 +621,6 @@ struct BarcodeDataCard: View {
                 .opacity(0.4)
         )
         .clipped()
-//        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: code) {
             guard !code.isEmpty else { return }
 
@@ -703,6 +706,15 @@ struct BarcodeDataCard: View {
                                 isAnalyzing = false
                                 isLoading = false
                                 onResultUpdated?()
+                                // After a successful analysis, refresh history so Home/Lists
+                                // Recent Scans reflect this scan immediately.
+                                Task {
+                                    if let history = try? await service.fetchHistory() {
+                                        await MainActor.run {
+                                            appState.listsTabState.historyItems = history
+                                        }
+                                    }
+                                }
                             }
                         },
                         onError: { streamError in

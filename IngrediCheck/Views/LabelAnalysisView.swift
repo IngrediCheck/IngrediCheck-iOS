@@ -187,7 +187,7 @@ struct LabelAnalysisView: View {
                                     checkTabState.capturedImages = productImages
                                     _ = checkTabState.routes.popLast()
                                 }, label: {
-                                    Image(systemName: "photo.badge.plus")
+                                    Image(systemName: "`ViewAll`.badge.plus")
                                         .font(.subheadline)
                                 })
                                 StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)

@@ -10,19 +10,23 @@ struct HeaderImage: View {
     @Environment(WebService.self) var webService
 
     var body: some View {
-        if let image {
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-        } else {
-            ProgressView()
-                .task {
-                    if let image = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
-                        DispatchQueue.main.async {
-                            self.image = image
-                        }
-                    }
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                ProgressView()
+            }
+        }
+        .task(id: imageLocation) {
+            // Reset before loading a new image when imageLocation changes
+            image = nil
+            if let loaded = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
+                await MainActor.run {
+                    self.image = loaded
                 }
+            }
         }
     }
 }
