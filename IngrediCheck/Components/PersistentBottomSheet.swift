@@ -11,11 +11,14 @@ import UIKit
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(MemojiStore.self) private var memojiStore
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
+    @State private var isExpandedMinimal: Bool = false
     
     var body: some View {
         @Bindable var coordinator = coordinator
+        @Bindable var memojiStore = memojiStore
         
         VStack {
             Spacer()
@@ -98,7 +101,7 @@ struct PersistentBottomSheet: View {
         case .addMoreMembersMinimal:
             return 271
         case .generateAvatar:
-            return 642
+            return 379
         case .bringingYourAvatar:
             return 282
         case .meetYourAvatar:
@@ -234,15 +237,32 @@ struct PersistentBottomSheet: View {
             }
             
         case .generateAvatar:
-            GenerateAvatar(isExpandedMinimal: .constant(false))
-            
-        case .bringingYourAvatar:
-            BringingYourAvatar {
-                coordinator.navigateInBottomSheet(.meetYourAvatar)
+            GenerateAvatar(
+                isExpandedMinimal: $isExpandedMinimal,
+                randomPressed: { selection in
+                    Task {
+                        await memojiStore.generate(selection: selection, coordinator: coordinator)
+                    }
+                },
+                generatePressed: { selection in
+                    Task {
+                        await memojiStore.generate(selection: selection, coordinator: coordinator)
+                    }
+                }
+            )
+            .onAppear {
+                // Reset to collapsed state when appearing
+                isExpandedMinimal = false
             }
             
+        case .bringingYourAvatar:
+            BringingYourAvatar()
+            
         case .meetYourAvatar:
-            MeetYourAvatar {
+            MeetYourAvatar(
+                image: memojiStore.image,
+                backgroundColorHex: memojiStore.backgroundColorHex
+            ) {
                 coordinator.navigateInBottomSheet(.bringingYourAvatar)
             } assignedPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)

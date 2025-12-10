@@ -11,6 +11,7 @@ struct RootContainerView: View {
     @State private var coordinator = AppNavigationCoordinator()
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     @State private var webService = WebService()
+    @State private var memojiStore = MemojiStore()
 
     // --- HEAD BRANCH (keep these)
     @State private var appState = AppState()
@@ -35,6 +36,7 @@ struct RootContainerView: View {
         .environment(appState)
         .environment(userPreferences)
         .environment(authController)
+        .environment(memojiStore)
         .task {
             // Load family state when the preview container becomes active.
             await familyStore.loadCurrentFamily()

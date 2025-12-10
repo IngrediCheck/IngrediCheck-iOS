@@ -132,7 +132,11 @@ struct IngrediFamCanvasView: View {
             case .whatsYourName:
                 WhatsYourName()
             case .generateAvatar:
-                GenerateAvatar(isExpandedMinimal: $isExpandedMinimal)
+                GenerateAvatar(
+                    isExpandedMinimal: $isExpandedMinimal,
+                    randomPressed: { _ in },
+                    generatePressed: { _ in }
+                )
             case .bringingYourAvatar:
                 BringingYourAvatar()
             case .meetYourAvatar:
@@ -170,13 +174,13 @@ struct GenerateAvatar: View {
     ]
     
     @State var familyMember: [UserModel] = [
-        UserModel(familyMemberName: "Grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "Grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "Daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "Brother", familyMemberImage: "image-bg4")
+        UserModel(familyMemberName: "grandfather", familyMemberImage: "image-bg3"),
+        UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2"),
+        UserModel(familyMemberName: "young-daughter", familyMemberImage: "image-bg5"),
+        UserModel(familyMemberName: "father", familyMemberImage: "image-bg4")
     ]
     
-    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "Son", familyMemberImage: "image-bg1")
+    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
     
     @State var selectedTool: String = "family-member"
     @Binding var isExpandedMinimal: Bool
@@ -250,131 +254,193 @@ struct GenerateAvatar: View {
     
     @State var idx: Int = 0
     
-    @State var randomPressed: () -> Void = { }
-    @State var generatePressed: () -> Void = { }
+    // Track selected icons for each tool category
+    @State var selectedGestureIcon: String? = nil
+    @State var selectedHairStyleIcon: String? = nil
+    @State var selectedSkinToneIcon: String? = nil
+    @State var selectedAccessoriesIcon: String? = nil
+    @State var selectedColorThemeIcon: String? = nil
+    
+    var randomPressed: (MemojiSelection) -> Void = { _ in }
+    var generatePressed: (MemojiSelection) -> Void = { _ in }
+    
+    // Helper function to get selected icon for a tool category
+    func getSelectedIcon(for toolIcon: String) -> String? {
+        switch toolIcon {
+        case "family-member":
+            return selectedFamilyMember.image
+        case "gesture":
+            return selectedGestureIcon
+        case "hair-style":
+            return selectedHairStyleIcon
+        case "skin-tone":
+            return selectedSkinToneIcon
+        case "accessories":
+            return selectedAccessoriesIcon
+        case "color-theme":
+            return selectedColorThemeIcon
+        default:
+            return nil
+        }
+    }
+    
+    // Helper function to set selected icon for a tool category
+    func setSelectedIcon(for toolIcon: String, icon: String?) {
+        switch toolIcon {
+        case "gesture":
+            selectedGestureIcon = icon
+        case "hair-style":
+            selectedHairStyleIcon = icon
+        case "skin-tone":
+            selectedSkinToneIcon = icon
+        case "accessories":
+            selectedAccessoriesIcon = icon
+        case "color-theme":
+            selectedColorThemeIcon = icon
+        default:
+            break
+        }
+    }
+    
+    private func buildMemojiSelection() -> MemojiSelection {
+        let gesture = selectedGestureIcon ?? tools[0].tools.first?.icon ?? "wave"
+        let hair = selectedHairStyleIcon ?? tools[1].tools.first?.icon ?? "short-hair"
+        let skinTone = selectedSkinToneIcon ?? tools[2].tools.first?.icon ?? "light"
+        let accessory = selectedAccessoriesIcon ?? tools[3].tools.first?.icon
+        let colorTheme = selectedColorThemeIcon ?? tools[4].tools.first?.icon
+        
+        return MemojiSelection(
+            familyType: selectedFamilyMember.name.lowercased(),
+            gesture: gesture,
+            hair: hair,
+            skinTone: skinTone,
+            accessory: accessory,
+            colorThemeIcon: colorTheme
+        )
+    }
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                if geometry.size.height >= 500 {
-                    VStack {
-                        ScrollView(showsIndicators: false) {
-                            VStack(spacing: 32) {
-                                
-                                if isExpandedMaximal == false {
-                                    VStack(spacing: 4) {
-                                        Image(.funGuy)
-                                        
-                                        Text("AI Memojis")
-                                            .font(ManropeFont.bold.size(16))
-                                            .foregroundStyle(.grayScale150)
-                                        
-                                        Text("Create Personalized family Avatar")
-                                            .font(ManropeFont.medium.size(12))
-                                            .foregroundStyle(.grayScale150)
-                                    }
-                                    
-                                    Text("Generate Avatar")
-                                        .font(ManropeFont.bold.size(14))
-                                        .foregroundStyle(.grayScale150)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                
-                                VStack(spacing: 20) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            Image(.familyMember)
-                                                .resizable()
-                                                .renderingMode(.template)
-                                                .foregroundStyle(.grayScale150)
-                                                .frame(width: 22, height: 24)
-                                            
-                                            Text("Family Member")
-                                                .font(ManropeFont.semiBold.size(16))
-                                                .foregroundStyle(.grayScale150)
-                                        }
-                                        
-                                        Text("Tell us how you're related to them so we can create the perfect avatar!")
-                                            .font(ManropeFont.medium.size(12))
-                                            .foregroundStyle(.grayScale120)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                    
-                                    CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: $familyMember, selectedItem: $selectedFamilyMember)
-                                }
-                                
-                                .padding(.bottom, 30)
-                                
-                                
-                                if isExpandedMaximal == false {
-                                    ForEach(tools) { tool in
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            HStack(spacing: 8) {
-                                                Image(tool.icon)
-                                                    .resizable()
-                                                    .renderingMode(.template)
-                                                    .foregroundStyle(.grayScale150)
-                                                    .frame(width: 24, height: 24)
-                                                
-                                                Text(tool.title)
-                                                    .font(ManropeFont.semiBold.size(16))
-                                                    .foregroundStyle(.grayScale150)
-                                            }
-                                            
-                                            FlowLayout(horizontalSpacing: 8, verticalSpacing: 12) {
-                                                ForEach(tool.tools) { innerTool in
-                                                    
-                                                    Button {
-                                                        
-                                                    } label: {
-                                                        HStack(spacing: 4) {
-                                                            Image(innerTool.icon ?? "")
-                                                                .resizable()
-                                                                .frame(width: 24, height: 24)
-                                                            
-                                                            Text(innerTool.name)
-                                                                .font(ManropeFont.medium.size(14))
-                                                                .foregroundStyle(.grayScale150)
-                                                        }
-                                                        .padding(.vertical, 8)
-                                                        .padding(.trailing, 16)
-                                                        .padding(.leading, 12)
-                                                        .overlay(
-                                                            RoundedRectangle(cornerRadius: 40)
-                                                                .stroke(lineWidth: 1)
-                                                                .foregroundStyle(.grayScale60)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 30)
-                            .padding(.bottom, 5)
-                        }
-                        .padding(.top, 20)
-                        
-                        HStack(spacing: 16) {
-                            Button {
-                                randomPressed()
-                            } label: {
-                                GreenOutlinedCapsule(image: "ai-stick", title: "Random")
-                            }
-
-                            
-                            Button {
-                                generatePressed()
-                            } label: {
-                                GreenCapsule(title: "Generate", icon: "stars-generate")
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                } else {
+//                if geometry.size.height >= 500 {
+//                    VStack {
+//                        ScrollView(showsIndicators: false) {
+//                            VStack(spacing: 32) {
+//                                
+//                                if isExpandedMaximal == false {
+//                                    VStack(spacing: 4) {
+//                                        Image(.funGuy)
+//                                        
+//                                        Text("AI Memojis")
+//                                            .font(ManropeFont.bold.size(16))
+//                                            .foregroundStyle(.grayScale150)
+//                                        
+//                                        Text("Create Personalized family Avatar")
+//                                            .font(ManropeFont.medium.size(12))
+//                                            .foregroundStyle(.grayScale150)
+//                                    }
+//                                    
+//                                    Text("Generate Avatar")
+//                                        .font(ManropeFont.bold.size(14))
+//                                        .foregroundStyle(.grayScale150)
+//                                        .frame(maxWidth: .infinity, alignment: .leading)
+//                                }
+//                                
+//                                VStack(spacing: 20) {
+//                                    VStack(alignment: .leading, spacing: 8) {
+//                                        HStack(spacing: 8) {
+//                                            Image(.familyMember)
+//                                                .resizable()
+//                                                .renderingMode(.template)
+//                                                .foregroundStyle(.grayScale150)
+//                                                .frame(width: 22, height: 24)
+//                                            
+//                                            Text("Family Member")
+//                                                .font(ManropeFont.semiBold.size(16))
+//                                                .foregroundStyle(.grayScale150)
+//                                        }
+//                                        
+//                                        Text("Tell us how you're related to them so we can create the perfect avatar!")
+//                                            .font(ManropeFont.medium.size(12))
+//                                            .foregroundStyle(.grayScale120)
+//                                            .frame(maxWidth: .infinity, alignment: .leading)
+//                                    }
+//                                    
+//                                    CollapseFamilyList(collapsed: $isExpandedMaximal, familyNames: $familyMember, selectedItem: $selectedFamilyMember)
+//                                }
+//                                
+//                                .padding(.bottom, 30)
+//                                
+//                                
+//                                if isExpandedMaximal == false {
+//                                    ForEach(tools) { tool in
+//                                        VStack(alignment: .leading, spacing: 8) {
+//                                            HStack(spacing: 8) {
+//                                                Image(tool.icon)
+//                                                    .resizable()
+//                                                    .renderingMode(.template)
+//                                                    .foregroundStyle(.grayScale150)
+//                                                    .frame(width: 24, height: 24)
+//                                                
+//                                                Text(tool.title)
+//                                                    .font(ManropeFont.semiBold.size(16))
+//                                                    .foregroundStyle(.grayScale150)
+//                                            }
+//                                            
+//                                            FlowLayout(horizontalSpacing: 8, verticalSpacing: 12) {
+//                                                ForEach(tool.tools) { innerTool in
+//                                                    
+//                                                    Button {
+//                                                        
+//                                                    } label: {
+//                                                        HStack(spacing: 4) {
+//                                                            Image(innerTool.icon ?? "")
+//                                                                .resizable()
+//                                                                .frame(width: 24, height: 24)
+//                                                            
+//                                                            Text(innerTool.name)
+//                                                                .font(ManropeFont.medium.size(14))
+//                                                                .foregroundStyle(.grayScale150)
+//                                                        }
+//                                                        .padding(.vertical, 8)
+//                                                        .padding(.trailing, 16)
+//                                                        .padding(.leading, 12)
+//                                                        .overlay(
+//                                                            RoundedRectangle(cornerRadius: 40)
+//                                                                .stroke(lineWidth: 1)
+//                                                                .foregroundStyle(.grayScale60)
+//                                                        )
+//                                                    }
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                                
+//                            }
+//                            .padding(.horizontal, 20)
+//                            .padding(.top, 30)
+//                            .padding(.bottom, 5)
+//                        }
+//                        .padding(.top, 20)
+//                        
+//                        HStack(spacing: 16) {
+//                            Button {
+//                                randomPressed()
+//                            } label: {
+//                                GreenOutlinedCapsule(image: "ai-stick", title: "Random")
+//                            }
+//
+//                            
+//                            Button {
+//                                generatePressed()
+//                            } label: {
+//                                GreenCapsule(title: "Generate", icon: "stars-generate")
+//                            }
+//                        }
+//                        .padding(.horizontal, 20)
+//                    }
+//                } else {
                     if isExpandedMinimal {
                         VStack {
                             Spacer()
@@ -382,6 +448,7 @@ struct GenerateAvatar: View {
                                 
                         }
                         .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
                         .matchedGeometryEffect(id: "circle", in: animation)
                     } else {
                         VStack(spacing: 40) {
@@ -402,7 +469,12 @@ struct GenerateAvatar: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
                                         ForEach(toolIcons, id: \.self) { ele in
-                                            GenerateAvatarToolPill(icon: ele, title: ele, isSelected: $selectedTool) {
+                                            GenerateAvatarToolPill(
+                                                icon: ele,
+                                                title: ele,
+                                                isSelected: $selectedTool,
+                                                selectedItemIcon: getSelectedIcon(for: ele)
+                                            ) {
                                                 idx = 0
                                                 selectedTool = ele
                                             }
@@ -449,14 +521,14 @@ struct GenerateAvatar: View {
                             
                             HStack(spacing: 16) {
                                 Button {
-                                    randomPressed()
+                                    randomPressed(buildMemojiSelection())
                                 } label: {
                                     GreenOutlinedCapsule(image: "ai-stick", title: "Random")
                                 }
 
                                 
                                 Button {
-                                    generatePressed()
+                                    generatePressed(buildMemojiSelection())
                                 } label: {
                                     GreenCapsule(title: "Generate", icon: "stars-generate")
                                 }
@@ -464,7 +536,7 @@ struct GenerateAvatar: View {
                             .padding(.horizontal, 20)
                         }
                     }
-                }
+//                }
             }
             .overlay(alignment: .bottom) {
                 if isExpandedMinimal {
@@ -485,9 +557,15 @@ struct GenerateAvatar: View {
     
     @ViewBuilder
     func minimalToolsSelector(toolIdx: Int) -> some View {
+        // Map toolIdx to toolIcons: 0->gesture, 1->hair-style, 2->skin-tone, 3->accessories, 4->color-theme
+        let toolCategory = toolIcons[toolIdx + 1] // +1 because toolIcons[0] is "family-member"
+        let selectedIcon = getSelectedIcon(for: toolCategory)
+        let currentTool = tools[toolIdx].tools[idx]
+        let isCurrentSelected = selectedIcon == currentTool.icon
+        
         HStack {
             Button {
-                idx = idx - 1
+                idx = max(0, idx - 1)
             } label: {
                 Circle()
                     .fill(.grayScale60)
@@ -503,20 +581,30 @@ struct GenerateAvatar: View {
 
             Spacer()
             
-            VStack {
-                Image(tools[toolIdx].tools[idx].icon ?? "")
-                    .resizable()
-                    .frame(width: 56, height: 50)
-                
-                Text(tools[toolIdx].tools[idx].name)
-                    .font(ManropeFont.medium.size(14))
-                    .foregroundStyle(.grayScale140)
+            Button {
+                // Select the currently highlighted tool
+                setSelectedIcon(for: toolCategory, icon: currentTool.icon)
+            } label: {
+                VStack {
+                    if let icon = currentTool.icon {
+                        Image(icon)
+                            .resizable()
+                            .frame(width: 56, height: 50)
+                    }
+                    
+                    Text(currentTool.name)
+                        .font(ManropeFont.medium.size(14))
+                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
             }
+            .buttonStyle(.plain)
             
             Spacer()
             
             Button {
-                idx = idx + 1
+                idx = min(idx + 1, tools[toolIdx].tools.count - 1)
             } label: {
                 Circle()
                     .fill(.grayScale60)
@@ -529,6 +617,7 @@ struct GenerateAvatar: View {
             }
             .disabled(idx == tools[toolIdx].tools.count - 1)
         }
+        .padding(.horizontal, 20)
     }
     
     @ViewBuilder
@@ -614,7 +703,7 @@ struct GenerateAvatar: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: UIScreen.main.bounds.height * 0.35)
+        .frame(height: UIScreen.main.bounds.height * 0.30)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .foregroundStyle(.grayScale10)
@@ -625,7 +714,7 @@ struct GenerateAvatar: View {
                 .stroke(lineWidth: 0.5)
                 .foregroundStyle(.grayScale40)
         )
-        .padding(.bottom, 40)
+        .padding(.bottom, 60)
         .padding(.horizontal, 20)
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .offset(y: -30)
@@ -633,14 +722,28 @@ struct GenerateAvatar: View {
 }
 
 struct MeetYourAvatar: View {
+    var image: UIImage? = nil
+    var backgroundColorHex: String? = nil
     @State var regeneratePressed: () -> Void = { }
     @State var assignedPressed: () -> Void = { }
     var body: some View {
+        let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
+        
         VStack(spacing: 20) {
             // Avatar placeholder
             Circle()
-                .fill(.gray)
+                .fill(circleColor)
                 .frame(width: 137, height: 137)
+                .overlay {
+                    if let image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .background(Color.clear)
+                            .clipShape(Circle())
+                    }
+                }
 
             VStack(spacing: 40) {
                 Text("Meet your dad’s avatar,\nlooking good!")
@@ -1362,5 +1465,9 @@ struct BringingYourAvatar: View {
 }
 
 #Preview {
-    IngrediFamCanvasView()
+    GenerateAvatar(
+        isExpandedMinimal: .constant(false),
+        randomPressed: { _ in },
+        generatePressed: { _ in }
+    )
 }

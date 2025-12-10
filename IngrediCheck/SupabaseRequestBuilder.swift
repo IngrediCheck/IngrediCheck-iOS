@@ -6,6 +6,7 @@ enum SafeEatsEndpoint: String {
     case ingredicheck_analyze_stream = "analyze-stream"
     case ingredicheck_ping = "ping"
     case feedback = "feedback"
+    case memoji = "memoji"
     case history = "history"
     case list_items = "lists/%@"
     case list_items_item = "lists/%@/%@"
