@@ -11,13 +11,14 @@ import UIKit
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(MemojiStore.self) private var memojiStore
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
-    @StateObject private var memojiViewModel = MemojiViewModel()
     
     var body: some View {
         @Bindable var coordinator = coordinator
+        @Bindable var memojiStore = memojiStore
         
         VStack {
             Spacer()
@@ -239,10 +240,14 @@ struct PersistentBottomSheet: View {
             GenerateAvatar(
                 isExpandedMinimal: $isExpandedMinimal,
                 randomPressed: { selection in
-                    memojiViewModel.generate(selection: selection, coordinator: coordinator)
+                    Task {
+                        await memojiStore.generate(selection: selection, coordinator: coordinator)
+                    }
                 },
                 generatePressed: { selection in
-                    memojiViewModel.generate(selection: selection, coordinator: coordinator)
+                    Task {
+                        await memojiStore.generate(selection: selection, coordinator: coordinator)
+                    }
                 }
             )
             .onAppear {
@@ -255,8 +260,8 @@ struct PersistentBottomSheet: View {
             
         case .meetYourAvatar:
             MeetYourAvatar(
-                image: memojiViewModel.image,
-                backgroundColorHex: memojiViewModel.backgroundColorHex
+                image: memojiStore.image,
+                backgroundColorHex: memojiStore.backgroundColorHex
             ) {
                 coordinator.navigateInBottomSheet(.bringingYourAvatar)
             } assignedPressed: {
