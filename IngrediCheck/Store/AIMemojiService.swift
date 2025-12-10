@@ -61,19 +61,3 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> UIImage {
     return image
 }
 
-// Backward compatibility stub: uses a default request
-func generateMemojiImage() async throws -> UIImage {
-    let defaultRequest = MemojiRequest(
-        familyType: "father",
-        gesture: "wave",
-        hair: "long",
-        skinTone: "light",
-        accessories: ["sunglass"],
-        background: "transparent",
-        size: "1024x1024",
-        model: "gpt-image-1",
-        subscriptionTier: "monthly_basic"
-    )
-    return try await generateMemojiImage(requestBody: defaultRequest)
-}
-
