@@ -8,14 +8,16 @@
 import SwiftUI
 
 struct GenerateAvatarToolPill: View {
-    @State var icon: String = "family-member"
-    @State var title: String = "Family Member"
+    var icon: String = "family-member"
+    var title: String = "Family Member"
     @Binding var isSelected: String
-    @State var onTap: (() -> Void)? = nil
+    var selectedItemIcon: String? = nil // Icon of the selected item within this tool category
+    var onTap: (() -> Void)? = nil
     var body: some View {
         HStack(spacing: 4) {
             ZStack {
-                Image(icon)
+                // Show selected item icon if available, otherwise show default category icon
+                Image(selectedItemIcon ?? icon)
                     .resizable()
                     .frame(width:(isSelected == icon) ? 20 : 24, height: (isSelected == icon) ? 20 : 24)
                 

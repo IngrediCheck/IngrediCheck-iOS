@@ -92,6 +92,9 @@
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
 		D3BED0662ED9974A00088E044 /* RecentScansFullView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */; };
+		D3F0E0032F0A1B2C3D4E5F60 /* MemojiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */; };
+		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
+		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -175,13 +178,15 @@
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentScansFullView.swift; sourceTree = "<group>"; };
+		D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiModels.swift; sourceTree = "<group>"; };
+		D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiStore.swift; sourceTree = "<group>"; };
+		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
-		D3BECC0C2ED98A3E0088E044 /* AI Memoji  */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "AI Memoji "; sourceTree = "<group>"; };
 		D3BECC0E2ED98A3E0088E044 /* AI Summary */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "AI Summary"; sourceTree = "<group>"; };
 		D3BECC142ED98A3E0088E044 /* BarcodeScan */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BarcodeScan; sourceTree = "<group>"; };
 		D3BECC172ED98A3E0088E044 /* ChatBot */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ChatBot; sourceTree = "<group>"; };
@@ -270,6 +275,9 @@
 				39705AF22BD49794000E487D /* NetworkState.swift */,
 				0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */,
 				0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */,
+				D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */,
+				D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */,
+				D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -318,7 +326,6 @@
 				D3BECC7C2ED98D320088E044 /* WelcomeToYourFamilyView.swift */,
 				D3BECC732ED98CFF0088E044 /* Splash Screen */,
 				D3BECC742ED98CFF0088E044 /* Add Family Members */,
-				D3BECC0C2ED98A3E0088E044 /* AI Memoji  */,
 				D3BECC0E2ED98A3E0088E044 /* AI Summary */,
 				D3BECC142ED98A3E0088E044 /* BarcodeScan */,
 				D3BECC172ED98A3E0088E044 /* ChatBot */,
@@ -414,7 +421,6 @@
 				D3BECBA72ED9898E0088E044 /* Components */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
-				D3BECC0C2ED98A3E0088E044 /* AI Memoji  */,
 				D3BECC0E2ED98A3E0088E044 /* AI Summary */,
 				D3BECC142ED98A3E0088E044 /* BarcodeScan */,
 				D3BECC172ED98A3E0088E044 /* ChatBot */,
@@ -519,6 +525,9 @@
 				D3BED0622ED997490088E044 /* HomeView.swift in Sources */,
 				D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */,
 				D3BED0662ED9974A00088E044 /* RecentScansFullView.swift in Sources */,
+				D3F0E0032F0A1B2C3D4E5F60 /* MemojiModels.swift in Sources */,
+				D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */,
+				D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */,
 				D3BECC9E2ED98EA10088E044 /* Temp2.swift in Sources */,
 				D3BECC9F2ED98EA10088E044 /* Temp3.swift in Sources */,
 				D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */,
