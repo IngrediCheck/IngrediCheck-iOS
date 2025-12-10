@@ -217,6 +217,14 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 20)
 
+                    // Recent Scans loading state
+                    if appState.listsTabState.historyItems == nil {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 16)
+                    }
+
                     // Recent Scans list
                     if let historyItems = appState.listsTabState.historyItems {
                         let items = Array(historyItems.prefix(5))

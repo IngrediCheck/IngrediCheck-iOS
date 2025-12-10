@@ -252,6 +252,7 @@ struct ProductDetailView: View {
                                         HeaderImage(imageLocation: product.images[index])
                                             .frame(width: 50, height: 50)
                                             .clipped()
+                                            .opacity(selectedImageIndex == index ? 0.5 : 1.0)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 11)
                                                     .stroke(
@@ -284,6 +285,7 @@ struct ProductDetailView: View {
                                     HeaderImage(imageLocation: product.images[index])
                                         .frame(width: 50, height: 50)
                                         .clipped()
+                                        .opacity(selectedImageIndex == index ? 0.5 : 1.0)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 11)
                                                 .stroke(
@@ -354,6 +356,7 @@ struct ProductDetailView: View {
                                         .aspectRatio(contentMode: .fill)
                                         .frame(width: 50, height: 50)
                                         .clipped()
+                                        .opacity(selectedImageIndex == index ? 0.5 : 1.0)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 11)
                                                 .stroke(

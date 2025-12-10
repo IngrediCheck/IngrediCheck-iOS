@@ -221,15 +221,17 @@ import SimpleToast
                     Text("Recent Scans")
                         .font(ManropeFont.semiBold.size(18))
                 }
-                .padding(.leading, 10)
+                .padding(.leading, 5)
             }
-//            ToolbarItem(placement: .topBarTrailing) {
-//                Button(action: {
-//                    isSearching = true
-//                }, label: {
-//                    Image(systemName: "magnifyingglass")
-//                })
-//            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: {
+                    isSearching = true
+                }, label: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.black)
+                        .frame(width: 24, height: 24)
+                })
+            }
         }
     }
 }

@@ -505,6 +505,24 @@ private enum AuthFlowMode {
             }
         }
     }
+
+    public func signInWithApple(completion: ((Result<Void, Error>) -> Void)? = nil) {
+        Task {
+            do {
+                let credentials = try await requestAppleIDToken()
+                let session = try await finalizeAuth(with: credentials, mode: .signIn)
+                await MainActor.run {
+                    self.session = session
+                    completion?(.success(()))
+                }
+            } catch {
+                print("Apple sign-in failed: \(error)")
+                await MainActor.run {
+                    completion?(.failure(error))
+                }
+            }
+        }
+    }
     
     @MainActor
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
