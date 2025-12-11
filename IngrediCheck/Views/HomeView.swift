@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isProductDetailPresented = false
     @State private var isRecentScansPresented = false
+    @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
     @State private var collapseReferenceOffset: CGFloat = 0
@@ -41,9 +42,6 @@ struct HomeView: View {
     }
 
     private var primaryMemberName: String {
-        if let userName = authController.currentUserName, !userName.isEmpty {
-            return userName
-        }
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
 
@@ -82,6 +80,9 @@ struct HomeView: View {
                         Spacer()
 
                         ProfileCard(isProfileCompleted: false)
+                            .onTapGesture {
+                                isSettingsPresented = true
+                            }
                     }
                     .padding(.bottom, 28)
 
@@ -367,6 +368,12 @@ struct HomeView: View {
                 if appState.listsTabState.historyItems == nil {
                     await refreshRecentScans()
                 }
+            }
+
+            // ------------ SETTINGS SHEET ------------
+            .sheet(isPresented: $isSettingsPresented) {
+                SettingsSheet()
+                    .environment(userPreferences)
             }
 
             // ------------ CHAT SHEET ------------
