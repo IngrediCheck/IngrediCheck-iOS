@@ -55,10 +55,6 @@ private final class AppleSignInCoordinator: NSObject,
             return
         }
 
-        if let currentUserName = appleIDCredential.fullName?.formatted(), !currentUserName.isEmpty {
-            keychain.set(currentUserName, forKey: "currentUserName")
-        }
-
         guard let identityTokenData = appleIDCredential.identityToken else {
             continuation?.resume(throwing: AuthControllerError.idTokenIsNil)
             continuation = nil
@@ -403,10 +399,6 @@ private enum AuthFlowMode {
         case .success(let authorization):
             guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
                 throw AuthControllerError.unsupportedCredentialType
-            }
-
-            if let currentUserName = appleIDCredential.fullName?.formatted(), !currentUserName.isEmpty {
-                keychain.set(currentUserName, forKey: "currentUserName")
             }
 
             guard let identityTokenData = appleIDCredential.identityToken else {
