@@ -335,45 +335,59 @@ struct BarcodeDataCard: View {
         HStack(spacing: 14) {
             // Left-side visual changes based on whether we have a barcode yet.
             ZStack (){
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.thinMaterial)
-                    .frame(width: 68, height: 92)
-                    .opacity(0.4)
+//                RoundedRectangle(cornerRadius: 16)
+//                    .fill(.thinMaterial)
+//                    .frame(width: 68, height: 92)
+//                    .opacity(0.4)
                 if code.isEmpty {
                     // Empty card: simple placeholder block, no barcode illustration.
                     // The material background itself is the placeholder.
                 } else if let product = product, !product.images.isEmpty {
-                    // After product is known: show first product image with analyzing overlay when needed.
-                    if product.images.count == 1, let firstImage = product.images.first {
-                        ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
-                            .frame(width: 68, height: 92)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.white, lineWidth: 0.5)
-                            )
-                    } else {
-                        let firstImage = product.images[0]
-                        let secondImage = product.images[1]
+                    // Show up to three images stacked; if more exist, show a +N badge.
+                    let displayedImages = Array(product.images.prefix(3))
+                    let remainingCount = max(product.images.count - displayedImages.count, 0)
+                    let stackOffset: CGFloat = 6
+                    let sizeReduction: CGFloat = 4 // Each subsequent image is 4px smaller
+                    
+                    ZStack(alignment: .topTrailing) {
                         ZStack(alignment: .leading) {
-                            ProductImageThumbnail(imageLocation: secondImage, isAnalyzing: isAnalyzing)
-                                .frame(width: 68, height: 88)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.white, lineWidth: 0.3)
-                                )
-                            ProductImageThumbnail(imageLocation: firstImage, isAnalyzing: isAnalyzing)
-                                .frame(width: 68, height: 92)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.white, lineWidth: 0.3)
-                                )
-                                .shadow(color: Color.black.opacity(0.50	), radius: 6, x: -2, y: 4)
-                                .padding(.leading, 5)
+                            ForEach(Array(displayedImages.enumerated()), id: \.offset) { index, location in
+                                // Reverse the sizing: topmost image (highest index) should be largest
+                                let reverseIndex = displayedImages.count - 1 - index
+                                let imageWidth = 68 - CGFloat(reverseIndex) * sizeReduction
+                                let imageHeight = 92 - CGFloat(reverseIndex) * sizeReduction
+                                
+                                ProductImageThumbnail(imageLocation: location, isAnalyzing: isAnalyzing)
+                                    .frame(width: imageWidth, height: imageHeight)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Color.white, lineWidth: 0.4)
+                                    )
+                                    .shadow(radius: 4)
+                                    .offset(x: CGFloat(index) * stackOffset)
+                                    .zIndex(Double(index))
+                            }
                         }
-                        .frame(width: 68, height: 92, alignment: .leading)
+                        .frame(width: 68 + CGFloat(max(displayedImages.count - 1, 0)) * stackOffset,
+                               height: 92,
+                               alignment: .leading)
+                        
+                        if remainingCount > 0 {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                    )
+                                Text("+\(remainingCount)")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.black)
+                            }
+                            .frame(width: 30, height: 30)
+                            .offset(x: 8, y: -8)
+                        }
                     }
                 } else if product != nil {
                     // Product details were found but there is no image in the API response.
@@ -938,16 +952,16 @@ private struct ProductImageThumbnail: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.thinMaterial.opacity(0.4))
-                .frame(width: 68, height: 92)
+//            RoundedRectangle(cornerRadius: 16)
+//                .fill(.thinMaterial.opacity(0.4))
+//                .frame(width: 68, height: 92)
 
             if let image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 64, height: 88)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+//                    .frame(width: 64, height: 88)
+//                    .clipShape(RoundedRectangle(cornerRadius: 16))
             } else {
                 // When the image cannot be loaded from the server, fall back to
                 // the default "imagenotfound1" asset.
