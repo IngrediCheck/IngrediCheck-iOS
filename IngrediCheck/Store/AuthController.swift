@@ -187,6 +187,28 @@ private enum AuthFlowMode {
         return session?.user.email
     }
 
+    /// Best-effort full name for the currently logged-in user, derived from Supabase user metadata.
+    /// Tries common keys set by OAuth providers and your backend (full_name, name, given_name + family_name).
+    @MainActor var currentUserName: String? {
+        guard let metadata = session?.user.userMetadata else {
+            return nil
+        }
+
+        // Try common full-name style keys first
+        if let fullName = metadata["full_name"] as? String, !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return fullName
+        }
+        if let name = metadata["name"] as? String, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return name
+        }
+
+        // Fallback: combine given_name + family_name if present
+        let given = (metadata["given_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let family = (metadata["family_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let combined = [given, family].filter { !$0.isEmpty }.joined(separator: " ")
+        return combined.isEmpty ? nil : combined
+    }
+
     // Returns true if the email looks like Apple's private relay address
     @MainActor private func isAppleRelayEmail(_ email: String) -> Bool {
         let lowercased = email.lowercased()
