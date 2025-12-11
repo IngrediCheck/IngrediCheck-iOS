@@ -55,10 +55,6 @@ private final class AppleSignInCoordinator: NSObject,
             return
         }
 
-        if let currentUserName = appleIDCredential.fullName?.formatted(), !currentUserName.isEmpty {
-            keychain.set(currentUserName, forKey: "currentUserName")
-        }
-
         guard let identityTokenData = appleIDCredential.identityToken else {
             continuation?.resume(throwing: AuthControllerError.idTokenIsNil)
             continuation = nil
@@ -383,10 +379,6 @@ private enum AuthFlowMode {
                 throw AuthControllerError.unsupportedCredentialType
             }
 
-            if let currentUserName = appleIDCredential.fullName?.formatted(), !currentUserName.isEmpty {
-                keychain.set(currentUserName, forKey: "currentUserName")
-            }
-
             guard let identityTokenData = appleIDCredential.identityToken else {
                 throw AuthControllerError.idTokenIsNil
             }
@@ -499,6 +491,24 @@ private enum AuthFlowMode {
                 }
             } catch {
                 print("Google sign-in failed: \(error)")
+                await MainActor.run {
+                    completion?(.failure(error))
+                }
+            }
+        }
+    }
+
+    public func signInWithApple(completion: ((Result<Void, Error>) -> Void)? = nil) {
+        Task {
+            do {
+                let credentials = try await requestAppleIDToken()
+                let session = try await finalizeAuth(with: credentials, mode: .signIn)
+                await MainActor.run {
+                    self.session = session
+                    completion?(.success(()))
+                }
+            } catch {
+                print("Apple sign-in failed: \(error)")
                 await MainActor.run {
                     completion?(.failure(error))
                 }

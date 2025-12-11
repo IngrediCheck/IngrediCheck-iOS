@@ -221,15 +221,17 @@ import SimpleToast
                     Text("Recent Scans")
                         .font(ManropeFont.semiBold.size(18))
                 }
-                .padding(.leading, 10)
+                .padding(.leading, 5)
             }
-//            ToolbarItem(placement: .topBarTrailing) {
-//                Button(action: {
-//                    isSearching = true
-//                }, label: {
-//                    Image(systemName: "magnifyingglass")
-//                })
-//            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: {
+                    isSearching = true
+                }, label: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.black)
+                        .frame(width: 24, height: 24)
+                })
+            }
         }
     }
 }
@@ -402,8 +404,22 @@ import SimpleToast
             ScrollView {
                 VStack(spacing: 10) {
                     ForEach(Array(vm.searchResults.enumerated()), id: \.element.client_activity_id) { index, item in
-                        NavigationLink(value: HistoryRouteItem.historyItem(item)) {
-                            HistoryItemCardView(item: item)
+                        NavigationLink {
+                            let product = DTO.Product(
+                                barcode: item.barcode,
+                                brand: item.brand,
+                                name: item.name,
+                                ingredients: item.ingredients,
+                                images: item.images
+                            )
+                            ProductDetailView(
+                                product: product,
+                                matchStatus: item.calculateMatch(),
+                                ingredientRecommendations: item.ingredient_recommendations,
+                                isPlaceholderMode: false
+                            )
+                        } label: {
+                            HomeRecentScanRow(item: item)
                         }
                         .foregroundStyle(.primary)
 

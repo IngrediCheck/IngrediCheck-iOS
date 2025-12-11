@@ -1045,6 +1045,10 @@ struct DoYouHaveAnInviteCode: View {
 }
 
 struct WelcomeBack: View {
+    @Environment(AuthController.self) var authController
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @State private var isSigningIn = false
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1054,15 +1058,45 @@ struct WelcomeBack: View {
                     .multilineTextAlignment(.center)
 
                 Text("Log in to access your saved preferences and food insights.")
-                    .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(.grayScale120)
+                    .font(ManropeFont.medium.size(12))                    .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
             .padding(.bottom, 40)
 
             HStack(spacing: 16) {
-                GreenCapsule(title: "Google", icon: "google_logo", iconWidth: 24, iconHeight: 24)
-                GreenCapsule(title: "Apple", icon: "apple_logo", iconWidth: 24, iconHeight: 24)
+                Button {
+                    isSigningIn = true
+                    authController.signInWithGoogle { result in
+                        switch result {
+                        case .success:
+                            coordinator.showCanvas(.home)
+                            isSigningIn = false
+                        case .failure(let error):
+                            print("Google Sign-In failed: \\(error.localizedDescription)")
+                            isSigningIn = false
+                        }
+                    }
+                } label: {
+                    GreenCapsule(title: "Google", icon: "google_logo", iconWidth: 24, iconHeight: 24)
+                }
+                .disabled(isSigningIn)
+
+                Button {
+                    isSigningIn = true
+                    authController.signInWithApple { result in
+                        switch result {
+                        case .success:
+                            coordinator.showCanvas(.home)
+                            isSigningIn = false
+                        case .failure(let error):
+                            print("Apple Sign-In failed: \\(error.localizedDescription)")
+                            isSigningIn = false
+                        }
+                    }
+                } label: {
+                    GreenCapsule(title: "Apple", icon: "apple_logo", iconWidth: 24, iconHeight: 24)
+                }
+                .disabled(isSigningIn)
             }
             .padding(.bottom, 20)
 
@@ -1082,6 +1116,17 @@ struct WelcomeBack: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .center) {
+            if isSigningIn {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .scaleEffect(2)
+
+                }
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .fill(.neutral500)

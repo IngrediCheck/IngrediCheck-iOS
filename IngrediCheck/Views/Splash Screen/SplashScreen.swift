@@ -24,72 +24,112 @@ struct SplashScreen: View {
     ]
     
     @State private var currentIndex: Int = 0
+    @State private var isFirstLaunch: Bool = true
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                
-                Spacer()
-                Spacer()
-                
+        // In preview flow, if there's already a non-guest Supabase session
+        // (e.g., user previously logged in with Google/Apple), skip the
+        // marketing carousel and go straight into the main container.
+        // However, on a true first launch after install we always want to
+        // start from the first screen, even if a stale session exists in
+        // keychain. That first-launch detection is handled in the .task
+        // below and reflected via isFirstLaunch.
+        if !isFirstLaunch, authController.session != nil, !authController.signedInAsGuest {
+            // For returning logged-in users in preview flow, show a short
+            // branded splash image before transitioning directly to Home.
+            Splash {
+                Image("SplashScreen")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+            } content: {
+                RootContainerView(initialRoute: .home)
+                    .environment(authController)
+                    .environment(familyStore)
+            }
+        } else {
+            NavigationStack {
                 VStack {
-                    Text(slide.title)
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                    Text(slide.subtitle)
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale100)
-                        .multilineTextAlignment(.center)
-                }
-                
-                Spacer()
-                
-                HStack {
                     
-                    HStack {
-                        ForEach(slides.indices, id: \.self) { index in
-                            Capsule()
-                                .frame(width: currentIndex == index ? 24 : 5.5, height: 5.5)
-                                .foregroundStyle(
-                                    currentIndex == index
-                                    ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                    : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                                )
-                        }
+                    Spacer()
+                    Spacer()
+                    
+                    VStack {
+                        Text(slide.title)
+                            .font(NunitoFont.bold.size(22))
+                            .foregroundStyle(.grayScale150)
+                        Text(slide.subtitle)
+                            .font(ManropeFont.medium.size(14))
+                            .foregroundStyle(.grayScale100)
+                            .multilineTextAlignment(.center)
                     }
                     
                     Spacer()
                     
-                    if isLastSlide {
-                        NavigationLink {
-                            RootContainerView()
-                                .environment(authController)
-                                .environment(familyStore)
-                        } label: {
-                            GreenCapsule(title: "Get Started")
-                                .frame(width: 159)
-                        }
-                    } else {
-                        Button {
-                            withAnimation(.smooth) {
-                                currentIndex = min(currentIndex + 1, slides.count - 1)
+                    HStack {
+                        
+                        HStack {
+                            ForEach(slides.indices, id: \.self) { index in
+                                Capsule()
+                                    .frame(width: currentIndex == index ? 24 : 5.5, height: 5.5)
+                                    .foregroundStyle(
+                                        currentIndex == index
+                                        ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
+                                        : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
+                                    )
                             }
-                        } label: {
-                            GreenCircle()
+                        }
+                        
+                        Spacer()
+                        
+                        if isLastSlide {
+                            NavigationLink {
+                                RootContainerView()
+                                    .environment(authController)
+                                    .environment(familyStore)
+                            } label: {
+                                GreenCapsule(title: "Get Started")
+                                    .frame(width: 159)
+                            }
+                        } else {
+                            Button {
+                                withAnimation(.smooth) {
+                                    currentIndex = min(currentIndex + 1, slides.count - 1)
+                                }
+                            } label: {
+                                GreenCircle()
+                            }
                         }
                     }
+                    .animation(.smooth, value: currentIndex)
                 }
-                .animation(.smooth, value: currentIndex)
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
-        }
-        .task {
-            // Ensure the user is authenticated for preview flow so that
-            // subsequent Supabase-backed features (e.g., family) work.
-            if authController.signInState == .signedOut {
-                await authController.signIn()
+            .task {
+                let firstLaunchKey = "hasLaunchedOncePreviewFlow"
+                let hasLaunchedBefore = UserDefaults.standard.bool(forKey: firstLaunchKey)
+
+                if !hasLaunchedBefore {
+                    // Mark that we've now launched at least once. For this
+                    // initial launch we force onboarding by treating it as
+                    // first launch even if a stale session exists in keychain.
+                    UserDefaults.standard.set(true, forKey: firstLaunchKey)
+                    isFirstLaunch = true
+
+                    // If we somehow already have a Supabase session on first
+                    // launch (e.g., carried over via keychain from a previous
+                    // install), clear it so the user is not auto-logged in
+                    // before they choose Google/Apple or "Sign-in later".
+                    if authController.session != nil {
+                        await authController.signOut()
+                    }
+                } else {
+                    isFirstLaunch = false
+                }
+                // Do NOT auto-sign-in here; login should only happen when
+                // the user explicitly chooses a provider or taps "Sign-in later".
             }
         }
     }

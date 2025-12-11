@@ -13,9 +13,11 @@ struct HomeView: View {
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isProductDetailPresented = false
     @State private var isRecentScansPresented = false
+    @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
     @State private var collapseReferenceOffset: CGFloat = 0
+    @State private var isRefreshingHistory: Bool = false
 
     // ---------------------------
     // MERGED FROM YOUR BRANCH
@@ -27,6 +29,7 @@ struct HomeView: View {
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(AuthController.self) private var authController
 
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
@@ -39,7 +42,7 @@ struct HomeView: View {
     }
 
     private var primaryMemberName: String {
-        familyStore.family?.selfMember.name ?? "IngrediFriend"
+        return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
 
     var body: some View {
@@ -77,6 +80,9 @@ struct HomeView: View {
                         Spacer()
 
                         ProfileCard(isProfileCompleted: false)
+                            .onTapGesture {
+                                isSettingsPresented = true
+                            }
                     }
                     .padding(.bottom, 28)
 
@@ -193,9 +199,29 @@ struct HomeView: View {
                     // Recent Scans header
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Recent Scans")
-                                .font(ManropeFont.medium.size(18))
-                                .foregroundStyle(.grayScale150)
+                            HStack(spacing : 6) {
+                                Text("Recent Scans")
+                                    .font(ManropeFont.medium.size(18))
+                                    .foregroundStyle(.grayScale150)
+                                
+                                Button {
+                                                             Task {
+                                                                 await refreshRecentScans()
+                                                             }
+                                                         } label: {
+                                                             if isRefreshingHistory {
+                                                                 ProgressView()
+                                                                     .progressViewStyle(.circular)
+                                                                     .scaleEffect(0.7)
+                                                             } else {
+                                                                 Image(systemName: "arrow.clockwise")
+                                                                     .font(.system(size: 14, weight: .medium))
+                                                                     .foregroundStyle(Color(hex: "B6B6B6"))
+                                                             }
+                                                         }
+                                                         .buttonStyle(.plain)
+                                                         .disabled(isRefreshingHistory)
+                            }
 
                             Text("Here’s what you checked last in past 2 days")
                                 .font(ManropeFont.regular.size(12))
@@ -205,15 +231,34 @@ struct HomeView: View {
                         Spacer()
 
                         // KEEP YOUR SHEET VERSION
-                        Button {
-                            isRecentScansPresented = true
-                        } label: {
-                            Text("View All")
-                                .underline()
-                                .font(ManropeFont.medium.size(14))
-                                .foregroundStyle(Color(hex: "B6B6B6"))
+                        HStack(spacing: 6) {
+                            Button {
+                                isRecentScansPresented = true
+                            } label: {
+                                Text("View All")
+                                    .underline()
+                                    .font(ManropeFont.medium.size(14))
+                                    .foregroundStyle(Color(hex: "B6B6B6"))
+                            }
+                            .buttonStyle(.plain)
+
+//                            Button {
+//                                Task {
+//                                    await refreshRecentScans()
+//                                }
+//                            } label: {
+//                                if isRefreshingHistory {
+//                                    ProgressView()
+//                                        .progressViewStyle(.circular)
+//                                        .scaleEffect(0.7)
+//                                } else {
+//                                    Image(systemName: "arrow.clockwise")
+//                                        .font(.system(size: 14, weight: .medium))
+//                                }
+//                            }
+//                            .buttonStyle(.plain)
+//                            .disabled(isRefreshingHistory)
                         }
-                        .buttonStyle(.plain)
                     }
                     .padding(.bottom, 20)
 
@@ -321,12 +366,14 @@ struct HomeView: View {
             // ------------ HISTORY LOADING ------------
             .task {
                 if appState.listsTabState.historyItems == nil {
-                    if let history = try? await webService.fetchHistory() {
-                        await MainActor.run {
-                            appState.listsTabState.historyItems = history
-                        }
-                    }
+                    await refreshRecentScans()
                 }
+            }
+
+            // ------------ SETTINGS SHEET ------------
+            .sheet(isPresented: $isSettingsPresented) {
+                SettingsSheet()
+                    .environment(userPreferences)
             }
 
             // ------------ CHAT SHEET ------------
@@ -359,6 +406,18 @@ struct HomeView: View {
                     RecentScansPageView()
                 }
                 .environment(userPreferences)
+            }
+        }
+    }
+
+    private func refreshRecentScans() async {
+        guard !isRefreshingHistory else { return }
+        isRefreshingHistory = true
+        defer { isRefreshingHistory = false }
+
+        if let history = try? await webService.fetchHistory() {
+            await MainActor.run {
+                appState.listsTabState.historyItems = history
             }
         }
     }
