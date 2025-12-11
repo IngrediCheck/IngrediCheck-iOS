@@ -13,6 +13,7 @@ struct IngrediBotChatView: View {
     @State private var message: String = ""
     var onDismiss: (() -> Void)? = nil
     @State private var isBotThinking: Bool = false
+    @State private var navigateToSummary: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -124,7 +125,13 @@ struct IngrediBotChatView: View {
                             .stroke(Color.gray.opacity(0.2))
                     )
                 
-                NavigationLink(destination: DetailedAISummary()) {
+                Button {
+                    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        message = ""
+                    }
+                    navigateToSummary = true
+                } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()
                         .scaledToFit()
@@ -146,13 +153,15 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !trimmed.isEmpty {
-                            message = ""
-                        }
+                .background(
+                    NavigationLink(
+                        destination: DetailedAISummary()
+                            .environment(coordinator),
+                        isActive: $navigateToSummary
+                    ) {
+                        EmptyView()
                     }
+                    .hidden()
                 )
             }
         }
@@ -266,8 +275,10 @@ private struct TypingBubble: View {
 }
 
 #Preview("IngrediBotChatView") {
-    IngrediBotChatView()
-        .environment(AppNavigationCoordinator())
+    NavigationStack {
+        IngrediBotChatView()
+            .environment(AppNavigationCoordinator())
+    }
 }
 
 #Preview("ConversationBubble") {
