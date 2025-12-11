@@ -1464,10 +1464,105 @@ struct BringingYourAvatar: View {
     }
 }
 
+struct WouldYouLikeToInvite: View {
+    @State var invitePressed: () -> Void = { }
+    @State var continuePressed: () -> Void = { }
+    @State var name: String
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Would you like to invite \(name) to join IngrediFam?")
+                    .font(NunitoFont.bold.size(20))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("No worries if you skip this step. You can share the code with Neha later too.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 20)
+            
+            HStack(spacing: 16) {
+                Button {
+                    invitePressed()
+                } label: {
+                    GreenCapsule(title: "Invite", icon: "share")
+                }
+                
+                Button {
+                    continuePressed()
+                } label: {
+                    GreenCapsule(title: "Continue")
+                }
+
+                
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct WantToAddPreference: View {
+    @State var laterPressed: () -> Void = { }
+    @State var yesPressed: () -> Void = { }
+    @State var name: String
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Do you want to add preferences for Neha ?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("Don't worry, \(name) can add or edit her preferences once she joins Ingredifam")
+                    .font(ManropeFont.medium.size(14))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 20)
+            
+            HStack(spacing: 16) {
+                Button {
+                    laterPressed()
+                } label: {
+                    Text("Later")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+                
+                Button {
+                    yesPressed()
+                } label: {
+                    GreenCapsule(title: "Yes")
+                }
+
+                
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
 #Preview {
-    GenerateAvatar(
-        isExpandedMinimal: .constant(false),
-        randomPressed: { _ in },
-        generatePressed: { _ in }
-    )
+    WantToAddPreference(name: "Neha")
 }

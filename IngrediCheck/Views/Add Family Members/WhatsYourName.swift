@@ -75,6 +75,18 @@ struct WhatsYourName: View {
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
+                            ZStack {
+                                Circle()
+                                    .stroke(lineWidth: 2)
+                                    .foregroundStyle(.grayScale60)
+                                    .frame(width: 50, height: 50)
+                                
+                                Image(systemName: "plus")
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                                    .foregroundStyle(.grayScale60)
+                            }
+                            
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {
                                     Image(ele.image)
