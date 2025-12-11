@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
     @State var familyMembersList: [UserModel] = [
@@ -71,17 +72,22 @@ struct AddMoreMembers: View {
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
-                            ZStack {
-                                Circle()
-                                    .stroke(lineWidth: 2)
-                                    .foregroundStyle(.grayScale60)
-                                    .frame(width: 48, height: 48)
-                                
-                                Image(systemName: "plus")
-                                    .resizable()
-                                    .frame(width: 20, height: 20)
-                                    .foregroundStyle(.grayScale60)
+                            Button {
+                                coordinator.navigateInBottomSheet(.generateAvatar)
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .stroke(lineWidth: 2)
+                                        .foregroundStyle(.grayScale60)
+                                        .frame(width: 48, height: 48)
+                                    
+                                    Image(systemName: "plus")
+                                        .resizable()
+                                        .frame(width: 20, height: 20)
+                                        .foregroundStyle(.grayScale60)
+                                }
                             }
+                            .buttonStyle(.plain)
                             
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {

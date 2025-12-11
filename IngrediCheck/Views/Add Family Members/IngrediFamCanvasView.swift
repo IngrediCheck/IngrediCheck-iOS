@@ -138,7 +138,7 @@ struct IngrediFamCanvasView: View {
                     generatePressed: { _ in }
                 )
             case .bringingYourAvatar:
-                BringingYourAvatar()
+                IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             case .meetYourAvatar:
                 MeetYourAvatar()
             case .letsScanSmarter:
@@ -1429,40 +1429,6 @@ struct AddMoreMembersMinimal: View {
     }
 }
 
-struct BringingYourAvatar: View {
-    @State var viewDidAppear: () -> Void = {}
-    var body: some View {
-        VStack(spacing: 32) {
-            // Robot image
-            Image("ingrediBot")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 147, height: 147)
-                .clipped()
-            
-            VStack(spacing: 24) {
-                Text("Bringing your avatar to life... it’s going to be awesome!")
-                    .font(NunitoFont.bold.size(20))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
-        )
-        .onAppear() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                viewDidAppear()
-            }
-        }
-    }
-}
 
 struct WouldYouLikeToInvite: View {
     var name: String

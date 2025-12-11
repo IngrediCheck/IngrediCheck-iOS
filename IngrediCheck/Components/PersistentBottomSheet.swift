@@ -281,7 +281,7 @@ struct PersistentBottomSheet: View {
             }
             
         case .bringingYourAvatar:
-            BringingYourAvatar()
+            IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             
         case .meetYourAvatar:
             MeetYourAvatar(
