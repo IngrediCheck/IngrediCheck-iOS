@@ -19,8 +19,7 @@ struct AddMoreMembers: View {
         UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
-    @State var generatePressed: () -> Void = { }
-    @State var addMemberPressed: () -> Void = { }
+    @State var continuePressed: () -> Void = { }
     var body: some View {
         VStack {
             
@@ -76,7 +75,7 @@ struct AddMoreMembers: View {
                                 Circle()
                                     .stroke(lineWidth: 2)
                                     .foregroundStyle(.grayScale60)
-                                    .frame(width: 50, height: 50)
+                                    .frame(width: 48, height: 48)
                                 
                                 Image(systemName: "plus")
                                     .resizable()
@@ -117,30 +116,20 @@ struct AddMoreMembers: View {
             }
             .padding(.bottom, 40)
             
-            HStack(spacing: 16) {
-                Button {
-                    generatePressed()
-                } label: {
-                    GreenOutlinedCapsule(image: "stars-generate", title: "Generate")
+            Button {
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    showError = true
+                } else {
+                    print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
+                    familyStore.addPendingOtherMember(name: trimmed)
+                    name = ""
+                    showError = false
+                    continuePressed()
                 }
-                
-                Button {
-                    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if trimmed.isEmpty {
-                        showError = true
-                    } else {
-                        print("[AddMoreMembers] Add Member tapped with name=\(trimmed)")
-                        familyStore.addPendingOtherMember(name: trimmed)
-                        name = ""
-                        showError = false
-                        addMemberPressed()
-                    }
-                } label: {
-                    GreenCapsule(title: "Add Member")
-                }
-
-                
-                
+            } label: {
+                GreenCapsule(title: "Continue")
+                    .frame(width: 159)
             }
             .padding(.horizontal, 20)
         }

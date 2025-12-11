@@ -32,6 +32,7 @@ struct HomeView: View {
     // MERGED FROM DEVELOP BRANCH
     // ---------------------------
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
 
     private var familyMembers: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
@@ -162,7 +163,12 @@ struct HomeView: View {
 
                                     Spacer()
 
-                                    GreenCircle(iconName: "tabler_plus", iconSize: 24, circleSize: 36)
+                                    Button {
+                                        coordinator.navigateInBottomSheet(.addMoreMembers)
+                                    } label: {
+                                        GreenCircle(iconName: "tabler_plus", iconSize: 24, circleSize: 36)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .frame(height: 103)

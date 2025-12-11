@@ -214,15 +214,11 @@ struct PersistentBottomSheet: View {
             
         case .whatsYourName:
             WhatsYourName {
-                coordinator.navigateInBottomSheet(.generateAvatar)
-            } addMemberPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembers)
             }
             
         case .addMoreMembers:
             AddMoreMembers {
-                coordinator.navigateInBottomSheet(.generateAvatar)
-            } addMemberPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
             }
             
