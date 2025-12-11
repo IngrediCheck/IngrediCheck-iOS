@@ -37,7 +37,7 @@ private struct ProductionFlowView: View {
     var body: some View {
         Splash {
             Image("SplashScreen")
-                .resizable()
+                .resizable() 
                 .scaledToFill()
         } content: {
             MainView()

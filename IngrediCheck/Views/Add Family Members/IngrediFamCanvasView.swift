@@ -138,7 +138,7 @@ struct IngrediFamCanvasView: View {
                     generatePressed: { _ in }
                 )
             case .bringingYourAvatar:
-                BringingYourAvatar()
+                IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             case .meetYourAvatar:
                 MeetYourAvatar()
             case .letsScanSmarter:
@@ -163,6 +163,7 @@ struct IngrediFamCanvasView: View {
 }
 
 struct GenerateAvatar: View {
+    @Environment(MemojiStore.self) private var memojiStore
     
     @State var toolIcons: [String] = [
         "family-member",
@@ -182,7 +183,37 @@ struct GenerateAvatar: View {
     
     @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
     
-    @State var selectedTool: String = "family-member"
+    // Restore state from memojiStore when view appears
+    private func restoreState() {
+        // Restore selected family member
+        selectedFamilyMember = UserModel(
+            familyMemberName: memojiStore.selectedFamilyMemberName,
+            familyMemberImage: memojiStore.selectedFamilyMemberImage
+        )
+        
+        // Restore other selections
+        selectedTool = memojiStore.selectedTool
+        idx = memojiStore.currentToolIndex
+        selectedGestureIcon = memojiStore.selectedGestureIcon
+        selectedHairStyleIcon = memojiStore.selectedHairStyleIcon
+        selectedSkinToneIcon = memojiStore.selectedSkinToneIcon
+        selectedAccessoriesIcon = memojiStore.selectedAccessoriesIcon
+        selectedColorThemeIcon = memojiStore.selectedColorThemeIcon
+    }
+    
+    // Save state to memojiStore when selections change
+    private func saveState() {
+        memojiStore.selectedFamilyMemberName = selectedFamilyMember.name
+        memojiStore.selectedFamilyMemberImage = selectedFamilyMember.image
+        memojiStore.selectedTool = selectedTool
+        memojiStore.currentToolIndex = idx
+        memojiStore.selectedGestureIcon = selectedGestureIcon
+        memojiStore.selectedHairStyleIcon = selectedHairStyleIcon
+        memojiStore.selectedSkinToneIcon = selectedSkinToneIcon
+        memojiStore.selectedAccessoriesIcon = selectedAccessoriesIcon
+        memojiStore.selectedColorThemeIcon = selectedColorThemeIcon
+    }
+    
     @Binding var isExpandedMinimal: Bool
     @Namespace private var animation
     
@@ -252,9 +283,9 @@ struct GenerateAvatar: View {
     
     @State var isExpandedMaximal: Bool = false
     
+    // State variables synced with memojiStore
+    @State var selectedTool: String = "family-member"
     @State var idx: Int = 0
-    
-    // Track selected icons for each tool category
     @State var selectedGestureIcon: String? = nil
     @State var selectedHairStyleIcon: String? = nil
     @State var selectedSkinToneIcon: String? = nil
@@ -300,6 +331,7 @@ struct GenerateAvatar: View {
         default:
             break
         }
+        saveState()
     }
     
     private func buildMemojiSelection() -> MemojiSelection {
@@ -552,6 +584,21 @@ struct GenerateAvatar: View {
                 , alignment: .top
             )
             .animation(.easeInOut, value: isExpandedMinimal)
+            .onAppear {
+                restoreState()
+            }
+            .onChange(of: selectedTool) { _, _ in
+                saveState()
+            }
+            .onChange(of: idx) { _, _ in
+                saveState()
+            }
+            .onChange(of: selectedFamilyMember.name) { _, _ in
+                saveState()
+            }
+            .onChange(of: selectedFamilyMember.image) { _, _ in
+                saveState()
+            }
         }
     }
     
@@ -694,6 +741,7 @@ struct GenerateAvatar: View {
                             selectedFamilyMember = member
                             familyMember.removeAll { $0.name == member.name }
                             familyMember.append(temp)
+                            saveState()
                             
                             isExpandedMinimal = false
                         }
@@ -1474,25 +1522,43 @@ struct AddMoreMembersMinimal: View {
     }
 }
 
-struct BringingYourAvatar: View {
-    @State var viewDidAppear: () -> Void = {}
+
+struct WouldYouLikeToInvite: View {
+    var name: String
+    var invitePressed: () -> Void = { }
+    var continuePressed: () -> Void = { }
     var body: some View {
-        VStack(spacing: 32) {
-            // Robot image
-            Image("ingrediBot")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 147, height: 147)
-                .clipped()
-            
-            VStack(spacing: 24) {
-                Text("Bringing your avatar to life... it’s going to be awesome!")
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Would you like to invite \(name) to join IngrediFam?")
                     .font(NunitoFont.bold.size(20))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
+                
+                Text("No worries if you skip this step. You can share the code with Neha later too.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.horizontal, 20)
+            
+            HStack(spacing: 16) {
+                Button {
+                    invitePressed()
+                } label: {
+                    GreenCapsule(title: "Invite", icon: "share")
+                }
+                
+                Button {
+                    continuePressed()
+                } label: {
+                    GreenCapsule(title: "Continue")
+                }
+
+                
+            }
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
@@ -1501,18 +1567,62 @@ struct BringingYourAvatar: View {
                 .padding(.top, 11)
             , alignment: .top
         )
-        .onAppear() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                viewDidAppear()
+    }
+}
+
+struct WantToAddPreference: View {
+    var name: String
+    var laterPressed: () -> Void = { }
+    var yesPressed: () -> Void = { }
+    
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Do you want to add preferences for \(name)?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("Don't worry, \(name) can add or edit her preferences once she joins Ingredifam")
+                    .font(ManropeFont.medium.size(14))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.horizontal, 20)
+            
+            HStack(spacing: 16) {
+                Button {
+                    laterPressed()
+                } label: {
+                    Text("Later")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
+                }
+                
+                Button {
+                    yesPressed()
+                } label: {
+                    GreenCapsule(title: "Yes")
+                }
+
+                
+            }
+            .padding(.horizontal, 20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
     }
 }
 
 #Preview {
-    GenerateAvatar(
-        isExpandedMinimal: .constant(false),
-        randomPressed: { _ in },
-        generatePressed: { _ in }
-    )
+    WantToAddPreference(name: "Neha")
 }

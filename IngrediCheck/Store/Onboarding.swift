@@ -26,6 +26,7 @@ struct SectionedChipModel: Identifiable {
 enum OnboardingFlowType: String {
     case individual
     case family
+    case singleMember  // For adding a specific family member from home
 }
 
 enum OnboardingScreenId: String {
@@ -165,6 +166,22 @@ class Onboarding: ObservableObject {
                 currentSectionIndex += 1
                 currentScreenIndex = 0
             }
+        }
+    }
+    
+    /// Reset onboarding state to start from the beginning
+    func reset(flowType: OnboardingFlowType) {
+        onboardingFlowtype = flowType
+        currentSectionIndex = 0
+        currentScreenIndex = 0
+        preferences = Preferences()
+        isOnboardingCompleted = false
+        
+        // Reset all sections to incomplete
+        sections = sections.map { section in
+            var updatedSection = section
+            updatedSection.isComplete = false
+            return updatedSection
         }
     }
 }

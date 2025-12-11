@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct IngrediBotView: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var other: Bool = true
     var body: some View {
         VStack(spacing: 0) {
@@ -83,7 +84,12 @@ struct IngrediBotView: View {
                 }
                 
 
-                GreenCapsule(title: "Yes, let's go", icon: nil, width: 152, height: 52)
+                Button {
+                    coordinator.navigateInBottomSheet(.chatConversation)
+                } label: {
+                    GreenCapsule(title: "Yes, let's go", icon: nil, width: 152, height: 52)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.top, 33)
 

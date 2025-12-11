@@ -24,6 +24,8 @@ enum BottomSheetRoute: Hashable {
     case whatsYourName
     case addMoreMembers
     case addMoreMembersMinimal
+    case wouldYouLikeToInvite(name: String)
+    case wantToAddPreference(name: String)
     case generateAvatar
     case bringingYourAvatar
     case meetYourAvatar
@@ -46,6 +48,9 @@ enum BottomSheetRoute: Hashable {
     // AI ChatBot
     case chatIntro
     case chatConversation
+    
+    // Onboarding completion flow
+    case workingOnSummary
 
 }
 
