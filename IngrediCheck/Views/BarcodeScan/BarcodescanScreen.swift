@@ -199,7 +199,6 @@ struct CameraScreen: View {
                             scrollTargetCode = codes[idx]
                         } else {
                             codes.insert(code, at: 0)
-                            if codes.count > 10 { codes.removeLast(codes.count - 10) }
                             scrollTargetCode = code
                         }
                     }
@@ -620,11 +619,16 @@ struct CameraScreen: View {
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                 }
-                                
-                                Image("takeawayfood")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 94, height: 110)
+                                ZStack{
+                                    Image("systemuiconscapture")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 187, height: 187)
+                                    Image("takeawafood")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 94, height: 110)
+                                }
                                 
                                 Text("You’ll take around 5 photos — front, back, barcode, and ingredient list.")
                                     .font(.system(size: 13))	

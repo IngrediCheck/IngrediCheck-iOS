@@ -12,7 +12,6 @@ struct HomeView: View {
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isProductDetailPresented = false
-    @State private var isRecentScansPresented = false
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
@@ -194,7 +193,8 @@ struct HomeView: View {
                         .padding(.bottom, 20)
 
                     CreateYourAvatarCard()
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 32)
+                 
 
                     // Recent Scans header
                     HStack(alignment: .top) {
@@ -232,8 +232,8 @@ struct HomeView: View {
 
                         // KEEP YOUR SHEET VERSION
                         HStack(spacing: 6) {
-                            Button {
-                                isRecentScansPresented = true
+                            NavigationLink {
+                                RecentScansPageView()
                             } label: {
                                 Text("View All")
                                     .underline()
@@ -400,13 +400,6 @@ struct HomeView: View {
                 }
             }
 
-            // ------------ RECENT SCANS SHEET ------------
-            .fullScreenCover(isPresented: $isRecentScansPresented) {
-                NavigationStack {
-                    RecentScansPageView()
-                }
-                .environment(userPreferences)
-            }
         }
     }
 
