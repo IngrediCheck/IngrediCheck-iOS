@@ -124,17 +124,7 @@ struct IngrediBotChatView: View {
                             .stroke(Color.gray.opacity(0.2))
                     )
                 
-                Button {
-                    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmed.isEmpty else { return }
-                    isBotThinking = true
-                    message = ""
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isBotThinking = false
-                        }
-                    }
-                } label: {
+                NavigationLink(destination: DetailedAISummary()) {
                     Image(systemName: "paperplane.fill")
                         .resizable()
                         .scaledToFit()
@@ -156,6 +146,14 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            message = ""
+                        }
+                    }
+                )
             }
         }
         .padding(.horizontal, 20)

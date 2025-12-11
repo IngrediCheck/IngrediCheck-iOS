@@ -48,6 +48,9 @@ enum BottomSheetRoute: Hashable {
     // AI ChatBot
     case chatIntro
     case chatConversation
+    
+    // Onboarding completion flow
+    case workingOnSummary
 
 }
 

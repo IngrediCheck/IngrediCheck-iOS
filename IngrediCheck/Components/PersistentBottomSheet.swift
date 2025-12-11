@@ -126,6 +126,8 @@ struct PersistentBottomSheet: View {
             return 540
         case .chatConversation:
             return UIScreen.main.bounds.height * 0.75
+        case .workingOnSummary:
+            return 250
 
         }
     }
@@ -158,9 +160,11 @@ struct PersistentBottomSheet: View {
             return
         }
         
-        // Check if this is the last step → go to Home
+        // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
         if store.isLastStep {
-            coordinator.showCanvas(.home)
+            // Mark the last section as complete to show 100% progress
+            store.next()
+            coordinator.navigateInBottomSheet(.workingOnSummary)
             return
         }
         
@@ -320,8 +324,9 @@ struct PersistentBottomSheet: View {
                     // Check if there's a next step available before advancing
                     // If lifeStyle is the final step, clicking "Add Preferences" should complete onboarding
                     guard let nextStepId = store.nextStepId else {
-                        // No next step available, complete onboarding by going to home
-                        coordinator.showCanvas(.home)
+                        // No next step available, mark as complete and show summary flow (stay on MainCanvasView)
+                        store.next()
+                        coordinator.navigateInBottomSheet(.workingOnSummary)
                         return
                     }
                     
@@ -347,7 +352,19 @@ struct PersistentBottomSheet: View {
         case .chatIntro:
             IngrediBotView()
         case .chatConversation:
-            IngrediBotChatView()
+            NavigationStack {
+                IngrediBotChatView()
+            }
+            
+        case .workingOnSummary:
+            IngrediBotWithText(
+                text: "Working on your personalized summary…",
+                viewDidAppear: {
+                    // After 2 seconds, navigate to IngrediBotView
+                    coordinator.navigateInBottomSheet(.chatIntro)
+                },
+                delay: 2.0
+            )
             
         case .homeDefault:
             EmptyView()
