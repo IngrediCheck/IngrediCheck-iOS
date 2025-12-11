@@ -100,6 +100,10 @@ struct PersistentBottomSheet: View {
             return 438
         case .addMoreMembersMinimal:
             return 271
+        case .wouldYouLikeToInvite:
+            return 250
+        case .wantToAddPreference:
+            return 250
         case .generateAvatar:
             return 379
         case .bringingYourAvatar:
@@ -218,8 +222,14 @@ struct PersistentBottomSheet: View {
             }
             
         case .addMoreMembers:
-            AddMoreMembers {
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+            AddMoreMembers { name in
+                // If coming from home screen, navigate to WouldYouLikeToInvite
+                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(name: name))
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             }
             
         case .addMoreMembersMinimal:
@@ -230,6 +240,25 @@ struct PersistentBottomSheet: View {
                 }
             } addMorePressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembers)
+            }
+            
+        case .wouldYouLikeToInvite(let name):
+            WouldYouLikeToInvite(name: name) {
+                // Invite button pressed - TODO: Implement invite functionality
+                coordinator.navigateInBottomSheet(.homeDefault)
+            } continuePressed: {
+                // Continue button pressed - navigate to WantToAddPreference
+                coordinator.navigateInBottomSheet(.wantToAddPreference(name: name))
+            }
+            
+        case .wantToAddPreference(let name):
+            WantToAddPreference(name: name) {
+                // Later button pressed - dismiss sheet back to home
+                coordinator.navigateInBottomSheet(.homeDefault)
+            } yesPressed: {
+                // Yes button pressed - reset onboarding and navigate to MainCanvasView with singleMember flow
+                store.reset(flowType: .singleMember)
+                coordinator.showCanvas(.mainCanvas(flow: .singleMember))
             }
             
         case .generateAvatar:

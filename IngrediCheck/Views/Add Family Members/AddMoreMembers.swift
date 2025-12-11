@@ -19,7 +19,7 @@ struct AddMoreMembers: View {
         UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
-    @State var continuePressed: () -> Void = { }
+    @State var continuePressed: (String) -> Void = { _ in }
     var body: some View {
         VStack {
             
@@ -123,9 +123,10 @@ struct AddMoreMembers: View {
                 } else {
                     print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
                     familyStore.addPendingOtherMember(name: trimmed)
+                    let memberName = trimmed
                     name = ""
                     showError = false
-                    continuePressed()
+                    continuePressed(memberName)
                 }
             } label: {
                 GreenCapsule(title: "Continue")

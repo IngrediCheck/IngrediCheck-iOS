@@ -1465,9 +1465,9 @@ struct BringingYourAvatar: View {
 }
 
 struct WouldYouLikeToInvite: View {
-    @State var invitePressed: () -> Void = { }
-    @State var continuePressed: () -> Void = { }
-    @State var name: String
+    var name: String
+    var invitePressed: () -> Void = { }
+    var continuePressed: () -> Void = { }
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
@@ -1512,13 +1512,14 @@ struct WouldYouLikeToInvite: View {
 }
 
 struct WantToAddPreference: View {
-    @State var laterPressed: () -> Void = { }
-    @State var yesPressed: () -> Void = { }
-    @State var name: String
+    var name: String
+    var laterPressed: () -> Void = { }
+    var yesPressed: () -> Void = { }
+    
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Do you want to add preferences for Neha ?")
+                Text("Do you want to add preferences for \(name)?")
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
