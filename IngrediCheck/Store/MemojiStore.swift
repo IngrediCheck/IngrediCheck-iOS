@@ -9,6 +9,17 @@ final class MemojiStore {
     var backgroundColorHex: String?
     var isGenerating = false
     
+    // Store avatar generation selections to preserve state when navigating back
+    var selectedFamilyMemberName: String = "young-son"
+    var selectedFamilyMemberImage: String = "image-bg1"
+    var selectedTool: String = "family-member"
+    var selectedGestureIcon: String? = nil
+    var selectedHairStyleIcon: String? = nil
+    var selectedSkinToneIcon: String? = nil
+    var selectedAccessoriesIcon: String? = nil
+    var selectedColorThemeIcon: String? = nil
+    var currentToolIndex: Int = 0
+    
     func generate(selection: MemojiSelection, coordinator: AppNavigationCoordinator) async {
         isGenerating = true
         image = nil

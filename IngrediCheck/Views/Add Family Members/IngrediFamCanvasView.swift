@@ -163,6 +163,7 @@ struct IngrediFamCanvasView: View {
 }
 
 struct GenerateAvatar: View {
+    @Environment(MemojiStore.self) private var memojiStore
     
     @State var toolIcons: [String] = [
         "family-member",
@@ -182,7 +183,37 @@ struct GenerateAvatar: View {
     
     @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
     
-    @State var selectedTool: String = "family-member"
+    // Restore state from memojiStore when view appears
+    private func restoreState() {
+        // Restore selected family member
+        selectedFamilyMember = UserModel(
+            familyMemberName: memojiStore.selectedFamilyMemberName,
+            familyMemberImage: memojiStore.selectedFamilyMemberImage
+        )
+        
+        // Restore other selections
+        selectedTool = memojiStore.selectedTool
+        idx = memojiStore.currentToolIndex
+        selectedGestureIcon = memojiStore.selectedGestureIcon
+        selectedHairStyleIcon = memojiStore.selectedHairStyleIcon
+        selectedSkinToneIcon = memojiStore.selectedSkinToneIcon
+        selectedAccessoriesIcon = memojiStore.selectedAccessoriesIcon
+        selectedColorThemeIcon = memojiStore.selectedColorThemeIcon
+    }
+    
+    // Save state to memojiStore when selections change
+    private func saveState() {
+        memojiStore.selectedFamilyMemberName = selectedFamilyMember.name
+        memojiStore.selectedFamilyMemberImage = selectedFamilyMember.image
+        memojiStore.selectedTool = selectedTool
+        memojiStore.currentToolIndex = idx
+        memojiStore.selectedGestureIcon = selectedGestureIcon
+        memojiStore.selectedHairStyleIcon = selectedHairStyleIcon
+        memojiStore.selectedSkinToneIcon = selectedSkinToneIcon
+        memojiStore.selectedAccessoriesIcon = selectedAccessoriesIcon
+        memojiStore.selectedColorThemeIcon = selectedColorThemeIcon
+    }
+    
     @Binding var isExpandedMinimal: Bool
     @Namespace private var animation
     
@@ -252,9 +283,9 @@ struct GenerateAvatar: View {
     
     @State var isExpandedMaximal: Bool = false
     
+    // State variables synced with memojiStore
+    @State var selectedTool: String = "family-member"
     @State var idx: Int = 0
-    
-    // Track selected icons for each tool category
     @State var selectedGestureIcon: String? = nil
     @State var selectedHairStyleIcon: String? = nil
     @State var selectedSkinToneIcon: String? = nil
@@ -300,6 +331,7 @@ struct GenerateAvatar: View {
         default:
             break
         }
+        saveState()
     }
     
     private func buildMemojiSelection() -> MemojiSelection {
@@ -552,6 +584,21 @@ struct GenerateAvatar: View {
                 , alignment: .top
             )
             .animation(.easeInOut, value: isExpandedMinimal)
+            .onAppear {
+                restoreState()
+            }
+            .onChange(of: selectedTool) { _, _ in
+                saveState()
+            }
+            .onChange(of: idx) { _, _ in
+                saveState()
+            }
+            .onChange(of: selectedFamilyMember.name) { _, _ in
+                saveState()
+            }
+            .onChange(of: selectedFamilyMember.image) { _, _ in
+                saveState()
+            }
         }
     }
     
@@ -694,6 +741,7 @@ struct GenerateAvatar: View {
                             selectedFamilyMember = member
                             familyMember.removeAll { $0.name == member.name }
                             familyMember.append(temp)
+                            saveState()
                             
                             isExpandedMinimal = false
                         }

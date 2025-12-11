@@ -292,7 +292,7 @@ struct PersistentBottomSheet: View {
                 image: memojiStore.image,
                 backgroundColorHex: memojiStore.backgroundColorHex
             ) {
-                coordinator.navigateInBottomSheet(.bringingYourAvatar)
+                coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
             }
