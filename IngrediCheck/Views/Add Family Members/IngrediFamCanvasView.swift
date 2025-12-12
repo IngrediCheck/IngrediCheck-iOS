@@ -1695,20 +1695,29 @@ struct YourCurrentAvatar: View {
 }
 
 struct SetUpAvatarFor: View {
+    @Environment(FamilyStore.self) private var familyStore
+    
     private struct Member: Identifiable {
-        let id = UUID()
+        let id: UUID
         let name: String
         let image: String
         let background: Color
     }
     
-    private let members: [Member] = [
-        Member(name: "Ritika", image: "Ritika Raj", background: Color(hex: "DCC7F6")),
-        Member(name: "Neha", image: "Neha", background: Color(hex: "F9C6D0")),
-        Member(name: "Aarnav", image: "Aarnav", background: Color(hex: "FFF6B3")),
-        Member(name: "Grandpa", image: "Grandpa", background: Color(hex: "BFF0D4")),
-        Member(name: "Grandma", image: "Grandma", background: Color(hex: "A7D8F0"))
-    ]
+    private var members: [Member] {
+        guard let family = familyStore.family else { return [] }
+        let allMembers = [family.selfMember] + family.otherMembers
+        return allMembers.map { member in
+            // Use member name as image identifier (matching original asset-based approach)
+            // If imageFileHash is needed later, it can be handled separately for remote image loading
+            return Member(
+                id: member.id,
+                name: member.name,
+                image: member.name,
+                background: Color(hex: member.color)
+            )
+        }
+    }
     
     @State private var selectedMember: Member? = nil
     @State var nextPressed: () -> Void = { }
