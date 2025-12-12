@@ -110,6 +110,10 @@ struct PersistentBottomSheet: View {
             return 282
         case .meetYourAvatar:
             return 391
+        case .yourCurrentAvatar:
+            return nil
+        case .setUpAvatarFor:
+            return nil
         case .dietaryPreferencesSheet(let isFamilyFlow):
             return nil
         case .allSetToJoinYourFamily:
@@ -294,7 +298,23 @@ struct PersistentBottomSheet: View {
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                // If opened from home screen, dismiss the sheet
+                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
+            }
+            
+        case .yourCurrentAvatar:
+            YourCurrentAvatar {
+                coordinator.navigateInBottomSheet(.generateAvatar)
+            }
+            
+        case .setUpAvatarFor:
+            SetUpAvatarFor {
+                coordinator.navigateInBottomSheet(.yourCurrentAvatar)
             }
             
         case .dietaryPreferencesSheet(let isFamilyFlow):
