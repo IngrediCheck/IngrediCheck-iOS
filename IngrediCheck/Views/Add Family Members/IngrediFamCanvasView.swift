@@ -1658,6 +1658,82 @@ struct YourCurrentAvatar: View {
     }
 }
 
+struct SetUpAvatarFor: View {
+    private struct Member: Identifiable {
+        let id = UUID()
+        let name: String
+        let image: String
+        let background: Color
+    }
+    
+    private let members: [Member] = [
+        Member(name: "Ritika", image: "Ritika Raj", background: Color(hex: "DCC7F6")),
+        Member(name: "Neha", image: "Neha", background: Color(hex: "F9C6D0")),
+        Member(name: "Aarnav", image: "Aarnav", background: Color(hex: "FFF6B3")),
+        Member(name: "Grandpa", image: "Grandpa", background: Color(hex: "BFF0D4")),
+        Member(name: "Grandma", image: "Grandma", background: Color(hex: "A7D8F0"))
+    ]
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            
+            VStack(spacing: 10) {
+                Text("Whom do you want to set up\nan avatar for?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("Choose a family member to start crafting their avatar")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            
+            ScrollView(.horizontal) {
+                HStack(spacing: 16) {
+                    ForEach(members) { member in
+                        VStack(spacing: 8) {
+                            Circle()
+                                .fill(member.background)
+                                .frame(width: 46, height: 46)
+                                .overlay {
+                                    Image(member.image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 46, height: 46)
+                                        .clipShape(Circle())
+                                }
+                                .grayscale(0)
+                            
+                            Text(member.name)
+                                .font(ManropeFont.regular.size(10))
+                                .foregroundStyle(.grayScale150)
+                        }
+                    }
+                }
+                .padding(.leading, 20)
+                .padding(.vertical, 6)
+            }
+            
+            GreenCapsule(title: "Next")
+                .frame(width: 180)
+                .padding(.bottom, 8)
+        }
+        
+        .padding(.bottom, 53)
+        .padding(.top, 40)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
 #Preview {
-    YourCurrentAvatar()
+    SetUpAvatarFor()
 }
