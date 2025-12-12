@@ -774,6 +774,8 @@ struct MeetYourAvatar: View {
     var backgroundColorHex: String? = nil
     @State var regeneratePressed: () -> Void = { }
     @State var assignedPressed: () -> Void = { }
+    @State private var showConfetti = false
+    
     var body: some View {
         let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
         
@@ -822,6 +824,18 @@ struct MeetYourAvatar: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .overlay {
+            if showConfetti {
+                ConfettiView()
+            }
+        }
+        .onAppear {
+            showConfetti = true
+            // Reset confetti after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                showConfetti = false
+            }
+        }
     }
 }
 
