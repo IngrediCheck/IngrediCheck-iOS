@@ -1638,8 +1638,12 @@ struct YourCurrentAvatar: View {
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 23)
             
-            GreenCapsule(title: "Create New")
-                .frame(width: 159)
+            Button {
+                createNewPressed()
+            } label: {
+                GreenCapsule(title: "Create New")
+                    .frame(width: 159)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 64)
