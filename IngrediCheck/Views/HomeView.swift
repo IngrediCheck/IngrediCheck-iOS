@@ -200,6 +200,9 @@ struct HomeView: View {
                         .padding(.bottom, 20)
 
                     CreateYourAvatarCard()
+                        .onTapGesture {
+                            coordinator.navigateInBottomSheet(.yourCurrentAvatar)
+                        }
                         .padding(.bottom, 20)
 
                     // Recent Scans header

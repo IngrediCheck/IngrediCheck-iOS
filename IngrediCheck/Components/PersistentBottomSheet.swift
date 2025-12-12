@@ -110,6 +110,8 @@ struct PersistentBottomSheet: View {
             return 282
         case .meetYourAvatar:
             return 391
+        case .yourCurrentAvatar:
+            return nil
         case .dietaryPreferencesSheet(let isFamilyFlow):
             return nil
         case .allSetToJoinYourFamily:
@@ -295,6 +297,11 @@ struct PersistentBottomSheet: View {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+            }
+            
+        case .yourCurrentAvatar:
+            YourCurrentAvatar {
+                coordinator.navigateInBottomSheet(.generateAvatar)
             }
             
         case .dietaryPreferencesSheet(let isFamilyFlow):

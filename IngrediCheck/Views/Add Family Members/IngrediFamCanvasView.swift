@@ -1642,7 +1642,9 @@ struct YourCurrentAvatar: View {
                 .frame(width: 159)
         }
         .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.bottom, 64)
+        .padding(.top, 40)
+//        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .fill(.neutral500)
