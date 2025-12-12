@@ -786,9 +786,8 @@ struct MeetYourAvatar: View {
                     if let image {
                         Image(uiImage: image)
                             .resizable()
-                            .scaledToFit()
-                            .frame(width: 120, height: 120)
-                            .background(Color.clear)
+                            .scaledToFill()
+                            .frame(width: 137, height: 137)
                             .clipShape(Circle())
                     }
                 }
