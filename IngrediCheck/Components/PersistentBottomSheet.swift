@@ -296,7 +296,13 @@ struct PersistentBottomSheet: View {
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                // If opened from home screen, dismiss the sheet
+                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             }
             
         case .yourCurrentAvatar:
