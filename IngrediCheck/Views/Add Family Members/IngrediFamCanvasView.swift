@@ -1138,7 +1138,21 @@ struct WelcomeBack: View {
                         }
                     }
                 } label: {
-                    GreenCapsule(title: "Google", icon: "google_logo", iconWidth: 24, iconHeight: 24)
+                    HStack(spacing: 8) {
+                        Image("google_logo")
+                            .resizable()
+                            .frame(width: 24, height: 24)
+                        Text("Google")
+                            .font(NunitoFont.semiBold.size(16))
+                            .foregroundStyle(.grayScale150)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.white, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale40, lineWidth: 1)
+                    )
                 }
                 .disabled(isSigningIn)
 
@@ -1155,7 +1169,21 @@ struct WelcomeBack: View {
                         }
                     }
                 } label: {
-                    GreenCapsule(title: "Apple", icon: "apple_logo", iconWidth: 24, iconHeight: 24)
+                    HStack(spacing: 8) {
+                        Image("apple_logo")
+                            .resizable()
+                            .frame(width: 24, height: 24)
+                        Text("Apple")
+                            .font(NunitoFont.semiBold.size(16))
+                            .foregroundStyle(.grayScale150)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.white, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale40, lineWidth: 1)
+                    )
                 }
                 .disabled(isSigningIn)
             }
