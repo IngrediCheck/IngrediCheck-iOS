@@ -1623,6 +1623,36 @@ struct WantToAddPreference: View {
     }
 }
 
+struct YourCurrentAvatar: View {
+    
+    @State var createNewPressed: () -> Void = { }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Circle()
+                .frame(width: 120, height: 120)
+                .padding(.bottom, 26)
+            
+            Text("Here’s your current avatar. would you like to make a new one?")
+                .font(NunitoFont.bold.size(20))
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 23)
+            
+            GreenCapsule(title: "Create New")
+                .frame(width: 159)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
 #Preview {
-    WantToAddPreference(name: "Neha")
+    YourCurrentAvatar()
 }
