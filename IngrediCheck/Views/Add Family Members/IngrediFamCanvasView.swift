@@ -1674,6 +1674,8 @@ struct SetUpAvatarFor: View {
         Member(name: "Grandma", image: "Grandma", background: Color(hex: "A7D8F0"))
     ]
     
+    @State private var selectedMember: Member? = nil
+    
     var body: some View {
         VStack(spacing: 24) {
             
@@ -1691,25 +1693,45 @@ struct SetUpAvatarFor: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
             
-            ScrollView(.horizontal) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(members) { member in
                         VStack(spacing: 8) {
-                            Circle()
-                                .fill(member.background)
-                                .frame(width: 46, height: 46)
-                                .overlay {
-                                    Image(member.image)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 46, height: 46)
-                                        .clipShape(Circle())
+                            ZStack(alignment: .topTrailing) {
+                                Circle()
+                                    .fill(member.background)
+                                    .frame(width: 46, height: 46)
+                                    .overlay {
+                                        Image(member.image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 46, height: 46)
+                                            .clipShape(Circle())
+                                    }
+                                    .grayscale(selectedMember?.id == member.id ? 0 : 1)
+                                
+                                if selectedMember?.id == member.id {
+                                    Circle()
+                                        .fill(Color(hex: "2C9C3D"))
+                                        .frame(width: 16, height: 16)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(lineWidth: 1)
+                                                .foregroundStyle(.white)
+                                        )
+                                        .overlay(
+                                            Image("white-rounded-checkmark")
+                                        )
+                                        .offset(x: 0, y: -3)
                                 }
-                                .grayscale(0)
+                            }
                             
                             Text(member.name)
                                 .font(ManropeFont.regular.size(10))
                                 .foregroundStyle(.grayScale150)
+                        }
+                        .onTapGesture {
+                            selectedMember = member
                         }
                     }
                 }
@@ -1717,9 +1739,13 @@ struct SetUpAvatarFor: View {
                 .padding(.vertical, 6)
             }
             
-            GreenCapsule(title: "Next")
-                .frame(width: 180)
-                .padding(.bottom, 8)
+            Button {
+                // Handle next action
+            } label: {
+                GreenCapsule(title: "Next")
+                    .frame(width: 180)
+            }
+            .padding(.bottom, 8)
         }
         
         .padding(.bottom, 53)
