@@ -1250,19 +1250,13 @@ struct WhosThisFor: View {
                 Button {
                     justmePressed?()
                 } label: {
-                    Text("Just Me")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(height: 52)
-                        .frame(minWidth: 152)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
+                    GreenOutlinedCapsule(title: "Just Me")
                 }
 
                 Button {
                     addFamilyPressed?()
                 } label: {
-                    GreenCapsule(title: "Add Family")
+                    GreenOutlinedCapsule(title: "Add Family")
                 }
                 
             }
@@ -1587,13 +1581,13 @@ struct WouldYouLikeToInvite: View {
                 Button {
                     invitePressed()
                 } label: {
-                    GreenCapsule(title: "Invite", icon: "share")
+                    GreenOutlinedCapsule(image: "share", title: "Invite")
                 }
                 
                 Button {
                     continuePressed()
                 } label: {
-                    GreenCapsule(title: "Continue")
+                    GreenOutlinedCapsule(title: "Continue")
                 }
 
                 
