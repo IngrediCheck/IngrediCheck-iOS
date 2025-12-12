@@ -30,6 +30,7 @@ enum BottomSheetRoute: Hashable {
     case bringingYourAvatar
     case meetYourAvatar
     case yourCurrentAvatar
+    case setUpAvatarFor
     
     // DietaryPreferencesAndRestrictions route
     case dietaryPreferencesSheet(isFamilyFlow: Bool)

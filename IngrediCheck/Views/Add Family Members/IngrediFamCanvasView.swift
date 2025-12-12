@@ -1689,6 +1689,7 @@ struct SetUpAvatarFor: View {
     ]
     
     @State private var selectedMember: Member? = nil
+    @State var nextPressed: () -> Void = { }
     
     var body: some View {
         VStack(spacing: 24) {
@@ -1754,7 +1755,7 @@ struct SetUpAvatarFor: View {
             }
             
             Button {
-                // Handle next action
+                nextPressed()
             } label: {
                 GreenCapsule(title: "Next")
                     .frame(width: 180)
