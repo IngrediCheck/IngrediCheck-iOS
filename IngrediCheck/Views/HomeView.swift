@@ -200,6 +200,15 @@ struct HomeView: View {
                         .padding(.bottom, 20)
 
                     CreateYourAvatarCard()
+                        .onTapGesture {
+                            // If family has more than one member, show SetUpAvatarFor first
+                            // Otherwise, go directly to YourCurrentAvatar
+                            if familyMembers.count > 1 {
+                                coordinator.navigateInBottomSheet(.setUpAvatarFor)
+                            } else {
+                                coordinator.navigateInBottomSheet(.yourCurrentAvatar)
+                            }
+                        }
                         .padding(.bottom, 20)
 
                     // Recent Scans header

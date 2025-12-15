@@ -8,13 +8,19 @@
 import SwiftUI
 
 struct GreenOutlinedCapsule: View {
-    var image: String
+    var image: String? = nil
     var title: String
     var width: CGFloat? = 152
     var height: CGFloat? = 52
     var body: some View {
         HStack(spacing: 10) {
-            Image(image)
+            if let image = image {
+                Image(image)
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                    .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
+            }
             Text(title)
                 .font(NunitoFont.semiBold.size(16))
                 .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
@@ -23,6 +29,10 @@ struct GreenOutlinedCapsule: View {
         .frame(minWidth: 152)
         .frame(maxWidth: .infinity)
         .background(
+            Capsule()
+                .fill(Color.white)
+        )
+        .overlay(
             Capsule()
                 .stroke(lineWidth: 1.5)
                 .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 85))

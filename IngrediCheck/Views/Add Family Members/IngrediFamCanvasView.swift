@@ -774,6 +774,8 @@ struct MeetYourAvatar: View {
     var backgroundColorHex: String? = nil
     @State var regeneratePressed: () -> Void = { }
     @State var assignedPressed: () -> Void = { }
+    @State private var showConfetti = false
+    
     var body: some View {
         let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
         
@@ -786,9 +788,8 @@ struct MeetYourAvatar: View {
                     if let image {
                         Image(uiImage: image)
                             .resizable()
-                            .scaledToFit()
-                            .frame(width: 120, height: 120)
-                            .background(Color.clear)
+                            .scaledToFill()
+                            .frame(width: 137, height: 137)
                             .clipShape(Circle())
                     }
                 }
@@ -823,6 +824,18 @@ struct MeetYourAvatar: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .overlay {
+            if showConfetti {
+                ConfettiView()
+            }
+        }
+        .onAppear {
+            showConfetti = true
+            // Reset confetti after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                showConfetti = false
+            }
+        }
     }
 }
 
@@ -1125,7 +1138,21 @@ struct WelcomeBack: View {
                         }
                     }
                 } label: {
-                    GreenCapsule(title: "Google", icon: "google_logo", iconWidth: 24, iconHeight: 24)
+                    HStack(spacing: 8) {
+                        Image("google_logo")
+                            .resizable()
+                            .frame(width: 24, height: 24)
+                        Text("Google")
+                            .font(NunitoFont.semiBold.size(16))
+                            .foregroundStyle(.grayScale150)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.white, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale40, lineWidth: 1)
+                    )
                 }
                 .disabled(isSigningIn)
 
@@ -1142,7 +1169,21 @@ struct WelcomeBack: View {
                         }
                     }
                 } label: {
-                    GreenCapsule(title: "Apple", icon: "apple_logo", iconWidth: 24, iconHeight: 24)
+                    HStack(spacing: 8) {
+                        Image("apple_logo")
+                            .resizable()
+                            .frame(width: 24, height: 24)
+                        Text("Apple")
+                            .font(NunitoFont.semiBold.size(16))
+                            .foregroundStyle(.grayScale150)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.white, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale40, lineWidth: 1)
+                    )
                 }
                 .disabled(isSigningIn)
             }
@@ -1209,19 +1250,13 @@ struct WhosThisFor: View {
                 Button {
                     justmePressed?()
                 } label: {
-                    Text("Just Me")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(height: 52)
-                        .frame(minWidth: 152)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
+                    GreenOutlinedCapsule(title: "Just Me")
                 }
 
                 Button {
                     addFamilyPressed?()
                 } label: {
-                    GreenCapsule(title: "Add Family")
+                    GreenOutlinedCapsule(title: "Add Family")
                 }
                 
             }
@@ -1546,13 +1581,13 @@ struct WouldYouLikeToInvite: View {
                 Button {
                     invitePressed()
                 } label: {
-                    GreenCapsule(title: "Invite", icon: "share")
+                    GreenOutlinedCapsule(image: "share", title: "Invite")
                 }
                 
                 Button {
                     continuePressed()
                 } label: {
-                    GreenCapsule(title: "Continue")
+                    GreenOutlinedCapsule(title: "Continue")
                 }
 
                 
@@ -1623,6 +1658,154 @@ struct WantToAddPreference: View {
     }
 }
 
+struct YourCurrentAvatar: View {
+    
+    @State var createNewPressed: () -> Void = { }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Circle()
+                .frame(width: 120, height: 120)
+                .padding(.bottom, 26)
+            
+            Text("Here’s your current avatar. would you like to make a new one?")
+                .font(NunitoFont.bold.size(20))
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 23)
+            
+            Button {
+                createNewPressed()
+            } label: {
+                GreenCapsule(title: "Create New")
+                    .frame(width: 159)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 64)
+        .padding(.top, 40)
+//        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
+struct SetUpAvatarFor: View {
+    @Environment(FamilyStore.self) private var familyStore
+    
+    private struct Member: Identifiable {
+        let id: UUID
+        let name: String
+        let image: String
+        let background: Color
+    }
+    
+    private var members: [Member] {
+        guard let family = familyStore.family else { return [] }
+        let allMembers = [family.selfMember] + family.otherMembers
+        return allMembers.map { member in
+            // Use member name as image identifier (matching original asset-based approach)
+            // If imageFileHash is needed later, it can be handled separately for remote image loading
+            return Member(
+                id: member.id,
+                name: member.name,
+                image: member.name,
+                background: Color(hex: member.color)
+            )
+        }
+    }
+    
+    @State private var selectedMember: Member? = nil
+    @State var nextPressed: () -> Void = { }
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            
+            VStack(spacing: 10) {
+                Text("Whom do you want to set up\nan avatar for?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                
+                Text("Choose a family member to start crafting their avatar")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(members) { member in
+                        VStack(spacing: 8) {
+                            ZStack(alignment: .topTrailing) {
+                                Circle()
+                                    .fill(member.background)
+                                    .frame(width: 46, height: 46)
+                                    .overlay {
+                                        Image(member.image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 46, height: 46)
+                                            .clipShape(Circle())
+                                    }
+                                    .grayscale(selectedMember?.id == member.id ? 0 : 1)
+                                
+                                if selectedMember?.id == member.id {
+                                    Circle()
+                                        .fill(Color(hex: "2C9C3D"))
+                                        .frame(width: 16, height: 16)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(lineWidth: 1)
+                                                .foregroundStyle(.white)
+                                        )
+                                        .overlay(
+                                            Image("white-rounded-checkmark")
+                                        )
+                                        .offset(x: 0, y: -3)
+                                }
+                            }
+                            
+                            Text(member.name)
+                                .font(ManropeFont.regular.size(10))
+                                .foregroundStyle(.grayScale150)
+                        }
+                        .onTapGesture {
+                            selectedMember = member
+                        }
+                    }
+                }
+                .padding(.leading, 20)
+                .padding(.vertical, 6)
+            }
+            
+            Button {
+                nextPressed()
+            } label: {
+                GreenCapsule(title: "Next")
+                    .frame(width: 180)
+            }
+            .padding(.bottom, 8)
+        }
+        
+        .padding(.bottom, 53)
+        .padding(.top, 40)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.neutral500)
+                .frame(width: 60, height: 4)
+                .padding(.top, 11)
+            , alignment: .top
+        )
+    }
+}
+
 #Preview {
-    WantToAddPreference(name: "Neha")
+    SetUpAvatarFor()
 }
