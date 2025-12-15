@@ -15,8 +15,9 @@ struct HomeView: View {
     @State private var isRecentScansPresented = false
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
-    @State private var previousScrollOffset: CGFloat = 0
-    @State private var collapseReferenceOffset: CGFloat = 0
+    @State private var scrollY: CGFloat = 0
+    @State private var prevValue: CGFloat = 0
+    @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
 
     // ---------------------------
@@ -318,55 +319,39 @@ struct HomeView: View {
                     GeometryReader { geo in
                         Color.clear
                             .onAppear {
-                                previousScrollOffset = geo.frame(in: .named("homeScroll")).minY
-                                collapseReferenceOffset = previousScrollOffset
+                                scrollY = geo.frame(in: .named("homeScroll")).minY
+                                prevValue = scrollY
+                                maxScrollOffset = scrollY < 0 ? scrollY : 0
                             }
                             .onChange(of: geo.frame(in: .named("homeScroll")).minY) { newValue in
-                                let currentOffset = newValue
-                                let threshold: CGFloat = 8           // minimum meaningful movement per frame
-                                let topGuardOffset: CGFloat = -12    // how far past top before we consider expansion
-                                let requiredLiftFromBottom: CGFloat = 180 // distance user must scroll up from bottom to expand
-
-                                // Only react to scroll changes when we're within the "normal"
-                                // scroll range (offset <= 0). This avoids reacting to rubber-band
-                                // stretching at the very top (offset > 0).
-                                if currentOffset <= 0 && previousScrollOffset <= 0 {
-                                    let delta = currentOffset - previousScrollOffset
-
-                                    // When user scrolls down with a meaningful movement -> collapse.
-                                    // When user scrolls up with a meaningful movement -> expand.
-                                    // Ignore tiny bounces so the tab bar doesn't flicker or auto-expand.
-                                    if delta < -threshold {
+                                scrollY = newValue
+                                
+                                // Only change state when scrolled past the top (scrollY < 0)
+                                if scrollY < 0 {
+                                    // Track the maximum (most negative) scroll offset reached
+                                    maxScrollOffset = min(maxScrollOffset, newValue)
+                                    
+                                    let scrollDelta = newValue - prevValue
+                                    let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
+                                    
+                                    if scrollDelta < -minScrollDelta {
+                                        // Scrolling down significantly -> collapse
                                         isTabBarExpanded = false
-
-                                        // Track the deepest (most negative) offset reached since we
-                                        // last collapsed; this is our "bottom reference" to compare
-                                        // against when deciding whether an upward motion is just a
-                                        // spring-back or a real intent to scroll up.
-                                        if collapseReferenceOffset == 0 {
-                                            collapseReferenceOffset = currentOffset
-                                        } else {
-                                            collapseReferenceOffset = min(collapseReferenceOffset, currentOffset)
-                                        }
-                                    } else if delta > threshold {
-                                        // Only allow expansion when:
-                                        // - we're safely away from the very top, AND
-                                        // - the user has moved a meaningful distance up from the
-                                        //   deepest offset reached since collapsing (to avoid
-                                        //   spring-back-at-bottom from expanding the tab bar).
-                                        let distanceFromBottom = currentOffset - collapseReferenceOffset
-
-                                        if distanceFromBottom > requiredLiftFromBottom,
-                                           currentOffset < topGuardOffset,
-                                           previousScrollOffset < topGuardOffset {
+                                    } else if scrollDelta > minScrollDelta {
+                                        // Only expand if scrolling up significantly AND not at the bottom
+                                        // Check if we're significantly above the maximum scroll offset
+                                        let bottomThreshold: CGFloat = 100 // Minimum distance from bottom to allow expansion
+                                        if newValue > (maxScrollOffset + bottomThreshold) {
                                             isTabBarExpanded = true
-                                            // Reset the reference for the next cycle.
-                                            collapseReferenceOffset = currentOffset
                                         }
                                     }
+                                    // If scrollDelta is too small (bounce/noise), don't change state
+                                } else {
+                                    // Reset max scroll offset when at the top
+                                    maxScrollOffset = 0
                                 }
-
-                                previousScrollOffset = currentOffset
+                                
+                                prevValue = newValue
                             }
                     }
                 )
