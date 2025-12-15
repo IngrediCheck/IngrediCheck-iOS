@@ -335,10 +335,10 @@ struct BarcodeDataCard: View {
         HStack(spacing: 14) {
             // Left-side visual changes based on whether we have a barcode yet.
             ZStack (){
-//                RoundedRectangle(cornerRadius: 16)
-//                    .fill(.thinMaterial)
-//                    .frame(width: 68, height: 92)
-//                    .opacity(0.4)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.thinMaterial)
+                    .frame(width: 68, height: 92)
+                    .opacity(0.4)
                 if code.isEmpty {
                     // Empty card: simple placeholder block, no barcode illustration.
                     // The material background itself is the placeholder.
