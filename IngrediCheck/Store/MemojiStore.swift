@@ -31,6 +31,8 @@ final class MemojiStore {
             image = generated
             coordinator.navigateInBottomSheet(.meetYourAvatar)
         } catch {
+            // Log error so we can debug why memoji generation failed
+            print("Memoji generation failed: \(error.localizedDescription)")
             image = UIImage(named: "ingrediBot")
             coordinator.navigateInBottomSheet(.meetYourAvatar)
         }
