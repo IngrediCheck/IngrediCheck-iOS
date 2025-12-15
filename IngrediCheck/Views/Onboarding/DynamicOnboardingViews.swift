@@ -38,6 +38,7 @@ struct DynamicOptionsQuestionView: View {
                 }
                 .padding(.leading, 20)
             }
+            // Don't show carousel for singleMember flow (adding specific member from home)
             
             FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
                 ForEach(options) { option in
@@ -127,6 +128,7 @@ struct DynamicSubStepsQuestionView: View {
                 }
                 .padding(.leading, 20)
             }
+            // Don't show carousel for singleMember flow (adding specific member from home)
             
             StackedCards(
                 cards: cards,
@@ -227,6 +229,7 @@ struct DynamicRegionsQuestionView: View {
                 }
                 .padding(.leading, 20)
             }
+            // Don't show carousel for singleMember flow (adding specific member from home)
             
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {

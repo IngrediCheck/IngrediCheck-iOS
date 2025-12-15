@@ -13,6 +13,7 @@ struct IngrediBotChatView: View {
     @State private var message: String = ""
     var onDismiss: (() -> Void)? = nil
     @State private var isBotThinking: Bool = false
+    @State private var navigateToSummary: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -126,14 +127,10 @@ struct IngrediBotChatView: View {
                 
                 Button {
                     let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmed.isEmpty else { return }
-                    isBotThinking = true
-                    message = ""
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isBotThinking = false
-                        }
+                    if !trimmed.isEmpty {
+                        message = ""
                     }
+                    navigateToSummary = true
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()
@@ -156,6 +153,16 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
+                .background(
+                    NavigationLink(
+                        destination: DetailedAISummary()
+                            .environment(coordinator),
+                        isActive: $navigateToSummary
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
             }
         }
         .padding(.horizontal, 20)
@@ -268,8 +275,10 @@ private struct TypingBubble: View {
 }
 
 #Preview("IngrediBotChatView") {
-    IngrediBotChatView()
-        .environment(AppNavigationCoordinator())
+    NavigationStack {
+        IngrediBotChatView()
+            .environment(AppNavigationCoordinator())
+    }
 }
 
 #Preview("ConversationBubble") {

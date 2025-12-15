@@ -100,12 +100,20 @@ struct PersistentBottomSheet: View {
             return 438
         case .addMoreMembersMinimal:
             return 271
+        case .wouldYouLikeToInvite:
+            return 250
+        case .wantToAddPreference:
+            return 250
         case .generateAvatar:
             return 379
         case .bringingYourAvatar:
             return 282
         case .meetYourAvatar:
             return 391
+        case .yourCurrentAvatar:
+            return nil
+        case .setUpAvatarFor:
+            return nil
         case .dietaryPreferencesSheet(let isFamilyFlow):
             return nil
         case .allSetToJoinYourFamily:
@@ -122,6 +130,8 @@ struct PersistentBottomSheet: View {
             return 540
         case .chatConversation:
             return UIScreen.main.bounds.height * 0.75
+        case .workingOnSummary:
+            return 250
 
         }
     }
@@ -154,9 +164,11 @@ struct PersistentBottomSheet: View {
             return
         }
         
-        // Check if this is the last step → go to Home
+        // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
         if store.isLastStep {
-            coordinator.showCanvas(.home)
+            // Mark the last section as complete to show 100% progress
+            store.next()
+            coordinator.navigateInBottomSheet(.workingOnSummary)
             return
         }
         
@@ -214,16 +226,18 @@ struct PersistentBottomSheet: View {
             
         case .whatsYourName:
             WhatsYourName {
-                coordinator.navigateInBottomSheet(.generateAvatar)
-            } addMemberPressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembers)
             }
             
         case .addMoreMembers:
-            AddMoreMembers {
-                coordinator.navigateInBottomSheet(.generateAvatar)
-            } addMemberPressed: {
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+            AddMoreMembers { name in
+                // If coming from home screen, navigate to WouldYouLikeToInvite
+                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(name: name))
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             }
             
         case .addMoreMembersMinimal:
@@ -234,6 +248,25 @@ struct PersistentBottomSheet: View {
                 }
             } addMorePressed: {
                 coordinator.navigateInBottomSheet(.addMoreMembers)
+            }
+            
+        case .wouldYouLikeToInvite(let name):
+            WouldYouLikeToInvite(name: name) {
+                // Invite button pressed - TODO: Implement invite functionality
+                coordinator.navigateInBottomSheet(.homeDefault)
+            } continuePressed: {
+                // Continue button pressed - navigate to WantToAddPreference
+                coordinator.navigateInBottomSheet(.wantToAddPreference(name: name))
+            }
+            
+        case .wantToAddPreference(let name):
+            WantToAddPreference(name: name) {
+                // Later button pressed - dismiss sheet back to home
+                coordinator.navigateInBottomSheet(.homeDefault)
+            } yesPressed: {
+                // Yes button pressed - reset onboarding and navigate to MainCanvasView with singleMember flow
+                store.reset(flowType: .singleMember)
+                coordinator.showCanvas(.mainCanvas(flow: .singleMember))
             }
             
         case .generateAvatar:
@@ -256,16 +289,32 @@ struct PersistentBottomSheet: View {
             }
             
         case .bringingYourAvatar:
-            BringingYourAvatar()
+            IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             
         case .meetYourAvatar:
             MeetYourAvatar(
                 image: memojiStore.image,
                 backgroundColorHex: memojiStore.backgroundColorHex
             ) {
-                coordinator.navigateInBottomSheet(.bringingYourAvatar)
+                coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                // If opened from home screen, dismiss the sheet
+                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
+            }
+            
+        case .yourCurrentAvatar:
+            YourCurrentAvatar {
+                coordinator.navigateInBottomSheet(.generateAvatar)
+            }
+            
+        case .setUpAvatarFor:
+            SetUpAvatarFor {
+                coordinator.navigateInBottomSheet(.yourCurrentAvatar)
             }
             
         case .dietaryPreferencesSheet(let isFamilyFlow):
@@ -295,8 +344,9 @@ struct PersistentBottomSheet: View {
                     // Check if there's a next step available before advancing
                     // If lifeStyle is the final step, clicking "Add Preferences" should complete onboarding
                     guard let nextStepId = store.nextStepId else {
-                        // No next step available, complete onboarding by going to home
-                        coordinator.showCanvas(.home)
+                        // No next step available, mark as complete and show summary flow (stay on MainCanvasView)
+                        store.next()
+                        coordinator.navigateInBottomSheet(.workingOnSummary)
                         return
                     }
                     
@@ -322,7 +372,19 @@ struct PersistentBottomSheet: View {
         case .chatIntro:
             IngrediBotView()
         case .chatConversation:
-            IngrediBotChatView()
+            NavigationStack {
+                IngrediBotChatView()
+            }
+            
+        case .workingOnSummary:
+            IngrediBotWithText(
+                text: "Working on your personalized summary…",
+                viewDidAppear: {
+                    // After 2 seconds, navigate to IngrediBotView
+                    coordinator.navigateInBottomSheet(.chatIntro)
+                },
+                delay: 2.0
+            )
             
         case .homeDefault:
             EmptyView()

@@ -28,6 +28,8 @@ struct DashedLine: View {
 
 
 struct DetailedAISummary: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(\.dismiss) private var dismiss
     private let sections: [AISummarySectionItem] = AISummarySectionItem.sample
     @State private var scrollOffset: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
@@ -135,7 +137,14 @@ struct DetailedAISummary: View {
                 .padding(.bottom, 14)
                 
                 
-                GreenCapsule(title: "Next")
+                Button {
+                    dismiss()
+                    coordinator.showCanvas(.home)
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } label: {
+                    GreenCapsule(title: "Next")
+                }
+                .buttonStyle(.plain)
             }
             .padding(20)
         .background(Color(hex: "FDF6E7"))
