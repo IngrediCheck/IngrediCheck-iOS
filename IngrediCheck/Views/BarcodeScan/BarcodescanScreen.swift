@@ -368,7 +368,7 @@ struct CameraScreen: View {
                         let minScale: CGFloat = 97.0 / 120.0  // off-center cards should be about 97pt tall
                         
                         if #available(iOS 17.0, *) {
-                            // iOS 17+ native snapping using scrollTarget APIs
+                            // iOS 17+ horizontal carousel (no implicit snapping)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 8) {
                                     ForEach(displayCodes, id: \.self) { code in
@@ -415,7 +415,6 @@ struct CameraScreen: View {
                                 .scrollTargetLayout() // mark each card as a scroll target
                                 .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
                             }
-                            .scrollTargetBehavior(.viewAligned) // snap nearest card to center
                             .onChange(of: scrollTargetCode) { target in
                                 guard let target else { return }
                                 withAnimation(.easeInOut) {
@@ -431,7 +430,7 @@ struct CameraScreen: View {
                                 }
                             }
                         } else {
-                            // iOS 16 and earlier: keep existing custom snapping using drag + geometry
+                            // iOS 16 and earlier: horizontal carousel without extra snapping gesture
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 8) {
                                     ForEach(displayCodes, id: \.self) { code in
@@ -474,23 +473,6 @@ struct CameraScreen: View {
                                 }
                                 .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
                             }
-                            // Track user drag on the scroll view to suppress auto-scroll while interacting
-                            .simultaneousGesture(
-                                DragGesture(minimumDistance: 1, coordinateSpace: .local)
-                                    .onChanged { _ in
-                                        if !isUserDragging { isUserDragging = true }
-                                    }
-                                    .onEnded { _ in
-                                        let centerX = UIScreen.main.bounds.width / 2
-                                        if let target = nearestCenteredCode(to: centerX, in: cardCenterData) {
-                                            withAnimation(.easeInOut(duration: 0.25)) {
-                                                proxy.scrollTo(target, anchor: .center)
-                                            }
-                                        }
-                                        isUserDragging = false
-                                        lastUserDragAt = Date()
-                                    }
-                            )
                             .onChange(of: scrollTargetCode) { target in
                                 guard let target else { return }
                                 // Suppress auto-scroll if user is actively dragging or just dragged recently

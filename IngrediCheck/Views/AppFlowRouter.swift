@@ -9,25 +9,39 @@ struct AppFlowRouter: View {
     @State private var onboardingState = OnboardingState()
     @State private var authController = AuthController()
     @State private var familyStore = FamilyStore()
+    @State private var appResetID = UUID()
     
     var body: some View {
-        if Config.usePreviewFlow {
-            PreviewFlowView()
-                .environment(authController)
-                .environment(webService)
-                .environment(userPreferences)
-                .environment(appState)
-                .environment(dietaryPreferences)
-                .environment(onboardingState)
-                .environment(familyStore)
-        } else {
-            ProductionFlowView()
-                .environment(authController)
-                .environment(webService)
-                .environment(userPreferences)
-                .environment(appState)
-                .environment(dietaryPreferences)
-                .environment(onboardingState)
+        Group {
+            if Config.usePreviewFlow {
+                PreviewFlowView()
+                    .environment(authController)
+                    .environment(webService)
+                    .environment(userPreferences)
+                    .environment(appState)
+                    .environment(dietaryPreferences)
+                    .environment(onboardingState)
+                    .environment(familyStore)
+            } else {
+                ProductionFlowView()
+                    .environment(authController)
+                    .environment(webService)
+                    .environment(userPreferences)
+                    .environment(appState)
+                    .environment(dietaryPreferences)
+                    .environment(onboardingState)
+            }
+        }
+        .id(appResetID)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
+            appResetID = UUID()
+            webService = WebService()
+            dietaryPreferences = DietaryPreferences()
+            userPreferences = UserPreferences()
+            appState = AppState()
+            onboardingState = OnboardingState()
+            authController = AuthController()
+            familyStore = FamilyStore()
         }
     }
 }

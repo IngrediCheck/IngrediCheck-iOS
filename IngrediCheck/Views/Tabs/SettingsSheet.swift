@@ -62,7 +62,7 @@ struct SettingsSheet: View {
                         .padding(.top, 6)
                     } else if authController.signedInAsGuest {
                         AccountUpgradeView()
-                        DeleteAccountView(labelText: "Reset App State")
+                        ResetAppStateView(labelText: "Reset App State")
                     } else {
                         Text("Sign in to manage your account.")
                             .font(.footnote)
@@ -297,6 +297,59 @@ struct DeleteAccountView: View {
                         onboardingState.clearAll()
                         userPreferences.clearAll()
                         dietaryPreferences.clearAll()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct ResetAppStateView: View {
+
+    let labelText: String
+
+    @Environment(\.dismiss) var dismiss
+    @Environment(AuthController.self) var authController
+    @Environment(OnboardingState.self) var onboardingState
+    @Environment(UserPreferences.self) var userPreferences
+    @Environment(DietaryPreferences.self) var dietaryPreferences
+    @Environment(AppState.self) var appState
+
+    @State private var confirmationShown = false
+
+    var body: some View {
+        Button {
+            confirmationShown = true
+        } label: {
+            Label {
+                Text(labelText)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
+            .foregroundStyle(.red)
+        }
+        .confirmationDialog(
+            "This will sign you out and reset the app",
+            isPresented: $confirmationShown,
+            titleVisibility: .visible
+        ) {
+            Button("Reset") {
+                Task {
+                    await authController.resetForAppReset()
+                    await MainActor.run {
+                        appState.activeSheet = nil
+                        appState.activeTab = .home
+                        appState.feedbackConfig = nil
+                        appState.listsTabState = ListsTabState()
+                        onboardingState.clearAll()
+                        userPreferences.clearAll()
+                        dietaryPreferences.clearAll()
+                        UserDefaults.standard.removeObject(forKey: "hasLaunchedOncePreviewFlow")
+                        dismiss()
+                        NotificationCenter.default.post(
+                            name: Notification.Name("AppDidReset"),
+                            object: nil
+                        )
                     }
                 }
             }

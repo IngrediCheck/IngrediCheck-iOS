@@ -241,6 +241,15 @@ private enum AuthFlowMode {
         }
     }
 
+    public func resetForAppReset() async {
+        await signOut()
+        await MainActor.run {
+            clearAnonymousCredentials()
+            Self.hasRegisteredDevice = false
+            Self.hasPinged = false
+        }
+    }
+
     func signIn() async {
         
         print("signIn()")

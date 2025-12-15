@@ -10,6 +10,7 @@ import UIKit
 
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     @Environment(MemojiStore.self) private var memojiStore
     @EnvironmentObject private var store: Onboarding
@@ -196,18 +197,30 @@ struct PersistentBottomSheet: View {
             
         case .doYouHaveAnInviteCode:
             DoYouHaveAnInviteCode {
-                coordinator.navigateInBottomSheet(.enterInviteCode)
+                Task { @MainActor in
+                    await authController.signIn()
+                    coordinator.navigateInBottomSheet(.enterInviteCode)
+                }
             } noPressed: {
-                coordinator.navigateInBottomSheet(.whosThisFor)
+                Task { @MainActor in
+                    await authController.signIn()
+                    coordinator.navigateInBottomSheet(.whosThisFor)
+                }
             }
             
         case .enterInviteCode:
             EnterYourInviteCode(
                 yesPressed: {
-                    coordinator.showCanvas(.welcomeToYourFamily)
+                    Task { @MainActor in
+                        await authController.signIn()
+                        coordinator.showCanvas(.welcomeToYourFamily)
+                    }
                 },
                 noPressed: {
-                    coordinator.navigateInBottomSheet(.whosThisFor)
+                    Task { @MainActor in
+                        await authController.signIn()
+                        coordinator.navigateInBottomSheet(.whosThisFor)
+                    }
                 }
             )
             
