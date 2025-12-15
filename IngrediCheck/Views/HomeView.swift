@@ -11,7 +11,6 @@ struct HomeView: View {
     private let chatSmallDetent: PresentationDetent = .height(260)
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
-    @State private var isProductDetailPresented = false
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var previousScrollOffset: CGFloat = 0
@@ -21,9 +20,14 @@ struct HomeView: View {
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
-    @State private var selectedProduct: DTO.Product? = nil
-    @State private var selectedMatchStatus: DTO.ProductRecommendation? = nil
-    @State private var selectedIngredientRecommendations: [DTO.IngredientRecommendation]? = nil
+    private struct ProductDetailPayload: Identifiable {
+        let id = UUID()
+        let product: DTO.Product
+        let matchStatus: DTO.ProductRecommendation
+        let ingredientRecommendations: [DTO.IngredientRecommendation]?
+    }
+
+    @State private var activeProductDetail: ProductDetailPayload?
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
@@ -294,10 +298,13 @@ struct HomeView: View {
                                         images: item.images
                                     )
 
-                                    selectedProduct = product
-                                    selectedMatchStatus = item.calculateMatch()
-                                    selectedIngredientRecommendations = item.ingredient_recommendations
-                                    isProductDetailPresented = true
+                                    let payload = ProductDetailPayload(
+                                        product: product,
+                                        matchStatus: item.calculateMatch(),
+                                        ingredientRecommendations: item.ingredient_recommendations
+                                    )
+
+                                    activeProductDetail = payload
 
                                 } label: {
                                     HomeRecentScanRow(item: item)
@@ -403,17 +410,13 @@ struct HomeView: View {
             }
 
             // ------------ PRODUCT DETAIL ------------
-            .fullScreenCover(isPresented: $isProductDetailPresented) {
-                if let product = selectedProduct {
-                    ProductDetailView(
-                        product: product,
-                        matchStatus: selectedMatchStatus,
-                        ingredientRecommendations: selectedIngredientRecommendations,
-                        isPlaceholderMode: false
-                    )
-                } else {
-                    ProductDetailView(isPlaceholderMode: true)
-                }
+            .fullScreenCover(item: $activeProductDetail) { detail in
+                ProductDetailView(
+                    product: detail.product,
+                    matchStatus: detail.matchStatus,
+                    ingredientRecommendations: detail.ingredientRecommendations,
+                    isPlaceholderMode: false
+                )
             }
 
         }
