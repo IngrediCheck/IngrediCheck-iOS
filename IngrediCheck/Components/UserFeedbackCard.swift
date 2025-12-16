@@ -34,7 +34,6 @@ struct UserFeedbackCard: View {
                 Divider()
             }
             
-        matching
             // Star rating row
             HStack(spacing: 8) {
                 ForEach(1...5, id: \.self) { index in
