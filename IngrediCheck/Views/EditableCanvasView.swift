@@ -206,33 +206,59 @@ struct EditableCanvasView: View {
             return nil
         }
         
-        guard let subSteps = step.content.subSteps else { return nil }
-        
-        // Convert nested dict to sectioned chips with icons
+        // Type-2 steps use subSteps, type-3 steps use regions. Handle both.
         var sections: [SectionedChipModel] = []
         
-        for subStep in subSteps {
-            guard let selectedItems = nestedDict[subStep.title],
-                  !selectedItems.isEmpty else {
-                continue
-            }
-            
-            // Map selected items to ChipsModel with icons
-            let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
-                if let option = subStep.options?.first(where: { $0.name == itemName }) {
-                    return ChipsModel(name: option.name, icon: option.icon)
+        if let subSteps = step.content.subSteps {
+            // MARK: Type-2 (Avoid / Lifestyle / Nutrition-style)
+            for subStep in subSteps {
+                guard let selectedItems = nestedDict[subStep.title],
+                      !selectedItems.isEmpty else {
+                    continue
                 }
-                return ChipsModel(name: itemName, icon: nil)
-            }
-            
-            if !selectedChips.isEmpty {
-                sections.append(
-                    SectionedChipModel(
-                        title: subStep.title,
-                        subtitle: subStep.description,
-                        chips: selectedChips
+                
+                // Map selected items to ChipsModel with icons
+                let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
+                    if let option = subStep.options?.first(where: { $0.name == itemName }) {
+                        return ChipsModel(name: option.name, icon: option.icon)
+                    }
+                    return ChipsModel(name: itemName, icon: nil)
+                }
+                
+                if !selectedChips.isEmpty {
+                    sections.append(
+                        SectionedChipModel(
+                            title: subStep.title,
+                            subtitle: subStep.description,
+                            chips: selectedChips
+                        )
                     )
-                )
+                }
+            }
+        } else if let regions = step.content.regions {
+            // MARK: Type-3 (Region-style)
+            for region in regions {
+                guard let selectedItems = nestedDict[region.name],
+                      !selectedItems.isEmpty else {
+                    continue
+                }
+                
+                let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
+                    if let option = region.subRegions.first(where: { $0.name == itemName }) {
+                        return ChipsModel(name: option.name, icon: option.icon)
+                    }
+                    return ChipsModel(name: itemName, icon: nil)
+                }
+                
+                if !selectedChips.isEmpty {
+                    sections.append(
+                        SectionedChipModel(
+                            title: region.name,
+                            subtitle: nil,
+                            chips: selectedChips
+                        )
+                    )
+                }
             }
         }
         
