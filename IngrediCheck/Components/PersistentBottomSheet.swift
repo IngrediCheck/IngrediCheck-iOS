@@ -197,15 +197,9 @@ struct PersistentBottomSheet: View {
             
         case .doYouHaveAnInviteCode:
             DoYouHaveAnInviteCode {
-                Task { @MainActor in
-                    await authController.signIn()
-                    coordinator.navigateInBottomSheet(.enterInviteCode)
-                }
+                coordinator.navigateInBottomSheet(.enterInviteCode)
             } noPressed: {
-                Task { @MainActor in
-                    await authController.signIn()
-                    coordinator.navigateInBottomSheet(.whosThisFor)
-                }
+                coordinator.navigateInBottomSheet(.whosThisFor)
             }
             
         case .enterInviteCode:
@@ -217,19 +211,22 @@ struct PersistentBottomSheet: View {
                     }
                 },
                 noPressed: {
-                    Task { @MainActor in
-                        await authController.signIn()
-                        coordinator.navigateInBottomSheet(.whosThisFor)
-                    }
+                    coordinator.navigateInBottomSheet(.whosThisFor)
                 }
             )
             
         case .whosThisFor:
             WhosThisFor {
-                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
-                coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                Task { @MainActor in
+                    await authController.signIn()
+                    coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
+                    coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                }
             } addFamilyPressed: {
-                coordinator.showCanvas(.letsMeetYourIngrediFam)
+                Task { @MainActor in
+                    await authController.signIn()
+                    coordinator.showCanvas(.letsMeetYourIngrediFam)
+                }
             }
             
         case .letsMeetYourIngrediFam:

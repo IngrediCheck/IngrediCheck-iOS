@@ -320,6 +320,7 @@ struct BarcodeDataCard: View {
 
     @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
+    @Environment(UserPreferences.self) private var userPreferences
 
     @State private var analysisResult: BarcodeScanAnalysisResult?
     @State private var isLoading = false
@@ -719,6 +720,11 @@ struct BarcodeDataCard: View {
                                 BarcodeScanAnalysisService.storeResult(result)
                                 isAnalyzing = false
                                 isLoading = false
+                                // Increment scan count when analysis completes successfully
+                                // Only increment if we have a product (not for "not found" cases)
+                                if product != nil {
+                                    userPreferences.incrementScanCount()
+                                }
                                 onResultUpdated?()
                                 // After a successful analysis, refresh history so Home/Lists
                                 // Recent Scans reflect this scan immediately.
@@ -863,6 +869,11 @@ struct BarcodeDataCard: View {
                             BarcodeScanAnalysisService.storeResult(result)
                             isAnalyzing = false
                             isLoading = false
+                            // Increment scan count when analysis completes successfully
+                            // Only increment if we have a product (not for "not found" cases)
+                            if product != nil {
+                                userPreferences.incrementScanCount()
+                            }
                             onResultUpdated?()
                         }
                     },

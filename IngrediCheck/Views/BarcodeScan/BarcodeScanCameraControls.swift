@@ -192,6 +192,7 @@ struct ArrowSwipeShimmer: View {
     @State private var phase: CGFloat = -1
     private let animationDuration: Double = 1.4
     var mode: CameraMode
+    var baseOpacity: Double = 0.35
     
     var body: some View {
         HStack(spacing: 8) {
@@ -200,8 +201,9 @@ struct ArrowSwipeShimmer: View {
                     .renderingMode(.template)
                     .resizable()
                     .frame(width: 11, height: 21)
-                    .foregroundColor(.white)
-                    .opacity(0.4) // base arrow look
+                    .foregroundColor(.white.opacity(baseOpacity))
+
+//                    .opacity(0.4) // base arrow look
                     .rotationEffect(.degrees(mode == .photo ? 180 : 0))
                     .animation(
                         .easeInOut(duration: 0.24)
@@ -222,23 +224,23 @@ struct ArrowSwipeShimmer: View {
             )
             .frame(width: 42)
             .offset(x: phase * 42 * (mode == .photo ? -1 : 1))
-        )
-        .mask(
-            HStack(spacing: 8) {
-                ForEach(0..<3, id: \.self) { index in
-                    Image("right-arrow1")
-                        .renderingMode(.template)
-                        .resizable()
-                        .frame(width: 11, height: 21)
-                        .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+            .mask(
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Image("right-arrow1")
+                            .renderingMode(.template)
+                            .resizable()
+                            .frame(width: 11, height: 21)
+                            .rotationEffect(.degrees(mode == .photo ? 180 : 0))
                     
-                        .animation(
-                            .easeInOut(duration: 0.24)
-                            .delay(0.04 * Double(index)),
-                            value: mode
-                        )
+                            .animation(
+                                .easeInOut(duration: 0.24)
+                                .delay(0.04 * Double(index)),
+                                value: mode
+                            )
+                    }
                 }
-            }
+            )
         )
         .onAppear { startShimmer(withDelay: 0.4) }
         .onChange(of: mode) { _ in
