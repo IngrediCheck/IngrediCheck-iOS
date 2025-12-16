@@ -546,11 +546,12 @@ struct EditableCanvasView: View {
             
             print("[EditableCanvasView] updateFoodNotes: ✅ Success! Updated version to \(response.version), updatedAt: \(response.updatedAt)")
         } catch let error as WebService.VersionMismatchError {
-            // Handle version mismatch - update to current version and retry
-            print("[EditableCanvasView] updateFoodNotes: ⚠️ Version mismatch detected. Expected: \(error.expectedVersion), Current on server: \(error.currentVersion)")
+            // Handle version mismatch - backend provides currentNote with actual data
+            print("[EditableCanvasView] updateFoodNotes: ⚠️ Version mismatch detected. Expected: \(error.expectedVersion), Current on server: \(error.currentNote.version)")
             
+            // Update to current version from backend
             await MainActor.run {
-                currentVersion = error.currentVersion
+                currentVersion = error.currentNote.version
             }
             
             // Retry with the correct version

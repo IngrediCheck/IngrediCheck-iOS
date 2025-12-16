@@ -1133,7 +1133,7 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
     
     struct VersionMismatchError: Error {
-        let currentVersion: Int
+        let currentNote: FoodNotesResponse
         let expectedVersion: Int
     }
     
@@ -1163,13 +1163,19 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
+        // Backend returns null if no food notes exist (status 200 with null body)
+        let responseString = String(data: data, encoding: .utf8) ?? ""
+        if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
+            print("[WebService] fetchFoodNotes: No food notes found (null response), returning nil")
+            return nil
+        }
+        
         // Parse response - include content, version and updatedAt
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = jsonObject["version"] as? Int,
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
             print("[WebService] fetchFoodNotes: ❌ Failed to parse response")
-            let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode"
             print("[WebService] fetchFoodNotes: Response body: \(responseString)")
             throw NetworkError.decodingError
         }
@@ -1205,23 +1211,20 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             print("[WebService] updateFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
             
-            // Parse version mismatch error
-            if httpResponse.statusCode == 400 {
+            // Handle version mismatch (409 Conflict) - backend now returns currentNote in response
+            if httpResponse.statusCode == 409 {
                 if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let errorString = jsonObject["error"] as? String {
-                    // Parse "Version mismatch: expected 0, got 2"
-                    if errorString.contains("Version mismatch") && errorString.contains("got") {
-                        // Extract version number after "got "
-                        let components = errorString.components(separatedBy: "got ")
-                        if components.count > 1 {
-                            let versionPart = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
-                            // Extract just the number (remove any trailing characters)
-                            let versionString = versionPart.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-                            if let currentVersion = Int(versionString) {
-                                throw VersionMismatchError(currentVersion: currentVersion, expectedVersion: version)
-                            }
-                        }
-                    }
+                   let currentNoteDict = jsonObject["currentNote"] as? [String: Any],
+                   let currentVersion = currentNoteDict["version"] as? Int,
+                   let currentUpdatedAt = currentNoteDict["updatedAt"] as? String,
+                   let currentContent = currentNoteDict["content"] as? [String: Any] {
+                    let currentNote = FoodNotesResponse(
+                        content: currentContent,
+                        version: currentVersion,
+                        updatedAt: currentUpdatedAt
+                    )
+                    print("[WebService] updateFoodNotes: Version mismatch - current version: \(currentVersion), expected: \(version)")
+                    throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
                 }
             }
             
