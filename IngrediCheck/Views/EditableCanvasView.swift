@@ -111,6 +111,14 @@ struct EditableCanvasView: View {
                 , alignment: .top
             )
         }
+        .onAppear {
+            // Update completion status for all sections based on their data
+            store.updateSectionCompletionStatus()
+        }
+        .onChange(of: store.preferences) { _ in
+            // Update completion status whenever preferences change
+            store.updateSectionCompletionStatus()
+        }
     }
     
     private func icon(for stepId: String) -> String {
@@ -400,6 +408,16 @@ struct EditSectionBottomSheet: View {
         .shadow(radius: 27.5)
         .ignoresSafeArea(edges: .bottom)
         .animation(.easeInOut(duration: 0.2), value: stepId)
+        .onChange(of: stepId) { _ in
+            // Update completion status when switching sections
+            store.updateSectionCompletionStatus()
+        }
+        .onChange(of: isPresented) { newValue in
+            // Update completion status when sheet is dismissed
+            if !newValue {
+                store.updateSectionCompletionStatus()
+            }
+        }
     }
 }
 
