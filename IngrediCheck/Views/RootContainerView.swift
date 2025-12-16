@@ -24,6 +24,7 @@ struct RootContainerView: View {
     // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AuthController.self) private var authController
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -41,6 +42,12 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
+            coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
+            onboarding.reset(flowType: .individual)
+            familyStore.resetLocalState()
+            dismiss()
+        }
         .task {
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()

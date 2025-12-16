@@ -10,6 +10,7 @@ import UIKit
 
 struct PersistentBottomSheet: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     @Environment(MemojiStore.self) private var memojiStore
     @EnvironmentObject private var store: Onboarding
@@ -204,7 +205,10 @@ struct PersistentBottomSheet: View {
         case .enterInviteCode:
             EnterYourInviteCode(
                 yesPressed: {
-                    coordinator.showCanvas(.welcomeToYourFamily)
+                    Task { @MainActor in
+                        await authController.signIn()
+                        coordinator.showCanvas(.welcomeToYourFamily)
+                    }
                 },
                 noPressed: {
                     coordinator.navigateInBottomSheet(.whosThisFor)
@@ -213,10 +217,16 @@ struct PersistentBottomSheet: View {
             
         case .whosThisFor:
             WhosThisFor {
-                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
-                coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                Task { @MainActor in
+                    await authController.signIn()
+                    coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
+                    coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                }
             } addFamilyPressed: {
-                coordinator.showCanvas(.letsMeetYourIngrediFam)
+                Task { @MainActor in
+                    await authController.signIn()
+                    coordinator.showCanvas(.letsMeetYourIngrediFam)
+                }
             }
             
         case .letsMeetYourIngrediFam:

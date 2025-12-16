@@ -25,33 +25,34 @@ struct SplashScreen: View {
     
     @State private var currentIndex: Int = 0
     @State private var isFirstLaunch: Bool = true
+    @State private var isCheckingLaunchState: Bool = true
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     
     var body: some View {
-        // In preview flow, if there's already a non-guest Supabase session
-        // (e.g., user previously logged in with Google/Apple), skip the
-        // marketing carousel and go straight into the main container.
-        // However, on a true first launch after install we always want to
-        // start from the first screen, even if a stale session exists in
-        // keychain. That first-launch detection is handled in the .task
-        // below and reflected via isFirstLaunch.
-        if !isFirstLaunch, authController.session != nil, !authController.signedInAsGuest {
-            // For returning logged-in users in preview flow, show a short
-            // branded splash image before transitioning directly to Home.
-            Splash {
+        Group {
+            if isCheckingLaunchState {
                 Image("SplashScreen")
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
-            } content: {
-                RootContainerView(initialRoute: .home)
-                    .environment(authController)
-                    .environment(familyStore)
-            }
-        } else {
-            NavigationStack {
-                VStack {
+            } else if !isFirstLaunch, authController.session != nil {
+                // In preview flow, if there's already a Supabase session
+                // (including anonymous/guest), skip the marketing carousel
+                // and go straight into the main container.
+                Splash {
+                    Image("SplashScreen")
+                        .resizable()
+                        .scaledToFill()
+                        .ignoresSafeArea()
+                } content: {
+                    RootContainerView(initialRoute: .home)
+                        .environment(authController)
+                        .environment(familyStore)
+                }
+            } else {
+                NavigationStack {
+                    VStack {
                     
                     Spacer()
                     Spacer()
@@ -107,30 +108,33 @@ struct SplashScreen: View {
                 }
                 .padding(.horizontal, 20)
             }
-            .task {
-                let firstLaunchKey = "hasLaunchedOncePreviewFlow"
-                let hasLaunchedBefore = UserDefaults.standard.bool(forKey: firstLaunchKey)
-
-                if !hasLaunchedBefore {
-                    // Mark that we've now launched at least once. For this
-                    // initial launch we force onboarding by treating it as
-                    // first launch even if a stale session exists in keychain.
-                    UserDefaults.standard.set(true, forKey: firstLaunchKey)
-                    isFirstLaunch = true
-
-                    // If we somehow already have a Supabase session on first
-                    // launch (e.g., carried over via keychain from a previous
-                    // install), clear it so the user is not auto-logged in
-                    // before they choose Google/Apple or "Sign-in later".
-                    if authController.session != nil {
-                        await authController.signOut()
-                    }
-                } else {
-                    isFirstLaunch = false
-                }
-                // Do NOT auto-sign-in here; login should only happen when
-                // the user explicitly chooses a provider or taps "Sign-in later".
             }
+        }
+        .task {
+            let firstLaunchKey = "hasLaunchedOncePreviewFlow"
+            let hasLaunchedBefore = UserDefaults.standard.bool(forKey: firstLaunchKey)
+
+            if !hasLaunchedBefore {
+                // Mark that we've now launched at least once. For this
+                // initial launch we force onboarding by treating it as
+                // first launch even if a stale session exists in keychain.
+                UserDefaults.standard.set(true, forKey: firstLaunchKey)
+                isFirstLaunch = true
+
+                // If we somehow already have a Supabase session on first
+                // launch (e.g., carried over via keychain from a previous
+                // install), clear it so the user is not auto-logged in
+                // before they choose Google/Apple or "Sign-in later".
+                if authController.session != nil {
+                    await authController.signOut()
+                }
+            } else {
+                isFirstLaunch = false
+            }
+
+            isCheckingLaunchState = false
+            // Do NOT auto-sign-in here; login should only happen when
+            // the user explicitly chooses a provider or taps "Sign-in later".
         }
     }
     
