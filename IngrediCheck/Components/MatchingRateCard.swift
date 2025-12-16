@@ -9,31 +9,23 @@ import SwiftUI
 
 struct MatchingRateCard: View {
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Matching Rate")
-                    .font(ManropeFont.medium.size(18))
-                    .foregroundStyle(.grayScale150)
-                
-                HStack(alignment: .top, spacing: 0) {
-                    Image("up-trend")
-                        .resizable()
-                        .frame(width: 22, height: 22)
-                    
-                    Text("+ 20 from last month")
-                        .font(ManropeFont.regular.size(10))
-                        .foregroundStyle(.grayScale100)
-                }
-                
-            }
+        //        HStack {
+        //
+        //
+        //
+        //        }
+        //        .padding(.horizontal, 12)
+        //        .frame(height: 125)
+        //        .background(.grayScale10, in: RoundedRectangle(cornerRadius: 24))
+        //        .shadow(color: Color(hex: "#ECECEC"), radius: 9, x: 0, y: 0)
+        //        .overlay(
+        VStack(alignment: .leading ){
             
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .frame(height: 125)
-        .background(.grayScale10, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color(hex: "#ECECEC"), radius: 9, x: 0, y: 0)
-        .overlay(
+            Text("Matching Rate")
+                .font(ManropeFont.medium.size(16))
+                .padding(.leading , 20)
+                .padding(.top,13)
+                
             ZStack {
                 Rectangle()
                     .fill(.clear)
@@ -61,17 +53,14 @@ struct MatchingRateCard: View {
                         .foregroundStyle(.grayScale100)
                 }
             }
-                .offset(x: UIScreen.main.bounds.width * 0.003,y: 20)
-            , alignment: .trailing
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(lineWidth: 0.25)
-                .foregroundStyle(.grayScale60)
-        )
+            
+       
+        }.frame(maxWidth: .infinity  )
+            .frame(height: 229)
+            .background(.grayScale10, in: RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color(hex: "#ECECEC"), radius: 9, x: 0, y: 0)
     }
 }
-
 #Preview {
     ZStack {
         Color.gray.opacity(0.1).ignoresSafeArea()
