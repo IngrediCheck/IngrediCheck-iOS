@@ -10,12 +10,16 @@ import SwiftUI
 struct EditableCanvasView: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(\.dismiss) private var dismiss
+    @Environment(WebService.self) private var webService
     
     @State private var editingStepId: String? = nil
     @State private var isEditSheetPresented: Bool = false
     @State private var tagBarScrollTarget: UUID? = nil
     @State private var currentEditingSectionIndex: Int = 0
     @State private var isProgrammaticChange: Bool = false
+    @State private var debounceTask: Task<Void, Never>? = nil
+    @State private var currentVersion: Int = 0
+    @State private var isLoadingFoodNotes: Bool = false
     
     var body: some View {
         let cards = selectedCards()
@@ -45,7 +49,21 @@ struct EditableCanvasView: View {
                     .padding(.bottom, 16)
                     
                     // Selected items scroll view
-                    if let cards = cards, !cards.isEmpty {
+                    if isLoadingFoodNotes {
+                        // Loading state
+                        VStack(spacing: 16) {
+                            Spacer()
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .scaleEffect(1.2)
+                            Text("Loading your preferences...")
+                                .font(ManropeFont.medium.size(16))
+                                .foregroundStyle(.grayScale100)
+                                .padding(.top, 8)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let cards = cards, !cards.isEmpty {
                         ScrollView(.vertical, showsIndicators: false) {
                             VStack(spacing: 16) {
                                 ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
@@ -114,10 +132,40 @@ struct EditableCanvasView: View {
         .onAppear {
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
+            
+            // Fetch and load food notes data when view appears
+            Task {
+                await loadFoodNotesFromBackend()
+            }
+        }
+        .onDisappear {
+            // Cancel any pending debounce task when view disappears
+            debounceTask?.cancel()
+            debounceTask = nil
         }
         .onChange(of: store.preferences) { _ in
             // Update completion status whenever preferences change
             store.updateSectionCompletionStatus()
+            
+            // Debounce API call - cancel previous task and start new one
+            debounceTask?.cancel()
+            debounceTask = Task {
+                do {
+                    // Wait 5 seconds
+                    try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                    
+                    // Check if task was cancelled
+                    try Task.checkCancellation()
+                    
+                    // Build content structure and call API
+                    await updateFoodNotes()
+                } catch {
+                    // Task was cancelled or sleep interrupted - ignore
+                    if !(error is CancellationError) {
+                        print("[EditableCanvasView] Debounce task error: \(error)")
+                    }
+                }
+            }
         }
     }
     
@@ -254,6 +302,260 @@ struct EditableCanvasView: View {
             // Last section, close the sheet
             withAnimation(.easeInOut(duration: 0.2)) {
                 isEditSheetPresented = false
+            }
+        }
+    }
+    
+    // MARK: - Food Notes API Integration
+    
+    @MainActor
+    private func loadFoodNotesFromBackend() async {
+        print("[EditableCanvasView] loadFoodNotesFromBackend: Starting to load food notes from backend")
+        
+        // Show loading indicator
+        isLoadingFoodNotes = true
+        
+        do {
+            if let response = try await webService.fetchFoodNotes() {
+                print("[EditableCanvasView] loadFoodNotesFromBackend: ✅ Received food notes data")
+                print("[EditableCanvasView] loadFoodNotesFromBackend: Version: \(response.version), UpdatedAt: \(response.updatedAt)")
+                print("[EditableCanvasView] loadFoodNotesFromBackend: Content keys: \(response.content.keys.joined(separator: ", "))")
+                
+                // Update version
+                currentVersion = response.version
+                
+                // Convert content structure to Preferences format
+                await convertContentToPreferences(content: response.content)
+                
+                // Update completion status after loading
+                store.updateSectionCompletionStatus()
+                
+                print("[EditableCanvasView] loadFoodNotesFromBackend: ✅ Successfully loaded and applied food notes data")
+            } else {
+                // No food notes exist yet, start with version 0
+                currentVersion = 0
+                print("[EditableCanvasView] loadFoodNotesFromBackend: No existing food notes found, starting with version 0")
+            }
+        } catch let error as NetworkError {
+            // If GET endpoint doesn't exist (404) or other errors, start with version 0
+            // The version will be corrected on first update attempt via error parsing
+            if case .notFound = error {
+                currentVersion = 0
+                print("[EditableCanvasView] loadFoodNotesFromBackend: GET endpoint not available (404), will detect version on first update")
+            } else {
+                currentVersion = 0
+                print("[EditableCanvasView] loadFoodNotesFromBackend: ❌ Failed to load food notes: \(error)")
+            }
+        } catch {
+            // If fetch fails for any other reason, start with version 0
+            currentVersion = 0
+            print("[EditableCanvasView] loadFoodNotesFromBackend: ❌ Failed to load food notes: \(error.localizedDescription)")
+        }
+        
+        // Hide loading indicator
+        isLoadingFoodNotes = false
+    }
+    
+    @MainActor
+    private func convertContentToPreferences(content: [String: Any]) async {
+        print("[EditableCanvasView] convertContentToPreferences: Converting content to preferences format")
+        
+        // Iterate through content keys (which are step IDs)
+        for (stepId, stepContent) in content {
+            print("[EditableCanvasView] convertContentToPreferences: Processing stepId: \(stepId)")
+            
+            // Find the step by ID to get the section name
+            guard let step = store.dynamicSteps.first(where: { $0.id == stepId }) else {
+                print("[EditableCanvasView] convertContentToPreferences: ⚠️ Step not found for stepId: \(stepId), skipping")
+                continue
+            }
+            
+            let sectionName = step.header.name
+            print("[EditableCanvasView] convertContentToPreferences: Found step '\(sectionName)' for stepId: \(stepId)")
+            
+            // Check if content is an array (type-1) or nested object (type-2 or type-3)
+            if let itemsArray = stepContent as? [[String: Any]] {
+                // Type-1: Simple list
+                print("[EditableCanvasView] convertContentToPreferences: Type-1 list with \(itemsArray.count) items")
+                let itemNames = itemsArray.compactMap { item -> String? in
+                    if let name = item["name"] as? String {
+                        return name
+                    }
+                    return nil
+                }
+                
+                if !itemNames.isEmpty {
+                    store.preferences.sections[sectionName] = .list(itemNames)
+                    print("[EditableCanvasView] convertContentToPreferences: ✅ Set \(sectionName) as list with items: \(itemNames.joined(separator: ", "))")
+                }
+            } else if let nestedDict = stepContent as? [String: Any] {
+                // Type-2 or Type-3: Nested structure
+                print("[EditableCanvasView] convertContentToPreferences: Nested structure with keys: \(nestedDict.keys.joined(separator: ", "))")
+                
+                var preferencesNestedDict: [String: [String]] = [:]
+                
+                for (nestedKey, nestedValue) in nestedDict {
+                    if let itemsArray = nestedValue as? [[String: Any]] {
+                        let itemNames = itemsArray.compactMap { item -> String? in
+                            if let name = item["name"] as? String {
+                                return name
+                            }
+                            return nil
+                        }
+                        
+                        if !itemNames.isEmpty {
+                            preferencesNestedDict[nestedKey] = itemNames
+                            print("[EditableCanvasView] convertContentToPreferences: ✅ Set nested key '\(nestedKey)' with items: \(itemNames.joined(separator: ", "))")
+                        }
+                    }
+                }
+                
+                if !preferencesNestedDict.isEmpty {
+                    store.preferences.sections[sectionName] = .nested(preferencesNestedDict)
+                    print("[EditableCanvasView] convertContentToPreferences: ✅ Set \(sectionName) as nested with \(preferencesNestedDict.count) sub-sections")
+                }
+            } else {
+                print("[EditableCanvasView] convertContentToPreferences: ⚠️ Unknown content format for stepId: \(stepId)")
+            }
+        }
+        
+        print("[EditableCanvasView] convertContentToPreferences: ✅ Conversion complete")
+    }
+    
+    @MainActor
+    private func updateFoodNotes() async {
+        // Build content structure dynamically from preferences
+        var content: [String: Any] = [:]
+        
+        // Iterate through all dynamic steps to build content
+        for step in store.dynamicSteps {
+            let sectionName = step.header.name
+            
+            guard let preferenceValue = store.preferences.sections[sectionName] else {
+                continue
+            }
+            
+            switch preferenceValue {
+            case .list(let items):
+                // Simple list - convert to array of objects with iconName and name
+                let itemsArray = items.compactMap { itemName -> [String: String]? in
+                    // Find icon from step options
+                    let icon = step.content.options?.first(where: { $0.name == itemName })?.icon ?? ""
+                    return [
+                        "iconName": icon,
+                        "name": itemName
+                    ]
+                }
+                
+                if !itemsArray.isEmpty {
+                    // Use step id as key (lowercased) for the content
+                    content[step.id] = itemsArray
+                }
+                
+            case .nested(let nestedDict):
+                // Nested structure - for type-2 steps (Avoid, LifeStyle, Nutrition)
+                var nestedContent: [String: Any] = [:]
+                
+                if let subSteps = step.content.subSteps {
+                    for subStep in subSteps {
+                        if let items = nestedDict[subStep.title], !items.isEmpty {
+                            let itemsArray = items.compactMap { itemName -> [String: String]? in
+                                let icon = subStep.options?.first(where: { $0.name == itemName })?.icon ?? ""
+                                return [
+                                    "iconName": icon,
+                                    "name": itemName
+                                ]
+                            }
+                            
+                            if !itemsArray.isEmpty {
+                                nestedContent[subStep.title] = itemsArray
+                            }
+                        }
+                    }
+                } else if step.type == .type3 {
+                    // Type-3 (Region) - regions with subRegions
+                    for (regionName, items) in nestedDict {
+                        if !items.isEmpty {
+                            let itemsArray = items.compactMap { itemName -> [String: String]? in
+                                // Find icon from regions structure
+                                var icon = ""
+                                if let region = step.content.regions?.first(where: { $0.name == regionName }) {
+                                    icon = region.subRegions.first(where: { $0.name == itemName })?.icon ?? ""
+                                }
+                                return [
+                                    "iconName": icon,
+                                    "name": itemName
+                                ]
+                            }
+                            
+                            if !itemsArray.isEmpty {
+                                nestedContent[regionName] = itemsArray
+                            }
+                        }
+                    }
+                }
+                
+                if !nestedContent.isEmpty {
+                    content[step.id] = nestedContent
+                }
+            }
+        }
+        
+        // Only call API if content is not empty
+        guard !content.isEmpty else {
+            print("[EditableCanvasView] updateFoodNotes: Content is empty, skipping API call")
+            return
+        }
+        
+        do {
+            print("[EditableCanvasView] updateFoodNotes: Calling API with version \(currentVersion)")
+            print("[EditableCanvasView] updateFoodNotes: Content keys: \(content.keys.joined(separator: ", "))")
+            
+            let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
+            
+            // Update version from response
+            await MainActor.run {
+                currentVersion = response.version
+            }
+            
+            print("[EditableCanvasView] updateFoodNotes: ✅ Success! Updated version to \(response.version), updatedAt: \(response.updatedAt)")
+        } catch let error as WebService.VersionMismatchError {
+            // Handle version mismatch - update to current version and retry
+            print("[EditableCanvasView] updateFoodNotes: ⚠️ Version mismatch detected. Expected: \(error.expectedVersion), Current on server: \(error.currentVersion)")
+            
+            await MainActor.run {
+                currentVersion = error.currentVersion
+            }
+            
+            // Retry with the correct version
+            do {
+                print("[EditableCanvasView] updateFoodNotes: Retrying with version \(currentVersion)")
+                let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
+                
+                await MainActor.run {
+                    currentVersion = response.version
+                }
+                
+                print("[EditableCanvasView] updateFoodNotes: ✅ Success after retry! Updated version to \(response.version), updatedAt: \(response.updatedAt)")
+            } catch {
+                print("[EditableCanvasView] updateFoodNotes: ❌ Failed on retry: \(error.localizedDescription)")
+            }
+        } catch {
+            if let networkError = error as? NetworkError {
+                switch networkError {
+                case .invalidResponse(let statusCode):
+                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Invalid response: \(statusCode)")
+                case .authError:
+                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Authentication error")
+                case .decodingError:
+                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Decoding error")
+                case .badUrl:
+                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Bad URL")
+                case .notFound(let message):
+                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Not found: \(message)")
+                }
+            } else {
+                print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Error: \(error.localizedDescription)")
             }
         }
     }
