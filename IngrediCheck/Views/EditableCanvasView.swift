@@ -11,6 +11,7 @@ struct EditableCanvasView: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(\.dismiss) private var dismiss
     @Environment(WebService.self) private var webService
+    @Environment(FamilyStore.self) private var familyStore
     
     @State private var editingStepId: String? = nil
     @State private var isEditSheetPresented: Bool = false
@@ -20,6 +21,8 @@ struct EditableCanvasView: View {
     @State private var debounceTask: Task<Void, Never>? = nil
     @State private var currentVersion: Int = 0
     @State private var isLoadingFoodNotes: Bool = false
+    // Track which members have which items: [sectionName: [itemName: [memberIds]]]
+    @State private var itemMemberAssociations: [String: [String: [String]]] = [:]
     
     var body: some View {
         let cards = selectedCards()
@@ -83,7 +86,7 @@ struct EditableCanvasView: View {
                                             }
                                             editingStepId = card.stepId
                                             isEditSheetPresented = true
-                                        }
+                                        }, itemMemberAssociations: itemMemberAssociations
                                     )
                                     .padding(.top, index == 0 ? 16 : 0)
                                 }
@@ -174,6 +177,30 @@ struct EditableCanvasView: View {
             return icon
         }
         return "allergies"
+    }
+    
+    // Helper function to get member images for an item
+    private func getMemberImages(for sectionName: String, itemName: String) -> [String] {
+        guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
+            return []
+        }
+        
+        var images: [String] = []
+        
+        for memberId in memberIds {
+            if memberId == "Everyone" {
+                images.append("Everyone")
+            } else if let family = familyStore.family {
+                // Find member by ID and use their name as image identifier
+                if memberId == family.selfMember.id.uuidString {
+                    images.append(family.selfMember.name)
+                } else if let member = family.otherMembers.first(where: { $0.id.uuidString == memberId }) {
+                    images.append(member.name)
+                }
+            }
+        }
+        
+        return images
     }
     
     private func chips(for stepId: String) -> [ChipsModel]? {
@@ -319,16 +346,126 @@ struct EditableCanvasView: View {
         isLoadingFoodNotes = true
         
         do {
-            if let response = try await webService.fetchFoodNotes() {
+            if let response = try await webService.fetchFoodNotesAll() {
                 print("[EditableCanvasView] loadFoodNotesFromBackend: ✅ Received food notes data")
-                print("[EditableCanvasView] loadFoodNotesFromBackend: Version: \(response.version), UpdatedAt: \(response.updatedAt)")
-                print("[EditableCanvasView] loadFoodNotesFromBackend: Content keys: \(response.content.keys.joined(separator: ", "))")
                 
-                // Update version
-                currentVersion = response.version
+                // Combine family note and member notes to get unified content
+                var unifiedContent: [String: Any] = [:]
+                var associations: [String: [String: [String]]] = [:]
                 
-                // Convert content structure to Preferences format
-                await convertContentToPreferences(content: response.content)
+                // Process family note (if exists) - these are "Everyone" level
+                if let familyNote = response.familyNote {
+                    currentVersion = familyNote.version
+                    
+                    // Merge family note content into unified content
+                    for (stepId, stepContent) in familyNote.content {
+                        unifiedContent[stepId] = stepContent
+                        
+                        if let step = store.dynamicSteps.first(where: { $0.id == stepId }) {
+                            let sectionName = step.header.name
+                            if associations[sectionName] == nil {
+                                associations[sectionName] = [:]
+                            }
+                            
+                            // Extract item names and mark as "Everyone" (family level)
+                            if let itemsArray = stepContent as? [[String: Any]] {
+                                for item in itemsArray {
+                                    if let itemName = item["name"] as? String {
+                                        associations[sectionName]?[itemName] = ["Everyone"]
+                                    }
+                                }
+                            } else if let nestedDict = stepContent as? [String: Any] {
+                                for (_, nestedValue) in nestedDict {
+                                    if let itemsArray = nestedValue as? [[String: Any]] {
+                                        for item in itemsArray {
+                                            if let itemName = item["name"] as? String {
+                                                associations[sectionName]?[itemName] = ["Everyone"]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Process member notes - these are member-specific
+                // Merge member content into unified content (combining items from all members)
+                for (memberId, memberNote) in response.memberNotes {
+                    // Use the highest version from member notes if no family note
+                    if response.familyNote == nil {
+                        currentVersion = max(currentVersion, memberNote.version)
+                    }
+                    
+                    for (stepId, stepContent) in memberNote.content {
+                        if let step = store.dynamicSteps.first(where: { $0.id == stepId }) {
+                            let sectionName = step.header.name
+                            if associations[sectionName] == nil {
+                                associations[sectionName] = [:]
+                            }
+                            
+                            // Merge member items into unified content
+                            if let itemsArray = stepContent as? [[String: Any]] {
+                                // Type-1: Simple list - merge items
+                                var existingItems = unifiedContent[stepId] as? [[String: Any]] ?? []
+                                var existingItemNames = Set(existingItems.compactMap { $0["name"] as? String })
+                                
+                                for item in itemsArray {
+                                    if let itemName = item["name"] as? String {
+                                        if !existingItemNames.contains(itemName) {
+                                            existingItems.append(item)
+                                            existingItemNames.insert(itemName)
+                                        }
+                                        
+                                        // Track member association
+                                        if associations[sectionName]?[itemName] == nil {
+                                            associations[sectionName]?[itemName] = []
+                                        }
+                                        if !associations[sectionName]![itemName]!.contains(memberId) {
+                                            associations[sectionName]![itemName]!.append(memberId)
+                                        }
+                                    }
+                                }
+                                unifiedContent[stepId] = existingItems
+                            } else if let nestedDict = stepContent as? [String: Any] {
+                                // Type-2 or Type-3: Nested structure - merge nested items
+                                var existingNested = unifiedContent[stepId] as? [String: Any] ?? [:]
+                                
+                                for (nestedKey, nestedValue) in nestedDict {
+                                    if let itemsArray = nestedValue as? [[String: Any]] {
+                                        var existingItems = existingNested[nestedKey] as? [[String: Any]] ?? []
+                                        var existingItemNames = Set(existingItems.compactMap { $0["name"] as? String })
+                                        
+                                        for item in itemsArray {
+                                            if let itemName = item["name"] as? String {
+                                                if !existingItemNames.contains(itemName) {
+                                                    existingItems.append(item)
+                                                    existingItemNames.insert(itemName)
+                                                }
+                                                
+                                                // Track member association
+                                                if associations[sectionName]?[itemName] == nil {
+                                                    associations[sectionName]?[itemName] = []
+                                                }
+                                                if !associations[sectionName]![itemName]!.contains(memberId) {
+                                                    associations[sectionName]![itemName]!.append(memberId)
+                                                }
+                                            }
+                                        }
+                                        existingNested[nestedKey] = existingItems
+                                    }
+                                }
+                                unifiedContent[stepId] = existingNested
+                            }
+                        }
+                    }
+                }
+                
+                // Convert unified content to preferences format
+                await convertContentToPreferences(content: unifiedContent)
+                
+                // Store associations
+                itemMemberAssociations = associations
                 
                 // Update completion status after loading
                 store.updateSectionCompletionStatus()
@@ -337,6 +474,7 @@ struct EditableCanvasView: View {
             } else {
                 // No food notes exist yet, start with version 0
                 currentVersion = 0
+                itemMemberAssociations = [:]
                 print("[EditableCanvasView] loadFoodNotesFromBackend: No existing food notes found, starting with version 0")
             }
         } catch let error as NetworkError {
@@ -344,14 +482,17 @@ struct EditableCanvasView: View {
             // The version will be corrected on first update attempt via error parsing
             if case .notFound = error {
                 currentVersion = 0
+                itemMemberAssociations = [:]
                 print("[EditableCanvasView] loadFoodNotesFromBackend: GET endpoint not available (404), will detect version on first update")
             } else {
                 currentVersion = 0
+                itemMemberAssociations = [:]
                 print("[EditableCanvasView] loadFoodNotesFromBackend: ❌ Failed to load food notes: \(error)")
             }
         } catch {
             // If fetch fails for any other reason, start with version 0
             currentVersion = 0
+            itemMemberAssociations = [:]
             print("[EditableCanvasView] loadFoodNotesFromBackend: ❌ Failed to load food notes: \(error.localizedDescription)")
         }
         
@@ -575,11 +716,38 @@ struct EditableCanvasCardModel: Identifiable {
 }
 
 struct EditableCanvasCard: View {
+    @Environment(FamilyStore.self) private var familyStore
+    
     var chips: [ChipsModel]? = nil
     var sectionedChips: [SectionedChipModel]? = nil
     var title: String = "Allergies"
     var iconName: String = "allergies"
     var onEdit: (() -> Void)? = nil
+    var itemMemberAssociations: [String: [String: [String]]] = [:]
+    
+    // Helper function to get member images for an item
+    private func getMemberImages(for sectionName: String, itemName: String) -> [String] {
+        guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
+            return []
+        }
+        
+        var images: [String] = []
+        
+        for memberId in memberIds {
+            if memberId == "Everyone" {
+                images.append("Everyone")
+            } else if let family = familyStore.family {
+                // Find member by ID and use their name as image identifier
+                if memberId == family.selfMember.id.uuidString {
+                    images.append(family.selfMember.name)
+                } else if let member = family.otherMembers.first(where: { $0.id.uuidString == memberId }) {
+                    images.append(member.name)
+                }
+            }
+        }
+        
+        return images
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -635,6 +803,7 @@ struct EditableCanvasCard: View {
                                         title: chip.name,
                                         bgColor: .secondary200,
                                         image: chip.icon,
+                                        familyList: getMemberImages(for: title, itemName: chip.name),
                                         outlined: false
                                     )
                                 }
@@ -648,6 +817,7 @@ struct EditableCanvasCard: View {
                                 title: chip.name,
                                 bgColor: .secondary200,
                                 image: chip.icon,
+                                familyList: getMemberImages(for: title, itemName: chip.name),
                                 outlined: false
                             )
                         }

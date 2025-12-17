@@ -1132,6 +1132,11 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         let updatedAt: String
     }
     
+    struct FoodNotesAllResponse {
+        let familyNote: FoodNotesResponse?
+        let memberNotes: [String: FoodNotesResponse] // Key is member ID
+    }
+    
     struct VersionMismatchError: Error {
         let currentNote: FoodNotesResponse
         let expectedVersion: Int
@@ -1183,6 +1188,72 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         print("[WebService] fetchFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: ", "))")
         
         return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+    }
+    
+    func fetchFoodNotesAll() async throws -> FoodNotesAllResponse? {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        print("[WebService] fetchFoodNotesAll: Starting GET request to /family/food-notes/all")
+        
+        let request = SupabaseRequestBuilder(endpoint: .family_food_notes_all)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            // 404 means no food notes exist yet, which is fine
+            if httpResponse.statusCode == 404 {
+                print("[WebService] fetchFoodNotesAll: No food notes found (404), returning nil")
+                return nil
+            }
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("[WebService] fetchFoodNotesAll: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        // Backend returns null if no food notes exist (status 200 with null body)
+        let responseString = String(data: data, encoding: .utf8) ?? ""
+        if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
+            print("[WebService] fetchFoodNotesAll: No food notes found (null response), returning nil")
+            return nil
+        }
+        
+        // Parse response - includes familyNote and memberNotes
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("[WebService] fetchFoodNotesAll: ❌ Failed to parse response")
+            print("[WebService] fetchFoodNotesAll: Response body: \(responseString)")
+            throw NetworkError.decodingError
+        }
+        
+        // Parse familyNote (can be null)
+        var familyNote: FoodNotesResponse? = nil
+        if let familyNoteDict = jsonObject["familyNote"] as? [String: Any],
+           let version = familyNoteDict["version"] as? Int,
+           let updatedAt = familyNoteDict["updatedAt"] as? String,
+           let content = familyNoteDict["content"] as? [String: Any] {
+            familyNote = FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+        }
+        
+        // Parse memberNotes (dictionary of member ID -> FoodNotesResponse)
+        var memberNotes: [String: FoodNotesResponse] = [:]
+        if let memberNotesDict = jsonObject["memberNotes"] as? [String: [String: Any]] {
+            for (memberId, noteDict) in memberNotesDict {
+                if let version = noteDict["version"] as? Int,
+                   let updatedAt = noteDict["updatedAt"] as? String,
+                   let content = noteDict["content"] as? [String: Any] {
+                    memberNotes[memberId] = FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+                }
+            }
+        }
+        
+        print("[WebService] fetchFoodNotesAll: ✅ Success! Family note: \(familyNote != nil ? "present" : "null"), Member notes: \(memberNotes.count)")
+        
+        return FoodNotesAllResponse(familyNote: familyNote, memberNotes: memberNotes)
     }
     
     func updateFoodNotes(content: [String: Any], version: Int) async throws -> FoodNotesResponse {
