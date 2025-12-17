@@ -18,6 +18,7 @@ enum SafeEatsEndpoint: String {
     case devices_is_internal = "devices/%@/is-internal"
     case family_food_notes = "family/food-notes"
     case family_food_notes_all = "family/food-notes/all"
+    case family_member_food_notes = "family/members/%@/food-notes"
 }
 
 class SupabaseRequestBuilder {

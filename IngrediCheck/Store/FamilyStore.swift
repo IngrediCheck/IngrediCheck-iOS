@@ -20,6 +20,10 @@ final class FamilyStore {
     private(set) var pendingSelfMember: FamilyMember?
     private(set) var pendingOtherMembers: [FamilyMember] = []
     
+    /// Currently selected member in the family preferences UI.
+    /// `nil` means "Everyone" (family-level).
+    var selectedMemberId: UUID? = nil
+    
     init(service: FamilyService = FamilyService()) {
         self.service = service
     }

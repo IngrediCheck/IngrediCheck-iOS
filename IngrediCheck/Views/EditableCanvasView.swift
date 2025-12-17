@@ -464,7 +464,19 @@ struct EditableCanvasView: View {
                 // Convert unified content to preferences format
                 await convertContentToPreferences(content: unifiedContent)
                 
-                // Store associations
+        // If an item has both "Everyone" and specific members associated,
+        // prefer the specific members and drop the "Everyone" tag so
+                // the UI shows the correct per-member icons.
+                for (sectionName, items) in associations {
+                    for (itemName, members) in items {
+                        let specificMembers = members.filter { $0 != "Everyone" }
+                        if !specificMembers.isEmpty {
+                            associations[sectionName]?[itemName] = specificMembers
+                        }
+                    }
+                }
+                
+                // Store associations after cleanup
                 itemMemberAssociations = associations
                 
                 // Update completion status after loading
@@ -652,36 +664,69 @@ struct EditableCanvasView: View {
         }
         
         do {
-            print("[EditableCanvasView] updateFoodNotes: Calling API with version \(currentVersion)")
-            print("[EditableCanvasView] updateFoodNotes: Content keys: \(content.keys.joined(separator: ", "))")
-            
-            let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
-            
-            // Update version from response
-            await MainActor.run {
-                currentVersion = response.version
-            }
-            
-            print("[EditableCanvasView] updateFoodNotes: ✅ Success! Updated version to \(response.version), updatedAt: \(response.updatedAt)")
-        } catch let error as WebService.VersionMismatchError {
-            // Handle version mismatch - backend provides currentNote with actual data
-            print("[EditableCanvasView] updateFoodNotes: ⚠️ Version mismatch detected. Expected: \(error.expectedVersion), Current on server: \(error.currentNote.version)")
-            
-            // Update to current version from backend
-            await MainActor.run {
-                currentVersion = error.currentNote.version
-            }
-            
-            // Retry with the correct version
-            do {
-                print("[EditableCanvasView] updateFoodNotes: Retrying with version \(currentVersion)")
-                let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
+            // Decide whether to update at family-level or member-level based on
+            // the currently selected member in FamilyStore.
+            if let selectedMemberId = familyStore.selectedMemberId {
+                let memberIdString = selectedMemberId.uuidString
+                print("[EditableCanvasView] updateFoodNotes: Detected selectedMemberId=\(memberIdString). Using member-specific endpoint.")
+                print("[EditableCanvasView] updateFoodNotes: Calling PUT /ingredicheck/family/members/:id/food-notes with version=\(currentVersion)")
+                print("[EditableCanvasView] updateFoodNotes: Content keys: \(Array(content.keys))")
+                
+                let response = try await webService.updateMemberFoodNotes(
+                    memberId: memberIdString,
+                    content: content,
+                    version: currentVersion
+                )
                 
                 await MainActor.run {
                     currentVersion = response.version
                 }
                 
-                print("[EditableCanvasView] updateFoodNotes: ✅ Success after retry! Updated version to \(response.version), updatedAt: \(response.updatedAt)")
+                print("[EditableCanvasView] updateFoodNotes: ✅ Member update success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+            } else {
+                print("[EditableCanvasView] updateFoodNotes: No selectedMemberId (Everyone). Using family-level endpoint.")
+                print("[EditableCanvasView] updateFoodNotes: Calling PUT /ingredicheck/family/food-notes with version=\(currentVersion)")
+                print("[EditableCanvasView] updateFoodNotes: Content keys: \(Array(content.keys))")
+                
+                let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
+                
+                // Update version from response
+                await MainActor.run {
+                    currentVersion = response.version
+                }
+                
+                print("[EditableCanvasView] updateFoodNotes: ✅ Family update success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+            }
+        } catch let error as WebService.VersionMismatchError {
+            // Handle version mismatch - backend provides currentNote with actual data
+            print("[EditableCanvasView] updateFoodNotes: ⚠️ Version mismatch detected. Expected=\(error.expectedVersion), Current on server=\(error.currentNote.version)")
+            
+            await MainActor.run {
+                currentVersion = error.currentNote.version
+            }
+            
+            // Retry with the correct version using the same endpoint decision
+            do {
+                if let selectedMemberId = familyStore.selectedMemberId {
+                    let memberIdString = selectedMemberId.uuidString
+                    print("[EditableCanvasView] updateFoodNotes: Retrying member-specific update with version=\(currentVersion)")
+                    let response = try await webService.updateMemberFoodNotes(
+                        memberId: memberIdString,
+                        content: content,
+                        version: currentVersion
+                    )
+                    await MainActor.run {
+                        currentVersion = response.version
+                    }
+                    print("[EditableCanvasView] updateFoodNotes: ✅ Member retry success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+                } else {
+                    print("[EditableCanvasView] updateFoodNotes: Retrying family-level update with version=\(currentVersion)")
+                    let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
+                    await MainActor.run {
+                        currentVersion = response.version
+                    }
+                    print("[EditableCanvasView] updateFoodNotes: ✅ Family retry success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+                }
             } catch {
                 print("[EditableCanvasView] updateFoodNotes: ❌ Failed on retry: \(error.localizedDescription)")
             }
