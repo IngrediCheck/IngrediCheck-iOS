@@ -13,6 +13,7 @@ struct CanvasTagBar: View {
     var onTapCurrentSection: (() -> Void)? = nil
     @Binding var scrollTarget: UUID?
     var currentBottomSheetRoute: BottomSheetRoute? = nil
+    var allowTappingIncompleteSections: Bool = false // Allow tapping even if section is not completed (for EditableCanvasView)
 
     /// Derived tag items from the dynamic sections / JSON, so that ordering,
     /// titles and icons always match the config.
@@ -118,7 +119,8 @@ struct CanvasTagBar: View {
         }
         
         let tappedName = store.sections[index].name
-        if store.sections[index].isComplete || visited.contains(tappedName) {
+        // Allow tapping if: section is complete, has been visited, or if we're in edit mode (EditableCanvasView)
+        if allowTappingIncompleteSections || store.sections[index].isComplete || visited.contains(tappedName) {
             store.currentSectionIndex = index
             store.currentScreenIndex = 0
             if visited.contains(tappedName) == false {

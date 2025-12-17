@@ -35,7 +35,8 @@ struct EditableCanvasView: View {
                             openEditSheetForCurrentSection()
                         },
                         scrollTarget: $tagBarScrollTarget,
-                        currentBottomSheetRoute: nil
+                        currentBottomSheetRoute: nil,
+                        allowTappingIncompleteSections: true // Allow tapping any section in edit mode
                     )
                     .onChange(of: store.currentSectionIndex) { newIndex in
                         // When section changes via tag bar tap, update/edit sheet for that section
@@ -111,10 +112,7 @@ struct EditableCanvasView: View {
                     EditSectionBottomSheet(
                         isPresented: $isEditSheetPresented,
                         stepId: stepId,
-                        currentSectionIndex: currentEditingSectionIndex,
-                        onNext: {
-                            handleNextSection()
-                        }
+                        currentSectionIndex: currentEditingSectionIndex
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -308,27 +306,6 @@ struct EditableCanvasView: View {
             currentEditingSectionIndex = index
             editingStepId = stepId
             isEditSheetPresented = true
-        }
-    }
-    
-    private func handleNextSection() {
-        // Move to next section
-        if currentEditingSectionIndex < store.sections.count - 1 {
-            let nextIndex = currentEditingSectionIndex + 1
-            if let nextStepId = store.sections[nextIndex].screens.first?.stepId {
-                isProgrammaticChange = true
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    currentEditingSectionIndex = nextIndex
-                    store.currentSectionIndex = nextIndex
-                    editingStepId = nextStepId
-                }
-                // Sheet will update automatically via editingStepId change
-            }
-        } else {
-            // Last section, close the sheet
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isEditSheetPresented = false
-            }
         }
     }
     
@@ -702,11 +679,6 @@ struct EditSectionBottomSheet: View {
     
     let stepId: String
     let currentSectionIndex: Int
-    var onNext: (() -> Void)? = nil
-    
-    private var isLastSection: Bool {
-        currentSectionIndex >= store.sections.count - 1
-    }
     
     // Determine flow type: use .family if user has a family, otherwise use store's flow type
     private var effectiveFlowType: OnboardingFlowType {
@@ -728,19 +700,21 @@ struct EditSectionBottomSheet: View {
                 )
                 .frame(maxWidth: .infinity, alignment: .top)
                 .padding(.top, 24)
-                .padding(.bottom, 40)
+                .padding(.bottom, 100) // Increased padding to accommodate Done button
                 .transition(.opacity)
             }
             
-            // Next button (GreenCircle)
-            if let onNext = onNext {
-                Button(action: onNext) {
-                    GreenCircle()
+            // Done button (GreenCapsule) - closes the sheet
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isPresented = false
                 }
-                .buttonStyle(.plain)
-                .padding(.trailing, 20)
-                .padding(.bottom, 24)
+            }) {
+                GreenCapsule(title: "Done", takeFullWidth: false)
             }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
+            .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(Color.white)
