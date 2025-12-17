@@ -98,13 +98,18 @@ struct IngredientsChips: View {
         
         var body: some View {
             ZStack {
-                // Base colored circle
+                // Base colored circle - always visible as background
+                Circle()
+                    .fill(circleBackgroundColor)
+                    .frame(width: 24, height: 24)
+                
+                // White stroke overlay
                 Circle()
                     .stroke(lineWidth: 1)
                     .frame(width: 24, height: 24)
-                    .foregroundStyle(Color(hex: "#B6B6B6"))
-                    .background(circleBackgroundColor)
+                    .foregroundStyle(Color.white)
                 
+                // Content layer
                 if memberIdentifier == "Everyone" {
                     // Show "Everyone" icon
                     Image("Everyone")
