@@ -526,16 +526,33 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
 
     func uploadImage(image: UIImage) async throws -> String {
-
+    
         let imageData = image.jpegData(compressionQuality: 1.0)!
         let imageFileName = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
-
-        try await supabaseClient.storage.from("productimages").upload(
-            path: imageFileName,
-            file: imageData,
-            options: FileOptions(contentType: "image/jpeg")
-        )
-
+        
+        print("[WebService] uploadImage: Uploading image to storage with key=\(imageFileName)")
+        
+        do {
+            try await supabaseClient.storage.from("productimages").upload(
+                path: imageFileName,
+                file: imageData,
+                options: FileOptions(contentType: "image/jpeg")
+            )
+            print("[WebService] uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
+        } catch {
+            let message = String(describing: error)
+            // Supabase storage returns "The resource already exists" when the same
+            // object key is uploaded again. In our case the key is a SHA256 hash
+            // of the image bytes, so if the content is identical we can safely
+            // treat this as a success and reuse the existing object.
+            if message.contains("resource already exists") {
+                print("[WebService] uploadImage: ℹ️ Resource already exists for key=\(imageFileName), reusing existing file")
+            } else {
+                print("[WebService] uploadImage: ❌ Upload failed for key=\(imageFileName): \(error.localizedDescription)")
+                throw error
+            }
+        }
+    
         return imageFileName
     }
 
