@@ -88,7 +88,8 @@ struct EditableCanvasView: View {
                                             }
                                             editingStepId = card.stepId
                                             isEditSheetPresented = true
-                                        }, itemMemberAssociations: itemMemberAssociations
+                                        },
+                                        itemMemberAssociations: itemMemberAssociations
                                     )
                                     .padding(.top, index == 0 ? 16 : 0)
                                 }
@@ -181,31 +182,16 @@ struct EditableCanvasView: View {
         return "allergies"
     }
     
-    // Helper function to get member images for an item
-    private func getMemberImages(for sectionName: String, itemName: String) -> [String] {
+    // Helper function to get member identifiers for an item
+    // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
+    private func getMemberIdentifiers(for sectionName: String, itemName: String) -> [String] {
         guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
             return []
         }
         
-        var images: [String] = []
-        
-        for memberId in memberIds {
-            if memberId == "Everyone" {
-                images.append("Everyone")
-            } else if let family = familyStore.family,
-                      let uuid = UUID(uuidString: memberId) {
-                // Match using UUIDs to avoid case-sensitivity issues on strings.
-                if uuid == family.selfMember.id {
-                    images.append(family.selfMember.name)
-                } else if let member = family.otherMembers.first(where: { $0.id == uuid }) {
-                    images.append(member.name)
-                } else {
-                    print("[EditableCanvasView] getMemberImages: ⚠️ No matching FamilyMember for memberId=\(memberId)")
-                }
-            }
-        }
-        
-        return images
+        // Return member IDs directly (already UUID strings or "Everyone")
+        // ChipMemberAvatarView will resolve these to FamilyMember objects
+        return memberIds
     }
     
     private func chips(for stepId: String) -> [ChipsModel]? {
@@ -805,28 +791,16 @@ struct EditableCanvasCard: View {
     var onEdit: (() -> Void)? = nil
     var itemMemberAssociations: [String: [String: [String]]] = [:]
     
-    // Helper function to get member images for an item
-    private func getMemberImages(for sectionName: String, itemName: String) -> [String] {
+    // Helper function to get member identifiers for an item
+    // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
+    private func getMemberIdentifiers(for sectionName: String, itemName: String) -> [String] {
         guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
             return []
         }
         
-        var images: [String] = []
-        
-        for memberId in memberIds {
-            if memberId == "Everyone" {
-                images.append("Everyone")
-            } else if let family = familyStore.family {
-                // Find member by ID and use their name as image identifier
-                if memberId == family.selfMember.id.uuidString {
-                    images.append(family.selfMember.name)
-                } else if let member = family.otherMembers.first(where: { $0.id.uuidString == memberId }) {
-                    images.append(member.name)
-                }
-            }
-        }
-        
-        return images
+        // Return member IDs directly (already UUID strings or "Everyone")
+        // ChipMemberAvatarView will resolve these to FamilyMember objects
+        return memberIds
     }
     
     var body: some View {
@@ -883,7 +857,7 @@ struct EditableCanvasCard: View {
                                         title: chip.name,
                                         bgColor: .secondary200,
                                         image: chip.icon,
-                                        familyList: getMemberImages(for: title, itemName: chip.name),
+                                        familyList: getMemberIdentifiers(for: title, itemName: chip.name),
                                         outlined: false
                                     )
                                 }
@@ -897,7 +871,7 @@ struct EditableCanvasCard: View {
                                 title: chip.name,
                                 bgColor: .secondary200,
                                 image: chip.icon,
-                                familyList: getMemberImages(for: title, itemName: chip.name),
+                                familyList: getMemberIdentifiers(for: title, itemName: chip.name),
                                 outlined: false
                             )
                         }
