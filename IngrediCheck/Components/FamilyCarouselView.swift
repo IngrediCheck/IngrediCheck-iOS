@@ -61,8 +61,8 @@ struct FamilyCarouselView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 18) {
                 ForEach(familyMembersList, id: \.id) { ele in
-                    circleImage(
-                        image: ele.image,
+                    FamilyCarouselMemberAvatarView(
+                        memberIdentifier: ele.id,
                         name: ele.name,
                         color: ele.backgroundColor ?? .clear,
                         isSelected: ele.id == selectedFamilyMember?.id
@@ -231,56 +231,69 @@ struct FamilyCarouselView: View {
     }
 }
 
-struct circleImage: View {
+// MARK: - Family Carousel Member Avatar View
 
-    let image: String
+/// Avatar view used in FamilyCarouselView to show actual member memoji avatars.
+struct FamilyCarouselMemberAvatarView: View {
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
+    
+    let memberIdentifier: String // "everyone" or member UUID string
     let name: String?
     let color: Color
     let isSelected: Bool
     
+    @State private var avatarImage: UIImage? = nil
+    @State private var loadedHash: String? = nil
+    
     var body: some View {
         VStack(spacing: 4) {
-            if name == "Everyone" {
-                ZStack {
-                    if isSelected {
-                        Circle()
-                            .strokeBorder(Color(hex: "91B640"), lineWidth: 2)
-                            .frame(width: 52, height: 52)
-                    }
-                    
+            ZStack {
+                if isSelected {
+                    Circle()
+                        .strokeBorder(Color(hex: "91B640"), lineWidth: 2)
+                        .frame(width: 52, height: 52)
+                }
+                
+                if memberIdentifier == "everyone" {
+                    // "Everyone" option
                     Circle()
                         .frame(width: 46, height: 46)
                         .foregroundStyle(
                             LinearGradient(colors: [Color(hex: "FFC552"), Color(hex: "FFAA28")], startPoint: .top, endPoint: .bottom)
                         )
-                        .overlay(
-                            Image(image)
+                        .overlay {
+                            Image("Everyone")
                                 .resizable()
                                 .scaledToFill()
                                 .frame(width: 28, height: 28)
-                        )
-                }
-            } else {
-                ZStack {
-                    if isSelected {
-                        Circle()
-                            .strokeBorder(Color(hex: "91B640"), lineWidth: 2)
-                            .frame(width: 52, height: 52)
-                    }
-                    
+                        }
+                } else {
+                    // Individual member - show actual avatar if available
                     Circle()
+                        .fill(color)
                         .frame(width: 46, height: 46)
-                        .foregroundStyle(color)
-                        .overlay(
-                            Text(String((name ?? "").prefix(1)))
-                                .font(NunitoFont.semiBold.size(14))
-                                .foregroundStyle(.white)
-                        )
-                        .overlay(
+                        .overlay {
+                            if let avatarImage {
+                                // Show loaded memoji avatar - slightly smaller to show background border
+                                Image(uiImage: avatarImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 42, height: 42)
+                                    .clipShape(Circle())
+                            } else if let member = resolvedMember {
+                                // Fallback: first letter of name
+                                Text(String(member.name.prefix(1)))
+                                    .font(NunitoFont.semiBold.size(14))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .overlay {
+                            // White stroke overlay
                             Circle()
                                 .stroke(lineWidth: 1)
                                 .foregroundStyle(Color.white)
-                        )
+                        }
                 }
             }
             
@@ -289,6 +302,56 @@ struct circleImage: View {
                     .font(ManropeFont.regular.size(10))
                     .foregroundStyle(isSelected ? Color(hex: "91B640") : .grayScale130)
             }
+        }
+        .task(id: memberIdentifier) {
+            await loadAvatarIfNeeded()
+        }
+    }
+    
+    private var resolvedMember: FamilyMember? {
+        guard memberIdentifier != "everyone",
+              let uuid = UUID(uuidString: memberIdentifier),
+              let family = familyStore.family else {
+            return nil
+        }
+        
+        if uuid == family.selfMember.id {
+            return family.selfMember
+        }
+        return family.otherMembers.first { $0.id == uuid }
+    }
+    
+    @MainActor
+    private func loadAvatarIfNeeded() async {
+        guard memberIdentifier != "everyone",
+              let member = resolvedMember else {
+            avatarImage = nil
+            loadedHash = nil
+            return
+        }
+        
+        guard let hash = member.imageFileHash, !hash.isEmpty else {
+            avatarImage = nil
+            loadedHash = nil
+            return
+        }
+        
+        // Skip if already loaded for this hash
+        if loadedHash == hash, avatarImage != nil {
+            return
+        }
+        
+        print("[FamilyCarouselMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+        do {
+            let uiImage = try await webService.fetchImage(
+                imageLocation: .imageFileHash(hash),
+                imageSize: .small
+            )
+            avatarImage = uiImage
+            loadedHash = hash
+            print("[FamilyCarouselMemberAvatarView] ✅ Loaded avatar for \(member.name)")
+        } catch {
+            print("[FamilyCarouselMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
         }
     }
 }
