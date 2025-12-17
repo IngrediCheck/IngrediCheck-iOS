@@ -83,7 +83,7 @@ struct HomeView: View {
 
                         Spacer()
 
-                        ProfileCard(isProfileCompleted: false)
+                        ProfileCard(isProfileCompleted: true)
                             .onTapGesture {
                                 isSettingsPresented = true
                             }
@@ -282,8 +282,9 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 20)
 
-                    // Recent Scans list
-                    if let historyItems = appState.listsTabState.historyItems {
+                    // Recent Scans list / empty state
+                    if let historyItems = appState.listsTabState.historyItems,
+                       !historyItems.isEmpty {
                         let items = Array(historyItems.prefix(5))
 
                         VStack(spacing: 0) {
@@ -316,6 +317,20 @@ struct HomeView: View {
                                 }
                             }
                         }
+                    } else {
+                        VStack(spacing: 12) {
+                            Image("blackroboicon")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120, height: 120)
+                            Text("Ooops, No scans yet!")
+                                .font(NunitoFont.semiBold.size(16))
+                                .foregroundStyle(.grayScale100)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top , 8)
+                        .padding(.bottom , 129)
                     }
                 }
                 .padding(.horizontal, 20)
