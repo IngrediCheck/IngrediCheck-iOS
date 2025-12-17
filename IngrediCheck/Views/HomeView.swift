@@ -319,7 +319,7 @@ struct HomeView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 90)
+                .padding(.bottom , 30)
                 .navigationBarBackButtonHidden(true)
                 // ← Attach GeometryReader here so it measures inside the ScrollView's coordinate space
                 .background(
@@ -379,7 +379,23 @@ struct HomeView: View {
                     }
                 )
             }
+            .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
+            .overlay(
+                LinearGradient(
+                    colors: [
+                    
+                        Color.white.opacity(0),
+                       Color(hex: "#FCFCFE"),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 132)
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false),
+                alignment: .bottom
+            ).offset( y: 30)
             .overlay(
                 TabBar(isExpanded: $isTabBarExpanded),
                 alignment: .bottom
@@ -407,7 +423,7 @@ struct HomeView: View {
                 .presentationDetents([chatSmallDetent, .medium, .large],
                                      selection: $selectedChatDetent)
                 .presentationDragIndicator(.visible)
-            }
+			            }
 
             // ------------ PRODUCT DETAIL ------------
             .fullScreenCover(item: $activeProductDetail) { detail in
