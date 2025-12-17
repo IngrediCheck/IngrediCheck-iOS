@@ -206,20 +206,16 @@ import SimpleToast
         }
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("")
+        .navigationTitle("Recent Scans")
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                HStack(spacing: 12) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image("back-arrow1")
-                            .resizable()
-                            .frame(width: 20, height: 20)
-                    }
-                    Text("Recent Scans")
-                        .font(ManropeFont.semiBold.size(18))
+                Button {
+                    dismiss()
+                } label: {
+                    Image("back-arrow1")
+                        .resizable()
+                        .frame(width: 20, height: 20)
                 }
                 .padding(.leading, 5)
             }

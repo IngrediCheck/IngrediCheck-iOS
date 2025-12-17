@@ -32,6 +32,7 @@ struct CreateYourAvatarCard: View {
                         Image("right-arrow")
                             .resizable()
                             .frame(width: 12, height: 12)
+                        //this icon is mising in assets
                     }
                     .foregroundStyle(.grayScale150)
                 }

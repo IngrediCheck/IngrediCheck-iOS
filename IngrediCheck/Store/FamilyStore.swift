@@ -264,6 +264,16 @@ final class FamilyStore {
             print("[FamilyStore] leave error: \(error)")
         }
     }
+
+    func resetLocalState() {
+        family = nil
+        isLoading = false
+        isJoining = false
+        isInviting = false
+        errorMessage = nil
+        pendingSelfMember = nil
+        pendingOtherMembers = []
+    }
 }
 
 

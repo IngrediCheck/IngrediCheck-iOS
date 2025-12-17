@@ -72,7 +72,7 @@ struct CameraScreen: View {
             toastState = .scanning
             return
         }
-
+        
         // No codes yet: user is aligning/scanning. Only consider the centered card.
         guard let activeCode = currentCenteredCode, !activeCode.isEmpty else {
             toastState = .scanning
@@ -199,7 +199,6 @@ struct CameraScreen: View {
                             scrollTargetCode = codes[idx]
                         } else {
                             codes.insert(code, at: 0)
-                            if codes.count > 10 { codes.removeLast(codes.count - 10) }
                             scrollTargetCode = code
                         }
                     }
@@ -295,8 +294,8 @@ struct CameraScreen: View {
                 }
                 .padding(.horizontal,20)
                 .padding(.bottom,42)
-
-//                cameraGuidetext()
+                
+                //                cameraGuidetext()
                 tostmsg(state: toastState)
                     .onAppear {
                         updateToastState()
@@ -369,7 +368,7 @@ struct CameraScreen: View {
                         let minScale: CGFloat = 97.0 / 120.0  // off-center cards should be about 97pt tall
                         
                         if #available(iOS 17.0, *) {
-                            // iOS 17+ native snapping using scrollTarget APIs
+                            // iOS 17+ horizontal carousel (no implicit snapping)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 8) {
                                     ForEach(displayCodes, id: \.self) { code in
@@ -398,8 +397,8 @@ struct CameraScreen: View {
                                                         isProductDetailPresented = true
                                                     }
                                                 )
-                                                    .scaleEffect(x: 1.0, y: scale, anchor: .center)
-                                                    .animation(.easeInOut(duration: 0.2), value: scale)
+                                                .scaleEffect(x: 1.0, y: scale, anchor: .center)
+                                                .animation(.easeInOut(duration: 0.2), value: scale)
                                             }
                                             .background(
                                                 Color.clear.preference(
@@ -411,28 +410,11 @@ struct CameraScreen: View {
                                         .frame(width: 300, height: 120)
                                         .id(code)
                                         .transition(.opacity)
-                                        .simultaneousGesture(
-                                            DragGesture(minimumDistance: 15, coordinateSpace: .local)
-                                                .onEnded { value in
-                                                    let t = value.translation
-                                                    let promote: () -> Void = {
-                                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                                            if let idx = codes.firstIndex(of: code) { codes.remove(at: idx) }
-                                                            codes.insert(code, at: 0)
-                                                        }
-                                                    }
-                                                    // Only allow vertical swipe-up to promote to avoid fighting horizontal scroll
-                                                    if abs(t.height) > 30 && abs(t.height) > abs(t.width) && t.height < 0 {
-                                                        promote(); return
-                                                    }
-                                                }
-                                        )
                                     }
                                 }
                                 .scrollTargetLayout() // mark each card as a scroll target
                                 .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
                             }
-                            .scrollTargetBehavior(.viewAligned) // snap nearest card to center
                             .onChange(of: scrollTargetCode) { target in
                                 guard let target else { return }
                                 withAnimation(.easeInOut) {
@@ -448,7 +430,7 @@ struct CameraScreen: View {
                                 }
                             }
                         } else {
-                            // iOS 16 and earlier: keep existing custom snapping using drag + geometry
+                            // iOS 16 and earlier: horizontal carousel without extra snapping gesture
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 8) {
                                     ForEach(displayCodes, id: \.self) { code in
@@ -474,8 +456,8 @@ struct CameraScreen: View {
                                                         isProductDetailPresented = true
                                                     }
                                                 )
-                                                    .scaleEffect(x: 1.0, y: scale, anchor: .center)
-                                                    .animation(.easeInOut(duration: 0.2), value: scale)
+                                                .scaleEffect(x: 1.0, y: scale, anchor: .center)
+                                                .animation(.easeInOut(duration: 0.2), value: scale)
                                             }
                                             .background(
                                                 Color.clear.preference(
@@ -487,43 +469,10 @@ struct CameraScreen: View {
                                         .frame(width: 300, height: 120)
                                         .id(code)
                                         .transition(.opacity)
-                                        .simultaneousGesture(
-                                            DragGesture(minimumDistance: 15, coordinateSpace: .local)
-                                                .onEnded { value in
-                                                    let t = value.translation
-                                                    let promote: () -> Void = {
-                                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                                            if let idx = codes.firstIndex(of: code) { codes.remove(at: idx) }
-                                                            codes.insert(code, at: 0)
-                                                        }
-                                                    }
-                                                    // Only allow vertical swipe-up to promote to avoid fighting horizontal scroll
-                                                    if abs(t.height) > 30 && abs(t.height) > abs(t.width) && t.height < 0 {
-                                                        promote(); return
-                                                    }
-                                                }
-                                        )
                                     }
                                 }
                                 .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
                             }
-                            // Track user drag on the scroll view to suppress auto-scroll while interacting
-                            .simultaneousGesture(
-                                DragGesture(minimumDistance: 1, coordinateSpace: .local)
-                                    .onChanged { _ in
-                                        if !isUserDragging { isUserDragging = true }
-                                    }
-                                    .onEnded { _ in
-                                        let centerX = UIScreen.main.bounds.width / 2
-                                        if let target = nearestCenteredCode(to: centerX, in: cardCenterData) {
-                                            withAnimation(.easeInOut(duration: 0.25)) {
-                                                proxy.scrollTo(target, anchor: .center)
-                                            }
-                                        }
-                                        isUserDragging = false
-                                        lastUserDragAt = Date()
-                                    }
-                            )
                             .onChange(of: scrollTargetCode) { target in
                                 guard let target else { return }
                                 // Suppress auto-scroll if user is actively dragging or just dragged recently
@@ -620,14 +569,19 @@ struct CameraScreen: View {
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                 }
-                                
-                                Image("takeawayfood")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 94, height: 110)
+                                ZStack{
+                                    Image("systemuiconscapture")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 187, height: 187)
+                                    Image("takeawafood")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 94, height: 110)
+                                }
                                 
                                 Text("You’ll take around 5 photos — front, back, barcode, and ingredient list.")
-                                    .font(.system(size: 13))	
+                                    .font(.system(size: 13))
                                     .foregroundColor(Color(.grayScale110))
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 24)
@@ -681,122 +635,124 @@ struct CameraScreen: View {
                         maxTotalCount: 10)
         }
     }
-}
-
-// MARK: - Photo Picker for gallery selection
-
-struct PhotoPicker: UIViewControllerRepresentable {
     
-    @Environment(\.presentationMode) var presentationMode
-    @Binding var images: [UIImage]
-    @Binding var didHitLimit: Bool
-    var maxTotalCount: Int = 10
     
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var configuration = PHPickerConfiguration()
-        configuration.filter = .images
-        configuration.selectionLimit = maxTotalCount
+    // MARK: - Photo Picker for gallery selection
+    
+    struct PhotoPicker: UIViewControllerRepresentable {
         
-        let picker = PHPickerViewController(configuration: configuration)
-        picker.delegate = context.coordinator
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {
-        // no-op
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let parent: PhotoPicker
+        @Environment(\.presentationMode) var presentationMode
+        @Binding var images: [UIImage]
+        @Binding var didHitLimit: Bool
+        var maxTotalCount: Int = 10
         
-        init(_ parent: PhotoPicker) {
-            self.parent = parent
+        func makeUIViewController(context: Context) -> PHPickerViewController {
+            var configuration = PHPickerConfiguration()
+            configuration.filter = .images
+            configuration.selectionLimit = maxTotalCount
+            
+            let picker = PHPickerViewController(configuration: configuration)
+            picker.delegate = context.coordinator
+            return picker
         }
         
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            parent.presentationMode.wrappedValue.dismiss()
+        func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {
+            // no-op
+        }
+        
+        func makeCoordinator() -> Coordinator {
+            Coordinator(self)
+        }
+        
+        class Coordinator: NSObject, PHPickerViewControllerDelegate {
+            let parent: PhotoPicker
             
-            guard !results.isEmpty else { return }
+            init(_ parent: PhotoPicker) {
+                self.parent = parent
+            }
             
-            for result in results {
-                let provider = result.itemProvider
-                guard provider.canLoadObject(ofClass: UIImage.self) else { continue }
+            func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+                parent.presentationMode.wrappedValue.dismiss()
                 
-                provider.loadObject(ofClass: UIImage.self) { object, _ in
-                    guard let uiImage = object as? UIImage else { return }
-                    DispatchQueue.main.async {
-                        if self.parent.images.count < self.parent.maxTotalCount {
-                            // Insert newest images at the front of the history
-                            self.parent.images.insert(uiImage, at: 0)
-                        } else {
-                            // We hit the global limit of 10 images; show a warning in the parent view.
-                            self.parent.didHitLimit = true
+                guard !results.isEmpty else { return }
+                
+                for result in results {
+                    let provider = result.itemProvider
+                    guard provider.canLoadObject(ofClass: UIImage.self) else { continue }
+                    
+                    provider.loadObject(ofClass: UIImage.self) { object, _ in
+                        guard let uiImage = object as? UIImage else { return }
+                        DispatchQueue.main.async {
+                            if self.parent.images.count < self.parent.maxTotalCount {
+                                // Insert newest images at the front of the history
+                                self.parent.images.insert(uiImage, at: 0)
+                            } else {
+                                // We hit the global limit of 10 images; show a warning in the parent view.
+                                self.parent.didHitLimit = true
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
-
-struct CardCenterPreferenceData: Equatable {
-    let code: String
-    let center: CGFloat
-}
-
-struct CardCenterPreferenceKey: PreferenceKey {
-    static var defaultValue: [CardCenterPreferenceData] = []
     
-    static func reduce(value: inout [CardCenterPreferenceData], nextValue: () -> [CardCenterPreferenceData]) {
-        value.append(contentsOf: nextValue())
+    struct CardCenterPreferenceData: Equatable {
+        let code: String
+        let center: CGFloat
     }
-}
-// MARK: - Photo card matching ContentView4 style
-
-struct PhotoContentView4: View {
-    let image: UIImage
     
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.thinMaterial.opacity(0.2))
-                .frame(width: 300, height: 120)
-            
-            HStack {
-                HStack(spacing: 47) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 68, height: 92)
-                        
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 64, height: 88)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                }
+    struct CardCenterPreferenceKey: PreferenceKey {
+        static var defaultValue: [CardCenterPreferenceData] = []
+        
+        static func reduce(value: inout [CardCenterPreferenceData], nextValue: () -> [CardCenterPreferenceData]) {
+            value.append(contentsOf: nextValue())
+        }
+    }
+    // MARK: - Photo card matching ContentView4 style
+    
+    struct PhotoContentView4: View {
+        let image: UIImage
+        
+        var body: some View {
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.thinMaterial.opacity(0.2))
+                    .frame(width: 300, height: 120)
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.thinMaterial.opacity(0.4))
-                        .frame(width: 185, height: 25)
-                        .opacity(0.3)
+                HStack {
+                    HStack(spacing: 47) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.thinMaterial.opacity(0.4))
+                                .frame(width: 68, height: 92)
+                            
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 64, height: 88)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                    }
                     
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.thinMaterial.opacity(0.4))
-                        .frame(width: 132, height: 20)
-                        .padding(.bottom, 7)
-                    
-                    RoundedRectangle(cornerRadius: 52)
-                        .fill(.thinMaterial.opacity(0.4))
-                        .frame(width: 79, height: 24)
+                    VStack(alignment: .leading, spacing: 8) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(.thinMaterial.opacity(0.4))
+                            .frame(width: 185, height: 25)
+                            .opacity(0.3)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(.thinMaterial.opacity(0.4))
+                            .frame(width: 132, height: 20)
+                            .padding(.bottom, 7)
+                        
+                        RoundedRectangle(cornerRadius: 52)
+                            .fill(.thinMaterial.opacity(0.4))
+                            .frame(width: 79, height: 24)
+                    }
                 }
             }
         }
     }
+
 }

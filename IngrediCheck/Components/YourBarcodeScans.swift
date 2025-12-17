@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct YourBarcodeScans: View {
+    @Environment(UserPreferences.self) var userPreferences
     @State private var isCameraPresented = false
     
     var body: some View {
@@ -17,7 +18,7 @@ struct YourBarcodeScans: View {
                     .font(ManropeFont.regular.size(14))
                     .foregroundStyle(.grayScale110)
                 
-                Text("50")
+                Text("\(userPreferences.totalScanCount)")
                     .font(.system(size: 52, weight: .bold))
                     .foregroundStyle(.grayScale150)
                     .frame(height: 40)
@@ -77,6 +78,11 @@ struct YourBarcodeScans: View {
         )
         .fullScreenCover(isPresented: $isCameraPresented) {
             CameraScreen()
+        }
+        .onAppear {
+            // Refresh count from UserDefaults when view appears to ensure it's up-to-date
+            // This handles cases where the count was updated while the view wasn't visible
+            userPreferences.refreshScanCount()
         }
     }
 }

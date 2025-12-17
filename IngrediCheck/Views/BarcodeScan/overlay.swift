@@ -320,6 +320,7 @@ struct BarcodeDataCard: View {
 
     @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
+    @Environment(UserPreferences.self) private var userPreferences
 
     @State private var analysisResult: BarcodeScanAnalysisResult?
     @State private var isLoading = false
@@ -335,10 +336,10 @@ struct BarcodeDataCard: View {
         HStack(spacing: 14) {
             // Left-side visual changes based on whether we have a barcode yet.
             ZStack (){
-//                RoundedRectangle(cornerRadius: 16)
-//                    .fill(.thinMaterial)
-//                    .frame(width: 68, height: 92)
-//                    .opacity(0.4)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.thinMaterial)
+                    .frame(width: 68, height: 92)
+                    .opacity(0.4)
                 if code.isEmpty {
                     // Empty card: simple placeholder block, no barcode illustration.
                     // The material background itself is the placeholder.
@@ -719,6 +720,11 @@ struct BarcodeDataCard: View {
                                 BarcodeScanAnalysisService.storeResult(result)
                                 isAnalyzing = false
                                 isLoading = false
+                                // Increment scan count when analysis completes successfully
+                                // Only increment if we have a product (not for "not found" cases)
+                                if product != nil {
+                                    userPreferences.incrementScanCount()
+                                }
                                 onResultUpdated?()
                                 // After a successful analysis, refresh history so Home/Lists
                                 // Recent Scans reflect this scan immediately.
@@ -863,6 +869,11 @@ struct BarcodeDataCard: View {
                             BarcodeScanAnalysisService.storeResult(result)
                             isAnalyzing = false
                             isLoading = false
+                            // Increment scan count when analysis completes successfully
+                            // Only increment if we have a product (not for "not found" cases)
+                            if product != nil {
+                                userPreferences.incrementScanCount()
+                            }
                             onResultUpdated?()
                         }
                     },

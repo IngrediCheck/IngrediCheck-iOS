@@ -149,16 +149,38 @@ private enum AuthFlowMode {
         }
     }
     
-    @MainActor var signedInWithApple: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] {
-            return provider == "apple"
+    /// Primary provider inferred from Supabase session.
+    ///
+    /// We prefer `user.identities` (which reflects all linked providers) and
+    /// fall back to `appMetadata["provider"]` when identities are missing.
+    /// This avoids stale values where an Apple-created account later links
+    /// Google but `appMetadata["provider"]` still reports `"apple"`.
+    @MainActor private var currentProvider: String? {
+        if let identities = session?.user.identities,
+           let last = identities.last {
+            return last.provider
         }
-        return false
+        
+        if let provider = session?.user.appMetadata["provider"] as? String {
+            return provider
+        }
+        
+        return nil
+    }
+    
+    @MainActor var signedInWithApple: Bool {
+        currentProvider == "apple"
+    }
+    
+    @MainActor var signedInWithGoogle: Bool {
+        currentProvider == "google"
     }
     
     @MainActor var signedInAsGuest: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] as? String {
-            return provider == "email" || provider == "anonymous"
+        if let provider = currentProvider {
+            if provider == "email" || provider == "anonymous" {
+                return true
+            }
         }
         
         if self.session?.user.isAnonymous == true {
@@ -172,13 +194,6 @@ private enum AuthFlowMode {
         return false
     }
     
-    @MainActor var signedInWithGoogle: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] {
-            return provider == "google"
-        }
-        return false
-    }
-
     @MainActor var currentUserEmail: String? {
         return session?.user.email
     }
@@ -201,14 +216,14 @@ private enum AuthFlowMode {
     }
 
     @MainActor var currentSignInProviderDisplay: (icon: String, text: String)? {
-        if signedInWithApple {
-            return ("applelogo", "Signed in with Apple")
-        }
-
         if signedInWithGoogle {
             return ("g.circle", "Signed in with Google")
         }
-
+        
+        if signedInWithApple {
+            return ("applelogo", "Signed in with Apple")
+        }
+        
         return nil
     }
     
@@ -238,6 +253,15 @@ private enum AuthFlowMode {
                 return
             }
             print("Signout failed: \(error)")
+        }
+    }
+
+    public func resetForAppReset() async {
+        await signOut()
+        await MainActor.run {
+            clearAnonymousCredentials()
+            Self.hasRegisteredDevice = false
+            Self.hasPinged = false
         }
     }
 
