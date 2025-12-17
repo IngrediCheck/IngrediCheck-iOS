@@ -14,7 +14,14 @@ struct RootContainerView: View {
     @State private var memojiStore = MemojiStore()
 
     init(initialRoute: CanvasRoute = .heyThere) {
-        _coordinator = State(initialValue: AppNavigationCoordinator(initialRoute: initialRoute))
+        if let snapshot = OnboardingResumeStore.load() {
+            let restored = AppNavigationCoordinator.restoreFromSnapshot(snapshot)
+            let coordinator = AppNavigationCoordinator(initialRoute: restored.canvas)
+            coordinator.navigateInBottomSheet(restored.sheet)
+            _coordinator = State(initialValue: coordinator)
+        } else {
+            _coordinator = State(initialValue: AppNavigationCoordinator(initialRoute: initialRoute))
+        }
     }
 
     // --- HEAD BRANCH (keep these)
@@ -48,18 +55,23 @@ struct RootContainerView: View {
             familyStore.resetLocalState()
             dismiss()
         }
+        .onAppear {
+            // Set up callback to sync onboarding state to Supabase whenever navigation changes
+            coordinator.onNavigationChange = {
+                print("[OnboardingMeta] onNavigationChange fired with canvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
+                await authController.syncRemoteOnboardingMetadata(from: coordinator)
+            }
+        }
         .task {
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
-            // If Supabase already has a restored *non-guest* session at launch,
-            // skip straight to Home so returning Google/Apple users land on
-            // their main experience instead of replaying onboarding.
-            // NOTE: This behavior is currently disabled for preview-first
-            // installs so that users must explicitly choose a login method
-            // before being routed to Home.
-            // if authController.session != nil, !authController.signedInAsGuest {
-            //     coordinator.showCanvas(.home)
-            // }
+            
+            // Always attempt to restore onboarding position on launch.
+            // This will:
+            // - Prefer Supabase metadata if a session exists
+            // - Otherwise use the locally cached metadata
+            print("[OnboardingMeta] RootContainerView.task: attempting restoreOnboardingPosition on launch")
+            authController.restoreOnboardingPosition(into: coordinator)
         }
     }
 

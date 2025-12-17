@@ -36,6 +36,19 @@ struct SplashScreen: View {
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
+            } else if !isFirstLaunch, OnboardingResumeStore.load() != nil {
+                // Resume in-progress onboarding (pre-login supported) by skipping
+                // the marketing carousel and going straight to the container.
+                Splash {
+                    Image("SplashScreen")
+                        .resizable()
+                        .scaledToFill()
+                        .ignoresSafeArea()
+                } content: {
+                    RootContainerView()
+                        .environment(authController)
+                        .environment(familyStore)
+                }
             } else if !isFirstLaunch, authController.session != nil {
                 // In preview flow, if there's already a Supabase session
                 // (including anonymous/guest), skip the marketing carousel

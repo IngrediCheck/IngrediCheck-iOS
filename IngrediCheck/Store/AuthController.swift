@@ -131,6 +131,7 @@ private enum AuthFlowMode {
     private static let anonUserNameKey = "anonEmail"
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
+    private static let onboardingMetadataKey = "remoteOnboardingMetadata"
     private static var hasRegisteredDevice = false
     private static var hasPinged = false
     
@@ -244,6 +245,8 @@ private enum AuthFlowMode {
     public func signOut() async {
         do {
             print("Signing Out")
+            // Clear all onboarding resume state (local + remote) before sign-out.
+            await clearAllOnboardingResumeStateRemoteAndLocal()
             _ = try await supabaseClient.auth.signOut()
         } catch AuthError.sessionMissing {
             print("Already signed out, nothing to revoke.")
@@ -257,7 +260,10 @@ private enum AuthFlowMode {
     }
 
     public func resetForAppReset() async {
+        // Ensure we sign out of Supabase and clear all onboarding state.
         await signOut()
+        // Also clear local onboarding caches even if there was no active session.
+        await clearAllOnboardingResumeStateRemoteAndLocal()
         await MainActor.run {
             clearAnonymousCredentials()
             Self.hasRegisteredDevice = false
@@ -502,6 +508,8 @@ private enum AuthFlowMode {
     private func clearAnonymousCredentials() {
         keychain.delete(AuthController.anonUserNameKey)
         keychain.delete(AuthController.anonPasswordKey)
+        // Also clear any locally cached onboarding metadata
+        UserDefaults.standard.removeObject(forKey: AuthController.onboardingMetadataKey)
     }
 
     public func signInWithGoogle(completion: ((Result<Void, Error>) -> Void)? = nil) {
@@ -598,6 +606,213 @@ private enum AuthFlowMode {
         isInternalUser = value
         if let session = session {
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value)
+        }
+    }
+    
+    // MARK: - Remote Onboarding Metadata Sync
+    
+    /// Syncs current onboarding state to Supabase raw_user_meta_data
+    /// Call this whenever navigation changes during onboarding
+    @MainActor
+    func syncRemoteOnboardingMetadata(from coordinator: AppNavigationCoordinator) async {
+        do {
+            let metadata = coordinator.buildOnboardingMetadata()
+            print("[OnboardingMeta] syncRemote: canvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute), flowType=\(metadata.flowType?.rawValue ?? "nil"), stage=\(metadata.stage?.rawValue ?? "nil"), stepId=\(metadata.currentStepId ?? "nil"), bottomSheetId=\(metadata.bottomSheetRoute?.rawValue ?? "nil"), bottomSheetParam=\(metadata.bottomSheetRouteParam ?? "nil")")
+            
+            // Always cache locally so we can restore even before login.
+            Self.cacheOnboardingMetadataLocally(metadata)
+            
+            // If there's no Supabase session yet (pre-login), stop here.
+            guard session != nil else {
+                print("[OnboardingMeta] syncRemote: no active session, cached locally only")
+                return
+            }
+            
+            guard let anyJSONDict = Self.encodeMetadataToAnyJSON(metadata) else {
+                print("❌ Failed to encode onboarding metadata")
+                return
+            }
+            // This maps directly to raw_user_meta_data in auth.users
+            let attrs = UserAttributes(data: anyJSONDict)
+            let updatedUser = try await supabaseClient.auth.update(user: attrs)
+            // Keep local session in sync
+            self.session?.user = updatedUser
+            print("✅ Synced onboarding metadata to Supabase: stage=\(metadata.stage?.rawValue ?? "nil"), stepId=\(metadata.currentStepId ?? "nil"), bottomSheet=\(metadata.bottomSheetRoute?.rawValue ?? "nil")")
+        } catch {
+            print("❌ Failed to sync onboarding metadata: \(error)")
+        }
+    }
+    
+    /// Helper to encode RemoteOnboardingMetadata into [String: AnyJSON] for Supabase
+    private static func encodeMetadataToAnyJSON(_ metadata: RemoteOnboardingMetadata) -> [String: AnyJSON]? {
+        guard let jsonData = try? JSONEncoder().encode(metadata),
+              let jsonDict = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+            return nil
+        }
+        
+        var anyJSONDict: [String: AnyJSON] = [:]
+        for (key, value) in jsonDict {
+            if let stringValue = value as? String {
+                if let encoded = try? AnyJSON(stringValue) {
+                    anyJSONDict[key] = encoded
+                }
+            } else if let boolValue = value as? Bool {
+                if let encoded = try? AnyJSON(boolValue) {
+                    anyJSONDict[key] = encoded
+                }
+            }
+            // We intentionally skip NSNull / nil values so they are not sent.
+        }
+        return anyJSONDict
+    }
+    
+    /// Cache onboarding metadata locally so we can restore pre-login state.
+    private static func cacheOnboardingMetadataLocally(_ metadata: RemoteOnboardingMetadata) {
+        if let data = try? JSONEncoder().encode(metadata) {
+            UserDefaults.standard.set(data, forKey: onboardingMetadataKey)
+        }
+    }
+    
+    /// Read cached onboarding metadata from UserDefaults.
+    private static func readLocalOnboardingMetadata() -> RemoteOnboardingMetadata? {
+        guard let data = UserDefaults.standard.data(forKey: onboardingMetadataKey) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(RemoteOnboardingMetadata.self, from: data)
+    }
+    
+    // MARK: - Global Onboarding Reset Helpers
+    
+    /// Clears all local and remote onboarding-resume related state.
+    @MainActor
+    private func clearAllOnboardingResumeStateRemoteAndLocal() async {
+        // 1) Clear local Supabase-metadata cache
+        UserDefaults.standard.removeObject(forKey: AuthController.onboardingMetadataKey)
+        // 2) Clear local canvas/bottom-sheet resume snapshot
+        OnboardingResumeStore.clear()
+        
+        // 3) Clear remote raw_user_meta_data if we have a session
+        guard session != nil else {
+            print("[OnboardingMeta] clearAll: no session, skipped remote clear")
+            return
+        }
+        
+        let clearMetadata = RemoteOnboardingMetadata(
+            flowType: nil,
+            stage: .none,
+            currentStepId: nil,
+            bottomSheetRoute: nil,
+            bottomSheetRouteParam: nil
+        )
+        
+        if let anyJSONDict = Self.encodeMetadataToAnyJSON(clearMetadata) {
+            let attrs = UserAttributes(data: anyJSONDict)
+            do {
+                try await supabaseClient.auth.update(user: attrs)
+                print("[OnboardingMeta] clearAll: remote raw_user_meta_data cleared")
+            } catch {
+                print("[OnboardingMeta] clearAll: failed to clear remote metadata: \(error)")
+            }
+        }
+    }
+    
+    /// Reads onboarding metadata from Supabase and returns it for restoration.
+    ///
+    /// We avoid JSONSerialization here because `userMetadata` may contain
+    /// SDK-specific wrapper types that are not JSON-serializable (leading to
+    /// `Invalid type in JSON write (__SwiftValue)` crashes). Instead we
+    /// manually pull out just the string fields we care about.
+    @MainActor
+    func readRemoteOnboardingMetadata() -> RemoteOnboardingMetadata? {
+        // 1) Prefer Supabase user metadata if available
+        if let rawMetadata = session?.user.userMetadata,
+           let dict = rawMetadata as? [String: Any] {
+            
+            let flowTypeRaw = dict["flowType"] as? String
+            let stageRaw = dict["stage"] as? String
+            let stepId = dict["currentStepId"] as? String
+            let bottomRouteRaw = dict["bottomSheetRoute"] as? String
+            let bottomRouteParam = dict["bottomSheetRouteParam"] as? String
+            
+            if flowTypeRaw != nil || stageRaw != nil || stepId != nil || bottomRouteRaw != nil {
+                let flowType = flowTypeRaw.flatMap { OnboardingFlowType(rawValue: $0) }
+                let stage = stageRaw.flatMap { RemoteOnboardingStage(rawValue: $0) }
+                let bottomRouteId = bottomRouteRaw.flatMap { BottomSheetRouteIdentifier(rawValue: $0) }
+                
+                let metadata = RemoteOnboardingMetadata(
+                    flowType: flowType,
+                    stage: stage,
+                    currentStepId: stepId,
+                    bottomSheetRoute: bottomRouteId,
+                    bottomSheetRouteParam: bottomRouteParam
+                )
+                
+                print("[OnboardingMeta] readRemote: using Supabase metadata: flowType=\(metadata.flowType?.rawValue ?? "nil"), stage=\(metadata.stage?.rawValue ?? "nil"), stepId=\(metadata.currentStepId ?? "nil"), bottomSheetId=\(metadata.bottomSheetRoute?.rawValue ?? "nil"), bottomSheetParam=\(metadata.bottomSheetRouteParam ?? "nil")")
+                return metadata
+            }
+        }
+        
+        // 2) Fallback to local cache (covers pre-login kills)
+        if let cached = Self.readLocalOnboardingMetadata() {
+            print("[OnboardingMeta] readRemote: using locally cached metadata: flowType=\(cached.flowType?.rawValue ?? "nil"), stage=\(cached.stage?.rawValue ?? "nil"), stepId=\(cached.currentStepId ?? "nil"), bottomSheetId=\(cached.bottomSheetRoute?.rawValue ?? "nil"), bottomSheetParam=\(cached.bottomSheetRouteParam ?? "nil")")
+            return cached
+        }
+        
+        print("[OnboardingMeta] readRemote: no metadata found (Supabase or local)")
+        return nil
+    }
+    
+    /// Restores navigation state from Supabase metadata
+    /// Call this on app launch after session is available
+    @MainActor
+    func restoreOnboardingPosition(into coordinator: AppNavigationCoordinator) {
+        guard let metadata = readRemoteOnboardingMetadata(),
+              let stage = metadata.stage,
+              let flowType = metadata.flowType else {
+            print("No onboarding metadata to restore")
+            return
+        }
+        
+        print("🔄 Restoring onboarding: stage=\(stage.rawValue), flowType=\(flowType.rawValue), stepId=\(metadata.currentStepId ?? "nil"), bottomSheet=\(metadata.bottomSheetRoute?.rawValue ?? "nil")")
+        
+        // Restore canvas route based on stage
+        switch stage {
+        case .none, .completed:
+            coordinator.showCanvas(.home)
+            
+        case .preOnboarding:
+            coordinator.showCanvas(.heyThere)
+            
+        case .choosingFlow:
+            coordinator.showCanvas(.letsMeetYourIngrediFam)
+            
+        case .dietaryIntro:
+            let isFamilyFlow = flowType != .individual
+            coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow))
+            
+        case .dynamicOnboarding:
+            coordinator.showCanvas(.mainCanvas(flow: flowType))
+            
+        case .fineTune:
+            coordinator.showCanvas(.mainCanvas(flow: flowType))
+        }
+        
+        // Restore bottom sheet route if available
+        if let routeId = metadata.bottomSheetRoute {
+            let restoredRoute = AppNavigationCoordinator.restoreBottomSheetRoute(
+                from: routeId,
+                param: metadata.bottomSheetRouteParam
+            )
+            print("[OnboardingMeta] restore: applying bottomSheetRoute=\(routeId.rawValue) with param=\(metadata.bottomSheetRouteParam ?? "nil")")
+            coordinator.navigateInBottomSheet(restoredRoute)
+        } else if let stepId = metadata.currentStepId, stage == .dynamicOnboarding {
+            // Fallback: use stepId if bottomSheetRoute wasn't stored (backward compatibility)
+            print("[OnboardingMeta] restore: fallback to onboardingStep with stepId=\(stepId)")
+            coordinator.navigateInBottomSheet(.onboardingStep(stepId: stepId))
+        } else if stage == .fineTune {
+            // Fallback for fineTune stage
+            print("[OnboardingMeta] restore: fallback to fineTuneYourExperience bottom sheet")
+            coordinator.navigateInBottomSheet(.fineTuneYourExperience)
         }
     }
 }
