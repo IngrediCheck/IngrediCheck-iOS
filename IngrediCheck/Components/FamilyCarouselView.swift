@@ -8,19 +8,51 @@
 import SwiftUI
 
 struct FamilyCarouselView: View {
-    
-    @State var familyMembersList: [UserModel] = [
-        UserModel(familyMemberName: "Everyone", familyMemberImage: "Everyone", backgroundColor: .clear),
-        
-        UserModel(familyMemberName: "Ritika Raj", familyMemberImage: "Ritika Raj", backgroundColor: Color(hex: "DCC7F6")),
-        UserModel(familyMemberName: "Neha", familyMemberImage: "Neha", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "Aarnav", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "Harsh", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "Grandpa", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "Grandma", backgroundColor: Color(hex: "A7D8F0"))
-    ]
+    @Environment(FamilyStore.self) private var familyStore
     
     @State var selectedFamilyMember: UserModel? = UserModel(familyMemberName: "Everyone", familyMemberImage: "Everyone", backgroundColor: .clear)
+    
+    // Convert FamilyMember objects to UserModel format
+    private var familyMembersList: [UserModel] {
+        var members: [UserModel] = []
+        
+        // Always include "Everyone" as the first option
+        members.append(
+            UserModel(
+                id: "everyone",
+                familyMemberName: "Everyone",
+                familyMemberImage: "Everyone",
+                backgroundColor: .clear
+            )
+        )
+        
+        // Add actual family members from FamilyStore
+        if let family = familyStore.family {
+            // Add self member
+            members.append(
+                UserModel(
+                    id: family.selfMember.id.uuidString,
+                    familyMemberName: family.selfMember.name,
+                    familyMemberImage: family.selfMember.name, // Use name as image identifier
+                    backgroundColor: Color(hex: family.selfMember.color)
+                )
+            )
+            
+            // Add other members
+            for otherMember in family.otherMembers {
+                members.append(
+                    UserModel(
+                        id: otherMember.id.uuidString,
+                        familyMemberName: otherMember.name,
+                        familyMemberImage: otherMember.name, // Use name as image identifier
+                        backgroundColor: Color(hex: otherMember.color)
+                    )
+                )
+            }
+        }
+        
+        return members
+    }
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -30,12 +62,23 @@ struct FamilyCarouselView: View {
                         image: ele.image,
                         name: ele.name,
                         color: ele.backgroundColor ?? .clear,
-                        isSelected: ele.name == selectedFamilyMember?.name
+                        isSelected: ele.id == selectedFamilyMember?.id
                     )
                     .onTapGesture {
                         selectFamilyMember(ele: ele)
                     }
                 }
+            }
+        }
+        .onAppear {
+            // Initialize selection to "Everyone" if not already set
+            if selectedFamilyMember == nil {
+                selectedFamilyMember = UserModel(
+                    id: "everyone",
+                    familyMemberName: "Everyone",
+                    familyMemberImage: "Everyone",
+                    backgroundColor: .clear
+                )
             }
         }
     }
@@ -86,10 +129,14 @@ struct circleImage: View {
                         .frame(width: 46, height: 46)
                         .foregroundStyle(color)
                         .overlay(
-                            Image(image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 46, height: 46)
+                            Text(String((name ?? "").prefix(1)))
+                                .font(NunitoFont.semiBold.size(14))
+                                .foregroundStyle(.white)
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
                         )
                 }
             }
@@ -105,4 +152,5 @@ struct circleImage: View {
 
 #Preview {
     FamilyCarouselView()
+        .environment(FamilyStore())
 }

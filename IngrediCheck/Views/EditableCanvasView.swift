@@ -697,6 +697,7 @@ struct EditableCanvasCard: View {
 
 struct EditSectionBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
+    @Environment(FamilyStore.self) private var familyStore
     @Binding var isPresented: Bool
     
     let stepId: String
@@ -707,12 +708,22 @@ struct EditSectionBottomSheet: View {
         currentSectionIndex >= store.sections.count - 1
     }
     
+    // Determine flow type: use .family if user has a family, otherwise use store's flow type
+    private var effectiveFlowType: OnboardingFlowType {
+        // If user has a family, show family selection carousel
+        if familyStore.family != nil {
+            return .family
+        }
+        // Otherwise use the store's current flow type
+        return store.onboardingFlowtype
+    }
+    
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             if let step = store.step(for: stepId) {
                 DynamicOnboardingStepView(
                     step: step,
-                    flowType: store.onboardingFlowtype,
+                    flowType: effectiveFlowType,
                     preferences: $store.preferences
                 )
                 .frame(maxWidth: .infinity, alignment: .top)
