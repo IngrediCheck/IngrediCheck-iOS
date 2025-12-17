@@ -401,6 +401,11 @@ struct PersistentBottomSheet: View {
     }
     
     private func getOnboardingFlowType() -> OnboardingFlowType {
+        // If user has a family, show family selection carousel (same logic as EditableCanvasView)
+        if familyStore.family != nil {
+            return .family
+        }
+        // Otherwise check the route for flow type
         if case .mainCanvas(let flow) = coordinator.currentCanvasRoute {
             return flow
         }
