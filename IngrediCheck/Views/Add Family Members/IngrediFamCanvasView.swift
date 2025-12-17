@@ -1659,16 +1659,41 @@ struct WantToAddPreference: View {
 }
 
 struct YourCurrentAvatar: View {
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
     @State var createNewPressed: () -> Void = { }
     
+    private var currentMember: FamilyMember? {
+        guard let family = familyStore.family else { return nil }
+        
+        // If a member was selected in SetUpAvatarFor, show that member's avatar
+        if let targetMemberId = familyStore.avatarTargetMemberId {
+            if targetMemberId == family.selfMember.id {
+                return family.selfMember
+            } else if let member = family.otherMembers.first(where: { $0.id == targetMemberId }) {
+                return member
+            }
+        }
+        
+        // Otherwise, default to selfMember
+        return family.selfMember
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            Circle()
-                .frame(width: 120, height: 120)
-                .padding(.bottom, 26)
+            // Show actual member avatar
+            if let member = currentMember {
+                YourCurrentAvatarView(member: member)
+                    .padding(.bottom, 26)
+            } else {
+                Circle()
+                    .fill(Color(hex: "#D9D9D9"))
+                    .frame(width: 120, height: 120)
+                    .padding(.bottom, 26)
+            }
             
-            Text("Here’s your current avatar. would you like to make a new one?")
+            Text("Here's your current avatar. would you like to make a new one?")
                 .font(NunitoFont.bold.size(20))
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 23)
@@ -1694,32 +1719,86 @@ struct YourCurrentAvatar: View {
     }
 }
 
-struct SetUpAvatarFor: View {
-    @Environment(FamilyStore.self) private var familyStore
+// MARK: - Your Current Avatar View
+
+/// Large avatar view (120x120) used in YourCurrentAvatar sheet to show the member's current memoji.
+struct YourCurrentAvatarView: View {
+    @Environment(WebService.self) private var webService
+    let member: FamilyMember
     
-    private struct Member: Identifiable {
-        let id: UUID
-        let name: String
-        let image: String
-        let background: Color
+    @State private var avatarImage: UIImage? = nil
+    @State private var loadedHash: String? = nil
+    
+    var body: some View {
+        // Base colored circle - always visible as background
+        Circle()
+            .fill(Color(hex: member.color))
+            .frame(width: 120, height: 120)
+            .overlay {
+                // Content layer overlaid on background
+                if let avatarImage {
+                    // Show loaded memoji avatar - slightly smaller to show background border
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 110, height: 110)
+                        .clipShape(Circle())
+                } else {
+                    // Fallback: first letter of name
+                    Text(String(member.name.prefix(1)))
+                        .font(NunitoFont.semiBold.size(48))
+                        .foregroundStyle(.white)
+                }
+            }
+            .overlay(
+                // White stroke overlay on top
+                Circle()
+                    .stroke(lineWidth: 2)
+                    .foregroundStyle(Color.white)
+            )
+            .task(id: member.imageFileHash) {
+                await loadAvatarIfNeeded()
+            }
     }
     
-    private var members: [Member] {
-        guard let family = familyStore.family else { return [] }
-        let allMembers = [family.selfMember] + family.otherMembers
-        return allMembers.map { member in
-            // Use member name as image identifier (matching original asset-based approach)
-            // If imageFileHash is needed later, it can be handled separately for remote image loading
-            return Member(
-                id: member.id,
-                name: member.name,
-                image: member.name,
-                background: Color(hex: member.color)
+    @MainActor
+    private func loadAvatarIfNeeded() async {
+        guard let hash = member.imageFileHash, !hash.isEmpty else {
+            avatarImage = nil
+            loadedHash = nil
+            return
+        }
+        
+        // Skip if already loaded for this hash
+        if loadedHash == hash, avatarImage != nil {
+            return
+        }
+        
+        print("[YourCurrentAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+        do {
+            let uiImage = try await webService.fetchImage(
+                imageLocation: .imageFileHash(hash),
+                imageSize: .small
             )
+            avatarImage = uiImage
+            loadedHash = hash
+            print("[YourCurrentAvatarView] ✅ Loaded avatar for \(member.name)")
+        } catch {
+            print("[YourCurrentAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
         }
     }
+}
+
+struct SetUpAvatarFor: View {
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
-    @State private var selectedMember: Member? = nil
+    private var members: [FamilyMember] {
+        guard let family = familyStore.family else { return [] }
+        return [family.selfMember] + family.otherMembers
+    }
+    
+    @State private var selectedMember: FamilyMember? = nil
     @State var nextPressed: () -> Void = { }
     
     var body: some View {
@@ -1744,16 +1823,8 @@ struct SetUpAvatarFor: View {
                     ForEach(members) { member in
                         VStack(spacing: 8) {
                             ZStack(alignment: .topTrailing) {
-                                Circle()
-                                    .fill(member.background)
-                                    .frame(width: 46, height: 46)
-                                    .overlay {
-                                        Image(member.image)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 46, height: 46)
-                                            .clipShape(Circle())
-                                    }
+                                // Member avatar view that loads actual memoji if available
+                                SetUpAvatarMemberView(member: member)
                                     .grayscale(selectedMember?.id == member.id ? 0 : 1)
                                 
                                 if selectedMember?.id == member.id {
@@ -1813,6 +1884,76 @@ struct SetUpAvatarFor: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+    }
+}
+
+// MARK: - SetUpAvatar Member Avatar View
+
+/// Avatar view used in SetUpAvatarFor sheet to show actual member memoji avatars.
+struct SetUpAvatarMemberView: View {
+    @Environment(WebService.self) private var webService
+    let member: FamilyMember
+    
+    @State private var avatarImage: UIImage? = nil
+    @State private var loadedHash: String? = nil
+    
+    var body: some View {
+        // Base colored circle - always visible as background
+        Circle()
+            .fill(Color(hex: member.color))
+            .frame(width: 46, height: 46)
+            .overlay {
+                // Content layer overlaid on background
+                if let avatarImage {
+                    // Show loaded memoji avatar - slightly smaller to show background border
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 42, height: 42)
+                        .clipShape(Circle())
+                } else {
+                    // Fallback: first letter of name
+                    Text(String(member.name.prefix(1)))
+                        .font(NunitoFont.semiBold.size(18))
+                        .foregroundStyle(.white)
+                }
+            }
+            .overlay(
+                // White stroke overlay on top
+                Circle()
+                    .stroke(lineWidth: 1)
+                    .foregroundStyle(Color.white)
+            )
+            .task(id: member.imageFileHash) {
+                await loadAvatarIfNeeded()
+            }
+    }
+    
+    @MainActor
+    private func loadAvatarIfNeeded() async {
+        guard let hash = member.imageFileHash, !hash.isEmpty else {
+            avatarImage = nil
+            loadedHash = nil
+            return
+        }
+        
+        // Skip if already loaded for this hash
+        if loadedHash == hash, avatarImage != nil {
+            return
+        }
+        
+        print("[SetUpAvatarMemberView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+        do {
+            let uiImage = try await webService.fetchImage(
+                imageLocation: .imageFileHash(hash),
+                imageSize: .small
+            )
+            avatarImage = uiImage
+            loadedHash = hash
+            print("[SetUpAvatarMemberView] ✅ Loaded avatar for \(member.name)")
+        } catch {
+            print("[SetUpAvatarMemberView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+        }
     }
 }
 

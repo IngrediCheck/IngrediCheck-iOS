@@ -97,43 +97,43 @@ struct IngredientsChips: View {
         @State private var loadedHash: String? = nil
         
         var body: some View {
-            ZStack {
-                // Base colored circle - always visible as background
-                Circle()
-                    .fill(circleBackgroundColor)
-                    .frame(width: 24, height: 24)
-                
-                // White stroke overlay
-                Circle()
-                    .stroke(lineWidth: 1)
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(Color.white)
-                
-                // Content layer
-                if memberIdentifier == "Everyone" {
-                    // Show "Everyone" icon
-                    Image("Everyone")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 24, height: 24)
-                        .clipShape(Circle())
-                } else if let avatarImage {
-                    // Show loaded memoji avatar
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 24, height: 24)
-                        .clipShape(Circle())
-                } else if let member = resolvedMember {
-                    // Fallback: first letter of name
-                    Text(String(member.name.prefix(1)))
-                        .font(NunitoFont.semiBold.size(10))
-                        .foregroundStyle(.white)
+            // Base colored circle - always visible as background
+            Circle()
+                .fill(circleBackgroundColor)
+                .frame(width: 24, height: 24)
+                .overlay {
+                    // Content layer overlaid on background
+                    if memberIdentifier == "Everyone" {
+                        // Show "Everyone" icon
+                        Image("Everyone")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 22, height: 22)
+                            .clipShape(Circle())
+                    } else if let avatarImage {
+                        // Show loaded memoji avatar - slightly smaller to show background border
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 22, height: 22)
+                            .clipShape(Circle())
+                    } else if let member = resolvedMember {
+                        // Fallback: first letter of name
+                        Text(String(member.name.prefix(1)))
+                            .font(NunitoFont.semiBold.size(10))
+                            .foregroundStyle(.white)
+                    }
                 }
-            }
-            .task(id: memberIdentifier) {
-                await loadAvatarIfNeeded()
-            }
+                .overlay {
+                    // White stroke overlay on top
+                    Circle()
+                        .stroke(lineWidth: 1)
+                        .frame(width: 24, height: 24)
+                        .foregroundStyle(Color.white)
+                }
+                .task(id: memberIdentifier) {
+                    await loadAvatarIfNeeded()
+                }
         }
         
         private var circleBackgroundColor: Color {

@@ -60,33 +60,36 @@ struct HomeView: View {
         @State private var loadedHash: String? = nil
         
         var body: some View {
-            ZStack {
-                // Base colored circle
-                Circle()
-                    .fill(Color(hex: member.color))
-                    .frame(width: 36, height: 36)
-                
-                if let avatarImage {
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
-                } else {
-                    Text(String(member.name.prefix(1)))
-                        .font(NunitoFont.semiBold.size(14))
-                        .foregroundStyle(.white)
+            // Base colored circle - always visible as background
+            Circle()
+                .fill(Color(hex: member.color))
+                .frame(width: 36, height: 36)
+                .overlay {
+                    // Content layer overlaid on background
+                    if let avatarImage {
+                        // Show loaded memoji avatar - slightly smaller to show background border
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                    } else {
+                        // Fallback: first letter of name
+                        Text(String(member.name.prefix(1)))
+                            .font(NunitoFont.semiBold.size(14))
+                            .foregroundStyle(.white)
+                    }
                 }
-            }
-            .overlay(
-                Circle()
-                    .stroke(lineWidth: 1)
-                    .foregroundStyle(Color.white)
-            )
-            // Re-evaluate whenever the member's imageFileHash changes.
-            .task(id: member.imageFileHash) {
-                await loadAvatarForCurrentHash()
-            }
+                .overlay(
+                    // White stroke overlay on top
+                    Circle()
+                        .stroke(lineWidth: 1)
+                        .foregroundStyle(Color.white)
+                )
+                // Re-evaluate whenever the member's imageFileHash changes.
+                .task(id: member.imageFileHash) {
+                    await loadAvatarForCurrentHash()
+                }
         }
         
         @MainActor
