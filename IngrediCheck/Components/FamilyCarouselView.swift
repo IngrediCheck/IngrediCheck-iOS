@@ -12,8 +12,8 @@ struct FamilyCarouselView: View {
     @Environment(WebService.self) private var webService
     @EnvironmentObject private var store: Onboarding
     
-    @State var selectedFamilyMember: UserModel? = UserModel(familyMemberName: "Everyone", familyMemberImage: "Everyone", backgroundColor: .clear)
-    @State private var isLoadingMemberFoodNotes: Bool = false
+    @State var selectedFamilyMember: UserModel? = nil
+    @State private var foodNotesStore: FoodNotesStore?
     
     // Convert FamilyMember objects to UserModel format
     private var familyMembersList: [UserModel] {
@@ -76,7 +76,13 @@ struct FamilyCarouselView: View {
             }
         }
         .onAppear {
+            // Initialize FoodNotesStore with environment values
+            if foodNotesStore == nil {
+                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: store)
+            }
+            
             // Initialize selection to "Everyone" if not already set
+            // But don't automatically load food notes - let user explicitly select a member
             if selectedFamilyMember == nil {
                 selectedFamilyMember = UserModel(
                     id: "everyone",
@@ -85,10 +91,9 @@ struct FamilyCarouselView: View {
                     backgroundColor: .clear
                 )
                 
-                // Initial load for family-level notes
-                Task {
-                    await loadFoodNotesForSelection(memberId: nil)
-                }
+                // Set FamilyStore.selectedMemberId to nil for "Everyone" but don't load food notes
+                // This ensures the UI shows "Everyone" as selected without breaking the flow
+                familyStore.selectedMemberId = nil
             }
         }
     }
@@ -111,123 +116,12 @@ struct FamilyCarouselView: View {
             familyStore.selectedMemberId = nil
         }
         
-        await loadFoodNotesForSelection(memberId: memberId)
-    }
-    
-    // MARK: - Member-specific Food Notes Integration
-    
-    @MainActor
-    private func loadFoodNotesForSelection(memberId: String?) async {
-        isLoadingMemberFoodNotes = true
-        defer { isLoadingMemberFoodNotes = false }
-        
-        do {
-            if let memberId {
-                print("[FamilyCarouselView] loadFoodNotesForSelection: Fetching member food notes for memberId=\(memberId)")
-                if let response = try await webService.fetchMemberFoodNotes(memberId: memberId) {
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: ✅ Received member food notes version=\(response.version), updatedAt=\(response.updatedAt)")
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: Content keys: \(Array(response.content.keys))")
-                    
-                    // Reset preferences and apply member-specific content
-                    store.preferences = Preferences()
-                    await convertContentToPreferencesFromContent(content: response.content)
-                    store.updateSectionCompletionStatus()
-                    
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: ✅ Applied member-specific preferences")
-                } else {
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: No member food notes found, clearing preferences")
-                    store.preferences = Preferences()
-                    store.updateSectionCompletionStatus()
-                }
-            } else {
-                print("[FamilyCarouselView] loadFoodNotesForSelection: Fetching family-level food notes")
-                if let response = try await webService.fetchFoodNotes() {
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: ✅ Received family food notes version=\(response.version), updatedAt=\(response.updatedAt)")
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: Content keys: \(Array(response.content.keys))")
-                    
-                    // Reset preferences and apply family-level content
-                    store.preferences = Preferences()
-                    await convertContentToPreferencesFromContent(content: response.content)
-                    store.updateSectionCompletionStatus()
-                    
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: ✅ Applied family-level preferences")
-                } else {
-                    print("[FamilyCarouselView] loadFoodNotesForSelection: No family food notes found, clearing preferences")
-                    store.preferences = Preferences()
-                    store.updateSectionCompletionStatus()
-                }
-            }
-        } catch {
-            print("[FamilyCarouselView] loadFoodNotesForSelection: ❌ Failed to load food notes: \(error.localizedDescription)")
+        // Load food notes for the selected member using FoodNotesStore
+        if let memberId = memberId {
+            await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+        } else {
+            await foodNotesStore?.loadFoodNotesForFamily()
         }
-    }
-    
-    /// Local copy of the conversion logic used by the editable canvas to
-    /// translate backend food-notes `content` into `Preferences`.
-    @MainActor
-    private func convertContentToPreferencesFromContent(content: [String: Any]) async {
-        print("[FamilyCarouselView] convertContentToPreferencesFromContent: Converting content to preferences format")
-        
-        // Iterate through content keys (which are step IDs)
-        for (stepId, stepContent) in content {
-            print("[FamilyCarouselView] convertContentToPreferencesFromContent: Processing stepId: \(stepId)")
-            
-            // Find the step by ID to get the section name
-            guard let step = store.dynamicSteps.first(where: { $0.id == stepId }) else {
-                print("[FamilyCarouselView] convertContentToPreferencesFromContent: ⚠️ Step not found for stepId: \(stepId), skipping")
-                continue
-            }
-            
-            let sectionName = step.header.name
-            print("[FamilyCarouselView] convertContentToPreferencesFromContent: Found step '\(sectionName)' for stepId: \(stepId)")
-            
-            // Check if content is an array (type-1) or nested object (type-2 or type-3)
-            if let itemsArray = stepContent as? [[String: Any]] {
-                // Type-1: Simple list
-                print("[FamilyCarouselView] convertContentToPreferencesFromContent: Type-1 list with \(itemsArray.count) items")
-                let itemNames = itemsArray.compactMap { item -> String? in
-                    if let name = item["name"] as? String {
-                        return name
-                    }
-                    return nil
-                }
-                
-                if !itemNames.isEmpty {
-                    store.preferences.sections[sectionName] = .list(itemNames)
-                    print("[FamilyCarouselView] convertContentToPreferencesFromContent: ✅ Set \(sectionName) as list with items: \(itemNames)")
-                }
-            } else if let nestedDict = stepContent as? [String: Any] {
-                // Type-2 or Type-3: Nested structure
-                print("[FamilyCarouselView] convertContentToPreferencesFromContent: Nested structure with keys: \(Array(nestedDict.keys))")
-                
-                var preferencesNestedDict: [String: [String]] = [:]
-                
-                for (nestedKey, nestedValue) in nestedDict {
-                    if let itemsArray = nestedValue as? [[String: Any]] {
-                        let itemNames = itemsArray.compactMap { item -> String? in
-                            if let name = item["name"] as? String {
-                                return name
-                            }
-                            return nil
-                        }
-                        
-                        if !itemNames.isEmpty {
-                            preferencesNestedDict[nestedKey] = itemNames
-                            print("[FamilyCarouselView] convertContentToPreferencesFromContent: ✅ Set nested key '\(nestedKey)' with items: \(itemNames)")
-                        }
-                    }
-                }
-                
-                if !preferencesNestedDict.isEmpty {
-                    store.preferences.sections[sectionName] = .nested(preferencesNestedDict)
-                    print("[FamilyCarouselView] convertContentToPreferencesFromContent: ✅ Set \(sectionName) as nested with \(preferencesNestedDict.count) sub-sections")
-                }
-            } else {
-                print("[FamilyCarouselView] convertContentToPreferencesFromContent: ⚠️ Unknown content format for stepId: \(stepId)")
-            }
-        }
-        
-        print("[FamilyCarouselView] convertContentToPreferencesFromContent: ✅ Conversion complete")
     }
 }
 

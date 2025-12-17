@@ -13,18 +13,14 @@ struct EditableCanvasView: View {
     @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
     
+    @State private var foodNotesStore: FoodNotesStore?
+    
     @State private var editingStepId: String? = nil
     @State private var isEditSheetPresented: Bool = false
     @State private var tagBarScrollTarget: UUID? = nil
     @State private var currentEditingSectionIndex: Int = 0
     @State private var isProgrammaticChange: Bool = false
     @State private var debounceTask: Task<Void, Never>? = nil
-    @State private var currentVersion: Int = 0
-    @State private var isLoadingFoodNotes: Bool = false
-    // Union view used for the scroll cards (Everyone + all members)
-    @State private var canvasPreferences: Preferences = Preferences()
-    // Track which members have which items: [sectionName: [itemName: [memberIds]]]
-    @State private var itemMemberAssociations: [String: [String: [String]]] = [:]
     
     var body: some View {
         let cards = selectedCards()
@@ -55,7 +51,7 @@ struct EditableCanvasView: View {
                     .padding(.bottom, 16)
                     
                     // Selected items scroll view
-                    if isLoadingFoodNotes {
+                    if foodNotesStore?.isLoadingFoodNotes == true {
                         // Loading state
                         VStack(spacing: 16) {
                             Spacer()
@@ -73,24 +69,24 @@ struct EditableCanvasView: View {
                         ScrollView(.vertical, showsIndicators: false) {
                             VStack(spacing: 16) {
                                 ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                                    EditableCanvasCard(
-                                        chips: card.chips,
-                                        sectionedChips: card.sectionedChips,
-                                        title: card.title,
-                                        iconName: card.icon,
-                                        onEdit: {
-                                            // Find the section index for this card
-                                            if let sectionIndex = store.sections.firstIndex(where: { section in
-                                                section.screens.first?.stepId == card.stepId
-                                            }) {
-                                                currentEditingSectionIndex = sectionIndex
-                                                store.currentSectionIndex = sectionIndex
-                                            }
-                                            editingStepId = card.stepId
-                                            isEditSheetPresented = true
-                                        },
-                                        itemMemberAssociations: itemMemberAssociations
-                                    )
+                    EditableCanvasCard(
+                        chips: card.chips,
+                        sectionedChips: card.sectionedChips,
+                        title: card.title,
+                        iconName: card.icon,
+                        onEdit: {
+                            // Find the section index for this card
+                            if let sectionIndex = store.sections.firstIndex(where: { section in
+                                section.screens.first?.stepId == card.stepId
+                            }) {
+                                currentEditingSectionIndex = sectionIndex
+                                store.currentSectionIndex = sectionIndex
+                            }
+                            editingStepId = card.stepId
+                            isEditSheetPresented = true
+                        },
+                        itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:]
+                    )
                                     .padding(.top, index == 0 ? 16 : 0)
                                 }
                             }
@@ -134,12 +130,17 @@ struct EditableCanvasView: View {
             )
         }
         .onAppear {
+            // Initialize FoodNotesStore with environment values
+            if foodNotesStore == nil {
+                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: store)
+            }
+            
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
             
             // Fetch and load food notes data when view appears
             Task {
-                await loadFoodNotesFromBackend()
+                await foodNotesStore?.loadFoodNotesAll()
             }
         }
         .onDisappear {
@@ -162,7 +163,7 @@ struct EditableCanvasView: View {
                     try Task.checkCancellation()
                     
                     // Build content structure and call API
-                    await updateFoodNotes()
+                    await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
                 } catch {
                     // Task was cancelled or sleep interrupted - ignore
                     if !(error is CancellationError) {
@@ -185,7 +186,8 @@ struct EditableCanvasView: View {
     // Helper function to get member identifiers for an item
     // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
     private func getMemberIdentifiers(for sectionName: String, itemName: String) -> [String] {
-        guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
+        guard let foodNotesStore = foodNotesStore,
+              let memberIds = foodNotesStore.itemMemberAssociations[sectionName]?[itemName] else {
             return []
         }
         
@@ -200,7 +202,8 @@ struct EditableCanvasView: View {
         
         // Use canvasPreferences so scroll cards always show the union view
         // (Everyone + all members) and do not change when switching member.
-        guard let value = canvasPreferences.sections[sectionName],
+        guard let foodNotesStore = foodNotesStore,
+              let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .list(let items) = value else {
             return nil
         }
@@ -220,7 +223,8 @@ struct EditableCanvasView: View {
         let sectionName = step.header.name
         
         // Use canvasPreferences for union view
-        guard let value = canvasPreferences.sections[sectionName],
+        guard let foodNotesStore = foodNotesStore,
+              let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .nested(let nestedDict) = value else {
             return nil
         }
@@ -331,445 +335,7 @@ struct EditableCanvasView: View {
     }
     
     // MARK: - Food Notes API Integration
-    
-    @MainActor
-    private func loadFoodNotesFromBackend() async {
-        print("[EditableCanvasView] loadFoodNotesFromBackend: Starting to load food notes from backend")
-        
-        // Show loading indicator
-        isLoadingFoodNotes = true
-        
-        do {
-            if let response = try await webService.fetchFoodNotesAll() {
-                print("[EditableCanvasView] loadFoodNotesFromBackend: ✅ Received food notes data")
-                
-                // Combine family note and member notes to get unified content
-                var unifiedContent: [String: Any] = [:]
-                var associations: [String: [String: [String]]] = [:]
-                
-                // Process family note (if exists) - these are "Everyone" level
-                if let familyNote = response.familyNote {
-                    currentVersion = familyNote.version
-                    
-                    // Merge family note content into unified content
-                    for (stepId, stepContent) in familyNote.content {
-                        unifiedContent[stepId] = stepContent
-                        
-                        if let step = store.dynamicSteps.first(where: { $0.id == stepId }) {
-                            let sectionName = step.header.name
-                            if associations[sectionName] == nil {
-                                associations[sectionName] = [:]
-                            }
-                            
-                            // Extract item names and mark as "Everyone" (family level)
-                            if let itemsArray = stepContent as? [[String: Any]] {
-                                for item in itemsArray {
-                                    if let itemName = item["name"] as? String {
-                                        associations[sectionName]?[itemName] = ["Everyone"]
-                                    }
-                                }
-                            } else if let nestedDict = stepContent as? [String: Any] {
-                                for (_, nestedValue) in nestedDict {
-                                    if let itemsArray = nestedValue as? [[String: Any]] {
-                                        for item in itemsArray {
-                                            if let itemName = item["name"] as? String {
-                                                associations[sectionName]?[itemName] = ["Everyone"]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Process member notes - these are member-specific
-                // Merge member content into unified content (combining items from all members)
-                for (memberId, memberNote) in response.memberNotes {
-                    // Use the highest version from member notes if no family note
-                    if response.familyNote == nil {
-                        currentVersion = max(currentVersion, memberNote.version)
-                    }
-                    
-                    for (stepId, stepContent) in memberNote.content {
-                        if let step = store.dynamicSteps.first(where: { $0.id == stepId }) {
-                            let sectionName = step.header.name
-                            if associations[sectionName] == nil {
-                                associations[sectionName] = [:]
-                            }
-                            
-                            // Merge member items into unified content
-                            if let itemsArray = stepContent as? [[String: Any]] {
-                                // Type-1: Simple list - merge items
-                                var existingItems = unifiedContent[stepId] as? [[String: Any]] ?? []
-                                var existingItemNames = Set(existingItems.compactMap { $0["name"] as? String })
-                                
-                                for item in itemsArray {
-                                    if let itemName = item["name"] as? String {
-                                        if !existingItemNames.contains(itemName) {
-                                            existingItems.append(item)
-                                            existingItemNames.insert(itemName)
-                                        }
-                                        
-                                        // Track member association
-                                        if associations[sectionName]?[itemName] == nil {
-                                            associations[sectionName]?[itemName] = []
-                                        }
-                                        if !associations[sectionName]![itemName]!.contains(memberId) {
-                                            associations[sectionName]![itemName]!.append(memberId)
-                                        }
-                                    }
-                                }
-                                unifiedContent[stepId] = existingItems
-                            } else if let nestedDict = stepContent as? [String: Any] {
-                                // Type-2 or Type-3: Nested structure - merge nested items
-                                var existingNested = unifiedContent[stepId] as? [String: Any] ?? [:]
-                                
-                                for (nestedKey, nestedValue) in nestedDict {
-                                    if let itemsArray = nestedValue as? [[String: Any]] {
-                                        var existingItems = existingNested[nestedKey] as? [[String: Any]] ?? []
-                                        var existingItemNames = Set(existingItems.compactMap { $0["name"] as? String })
-                                        
-                                        for item in itemsArray {
-                                            if let itemName = item["name"] as? String {
-                                                if !existingItemNames.contains(itemName) {
-                                                    existingItems.append(item)
-                                                    existingItemNames.insert(itemName)
-                                                }
-                                                
-                                                // Track member association
-                                                if associations[sectionName]?[itemName] == nil {
-                                                    associations[sectionName]?[itemName] = []
-                                                }
-                                                if !associations[sectionName]![itemName]!.contains(memberId) {
-                                                    associations[sectionName]![itemName]!.append(memberId)
-                                                }
-                                            }
-                                        }
-                                        existingNested[nestedKey] = existingItems
-                                    }
-                                }
-                                unifiedContent[stepId] = existingNested
-                            }
-                        }
-                    }
-                }
-                
-                // Convert unified content to canvasPreferences format so cards
-                // always reflect Everyone + all members, independent of which
-                // member is currently selected in the sheet.
-                await convertContentToCanvasPreferences(content: unifiedContent)
-                
-        // If an item has both "Everyone" and specific members associated,
-        // prefer the specific members and drop the "Everyone" tag so
-                // the UI shows the correct per-member icons.
-                for (sectionName, items) in associations {
-                    for (itemName, members) in items {
-                        let specificMembers = members.filter { $0 != "Everyone" }
-                        if !specificMembers.isEmpty {
-                            associations[sectionName]?[itemName] = specificMembers
-                        }
-                    }
-                }
-                
-                // Store associations after cleanup
-                itemMemberAssociations = associations
-                
-                // Update completion status after loading
-                store.updateSectionCompletionStatus()
-                
-                print("[EditableCanvasView] loadFoodNotesFromBackend: ✅ Successfully loaded and applied food notes data")
-            } else {
-                // No food notes exist yet, start with version 0
-                currentVersion = 0
-                itemMemberAssociations = [:]
-                print("[EditableCanvasView] loadFoodNotesFromBackend: No existing food notes found, starting with version 0")
-            }
-        } catch let error as NetworkError {
-            // If GET endpoint doesn't exist (404) or other errors, start with version 0
-            // The version will be corrected on first update attempt via error parsing
-            if case .notFound = error {
-                currentVersion = 0
-                itemMemberAssociations = [:]
-                print("[EditableCanvasView] loadFoodNotesFromBackend: GET endpoint not available (404), will detect version on first update")
-            } else {
-                currentVersion = 0
-                itemMemberAssociations = [:]
-                print("[EditableCanvasView] loadFoodNotesFromBackend: ❌ Failed to load food notes: \(error)")
-            }
-        } catch {
-            // If fetch fails for any other reason, start with version 0
-            currentVersion = 0
-            itemMemberAssociations = [:]
-            print("[EditableCanvasView] loadFoodNotesFromBackend: ❌ Failed to load food notes: \(error.localizedDescription)")
-        }
-        
-        // Hide loading indicator
-        isLoadingFoodNotes = false
-    }
-    
-    // MARK: - Preferences conversion helpers
-    
-    /// Convert backend food-notes `content` into the union view used by the
-    /// scroll cards (canvasPreferences). This is built from
-    /// GET /ingredicheck/family/food-notes/all and does not change when
-    /// switching the selected member for editing.
-    @MainActor
-    private func convertContentToCanvasPreferences(content: [String: Any]) async {
-        print("[EditableCanvasView] convertContentToCanvasPreferences: Converting content to canvasPreferences format")
-        
-        // Iterate through content keys (which are step IDs)
-        for (stepId, stepContent) in content {
-            print("[EditableCanvasView] convertContentToCanvasPreferences: Processing stepId: \(stepId)")
-            
-            // Find the step by ID to get the section name
-            guard let step = store.dynamicSteps.first(where: { $0.id == stepId }) else {
-                print("[EditableCanvasView] convertContentToCanvasPreferences: ⚠️ Step not found for stepId: \(stepId), skipping")
-                continue
-            }
-            
-            let sectionName = step.header.name
-            print("[EditableCanvasView] convertContentToCanvasPreferences: Found step '\(sectionName)' for stepId: \(stepId)")
-            
-            // Check if content is an array (type-1) or nested object (type-2 or type-3)
-            if let itemsArray = stepContent as? [[String: Any]] {
-                // Type-1: Simple list
-                print("[EditableCanvasView] convertContentToCanvasPreferences: Type-1 list with \(itemsArray.count) items")
-                let itemNames = itemsArray.compactMap { item -> String? in
-                    if let name = item["name"] as? String {
-                        return name
-                    }
-                    return nil
-                }
-                
-                if !itemNames.isEmpty {
-                    canvasPreferences.sections[sectionName] = .list(itemNames)
-                    print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Set \(sectionName) as list with items: \(itemNames.joined(separator: ", "))")
-                }
-            } else if let nestedDict = stepContent as? [String: Any] {
-                // Type-2 or Type-3: Nested structure
-                print("[EditableCanvasView] convertContentToCanvasPreferences: Nested structure with keys: \(nestedDict.keys.joined(separator: ", "))")
-                
-                var preferencesNestedDict: [String: [String]] = [:]
-                
-                for (nestedKey, nestedValue) in nestedDict {
-                    if let itemsArray = nestedValue as? [[String: Any]] {
-                        let itemNames = itemsArray.compactMap { item -> String? in
-                            if let name = item["name"] as? String {
-                                return name
-                            }
-                            return nil
-                        }
-                        
-                        if !itemNames.isEmpty {
-                            preferencesNestedDict[nestedKey] = itemNames
-                            print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Set nested key '\(nestedKey)' with items: \(itemNames.joined(separator: ", "))")
-                        }
-                    }
-                }
-                
-                if !preferencesNestedDict.isEmpty {
-                    canvasPreferences.sections[sectionName] = .nested(preferencesNestedDict)
-                    print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Set \(sectionName) as nested with \(preferencesNestedDict.count) sub-sections")
-                }
-            } else {
-                print("[EditableCanvasView] convertContentToCanvasPreferences: ⚠️ Unknown content format for stepId: \(stepId)")
-            }
-        }
-        
-        print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Conversion complete")
-    }
-    
-    @MainActor
-    private func updateFoodNotes() async {
-        // Build content structure dynamically from preferences
-        var content: [String: Any] = [:]
-        
-        // Iterate through all dynamic steps to build content
-        for step in store.dynamicSteps {
-            let sectionName = step.header.name
-            
-            guard let preferenceValue = store.preferences.sections[sectionName] else {
-                continue
-            }
-            
-            switch preferenceValue {
-            case .list(let items):
-                // Simple list - convert to array of objects with iconName and name
-                let itemsArray = items.compactMap { itemName -> [String: String]? in
-                    // Find icon from step options
-                    let icon = step.content.options?.first(where: { $0.name == itemName })?.icon ?? ""
-                    return [
-                        "iconName": icon,
-                        "name": itemName
-                    ]
-                }
-                
-                if !itemsArray.isEmpty {
-                    // Use step id as key (lowercased) for the content
-                    content[step.id] = itemsArray
-                }
-                
-            case .nested(let nestedDict):
-                // Nested structure - for type-2 steps (Avoid, LifeStyle, Nutrition)
-                var nestedContent: [String: Any] = [:]
-                
-                if let subSteps = step.content.subSteps {
-                    for subStep in subSteps {
-                        if let items = nestedDict[subStep.title], !items.isEmpty {
-                            let itemsArray = items.compactMap { itemName -> [String: String]? in
-                                let icon = subStep.options?.first(where: { $0.name == itemName })?.icon ?? ""
-                                return [
-                                    "iconName": icon,
-                                    "name": itemName
-                                ]
-                            }
-                            
-                            if !itemsArray.isEmpty {
-                                nestedContent[subStep.title] = itemsArray
-                            }
-                        }
-                    }
-                } else if step.type == .type3 {
-                    // Type-3 (Region) - regions with subRegions
-                    for (regionName, items) in nestedDict {
-                        if !items.isEmpty {
-                            let itemsArray = items.compactMap { itemName -> [String: String]? in
-                                // Find icon from regions structure
-                                var icon = ""
-                                if let region = step.content.regions?.first(where: { $0.name == regionName }) {
-                                    icon = region.subRegions.first(where: { $0.name == itemName })?.icon ?? ""
-                                }
-                                return [
-                                    "iconName": icon,
-                                    "name": itemName
-                                ]
-                            }
-                            
-                            if !itemsArray.isEmpty {
-                                nestedContent[regionName] = itemsArray
-                            }
-                        }
-                    }
-                }
-                
-                if !nestedContent.isEmpty {
-                    content[step.id] = nestedContent
-                }
-            }
-        }
-        
-        // Only call API if content is not empty
-        guard !content.isEmpty else {
-            print("[EditableCanvasView] updateFoodNotes: Content is empty, skipping API call")
-            return
-        }
-        
-        do {
-            // Decide whether to update at family-level or member-level based on
-            // the currently selected member in FamilyStore.
-            if let selectedMemberId = familyStore.selectedMemberId {
-                let memberIdString = selectedMemberId.uuidString
-                print("[EditableCanvasView] updateFoodNotes: Detected selectedMemberId=\(memberIdString). Using member-specific endpoint.")
-                print("[EditableCanvasView] updateFoodNotes: Calling PUT /ingredicheck/family/members/:id/food-notes with version=\(currentVersion)")
-                print("[EditableCanvasView] updateFoodNotes: Content keys: \(Array(content.keys))")
-                
-                let response = try await webService.updateMemberFoodNotes(
-                    memberId: memberIdString,
-                    content: content,
-                    version: currentVersion
-                )
-                
-                await MainActor.run {
-                    currentVersion = response.version
-                }
-                
-                print("[EditableCanvasView] updateFoodNotes: ✅ Member update success. New version=\(response.version), updatedAt=\(response.updatedAt)")
-                
-                // Refresh canvas union view from /family/food-notes/all so
-                // scroll cards (with member avatars) stay in sync.
-                Task {
-                    await loadFoodNotesFromBackend()
-                }
-            } else {
-                print("[EditableCanvasView] updateFoodNotes: No selectedMemberId (Everyone). Using family-level endpoint.")
-                print("[EditableCanvasView] updateFoodNotes: Calling PUT /ingredicheck/family/food-notes with version=\(currentVersion)")
-                print("[EditableCanvasView] updateFoodNotes: Content keys: \(Array(content.keys))")
-                
-                let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
-                
-                // Update version from response
-                await MainActor.run {
-                    currentVersion = response.version
-                }
-                
-                print("[EditableCanvasView] updateFoodNotes: ✅ Family update success. New version=\(response.version), updatedAt=\(response.updatedAt)")
-                
-                // Refresh canvas union view after family-level update.
-                Task {
-                    await loadFoodNotesFromBackend()
-                }
-            }
-        } catch let error as WebService.VersionMismatchError {
-            // Handle version mismatch - backend provides currentNote with actual data
-            print("[EditableCanvasView] updateFoodNotes: ⚠️ Version mismatch detected. Expected=\(error.expectedVersion), Current on server=\(error.currentNote.version)")
-            
-            await MainActor.run {
-                currentVersion = error.currentNote.version
-            }
-            
-            // Retry with the correct version using the same endpoint decision
-            do {
-                if let selectedMemberId = familyStore.selectedMemberId {
-                    let memberIdString = selectedMemberId.uuidString
-                    print("[EditableCanvasView] updateFoodNotes: Retrying member-specific update with version=\(currentVersion)")
-                    let response = try await webService.updateMemberFoodNotes(
-                        memberId: memberIdString,
-                        content: content,
-                        version: currentVersion
-                    )
-                    await MainActor.run {
-                        currentVersion = response.version
-                    }
-                    print("[EditableCanvasView] updateFoodNotes: ✅ Member retry success. New version=\(response.version), updatedAt=\(response.updatedAt)")
-                    
-                    Task {
-                        await loadFoodNotesFromBackend()
-                    }
-                } else {
-                    print("[EditableCanvasView] updateFoodNotes: Retrying family-level update with version=\(currentVersion)")
-                    let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
-                    await MainActor.run {
-                        currentVersion = response.version
-                    }
-                    print("[EditableCanvasView] updateFoodNotes: ✅ Family retry success. New version=\(response.version), updatedAt=\(response.updatedAt)")
-                    
-                    Task {
-                        await loadFoodNotesFromBackend()
-                    }
-                }
-            } catch {
-                print("[EditableCanvasView] updateFoodNotes: ❌ Failed on retry: \(error.localizedDescription)")
-            }
-        } catch {
-            if let networkError = error as? NetworkError {
-                switch networkError {
-                case .invalidResponse(let statusCode):
-                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Invalid response: \(statusCode)")
-                case .authError:
-                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Authentication error")
-                case .decodingError:
-                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Decoding error")
-                case .badUrl:
-                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Bad URL")
-                case .notFound(let message):
-                    print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Not found: \(message)")
-                }
-            } else {
-                print("[EditableCanvasView] updateFoodNotes: ❌ Failed - Error: \(error.localizedDescription)")
-            }
-        }
-    }
+    // All food notes logic is now handled by FoodNotesStore
 }
 
 struct EditableCanvasCardModel: Identifiable {

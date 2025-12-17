@@ -11,10 +11,15 @@ struct MainCanvasView: View {
     
     @EnvironmentObject private var store: Onboarding
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(WebService.self) private var webService
+    @Environment(FamilyStore.self) private var familyStore
+    
     private let flow: OnboardingFlowType
     
+    @State private var foodNotesStore: FoodNotesStore?
     @State private var cardScrollTarget: UUID? = nil
     @State private var tagBarScrollTarget: UUID? = nil
+    @State private var debounceTask: Task<Void, Never>? = nil
 	
 	init(flow: OnboardingFlowType) {
         self.flow = flow
@@ -49,11 +54,62 @@ struct MainCanvasView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.onAppear {
             store.onboardingFlowtype = flow
+            
+            // Initialize FoodNotesStore with environment values
+            if foodNotesStore == nil {
+                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: store)
+            }
+            
+            // Update completion status for all sections based on their data
+            store.updateSectionCompletionStatus()
+            
+            // Load existing food notes for the selected member or family
+            Task {
+                // First load the union view for canvas display
+                await foodNotesStore?.loadFoodNotesAll()
+                
+                // Then load preferences for the selected member/family into store.preferences
+                // so the user can see and edit their existing selections
+                if let selectedMemberId = familyStore.selectedMemberId {
+                    await foodNotesStore?.loadFoodNotesForMember(memberId: selectedMemberId.uuidString)
+                } else {
+                    await foodNotesStore?.loadFoodNotesForFamily()
+                }
+            }
 		}
+        .onDisappear {
+            // Cancel any pending debounce task when view disappears
+            debounceTask?.cancel()
+            debounceTask = nil
+        }
 		.onChange(of: store.currentSectionIndex) { _ in
             scheduleScrollToCurrentSectionViews()
             syncBottomSheetWithCurrentSection()
 		}
+        .onChange(of: store.preferences) { _ in
+            // Update completion status whenever preferences change
+            store.updateSectionCompletionStatus()
+            
+            // Debounce API call - cancel previous task and start new one
+            debounceTask?.cancel()
+            debounceTask = Task {
+                do {
+                    // Wait 5 seconds
+                    try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                    
+                    // Check if task was cancelled
+                    try Task.checkCancellation()
+                    
+                    // Build content structure and call API
+                    await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
+                } catch {
+                    // Task was cancelled or sleep interrupted - ignore
+                    if !(error is CancellationError) {
+                        print("[MainCanvasView] Debounce task error: \(error)")
+                    }
+                }
+            }
+        }
         .navigationBarBackButtonHidden(true)
     }
     
