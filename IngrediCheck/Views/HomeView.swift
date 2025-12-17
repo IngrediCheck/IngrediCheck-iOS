@@ -47,6 +47,68 @@ struct HomeView: View {
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
 
+    // MARK: - Family avatars
+
+    /// Small avatar used under "Your IngrediFam". Shows the member's memoji
+    /// if an imageFileHash is present, otherwise falls back to the first
+    /// letter of their name on top of their color.
+    struct FamilyMemberAvatarView: View {
+        @Environment(WebService.self) private var webService
+        let member: FamilyMember
+        
+        @State private var avatarImage: UIImage? = nil
+        
+        var body: some View {
+            ZStack {
+                // Base colored circle
+                Circle()
+                    .fill(Color(hex: member.color))
+                    .frame(width: 36, height: 36)
+                
+                if let avatarImage {
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .clipShape(Circle())
+                } else {
+                    Text(String(member.name.prefix(1)))
+                        .font(NunitoFont.semiBold.size(14))
+                        .foregroundStyle(.white)
+                }
+            }
+            .overlay(
+                Circle()
+                    .stroke(lineWidth: 1)
+                    .foregroundStyle(Color.white)
+            )
+            .task(id: member.imageFileHash) {
+                await loadAvatarIfNeeded()
+            }
+        }
+        
+        @MainActor
+        private func loadAvatarIfNeeded() async {
+            guard let hash = member.imageFileHash, !hash.isEmpty else {
+                // No avatar set yet; keep using initial fallback.
+                return
+            }
+            guard avatarImage == nil else { return }
+            
+            print("[HomeView.FamilyMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+            do {
+                let uiImage = try await webService.fetchImage(
+                    imageLocation: .imageFileHash(hash),
+                    imageSize: .small
+                )
+                avatarImage = uiImage
+                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded avatar for \(member.name)")
+            } catch {
+                print("[HomeView.FamilyMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
@@ -120,41 +182,29 @@ struct HomeView: View {
                     // Lifestyle + Family + Average scans
                     HStack {
                         LifestyleAndChoicesCard()
-
+                    
                         Spacer()
-
+                    
                         VStack {
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
                                     .font(ManropeFont.medium.size(18))
                                     .foregroundStyle(.grayScale150)
-
+                            
                                 Text("Your people, their choices.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
-
+                            
                                 HStack {
                                     ZStack(alignment: .bottomTrailing) {
                                         let membersToShow = Array(familyMembers.prefix(3))
-
+                            
                                         HStack(spacing: -8) {
                                             ForEach(membersToShow, id: \.id) { member in
-                                                Circle()
-                                                    .fill(Color(hex: member.color))
-                                                    .frame(width: 36, height: 36)
-                                                    .overlay(
-                                                        Text(String(member.name.prefix(1)))
-                                                            .font(NunitoFont.semiBold.size(14))
-                                                            .foregroundStyle(.white)
-                                                    )
-                                                    .overlay(
-                                                        Circle()
-                                                            .stroke(lineWidth: 1)
-                                                            .foregroundStyle(Color.white)
-                                                    )
+                                                FamilyMemberAvatarView(member: member)
                                             }
                                         }
-
+                            
                                         if familyMembers.count > 3 {
                                             Text("+\(familyMembers.count - 3)")
                                                 .font(NunitoFont.semiBold.size(12))
@@ -167,9 +217,9 @@ struct HomeView: View {
                                                 .offset(x: 10, y: -2)
                                         }
                                     }
-
+                            
                                     Spacer()
-
+                            
                                     Button {
                                         coordinator.navigateInBottomSheet(.addMoreMembers)
                                     } label: {
@@ -179,7 +229,7 @@ struct HomeView: View {
                                 }
                             }
                             .frame(height: 103)
-
+                        
                             AverageScansCard()
                         }
                     }

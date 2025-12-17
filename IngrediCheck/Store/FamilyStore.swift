@@ -24,6 +24,10 @@ final class FamilyStore {
     /// `nil` means "Everyone" (family-level).
     var selectedMemberId: UUID? = nil
     
+    /// Target member for avatar assignment from the MeetYourAvatar flow.
+    /// When non-nil, this is the member whose avatar should be updated.
+    var avatarTargetMemberId: UUID? = nil
+    
     init(service: FamilyService = FamilyService()) {
         self.service = service
     }

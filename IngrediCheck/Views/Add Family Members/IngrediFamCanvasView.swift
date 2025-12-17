@@ -1786,6 +1786,16 @@ struct SetUpAvatarFor: View {
             }
             
             Button {
+                guard let selected = selectedMember else {
+                    print("[SetUpAvatarFor] Next tapped with no member selected, ignoring")
+                    return
+                }
+                
+                // Remember which member's avatar we are about to generate,
+                // so that MeetYourAvatar can upload the image for this member.
+                print("[SetUpAvatarFor] Next tapped, setting avatarTargetMemberId=\(selected.id)")
+                familyStore.avatarTargetMemberId = selected.id
+                
                 nextPressed()
             } label: {
                 GreenCapsule(title: "Next")
