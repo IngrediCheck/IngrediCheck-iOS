@@ -452,8 +452,10 @@ private func handleAssignAvatar(
         // small avatars (e.g. in HomeView) use the same color as the
         // MeetYourAvatar sheet.
         if let bgHex = memojiStore.backgroundColorHex, !bgHex.isEmpty {
-            print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(bgHex)")
-            updatedMember.color = bgHex
+            // Ensure color has a # prefix (backend check constraint requires it)
+            let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+            print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
+            updatedMember.color = normalizedColor
         }
         
         print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
@@ -461,7 +463,13 @@ private func handleAssignAvatar(
         // 3. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)
         
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated")
+        // Check if editMember succeeded (it doesn't throw, but sets errorMessage on failure)
+        if let errorMsg = familyStore.errorMessage {
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Failed to update member in backend: \(errorMsg)")
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Avatar uploaded but member update failed - imageFileHash may not be persisted")
+        } else {
+            print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
+        }
     } catch {
         print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to upload or assign avatar: \(error.localizedDescription)")
     }
