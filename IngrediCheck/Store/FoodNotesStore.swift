@@ -206,11 +206,9 @@ final class FoodNotesStore {
         // Build content structure dynamically from preferences
         let content = buildContentFromPreferences(preferences: onboardingStore.preferences, dynamicSteps: onboardingStore.dynamicSteps)
         
-        // Only call API if content is not empty
-        guard !content.isEmpty else {
-            print("[FoodNotesStore] updateFoodNotes: Content is empty, skipping API call")
-            return
-        }
+        // Always call API, even if content is empty (to clear preferences)
+        // Empty content means user has deselected all chips, which should be saved
+        print("[FoodNotesStore] updateFoodNotes: Content keys: \(Array(content.keys)), isEmpty: \(content.isEmpty)")
         
         do {
             // Decide whether to update at family-level or member-level based on selectedMemberId

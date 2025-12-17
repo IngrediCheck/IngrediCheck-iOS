@@ -48,7 +48,8 @@ struct MainCanvasView: View {
             CanvasSummaryScrollView(
                 cards: cards ?? [],
                 scrollTarget: $cardScrollTarget,
-                showPlaceholder: cards?.isEmpty ?? true
+                showPlaceholder: cards?.isEmpty ?? true,
+                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:]
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -63,18 +64,10 @@ struct MainCanvasView: View {
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
             
-            // Load existing food notes for the selected member or family
+            // Fetch and load food notes data when view appears
+            // This loads the union view (Everyone + all members) for display
             Task {
-                // First load the union view for canvas display
                 await foodNotesStore?.loadFoodNotesAll()
-                
-                // Then load preferences for the selected member/family into store.preferences
-                // so the user can see and edit their existing selections
-                if let selectedMemberId = familyStore.selectedMemberId {
-                    await foodNotesStore?.loadFoodNotesForMember(memberId: selectedMemberId.uuidString)
-                } else {
-                    await foodNotesStore?.loadFoodNotesForFamily()
-                }
             }
 		}
         .onDisappear {
@@ -145,29 +138,92 @@ struct MainCanvasView: View {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
         
-        guard let value = store.preferences.sections[sectionName],
+        // Use canvasPreferences so scroll cards always show the union view
+        // (Everyone + all members) and do not change when switching member.
+        guard let foodNotesStore = foodNotesStore,
+              let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .list(let items) = value else {
             return nil
         }
         
-        return chipModels(from: items)
+        // Get icons from step options
+        let options = step.content.options ?? []
+        return items.compactMap { itemName -> ChipsModel? in
+            if let option = options.first(where: { $0.name == itemName }) {
+                return ChipsModel(name: option.name, icon: option.icon)
+            }
+            return ChipsModel(name: itemName, icon: nil)
+        }
     }
     
     private func sectionedChips(for stepId: String) -> [SectionedChipModel]? {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
         
-        guard let value = store.preferences.sections[sectionName],
+        // Use canvasPreferences for union view
+        guard let foodNotesStore = foodNotesStore,
+              let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .nested(let nestedDict) = value else {
             return nil
         }
         
-        // Convert nested dict to sectioned chips
-        let groups: [(String, [String])] = nestedDict.map { (key, value) in
-            (key, value)
+        // Type-2 steps use subSteps, type-3 steps use regions. Handle both.
+        var sections: [SectionedChipModel] = []
+        
+        if let subSteps = step.content.subSteps {
+            // MARK: Type-2 (Avoid / Lifestyle / Nutrition-style)
+            for subStep in subSteps {
+                guard let selectedItems = nestedDict[subStep.title],
+                      !selectedItems.isEmpty else {
+                    continue
+                }
+                
+                // Map selected items to ChipsModel with icons
+                let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
+                    if let option = subStep.options?.first(where: { $0.name == itemName }) {
+                        return ChipsModel(name: option.name, icon: option.icon)
+                    }
+                    return ChipsModel(name: itemName, icon: nil)
+                }
+                
+                if !selectedChips.isEmpty {
+                    sections.append(
+                        SectionedChipModel(
+                            title: subStep.title,
+                            subtitle: subStep.description,
+                            chips: selectedChips
+                        )
+                    )
+                }
+            }
+        } else if let regions = step.content.regions {
+            // MARK: Type-3 (Region-style)
+            for region in regions {
+                guard let selectedItems = nestedDict[region.name],
+                      !selectedItems.isEmpty else {
+                    continue
+                }
+                
+                let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
+                    if let option = region.subRegions.first(where: { $0.name == itemName }) {
+                        return ChipsModel(name: option.name, icon: option.icon)
+                    }
+                    return ChipsModel(name: itemName, icon: nil)
+                }
+                
+                if !selectedChips.isEmpty {
+                    sections.append(
+                        SectionedChipModel(
+                            title: region.name,
+                            subtitle: nil,
+                            chips: selectedChips
+                        )
+                    )
+                }
+            }
         }
         
-        return sectionedModels(from: groups)
+        return sections.isEmpty ? nil : sections
     }
     
     private func canvasCards() -> [CanvasCardModel]? {
@@ -184,6 +240,7 @@ struct MainCanvasView: View {
                         id: section.id,
                         title: section.name,
                         icon: icon(for: stepId),
+                        stepId: stepId,
                         chips: chips,
                         sectionedChips: groupedChips
                     )
@@ -194,26 +251,13 @@ struct MainCanvasView: View {
         return cards.isEmpty ? nil : cards
     }
     
-    private func chipModels(from list: [String]) -> [ChipsModel]? {
-        guard !list.isEmpty else { return nil }
-        return list.map { ChipsModel(name: $0, icon: nil) }
-    }
-    
-    private func sectionedModels(from groups: [(String, [String])]) -> [SectionedChipModel]? {
-        let sections = groups.compactMap { title, items -> SectionedChipModel? in
-            guard items.isEmpty == false else { return nil }
-            let chips = items.map { ChipsModel(name: $0, icon: nil) }
-            return SectionedChipModel(title: title, chips: chips)
-        }
-        return sections.isEmpty ? nil : sections
-    }
-    
 }
 
 struct CanvasCardModel: Identifiable {
     let id: UUID
     let title: String
     let icon: String
+    let stepId: String
     let chips: [ChipsModel]?
     let sectionedChips: [SectionedChipModel]?
 }
@@ -222,6 +266,7 @@ struct CanvasSummaryScrollView: View {
     let cards: [CanvasCardModel]
     @Binding var scrollTarget: UUID?
     let showPlaceholder: Bool
+    let itemMemberAssociations: [String: [String: [String]]]
     @State private var previousCardCount: Int = 0
     
     var body: some View {
@@ -246,7 +291,8 @@ struct CanvasSummaryScrollView: View {
                                 chips: card.chips,
                                 sectionedChips: card.sectionedChips,
                                 title: card.title,
-                                iconName: card.icon
+                                iconName: card.icon,
+                                itemMemberAssociations: itemMemberAssociations
                             )
                             .id(card.id)
                             // Add visual gap from the top edge so the card
