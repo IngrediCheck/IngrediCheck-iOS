@@ -448,7 +448,15 @@ private func handleAssignAvatar(
         var updatedMember = member
         updatedMember.imageFileHash = imageFileHash
         
-        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash)")
+        // Also persist the memoji background color as the member's color so
+        // small avatars (e.g. in HomeView) use the same color as the
+        // MeetYourAvatar sheet.
+        if let bgHex = memojiStore.backgroundColorHex, !bgHex.isEmpty {
+            print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(bgHex)")
+            updatedMember.color = bgHex
+        }
+        
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
         
         // 3. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)

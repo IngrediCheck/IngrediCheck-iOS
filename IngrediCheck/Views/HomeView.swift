@@ -57,6 +57,7 @@ struct HomeView: View {
         let member: FamilyMember
         
         @State private var avatarImage: UIImage? = nil
+        @State private var loadedHash: String? = nil
         
         var body: some View {
             ZStack {
@@ -82,18 +83,29 @@ struct HomeView: View {
                     .stroke(lineWidth: 1)
                     .foregroundStyle(Color.white)
             )
+            // Re-evaluate whenever the member's imageFileHash changes.
             .task(id: member.imageFileHash) {
-                await loadAvatarIfNeeded()
+                await loadAvatarForCurrentHash()
             }
         }
         
         @MainActor
-        private func loadAvatarIfNeeded() async {
+        private func loadAvatarForCurrentHash() async {
+            // If there is no hash, clear any cached avatar and fall back to initials.
             guard let hash = member.imageFileHash, !hash.isEmpty else {
-                // No avatar set yet; keep using initial fallback.
+                if avatarImage != nil {
+                    print("[HomeView.FamilyMemberAvatarView] imageFileHash cleared for \(member.name), resetting avatarImage")
+                }
+                avatarImage = nil
+                loadedHash = nil
                 return
             }
-            guard avatarImage == nil else { return }
+
+            // If we've already loaded this exact hash, skip re-fetching.
+            if loadedHash == hash, avatarImage != nil {
+                print("[HomeView.FamilyMemberAvatarView] Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
+                return
+            }
             
             print("[HomeView.FamilyMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
             do {
@@ -102,7 +114,8 @@ struct HomeView: View {
                     imageSize: .small
                 )
                 avatarImage = uiImage
-                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded avatar for \(member.name)")
+                loadedHash = hash
+                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded avatar for \(member.name) (hash=\(hash))")
             } catch {
                 print("[HomeView.FamilyMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
             }
