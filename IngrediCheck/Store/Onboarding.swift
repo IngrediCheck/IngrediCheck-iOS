@@ -23,7 +23,7 @@ struct SectionedChipModel: Identifiable {
     var chips: [ChipsModel]
 }
 
-enum OnboardingFlowType: String {
+enum OnboardingFlowType: String, Codable {
     case individual
     case family
     case singleMember  // For adding a specific family member from home
