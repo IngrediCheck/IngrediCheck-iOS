@@ -21,6 +21,8 @@ struct EditableCanvasView: View {
     @State private var debounceTask: Task<Void, Never>? = nil
     @State private var currentVersion: Int = 0
     @State private var isLoadingFoodNotes: Bool = false
+    // Union view used for the scroll cards (Everyone + all members)
+    @State private var canvasPreferences: Preferences = Preferences()
     // Track which members have which items: [sectionName: [itemName: [memberIds]]]
     @State private var itemMemberAssociations: [String: [String: [String]]] = [:]
     
@@ -190,12 +192,15 @@ struct EditableCanvasView: View {
         for memberId in memberIds {
             if memberId == "Everyone" {
                 images.append("Everyone")
-            } else if let family = familyStore.family {
-                // Find member by ID and use their name as image identifier
-                if memberId == family.selfMember.id.uuidString {
+            } else if let family = familyStore.family,
+                      let uuid = UUID(uuidString: memberId) {
+                // Match using UUIDs to avoid case-sensitivity issues on strings.
+                if uuid == family.selfMember.id {
                     images.append(family.selfMember.name)
-                } else if let member = family.otherMembers.first(where: { $0.id.uuidString == memberId }) {
+                } else if let member = family.otherMembers.first(where: { $0.id == uuid }) {
                     images.append(member.name)
+                } else {
+                    print("[EditableCanvasView] getMemberImages: ⚠️ No matching FamilyMember for memberId=\(memberId)")
                 }
             }
         }
@@ -207,7 +212,9 @@ struct EditableCanvasView: View {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
         
-        guard let value = store.preferences.sections[sectionName],
+        // Use canvasPreferences so scroll cards always show the union view
+        // (Everyone + all members) and do not change when switching member.
+        guard let value = canvasPreferences.sections[sectionName],
               case .list(let items) = value else {
             return nil
         }
@@ -226,7 +233,8 @@ struct EditableCanvasView: View {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
         
-        guard let value = store.preferences.sections[sectionName],
+        // Use canvasPreferences for union view
+        guard let value = canvasPreferences.sections[sectionName],
               case .nested(let nestedDict) = value else {
             return nil
         }
@@ -461,8 +469,10 @@ struct EditableCanvasView: View {
                     }
                 }
                 
-                // Convert unified content to preferences format
-                await convertContentToPreferences(content: unifiedContent)
+                // Convert unified content to canvasPreferences format so cards
+                // always reflect Everyone + all members, independent of which
+                // member is currently selected in the sheet.
+                await convertContentToCanvasPreferences(content: unifiedContent)
                 
         // If an item has both "Everyone" and specific members associated,
         // prefer the specific members and drop the "Everyone" tag so
@@ -512,27 +522,33 @@ struct EditableCanvasView: View {
         isLoadingFoodNotes = false
     }
     
+    // MARK: - Preferences conversion helpers
+    
+    /// Convert backend food-notes `content` into the union view used by the
+    /// scroll cards (canvasPreferences). This is built from
+    /// GET /ingredicheck/family/food-notes/all and does not change when
+    /// switching the selected member for editing.
     @MainActor
-    private func convertContentToPreferences(content: [String: Any]) async {
-        print("[EditableCanvasView] convertContentToPreferences: Converting content to preferences format")
+    private func convertContentToCanvasPreferences(content: [String: Any]) async {
+        print("[EditableCanvasView] convertContentToCanvasPreferences: Converting content to canvasPreferences format")
         
         // Iterate through content keys (which are step IDs)
         for (stepId, stepContent) in content {
-            print("[EditableCanvasView] convertContentToPreferences: Processing stepId: \(stepId)")
+            print("[EditableCanvasView] convertContentToCanvasPreferences: Processing stepId: \(stepId)")
             
             // Find the step by ID to get the section name
             guard let step = store.dynamicSteps.first(where: { $0.id == stepId }) else {
-                print("[EditableCanvasView] convertContentToPreferences: ⚠️ Step not found for stepId: \(stepId), skipping")
+                print("[EditableCanvasView] convertContentToCanvasPreferences: ⚠️ Step not found for stepId: \(stepId), skipping")
                 continue
             }
             
             let sectionName = step.header.name
-            print("[EditableCanvasView] convertContentToPreferences: Found step '\(sectionName)' for stepId: \(stepId)")
+            print("[EditableCanvasView] convertContentToCanvasPreferences: Found step '\(sectionName)' for stepId: \(stepId)")
             
             // Check if content is an array (type-1) or nested object (type-2 or type-3)
             if let itemsArray = stepContent as? [[String: Any]] {
                 // Type-1: Simple list
-                print("[EditableCanvasView] convertContentToPreferences: Type-1 list with \(itemsArray.count) items")
+                print("[EditableCanvasView] convertContentToCanvasPreferences: Type-1 list with \(itemsArray.count) items")
                 let itemNames = itemsArray.compactMap { item -> String? in
                     if let name = item["name"] as? String {
                         return name
@@ -541,12 +557,12 @@ struct EditableCanvasView: View {
                 }
                 
                 if !itemNames.isEmpty {
-                    store.preferences.sections[sectionName] = .list(itemNames)
-                    print("[EditableCanvasView] convertContentToPreferences: ✅ Set \(sectionName) as list with items: \(itemNames.joined(separator: ", "))")
+                    canvasPreferences.sections[sectionName] = .list(itemNames)
+                    print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Set \(sectionName) as list with items: \(itemNames.joined(separator: ", "))")
                 }
             } else if let nestedDict = stepContent as? [String: Any] {
                 // Type-2 or Type-3: Nested structure
-                print("[EditableCanvasView] convertContentToPreferences: Nested structure with keys: \(nestedDict.keys.joined(separator: ", "))")
+                print("[EditableCanvasView] convertContentToCanvasPreferences: Nested structure with keys: \(nestedDict.keys.joined(separator: ", "))")
                 
                 var preferencesNestedDict: [String: [String]] = [:]
                 
@@ -561,21 +577,21 @@ struct EditableCanvasView: View {
                         
                         if !itemNames.isEmpty {
                             preferencesNestedDict[nestedKey] = itemNames
-                            print("[EditableCanvasView] convertContentToPreferences: ✅ Set nested key '\(nestedKey)' with items: \(itemNames.joined(separator: ", "))")
+                            print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Set nested key '\(nestedKey)' with items: \(itemNames.joined(separator: ", "))")
                         }
                     }
                 }
                 
                 if !preferencesNestedDict.isEmpty {
-                    store.preferences.sections[sectionName] = .nested(preferencesNestedDict)
-                    print("[EditableCanvasView] convertContentToPreferences: ✅ Set \(sectionName) as nested with \(preferencesNestedDict.count) sub-sections")
+                    canvasPreferences.sections[sectionName] = .nested(preferencesNestedDict)
+                    print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Set \(sectionName) as nested with \(preferencesNestedDict.count) sub-sections")
                 }
             } else {
-                print("[EditableCanvasView] convertContentToPreferences: ⚠️ Unknown content format for stepId: \(stepId)")
+                print("[EditableCanvasView] convertContentToCanvasPreferences: ⚠️ Unknown content format for stepId: \(stepId)")
             }
         }
         
-        print("[EditableCanvasView] convertContentToPreferences: ✅ Conversion complete")
+        print("[EditableCanvasView] convertContentToCanvasPreferences: ✅ Conversion complete")
     }
     
     @MainActor
@@ -683,6 +699,12 @@ struct EditableCanvasView: View {
                 }
                 
                 print("[EditableCanvasView] updateFoodNotes: ✅ Member update success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+                
+                // Refresh canvas union view from /family/food-notes/all so
+                // scroll cards (with member avatars) stay in sync.
+                Task {
+                    await loadFoodNotesFromBackend()
+                }
             } else {
                 print("[EditableCanvasView] updateFoodNotes: No selectedMemberId (Everyone). Using family-level endpoint.")
                 print("[EditableCanvasView] updateFoodNotes: Calling PUT /ingredicheck/family/food-notes with version=\(currentVersion)")
@@ -696,6 +718,11 @@ struct EditableCanvasView: View {
                 }
                 
                 print("[EditableCanvasView] updateFoodNotes: ✅ Family update success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+                
+                // Refresh canvas union view after family-level update.
+                Task {
+                    await loadFoodNotesFromBackend()
+                }
             }
         } catch let error as WebService.VersionMismatchError {
             // Handle version mismatch - backend provides currentNote with actual data
@@ -719,6 +746,10 @@ struct EditableCanvasView: View {
                         currentVersion = response.version
                     }
                     print("[EditableCanvasView] updateFoodNotes: ✅ Member retry success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+                    
+                    Task {
+                        await loadFoodNotesFromBackend()
+                    }
                 } else {
                     print("[EditableCanvasView] updateFoodNotes: Retrying family-level update with version=\(currentVersion)")
                     let response = try await webService.updateFoodNotes(content: content, version: currentVersion)
@@ -726,6 +757,10 @@ struct EditableCanvasView: View {
                         currentVersion = response.version
                     }
                     print("[EditableCanvasView] updateFoodNotes: ✅ Family retry success. New version=\(response.version), updatedAt=\(response.updatedAt)")
+                    
+                    Task {
+                        await loadFoodNotesFromBackend()
+                    }
                 }
             } catch {
                 print("[EditableCanvasView] updateFoodNotes: ❌ Failed on retry: \(error.localizedDescription)")
