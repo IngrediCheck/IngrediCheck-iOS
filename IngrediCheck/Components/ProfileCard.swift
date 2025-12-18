@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+	
 struct ProfileCard: View {
     @State var isProfileCompleted: Bool = false
     var body: some View {
