@@ -19,7 +19,8 @@ struct MainCanvasView: View {
     @State private var foodNotesStore: FoodNotesStore?
     @State private var cardScrollTarget: UUID? = nil
     @State private var tagBarScrollTarget: UUID? = nil
-    @State private var debounceTask: Task<Void, Never>? = nil
+    @State private var isLoadingMemberPreferences: Bool = false // Track when loading member preferences
+    @State private var previousSectionIndex: Int = 0 // Track previous section index to detect forward navigation
 	
 	init(flow: OnboardingFlowType) {
         self.flow = flow
@@ -64,18 +65,30 @@ struct MainCanvasView: View {
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
             
+            // Initialize previous section index
+            previousSectionIndex = store.currentSectionIndex
+            
             // Fetch and load food notes data when view appears
             // This loads the union view (Everyone + all members) for display
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
             }
 		}
-        .onDisappear {
-            // Cancel any pending debounce task when view disappears
-            debounceTask?.cancel()
-            debounceTask = nil
-        }
-		.onChange(of: store.currentSectionIndex) { _ in
+		.onChange(of: store.currentSectionIndex) { newIndex in
+            // Save preferences immediately when moving forward to next step
+            // This ensures preferences are persisted before navigation and prevents data loss
+            if newIndex > previousSectionIndex && !isLoadingMemberPreferences && !store.preferences.sections.isEmpty {
+                print("[MainCanvasView] Moving forward to section \(newIndex), saving preferences immediately before navigation")
+                
+                // Save immediately to ensure data is persisted
+                Task {
+                    await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
+                }
+            }
+            
+            // Update previous section index
+            previousSectionIndex = newIndex
+            
             scheduleScrollToCurrentSectionViews()
             syncBottomSheetWithCurrentSection()
 		}
@@ -83,23 +96,45 @@ struct MainCanvasView: View {
             // Update completion status whenever preferences change
             store.updateSectionCompletionStatus()
             
-            // Debounce API call - cancel previous task and start new one
-            debounceTask?.cancel()
-            debounceTask = Task {
-                do {
-                    // Wait 5 seconds
-                    try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
-                    
-                    // Check if task was cancelled
-                    try Task.checkCancellation()
-                    
-                    // Build content structure and call API
-                    await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
-                } catch {
-                    // Task was cancelled or sleep interrupted - ignore
-                    if !(error is CancellationError) {
-                        print("[MainCanvasView] Debounce task error: \(error)")
-                    }
+            // If we were loading member preferences, clear the loading flag now that preferences have updated
+            if isLoadingMemberPreferences {
+                print("[MainCanvasView] Preferences updated after member switch, clearing loading flag")
+                isLoadingMemberPreferences = false
+                // Don't save - this was a loading operation, not a user change
+                return
+            }
+            
+            // Don't save if preferences are empty (user hasn't made any selections yet)
+            guard !store.preferences.sections.isEmpty else {
+                print("[MainCanvasView] Skipping save - preferences are empty")
+                return
+            }
+            
+            // Call API immediately when preferences change
+            print("[MainCanvasView] Preferences changed, saving immediately")
+            Task {
+                // Double-check we're not loading and preferences aren't empty before saving
+                guard !isLoadingMemberPreferences, !store.preferences.sections.isEmpty else {
+                    print("[MainCanvasView] Skipping save - loading state or empty preferences")
+                    return
+                }
+                
+                // Build content structure and call API immediately
+                await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
+            }
+        }
+        .onChange(of: familyStore.selectedMemberId) { _ in
+            // When switching members, set loading flag
+            print("[MainCanvasView] Member switched, setting loading flag")
+            isLoadingMemberPreferences = true
+            
+            // Fallback: Reset loading flag after a delay in case preferences don't change
+            // (e.g., if switching to a member with the same preferences)
+            Task {
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                if isLoadingMemberPreferences {
+                    print("[MainCanvasView] Fallback: Clearing loading flag after timeout")
+                    isLoadingMemberPreferences = false
                 }
             }
         }

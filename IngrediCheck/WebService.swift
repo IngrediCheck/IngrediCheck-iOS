@@ -1143,6 +1143,21 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     
     // MARK: - Food Notes API
     
+    // Pretty-print helper for logging JSON responses in the console.
+    private func prettyPrintedJSON(from data: Data) -> String {
+        guard !data.isEmpty else { return "<empty body>" }
+        
+        if let jsonObject = try? JSONSerialization.jsonObject(with: data),
+           JSONSerialization.isValidJSONObject(jsonObject),
+           let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            return prettyString
+        }
+        
+        // Fallback to raw UTF-8 string if not valid JSON
+        return String(data: data, encoding: .utf8) ?? "<non-UTF8 body>"
+    }
+    
     struct FoodNotesResponse {
         let content: [String: Any]
         let version: Int
@@ -1172,6 +1187,8 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             .build()
         
         let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] fetchFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
@@ -1220,6 +1237,8 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             .build()
         
         let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] fetchFoodNotesAll: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
@@ -1293,26 +1312,35 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             .build()
         
         let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] updateFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             print("[WebService] updateFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
             
-            // Handle version mismatch (409 Conflict) - backend now returns currentNote in response
+            // Handle version mismatch (409 Conflict) - backend now returns currentNote in response.
+            // For family notes, currentNote may be null when there is no existing note yet.
             if httpResponse.statusCode == 409 {
-                if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let currentNoteDict = jsonObject["currentNote"] as? [String: Any],
-                   let currentVersion = currentNoteDict["version"] as? Int,
-                   let currentUpdatedAt = currentNoteDict["updatedAt"] as? String,
-                   let currentContent = currentNoteDict["content"] as? [String: Any] {
-                    let currentNote = FoodNotesResponse(
-                        content: currentContent,
-                        version: currentVersion,
-                        updatedAt: currentUpdatedAt
-                    )
-                    print("[WebService] updateFoodNotes: Version mismatch - current version: \(currentVersion), expected: \(version)")
-                    throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
+                if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let currentNoteDict = jsonObject["currentNote"] as? [String: Any],
+                       let currentVersion = currentNoteDict["version"] as? Int,
+                       let currentUpdatedAt = currentNoteDict["updatedAt"] as? String,
+                       let currentContent = currentNoteDict["content"] as? [String: Any] {
+                        let currentNote = FoodNotesResponse(
+                            content: currentContent,
+                            version: currentVersion,
+                            updatedAt: currentUpdatedAt
+                        )
+                        print("[WebService] updateFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
+                        throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
+                    } else {
+                        // currentNote is null or missing: treat this as "no existing note",
+                        // so retry once with version=0 to create the family note.
+                        print("[WebService] updateFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
+                        return try await updateFoodNotes(content: content, version: 0)
+                    }
                 }
             }
             
@@ -1347,6 +1375,8 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             .build()
         
         let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] fetchMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
@@ -1403,6 +1433,8 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             .build()
         
         let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] updateMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
