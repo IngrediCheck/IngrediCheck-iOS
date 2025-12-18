@@ -190,14 +190,28 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
     }
     
     // MARK: - Photo capture
-    func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+    /// Captures a still image from the active camera session.
+    /// - Parameters:
+    ///   - useFlash: When `true`, a photo flash will be used for this capture
+    ///              if the device supports it. When `false`, the capture
+    ///              happens without flash.
+    ///   - completion: Called on the main thread with the resulting image, or
+    ///                 `nil` if capture failed.
+    func capturePhoto(useFlash: Bool = false, completion: @escaping (UIImage?) -> Void) {
         sessionQueue.async {
             guard self.session.isRunning else {
                 DispatchQueue.main.async { completion(nil) }
                 return
             }
             self.photoCaptureCompletion = completion
+            
             let settings = AVCapturePhotoSettings()
+            // Configure one-shot flash behaviour separate from the continuous torch
+            // that is controlled by `FlashManager` in scanner mode.
+            if self.photoOutput.supportedFlashModes.contains(.on) {
+                settings.flashMode = useFlash ? .on : .off
+            }
+            
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }

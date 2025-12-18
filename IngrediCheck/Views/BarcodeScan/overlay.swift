@@ -242,24 +242,27 @@ struct Flashcapsul: View {
     @State private var isFlashon = false
     /// When `true`, show the system torch icon; when `false`, show the custom flash asset.
     var isScannerMode: Bool
+    /// Optional callback used in photo mode so the parent can decide what to do
+    /// with the armed flash state when a picture is taken.
+    var onTogglePhotoFlash: ((Bool) -> Void)? = nil
     
     var body: some View {
         HStack(spacing: 4) {
             if isScannerMode {
                 // Scanner mode: show torch icon only
-                ZStack{
+                ZStack {
                     Image(systemName: isFlashon ? "flashlight.on.fill" : "flashlight.off.fill")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 20, height: 20)
-                    
                         .foregroundColor(.white)
-                }.frame(width: 33, height: 33)
-                    .background(
-                        .thinMaterial.opacity(0.4), in: .capsule
-                    )
+                }
+                .frame(width: 33, height: 33)
+                .background(
+                    .thinMaterial.opacity(0.4), in: .capsule
+                )
             } else {
-                // Photo mode: show custom flash asset + label
+                // Photo mode: show custom flash asset
                 ZStack {
                     Circle()
                         .fill(.thinMaterial.opacity(0.4))
@@ -269,22 +272,27 @@ struct Flashcapsul: View {
                         .frame(width: 28, height: 24)
                         .foregroundColor(.white)
                 }
-            
             }
         }
-        
-//        .padding(7.5)
-        
-        
         .onTapGesture {
             withAnimation(.easeInOut) {
-                FlashManager.shared.toggleFlash { on in
-                    self.isFlashon = on
+                if isScannerMode {
+                    // In live scanner mode, toggle the device torch immediately.
+                    FlashManager.shared.toggleFlash { on in
+                        self.isFlashon = on
+                    }
+                } else {
+                    // In photo capture mode, only arm/disarm flash for the next shot.
+                    isFlashon.toggle()
+                    onTogglePhotoFlash?(isFlashon)
                 }
             }
         }
         .onAppear {
-            isFlashon = FlashManager.shared.isFlashOn()
+            // Keep UI in sync with the current hardware state for scanner mode.
+            if isScannerMode {
+                isFlashon = FlashManager.shared.isFlashOn()
+            }
         }
     }
 }
