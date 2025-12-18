@@ -96,11 +96,11 @@ struct MainCanvasView: View {
             // Update completion status whenever preferences change
             store.updateSectionCompletionStatus()
             
-            // If we were loading member preferences, clear the loading flag now that preferences have updated
+            // If we were loading member/family preferences, this change came from a backend load.
+            // Clear the flag and DO NOT save.
             if isLoadingMemberPreferences {
-                print("[MainCanvasView] Preferences updated after member switch, clearing loading flag")
+                print("[MainCanvasView] Preferences updated after member switch, clearing loading flag (no save)")
                 isLoadingMemberPreferences = false
-                // Don't save - this was a loading operation, not a user change
                 return
             }
             
@@ -124,19 +124,10 @@ struct MainCanvasView: View {
             }
         }
         .onChange(of: familyStore.selectedMemberId) { _ in
-            // When switching members, set loading flag
+            // When switching members, mark that the next preferences change is from a backend load.
+            // MainCanvasView should NOT save in response to that change.
             print("[MainCanvasView] Member switched, setting loading flag")
             isLoadingMemberPreferences = true
-            
-            // Fallback: Reset loading flag after a delay in case preferences don't change
-            // (e.g., if switching to a member with the same preferences)
-            Task {
-                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                if isLoadingMemberPreferences {
-                    print("[MainCanvasView] Fallback: Clearing loading flag after timeout")
-                    isLoadingMemberPreferences = false
-                }
-            }
         }
         .navigationBarBackButtonHidden(true)
     }
