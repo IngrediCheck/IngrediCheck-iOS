@@ -989,13 +989,18 @@ struct AlreadyHaveAnAccount: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 12) {
-                Text("Already have an account?")
+            VStack(spacing: 0) {
+                Text("Are you an existing user?")
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
+                    .padding(.bottom ,12)
 
-                Text("We'll help you log in or start fresh.")
+                Text("Have you used IngrediCheck earlier? If yes, continue. ")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+                Text("If not, start new.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -1006,7 +1011,7 @@ struct AlreadyHaveAnAccount: View {
                 Button {
                     yesPressed()
                 } label: {
-                    Text("Yes, I have")
+                    Text("Yes, continue")
                         .font(NunitoFont.semiBold.size(16))
                         .foregroundStyle(.grayScale110)
                         .frame(height: 52)
@@ -1021,16 +1026,16 @@ struct AlreadyHaveAnAccount: View {
                 Button {
                     noPressed()
                 } label: {
-                    GreenCapsule(title: "No")
+                    GreenCapsule(title: "No, start new")
                 }
                 
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 32)
 
-            Text("You can switch anytime before continuing.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale120)
-                .multilineTextAlignment(.center)
+//            Text("You can switch anytime before continuing.")
+//                .font(ManropeFont.regular.size(12))
+//                .foregroundStyle(.grayScale120)
+//                .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1288,6 +1293,7 @@ struct AllSetToJoinYourFamily: View {
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
+                    .padding(.bottom , 12)
 
                 Text("Welcome to the Patel Family! Your ingredient lists and preferences will now sync automatically.")
                     .font(ManropeFont.medium.size(12))
