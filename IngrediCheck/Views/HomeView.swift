@@ -372,7 +372,7 @@ struct HomeView: View {
                                             collapseReferenceOffset = min(collapseReferenceOffset, currentOffset)
                                         }
                                     } else if delta > threshold {
-                                        // Only allow expansion when:
+                                        // Only allow expansion when  :
                                         // - we're safely away from the very top, AND
                                         // - the user has moved a meaningful distance up from the
                                         //   deepest offset reached since collapsing (to avoid
