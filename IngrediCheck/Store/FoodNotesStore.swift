@@ -512,10 +512,22 @@ final class FoodNotesStore {
         let memberKey = selectedMemberId?.uuidString
         
         var contentToUpdate = newContent
-        var versionToUpdate = isMemberUpdate ? (memberVersions[memberKey!] ?? 0) : familyVersion
+        var versionToUpdate = isMemberUpdate ? (memberVersions[memberKey ?? ""] ?? 0) : familyVersion
         
-        // For family updates, proactively fetch and merge to avoid overwriting other sections
-        if !isMemberUpdate {
+        // Proactively fetch and merge to avoid overwriting other sections
+        if let memberId = selectedMemberId?.uuidString {
+            print("👤 [FoodNotesStore] updateFoodNotes: Member update detected, fetching latest data to merge")
+            if let latestMemberNote = try? await webService.fetchMemberFoodNotes(memberId: memberId) {
+                contentToUpdate = mergedContent(existingContent: latestMemberNote.content, newContent: newContent)
+                versionToUpdate = latestMemberNote.version
+                memberVersions[memberId] = versionToUpdate // Update local version tracker
+                print("   → Merged with latest member data (v\(versionToUpdate))")
+            } else {
+                print("   → No existing member data found or fetch failed, using new content (v0)")
+                versionToUpdate = 0
+                memberVersions[memberId] = 0
+            }
+        } else {
             print("👨‍👩‍👧‍👦 [FoodNotesStore] updateFoodNotes: Family update detected, fetching latest data to merge")
             if let latestFamilyNote = try? await webService.fetchFoodNotes() {
                 contentToUpdate = mergedContent(existingContent: latestFamilyNote.content, newContent: newContent)
