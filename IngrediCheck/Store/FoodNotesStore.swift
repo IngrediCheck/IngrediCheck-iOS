@@ -82,8 +82,9 @@ final class FoodNotesStore {
                 // Process member notes - these are member-specific
                 // Merge member content into unified content (combining items from all members)
                 for (memberId, memberNote) in response.memberNotes {
+                    let normalizedMemberId = memberId.lowercased()
                     // Track per-member versions for optimistic updates
-                    memberVersions[memberId] = memberNote.version
+                    memberVersions[normalizedMemberId] = memberNote.version
                     for (stepId, stepContent) in memberNote.content {
                         if let step = onboardingStore.dynamicSteps.first(where: { $0.id == stepId }) {
                             let sectionName = step.header.name
@@ -96,7 +97,7 @@ final class FoodNotesStore {
                                 stepId: stepId,
                                 stepContent: stepContent,
                                 sectionName: sectionName,
-                                memberId: memberId,
+                                memberId: normalizedMemberId,
                                 unifiedContent: &unifiedContent,
                                 associations: &associations
                             )
@@ -109,19 +110,7 @@ final class FoodNotesStore {
                 // member is currently selected in the sheet.
                 canvasPreferences = convertContentToPreferences(content: unifiedContent, dynamicSteps: onboardingStore.dynamicSteps)
                 
-                // If an item has both "Everyone" and specific members associated,
-                // prefer the specific members and drop the "Everyone" tag so
-                // the UI shows the correct per-member icons.
-                for (sectionName, items) in associations {
-                    for (itemName, members) in items {
-                        let specificMembers = members.filter { $0 != "Everyone" }
-                        if !specificMembers.isEmpty {
-                            associations[sectionName]?[itemName] = specificMembers
-                        }
-                    }
-                }
-                
-                // Store associations after cleanup
+                // Store associations
                 itemMemberAssociations = associations
                 
                 print("[FoodNotesStore] loadFoodNotesAll: ✅ Successfully loaded and applied food notes data")
@@ -226,7 +215,7 @@ final class FoodNotesStore {
     ///
     /// This preserves other members' selections and keeps the union view stable while edits happen.
     func applyLocalPreferencesOptimistic(selectedMemberId: UUID?) {
-        let memberKey = selectedMemberId?.uuidString ?? "Everyone"
+        let memberKey = selectedMemberId?.uuidString.lowercased() ?? "Everyone"
         print("[FoodNotesStore] applyLocalPreferencesOptimistic: Applying local preferences for memberKey=\(memberKey)")
         
         // Work on mutable copies so we can reason clearly, then assign back atomically.
@@ -481,7 +470,7 @@ final class FoodNotesStore {
     func updateFoodNotes(selectedMemberId: UUID?, changedSections: Set<String>) async {
         // STEP 1: Ensure preferences come from the correct note before building content,
         // but avoid clobbering fresh in-memory edits for the same owner.
-        if let memberId = selectedMemberId?.uuidString {
+        if let memberId = selectedMemberId?.uuidString.lowercased() {
             // Member-specific save
             if onboardingStore.preferences.sections.isEmpty || (currentPreferencesOwnerKey != memberId && currentPreferencesOwnerKey != nil) {
                 // Either no local state yet, or local state belongs to a different owner (e.g. Everyone or another member)
@@ -509,13 +498,13 @@ final class FoodNotesStore {
         
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         let isMemberUpdate = (selectedMemberId != nil)
-        let memberKey = selectedMemberId?.uuidString
+        let memberKey = selectedMemberId?.uuidString.lowercased()
         
         var contentToUpdate = newContent
         var versionToUpdate = isMemberUpdate ? (memberVersions[memberKey ?? ""] ?? 0) : familyVersion
         
         // Proactively fetch and merge to avoid overwriting other sections
-        if let memberId = selectedMemberId?.uuidString {
+        if let memberId = selectedMemberId?.uuidString.lowercased() {
             print("👤 [FoodNotesStore] updateFoodNotes: Member update detected, fetching latest data to merge")
             if let latestMemberNote = try? await webService.fetchMemberFoodNotes(memberId: memberId) {
                 contentToUpdate = mergedContent(existingContent: latestMemberNote.content, newContent: newContent)
