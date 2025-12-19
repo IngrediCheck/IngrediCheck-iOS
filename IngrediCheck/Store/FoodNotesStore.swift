@@ -16,8 +16,15 @@ final class FoodNotesStore {
     
     // MARK: - State
     
-    /// Current version for optimistic updates (family-level or member-specific)
-    var currentVersion: Int = 0
+    /// Current version for family-level optimistic updates
+    private var familyVersion: Int = 0
+    
+    /// Current versions for member-specific optimistic updates, keyed by memberId (UUID string)
+    private var memberVersions: [String: Int] = [:]
+    
+    /// Tracks which entity last populated `onboardingStore.preferences`.
+    /// "Everyone" for family-level, or a member UUID string for member-level.
+    private var currentPreferencesOwnerKey: String? = nil
     
     /// Union view preferences used for canvas/background cards (Everyone + all members)
     /// This does not change when switching members in the edit sheet.
@@ -55,8 +62,7 @@ final class FoodNotesStore {
                 
                 // Process family note (if exists) - these are "Everyone" level
                 if let familyNote = response.familyNote {
-                    currentVersion = familyNote.version
-                    
+                    familyVersion = familyNote.version
                     // Merge family note content into unified content
                     for (stepId, stepContent) in familyNote.content {
                         unifiedContent[stepId] = stepContent
@@ -76,11 +82,8 @@ final class FoodNotesStore {
                 // Process member notes - these are member-specific
                 // Merge member content into unified content (combining items from all members)
                 for (memberId, memberNote) in response.memberNotes {
-                    // Use the highest version from member notes if no family note
-                    if response.familyNote == nil {
-                        currentVersion = max(currentVersion, memberNote.version)
-                    }
-                    
+                    // Track per-member versions for optimistic updates
+                    memberVersions[memberId] = memberNote.version
                     for (stepId, stepContent) in memberNote.content {
                         if let step = onboardingStore.dynamicSteps.first(where: { $0.id == stepId }) {
                             let sectionName = step.header.name
@@ -124,23 +127,27 @@ final class FoodNotesStore {
                 print("[FoodNotesStore] loadFoodNotesAll: ✅ Successfully loaded and applied food notes data")
             } else {
                 // No food notes exist yet, start with version 0
-                currentVersion = 0
+                familyVersion = 0
+                memberVersions = [:]
                 itemMemberAssociations = [:]
                 print("[FoodNotesStore] loadFoodNotesAll: No existing food notes found, starting with version 0")
             }
         } catch let error as NetworkError {
-            // If GET endpoint doesn't exist (404) or other errors, start with version 0
+                // If GET endpoint doesn't exist (404) or other errors, start with version 0
             if case .notFound = error {
-                currentVersion = 0
+                familyVersion = 0
+                memberVersions = [:]
                 itemMemberAssociations = [:]
                 print("[FoodNotesStore] loadFoodNotesAll: GET endpoint not available (404), will detect version on first update")
             } else {
-                currentVersion = 0
+                familyVersion = 0
+                memberVersions = [:]
                 itemMemberAssociations = [:]
                 print("[FoodNotesStore] loadFoodNotesAll: ❌ Failed to load food notes: \(error)")
             }
         } catch {
-            currentVersion = 0
+            familyVersion = 0
+            memberVersions = [:]
             itemMemberAssociations = [:]
             print("[FoodNotesStore] loadFoodNotesAll: ❌ Failed to load food notes: \(error.localizedDescription)")
         }
@@ -160,12 +167,14 @@ final class FoodNotesStore {
                 let preferences = convertContentToPreferences(content: response.content, dynamicSteps: onboardingStore.dynamicSteps)
                 onboardingStore.preferences = preferences
                 onboardingStore.updateSectionCompletionStatus()
+                currentPreferencesOwnerKey = memberId
                 
                 print("[FoodNotesStore] loadFoodNotesForMember: ✅ Applied member-specific preferences")
             } else {
                 print("[FoodNotesStore] loadFoodNotesForMember: No member food notes found, clearing preferences")
                 onboardingStore.preferences = Preferences()
                 onboardingStore.updateSectionCompletionStatus()
+                currentPreferencesOwnerKey = memberId
             }
         } catch {
             print("[FoodNotesStore] loadFoodNotesForMember: ❌ Failed to load food notes: \(error.localizedDescription)")
@@ -186,12 +195,16 @@ final class FoodNotesStore {
                 let preferences = convertContentToPreferences(content: response.content, dynamicSteps: onboardingStore.dynamicSteps)
                 onboardingStore.preferences = preferences
                 onboardingStore.updateSectionCompletionStatus()
+                currentPreferencesOwnerKey = "Everyone"
+                familyVersion = response.version
                 
                 print("[FoodNotesStore] loadFoodNotesForFamily: ✅ Applied family-level preferences")
             } else {
                 print("[FoodNotesStore] loadFoodNotesForFamily: No family food notes found, clearing preferences")
                 onboardingStore.preferences = Preferences()
                 onboardingStore.updateSectionCompletionStatus()
+                currentPreferencesOwnerKey = "Everyone"
+                familyVersion = 0
             }
         } catch {
             print("[FoodNotesStore] loadFoodNotesForFamily: ❌ Failed to load food notes: \(error.localizedDescription)")
@@ -199,6 +212,214 @@ final class FoodNotesStore {
     }
     
     // MARK: - Updating Food Notes
+    
+    /// Applies the current in-memory preferences for the active selection (Everyone or a member)
+    /// to the canvas union view **optimistically**, without waiting for the backend.
+    ///
+    /// - If `selectedMemberId == nil`, we treat this as the special "Everyone" member key.
+    /// - For each section:
+    ///   - We derive the server's current selection for that member from `itemMemberAssociations`.
+    ///   - We derive the local selection from `onboardingStore.preferences`.
+    ///   - We compute added/removed items and update:
+    ///       - `itemMemberAssociations[section][item]`
+    ///       - `canvasPreferences.sections[section]`
+    ///
+    /// This preserves other members' selections and keeps the union view stable while edits happen.
+    func applyLocalPreferencesOptimistic(selectedMemberId: UUID?) {
+        let memberKey = selectedMemberId?.uuidString ?? "Everyone"
+        print("[FoodNotesStore] applyLocalPreferencesOptimistic: Applying local preferences for memberKey=\(memberKey)")
+        
+        // Work on mutable copies so we can reason clearly, then assign back atomically.
+        var newCanvas = canvasPreferences
+        var newAssociations = itemMemberAssociations
+        
+        for step in onboardingStore.dynamicSteps {
+            let sectionName = step.header.name
+            
+            // Local selection for this member in this section (may be nil)
+            switch onboardingStore.preferences.sections[sectionName] {
+            case .list(let localItems):
+                // Current local items for this member
+                let localSet = Set(localItems)
+                
+                // Server-selected items for this member: from associations where this memberKey is present
+                let serverItemsForSection = newAssociations[sectionName] ?? [:]
+                let serverSelected = Set(
+                    serverItemsForSection.compactMap { (itemName, members) in
+                        members.contains(memberKey) ? itemName : nil
+                    }
+                )
+                
+                let toAdd = localSet.subtracting(serverSelected)
+                let toRemove = serverSelected.subtracting(localSet)
+                
+                // Handle removals
+                for item in toRemove {
+                    // Remove this member from associations
+                    if var members = newAssociations[sectionName]?[item] {
+                        members.removeAll { $0 == memberKey }
+                        if members.isEmpty {
+                            // No members left for this item; remove it entirely from associations and canvas
+                            newAssociations[sectionName]?[item] = nil
+                            
+                            if case .list(var existingItems) = newCanvas.sections[sectionName] {
+                                existingItems.removeAll { $0 == item }
+                                if existingItems.isEmpty {
+                                    newCanvas.sections[sectionName] = nil
+                                } else {
+                                    newCanvas.sections[sectionName] = .list(existingItems)
+                                }
+                            }
+                        } else {
+                            newAssociations[sectionName]?[item] = members
+                        }
+                    }
+                }
+                
+                // Handle additions
+                for item in toAdd {
+                    // Ensure the item exists in associations
+                    if newAssociations[sectionName] == nil {
+                        newAssociations[sectionName] = [:]
+                    }
+                    if newAssociations[sectionName]?[item] == nil {
+                        newAssociations[sectionName]?[item] = []
+                    }
+                    if !newAssociations[sectionName]![item]!.contains(memberKey) {
+                        newAssociations[sectionName]![item]!.append(memberKey)
+                    }
+                    
+                    // Ensure the item exists in canvas list
+                    if case .list(var existingItems) = newCanvas.sections[sectionName] {
+                        if !existingItems.contains(item) {
+                            existingItems.append(item)
+                            newCanvas.sections[sectionName] = .list(existingItems)
+                        }
+                    } else if newCanvas.sections[sectionName] == nil {
+                        newCanvas.sections[sectionName] = .list([item])
+                    }
+                }
+                
+            case .nested(let localNested):
+                // Nested sections (type-2/type-3)
+                
+                // Build serverSelected as a map nestedKey -> Set(items where memberKey present)
+                var serverSelectedNested: [String: Set<String>] = [:]
+                let serverItemsForSection = newAssociations[sectionName] ?? [:]
+                
+                // To compute serverSelectedNested we need to know, for each nested group,
+                // which items belong there. We can derive from canvasPreferences structure.
+                if case .nested(let existingNested) = newCanvas.sections[sectionName] {
+                    for (nestedKey, items) in existingNested {
+                        let selectedItemsForMember = items.filter { itemName in
+                            serverItemsForSection[itemName]?.contains(memberKey) == true
+                        }
+                        if !selectedItemsForMember.isEmpty {
+                            serverSelectedNested[nestedKey] = Set(selectedItemsForMember)
+                        }
+                    }
+                }
+                
+                // Process each nested key in localNested
+                for (nestedKey, localItems) in localNested {
+                    let localSet = Set(localItems)
+                    let serverSet = serverSelectedNested[nestedKey] ?? []
+                    
+                    let toAdd = localSet.subtracting(serverSet)
+                    let toRemove = serverSet.subtracting(localSet)
+                    
+                    // Removals
+                    for item in toRemove {
+                        if var members = newAssociations[sectionName]?[item] {
+                            members.removeAll { $0 == memberKey }
+                            if members.isEmpty {
+                                newAssociations[sectionName]?[item] = nil
+                                
+                                if case .nested(var existingNested) = newCanvas.sections[sectionName] {
+                                    var items = existingNested[nestedKey] ?? []
+                                    items.removeAll { $0 == item }
+                                    if items.isEmpty {
+                                        existingNested[nestedKey] = nil
+                                    } else {
+                                        existingNested[nestedKey] = items
+                                    }
+                                    
+                                    // If after removal the whole nested dict is empty, clear section
+                                    if existingNested.values.allSatisfy({ $0.isEmpty ?? true }) {
+                                        newCanvas.sections[sectionName] = nil
+                                    } else {
+                                        newCanvas.sections[sectionName] = .nested(existingNested.compactMapValues { $0 })
+                                    }
+                                }
+                            } else {
+                                newAssociations[sectionName]?[item] = members
+                            }
+                        }
+                    }
+                    
+                    // Additions
+                    for item in toAdd {
+                        if newAssociations[sectionName] == nil {
+                            newAssociations[sectionName] = [:]
+                        }
+                        if newAssociations[sectionName]?[item] == nil {
+                            newAssociations[sectionName]?[item] = []
+                        }
+                        if !newAssociations[sectionName]![item]!.contains(memberKey) {
+                            newAssociations[sectionName]![item]!.append(memberKey)
+                        }
+                        
+                        if case .nested(var existingNested) = newCanvas.sections[sectionName] {
+                            var items = existingNested[nestedKey] ?? []
+                            if !items.contains(item) {
+                                items.append(item)
+                                existingNested[nestedKey] = items
+                            }
+                            newCanvas.sections[sectionName] = .nested(existingNested)
+                        } else if newCanvas.sections[sectionName] == nil {
+                            newCanvas.sections[sectionName] = .nested([nestedKey: [item]])
+                        }
+                    }
+                }
+                
+            case nil:
+                // No local selection for this section: remove this member's contribution
+                let serverItemsForSection = newAssociations[sectionName] ?? [:]
+                let serverSelected = serverItemsForSection.filter { $0.value.contains(memberKey) }.map { $0.key }
+                
+                for item in serverSelected {
+                    if var members = newAssociations[sectionName]?[item] {
+                        members.removeAll { $0 == memberKey }
+                        if members.isEmpty {
+                            newAssociations[sectionName]?[item] = nil
+                            
+                            switch newCanvas.sections[sectionName] {
+                            case .list(var items):
+                                items.removeAll { $0 == item }
+                                newCanvas.sections[sectionName] = items.isEmpty ? nil : .list(items)
+                            case .nested(var nestedDict):
+                                for (nestedKey, var items) in nestedDict {
+                                    items.removeAll { $0 == item }
+                                    nestedDict[nestedKey] = items
+                                }
+                                // Clean up any empty nested arrays
+                                let cleaned = nestedDict.compactMapValues { $0.isEmpty ? nil : $0 }
+                                newCanvas.sections[sectionName] = cleaned.isEmpty ? nil : .nested(cleaned)
+                            case nil:
+                                break
+                            }
+                        } else {
+                            newAssociations[sectionName]?[item] = members
+                        }
+                    }
+                }
+            }
+        }
+        
+        canvasPreferences = newCanvas
+        itemMemberAssociations = newAssociations
+        print("[FoodNotesStore] applyLocalPreferencesOptimistic: Updated canvasPreferences & itemMemberAssociations for memberKey=\(memberKey)")
+    }
     
     /// Merges server-side content with new user-selected content.
     /// Strategy: for any step present in newContent, replace that step entirely on the server;
@@ -245,19 +466,73 @@ final class FoodNotesStore {
     }
     
     /// Updates food notes (family-level or member-specific) based on selectedMemberId.
+    ///
+    /// `changedSections` is a set of section names (e.g. "Allergies", "Intolerances") that were
+    /// actually modified by the user for this save. Only those sections will be sent to the backend;
+    /// all other sections are preserved from the server's current note via merge.
+    ///
     /// Flow:
-    /// 1. Build content from local preferences and optimistically PUT with currentVersion.
-    /// 2. If backend returns version_mismatch (409), merge currentNote.content with new content,
-    ///    bump version to currentNote.version, and retry PUT once with merged content.
-    func updateFoodNotes(selectedMemberId: UUID?) async {
-        // Build content structure dynamically from preferences
-        let newContent = buildContentFromPreferences(preferences: onboardingStore.preferences, dynamicSteps: onboardingStore.dynamicSteps)
+    /// 1. Ensure `onboardingStore.preferences` reflects the correct source (family vs member)
+    ///    based on who currently "owns" the in-memory preferences.
+    /// 2. Build content from local preferences, **filtered to `changedSections` only**, and
+    ///    optimistically PUT with the appropriate version.
+    /// 3. If backend returns version_mismatch (409), merge currentNote.content with filtered
+    ///    new content, bump version to currentNote.version, and retry PUT once with merged content.
+    func updateFoodNotes(selectedMemberId: UUID?, changedSections: Set<String>) async {
+        // STEP 1: Ensure preferences come from the correct note before building content,
+        // but avoid clobbering fresh in-memory edits for the same owner.
+        if let memberId = selectedMemberId?.uuidString {
+            // Member-specific save
+            if onboardingStore.preferences.sections.isEmpty || (currentPreferencesOwnerKey != memberId && currentPreferencesOwnerKey != nil) {
+                // Either no local state yet, or local state belongs to a different owner (e.g. Everyone or another member)
+                await loadFoodNotesForMember(memberId: memberId)
+            }
+        } else {
+            // Family-level save ("Everyone")
+            let familyKey = "Everyone"
+            if onboardingStore.preferences.sections.isEmpty || (currentPreferencesOwnerKey != familyKey && currentPreferencesOwnerKey != nil) {
+                // Either no local state yet, or local state belongs to a different owner (some member)
+                await loadFoodNotesForFamily()
+            }
+        }
+        
+        // STEP 2: Build content structure dynamically from preferences
+        // STEP 2: Build content structure dynamically from preferences, but only
+        // for the sections that actually changed in this interaction.
+        let filteredSteps = onboardingStore.dynamicSteps.filter { step in
+            changedSections.contains(step.header.name)
+        }
+        let newContent = buildContentFromPreferences(
+            preferences: onboardingStore.preferences,
+            dynamicSteps: filteredSteps
+        )
         
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        let isMemberUpdate = (selectedMemberId != nil)
+        let memberKey = selectedMemberId?.uuidString
+        
+        var contentToUpdate = newContent
+        var versionToUpdate = isMemberUpdate ? (memberVersions[memberKey!] ?? 0) : familyVersion
+        
+        // For family updates, proactively fetch and merge to avoid overwriting other sections
+        if !isMemberUpdate {
+            print("👨‍👩‍👧‍👦 [FoodNotesStore] updateFoodNotes: Family update detected, fetching latest data to merge")
+            if let latestFamilyNote = try? await webService.fetchFoodNotes() {
+                contentToUpdate = mergedContent(existingContent: latestFamilyNote.content, newContent: newContent)
+                versionToUpdate = latestFamilyNote.version
+                familyVersion = versionToUpdate // Update local version tracker
+                print("   → Merged with latest family data (v\(versionToUpdate))")
+            } else {
+                print("   → No existing family data found or fetch failed, using new content (v0)")
+                versionToUpdate = 0
+                familyVersion = 0
+            }
+        }
+        
         print("💾 [FoodNotesStore] updateFoodNotes: Starting update process")
-        print("   → New content keys: \(Array(newContent.keys))")
-        print("   → Selected member: \(selectedMemberId?.uuidString ?? "Everyone (family-level)")")
-        print("   → Current optimistic version: \(currentVersion)")
+        print("   → New content keys: \(Array(contentToUpdate.keys))")
+        print("   → Selected member: \(memberKey ?? "Everyone (family-level)")")
+        print("   → Current optimistic version: \(versionToUpdate)")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         // Helper to send a PUT with given content and version
@@ -295,9 +570,16 @@ final class FoodNotesStore {
         }
         
         do {
-            // 1) Optimistic update with local content and currentVersion
-            let initialResponse = try await sendUpdate(content: newContent, version: currentVersion)
-            currentVersion = initialResponse.version
+            // 1) Optimistic update with local content and the appropriate version
+            let initialResponse = try await sendUpdate(content: contentToUpdate, version: versionToUpdate)
+            
+            // Update version trackers
+            if let memberKey {
+                memberVersions[memberKey] = initialResponse.version
+            } else {
+                familyVersion = initialResponse.version
+            }
+            
             print("✅ [FoodNotesStore] updateFoodNotes: Optimistic update success")
             print("   → New version: \(initialResponse.version)")
             print("   → Updated at: \(initialResponse.updatedAt)")
@@ -317,13 +599,24 @@ final class FoodNotesStore {
             let serverContent = error.currentNote.content
             let merged = mergedContent(existingContent: serverContent, newContent: newContent)
             
-            currentVersion = error.currentNote.version
+            // Refresh appropriate version tracker from server
+            let retryVersion = error.currentNote.version
+            if let memberKey {
+                memberVersions[memberKey] = retryVersion
+            } else {
+                familyVersion = retryVersion
+            }
+            
             print("🔄 [FoodNotesStore] updateFoodNotes: Retrying with merged content and server version")
-            print("   → Retry version: \(currentVersion)")
+            print("   → Retry version: \(retryVersion)")
             
             do {
-                let retryResponse = try await sendUpdate(content: merged, version: currentVersion)
-                currentVersion = retryResponse.version
+                let retryResponse = try await sendUpdate(content: merged, version: retryVersion)
+                if let memberKey {
+                    memberVersions[memberKey] = retryResponse.version
+                } else {
+                    familyVersion = retryResponse.version
+                }
                 print("✅ [FoodNotesStore] updateFoodNotes: Retry success after merge")
                 print("   → New version: \(retryResponse.version)")
                 print("   → Updated at: \(retryResponse.updatedAt)")
