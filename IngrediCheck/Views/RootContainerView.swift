@@ -61,6 +61,17 @@ struct RootContainerView: View {
             //     coordinator.showCanvas(.home)
             // }
         }
+        // Whenever authentication completes (including first-time login or
+        // upgrading a guest account), refresh the family from the backend so
+        // the home screen immediately reflects the latest household state
+        // without requiring an app restart.
+        .onChange(of: authController.signInState) { _, newValue in
+            if newValue == .signedIn {
+                Task {
+                    await familyStore.loadCurrentFamily()
+                }
+            }
+        }
     }
 
     @ViewBuilder

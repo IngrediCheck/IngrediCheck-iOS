@@ -149,45 +149,62 @@ private enum AuthFlowMode {
         }
     }
     
-    /// Primary provider inferred from Supabase session.
-    ///
-    /// We prefer `user.identities` (which reflects all linked providers) and
-    /// fall back to `appMetadata["provider"]` when identities are missing.
-    /// This avoids stale values where an Apple-created account later links
-    /// Google but `appMetadata["provider"]` still reports `"apple"`.
-    @MainActor private var currentProvider: String? {
-        if let identities = session?.user.identities,
-           let last = identities.last {
-            return last.provider
-        }
-        
-        if let provider = session?.user.appMetadata["provider"] as? String {
-            return provider
-        }
-        
-        return nil
-    }
-    
     @MainActor var signedInWithApple: Bool {
-        currentProvider == "apple"
+        guard let session = session else { return false }
+        // Check identities first
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider.lowercased() == "apple" }) {
+                return true
+            }
+        }
+        // Fallback to appMetadata
+        if let provider = session.user.appMetadata["provider"] as? String,
+           provider.lowercased() == "apple" {
+            return true
+        }
+        return false
     }
     
     @MainActor var signedInWithGoogle: Bool {
-        currentProvider == "google"
+        guard let session = session else { return false }
+        // Check identities first
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider.lowercased() == "google" }) {
+                return true
+            }
+        }
+        // Fallback to appMetadata
+        if let provider = session.user.appMetadata["provider"] as? String,
+           provider.lowercased() == "google" {
+            return true
+        }
+        return false
     }
     
     @MainActor var signedInAsGuest: Bool {
-        if let provider = currentProvider {
+        guard let session = session else { return false }
+        
+        // If we have an explicit anonymous identity
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider == "anonymous" }) {
+                return true
+            }
+        }
+        
+        // If appMetadata says anonymous (or email for legacy guest)
+        if let provider = session.user.appMetadata["provider"] as? String {
             if provider == "email" || provider == "anonymous" {
                 return true
             }
         }
         
-        if self.session?.user.isAnonymous == true {
+        // Specific flag on user object
+        if session.user.isAnonymous == true {
             return true
         }
         
-        if let email = self.session?.user.email {
+        // Fallback: check email pattern
+        if let email = session.user.email {
             return email.hasPrefix("anon-") && email.hasSuffix("@example.com")
         }
         
@@ -222,6 +239,11 @@ private enum AuthFlowMode {
         
         if signedInWithApple {
             return ("applelogo", "Signed in with Apple")
+        }
+        
+        // Fallback for valid non-guest sessions where provider is missing
+        if session != nil && !signedInAsGuest {
+             return ("person.circle", "Signed in")
         }
         
         return nil

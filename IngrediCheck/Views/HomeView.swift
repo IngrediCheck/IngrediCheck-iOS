@@ -162,7 +162,7 @@ struct HomeView: View {
 
                         Spacer()
 
-                        ProfileCard(isProfileCompleted: false)
+                        ProfileCard(isProfileCompleted: true)
                             .onTapGesture {
                                 isSettingsPresented = true
                             }
@@ -349,8 +349,9 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 20)
 
-                    // Recent Scans list
-                    if let historyItems = appState.listsTabState.historyItems {
+                    // Recent Scans list / empty state
+                    if let historyItems = appState.listsTabState.historyItems,
+                       !historyItems.isEmpty {
                         let items = Array(historyItems.prefix(5))
 
                         VStack(spacing: 0) {
@@ -383,10 +384,24 @@ struct HomeView: View {
                                 }
                             }
                         }
+                    } else {
+                        VStack(spacing: 12) {
+                            Image("blackroboicon")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120, height: 120)
+                            Text("Ooops, No scans yet!")
+                                .font(NunitoFont.semiBold.size(16))
+                                .foregroundStyle(.grayScale100)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top , 8)
+                        .padding(.bottom , 129)
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 90)
+                .padding(.bottom , 30)
                 .navigationBarBackButtonHidden(true)
                 // ← Attach GeometryReader here so it measures inside the ScrollView's coordinate space
                 .background(
@@ -430,7 +445,23 @@ struct HomeView: View {
                     }
                 )
             }
+            .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
+            .overlay(
+                LinearGradient(
+                    colors: [
+                    
+                        Color.white.opacity(0),
+                       Color(hex: "#FCFCFE"),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 132)
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false),
+                alignment: .bottom
+            ).offset( y: 30)
             .overlay(
                 TabBar(isExpanded: $isTabBarExpanded),
                 alignment: .bottom
@@ -458,7 +489,7 @@ struct HomeView: View {
                 .presentationDetents([chatSmallDetent, .medium, .large],
                                      selection: $selectedChatDetent)
                 .presentationDragIndicator(.visible)
-            }
+			            }
 
             // ------------ PRODUCT DETAIL ------------
             .fullScreenCover(item: $activeProductDetail) { detail in

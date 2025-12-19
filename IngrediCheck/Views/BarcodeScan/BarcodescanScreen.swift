@@ -59,6 +59,7 @@ struct CameraScreen: View {
     @State private var selectedMatchStatus: DTO.ProductRecommendation? = nil
     @State private var selectedIngredientRecommendations: [DTO.IngredientRecommendation]? = nil
     @State private var isProductDetailPresented: Bool = false
+    @State private var photoFlashEnabled: Bool = false
     
     private func updateToastState() {
         // When in photo mode, show a dedicated guidance toast
@@ -303,14 +304,19 @@ struct CameraScreen: View {
                 Spacer()
                 if mode == .photo {
                     HStack {
-                        Flashcapsul(isScannerMode: false)
+                        Flashcapsul(
+                            isScannerMode: false,
+                            onTogglePhotoFlash: { enabled in
+                                photoFlashEnabled = enabled
+                            }
+                        )
                         
                         Spacer()
                         
                         // MARK: - Image Capturing Button
                         // Center: Capture photo button - captures a photo from the camera and adds it to the photo history
                         Button(action: {
-                            camera.capturePhoto { image in
+                            camera.capturePhoto(useFlash: photoFlashEnabled) { image in
                                 if let image = image {
                                     capturedPhoto = image
                                     capturedPhotoHistory.insert(image, at: 0)
