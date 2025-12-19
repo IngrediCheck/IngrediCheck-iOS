@@ -200,64 +200,16 @@ final class FoodNotesStore {
     
     // MARK: - Updating Food Notes
     
-    /// Fetches current data from backend and merges it with new user-selected data.
-    /// This ensures PUT requests don't replace existing data, but merge with it.
-    private func fetchAndMergeContent(selectedMemberId: UUID?, newContent: [String: Any]) async throws -> [String: Any] {
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print("🔄 [FoodNotesStore] fetchAndMergeContent: Starting fetch and merge process")
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        
-        var existingContent: [String: Any] = [:]
-        var fetchedVersion: Int = currentVersion
-        
-        // Fetch existing data from backend
-        do {
-            if let selectedMemberId = selectedMemberId {
-                let memberIdString = selectedMemberId.uuidString
-                print("📥 [FoodNotesStore] fetchAndMergeContent: Fetching existing data for memberId=\(memberIdString)")
-                print("   → GET /ingredicheck/family/members/\(memberIdString)/food-notes")
-                
-                if let response = try await webService.fetchMemberFoodNotes(memberId: memberIdString) {
-                    existingContent = response.content
-                    fetchedVersion = response.version
-                    print("✅ [FoodNotesStore] fetchAndMergeContent: Fetched existing member data")
-                    print("   → Version: \(fetchedVersion)")
-                    print("   → Existing content keys: \(Array(existingContent.keys))")
-                } else {
-                    print("ℹ️  [FoodNotesStore] fetchAndMergeContent: No existing member data found (starting fresh)")
-                }
-            } else {
-                print("📥 [FoodNotesStore] fetchAndMergeContent: Fetching existing data for family (Everyone)")
-                print("   → GET /ingredicheck/family/food-notes")
-                
-                if let response = try await webService.fetchFoodNotes() {
-                    existingContent = response.content
-                    fetchedVersion = response.version
-                    print("✅ [FoodNotesStore] fetchAndMergeContent: Fetched existing family data")
-                    print("   → Version: \(fetchedVersion)")
-                    print("   → Existing content keys: \(Array(existingContent.keys))")
-                } else {
-                    print("ℹ️  [FoodNotesStore] fetchAndMergeContent: No existing family data found (starting fresh)")
-                }
-            }
-        } catch {
-            print("⚠️  [FoodNotesStore] fetchAndMergeContent: Failed to fetch existing data: \(error.localizedDescription)")
-            print("   → Will proceed with new content only (may overwrite existing data)")
-        }
-        
-        // Update current version to match fetched version
-        currentVersion = fetchedVersion
-        
-        // Merge new content with existing content
-        // Strategy: Replace entire sections that are in newContent, keep other sections unchanged
-        print("🔀 [FoodNotesStore] fetchAndMergeContent: Merging new content with existing content")
-        print("   → New content keys: \(Array(newContent.keys))")
+    /// Merges server-side content with new user-selected content.
+    /// Strategy: for any step present in newContent, replace that step entirely on the server;
+    /// steps not present in newContent are left as-is from existingContent.
+    private func mergedContent(existingContent: [String: Any], newContent: [String: Any]) -> [String: Any] {
+        print("🔀 [FoodNotesStore] mergedContent: Merging new content with existing server content")
         print("   → Existing content keys: \(Array(existingContent.keys))")
+        print("   → New content keys: \(Array(newContent.keys))")
         
-        var mergedContent: [String: Any] = existingContent
+        var result = existingContent
         
-        // For each step in newContent, replace the entire section (this handles deselections correctly)
-        // Sections not in newContent remain unchanged from existingContent
         for (stepId, newStepContent) in newContent {
             print("   → Processing stepId: \(stepId)")
             
@@ -266,148 +218,122 @@ final class FoodNotesStore {
                 print("     → Type-1 (list): Replacing with \(itemsArray.count) items")
                 if itemsArray.isEmpty {
                     // If empty, remove the section (user deselected all items)
-                    mergedContent.removeValue(forKey: stepId)
+                    result.removeValue(forKey: stepId)
                     print("     → Removed section (empty selection)")
                 } else {
-                    mergedContent[stepId] = itemsArray
+                    result[stepId] = itemsArray
                     print("     → Replaced section with new items: \(itemsArray.compactMap { $0["name"] as? String })")
                 }
-                
             } else if let newNestedDict = newStepContent as? [String: Any] {
                 // Type-2 or Type-3: Nested structure - replace entire nested structure
                 print("     → Type-2/3 (nested): Replacing nested structure")
                 print("       → New nested keys: \(Array(newNestedDict.keys))")
                 
                 if newNestedDict.isEmpty {
-                    // If empty, remove the section
-                    mergedContent.removeValue(forKey: stepId)
+                    result.removeValue(forKey: stepId)
                     print("     → Removed section (empty nested selection)")
                 } else {
-                    // Replace the entire nested structure
-                    mergedContent[stepId] = newNestedDict
+                    result[stepId] = newNestedDict
                     print("     → Replaced nested structure")
                 }
             }
         }
         
-        print("✅ [FoodNotesStore] fetchAndMergeContent: Merge complete")
-        print("   → Merged content keys: \(Array(mergedContent.keys))")
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        
-        return mergedContent
+        print("✅ [FoodNotesStore] mergedContent: Merge complete")
+        print("   → Result keys: \(Array(result.keys))")
+        return result
     }
     
     /// Updates food notes (family-level or member-specific) based on selectedMemberId.
-    /// Automatically handles version mismatches and retries.
-    /// Fetches existing data and merges with new data before sending PUT request.
+    /// Flow:
+    /// 1. Build content from local preferences and optimistically PUT with currentVersion.
+    /// 2. If backend returns version_mismatch (409), merge currentNote.content with new content,
+    ///    bump version to currentNote.version, and retry PUT once with merged content.
     func updateFoodNotes(selectedMemberId: UUID?) async {
         // Build content structure dynamically from preferences
         let newContent = buildContentFromPreferences(preferences: onboardingStore.preferences, dynamicSteps: onboardingStore.dynamicSteps)
         
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("💾 [FoodNotesStore] updateFoodNotes: Starting update process")
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("   → New content keys: \(Array(newContent.keys))")
         print("   → Selected member: \(selectedMemberId?.uuidString ?? "Everyone (family-level)")")
+        print("   → Current optimistic version: \(currentVersion)")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
-        // Fetch existing data and merge with new content
-        let mergedContent: [String: Any]
-        do {
-            mergedContent = try await fetchAndMergeContent(selectedMemberId: selectedMemberId, newContent: newContent)
-        } catch {
-            print("❌ [FoodNotesStore] updateFoodNotes: Failed to fetch and merge content: \(error.localizedDescription)")
-            print("   → Falling back to using new content only")
-            mergedContent = newContent
+        // Helper to send a PUT with given content and version
+        func sendUpdate(content: [String: Any], version: Int) async throws -> WebService.FoodNotesResponse {
+            let maxAttempts = 3
+            var attempt = 1
+            
+            while true {
+                do {
+                    if let selectedMemberId {
+                        let memberIdString = selectedMemberId.uuidString
+                        print("📤 [FoodNotesStore] updateFoodNotes: PUT /ingredicheck/family/members/\(memberIdString)/food-notes (attempt \(attempt)/\(maxAttempts))")
+                        print("   → Version: \(version)")
+                        print("   → Content keys: \(Array(content.keys))")
+                        return try await webService.updateMemberFoodNotes(
+                            memberId: memberIdString,
+                            content: content,
+                            version: version
+                        )
+                    } else {
+                        print("📤 [FoodNotesStore] updateFoodNotes: PUT /ingredicheck/family/food-notes (attempt \(attempt)/\(maxAttempts))")
+                        print("   → Version: \(version)")
+                        print("   → Content keys: \(Array(content.keys))")
+                        return try await webService.updateFoodNotes(content: content, version: version)
+                    }
+                } catch {
+                    if let urlError = error as? URLError, urlError.code == .networkConnectionLost, attempt < maxAttempts {
+                        attempt += 1
+                        print("⚠️  [FoodNotesStore] updateFoodNotes: Network connection was lost, retrying (attempt \(attempt)/\(maxAttempts))")
+                        continue
+                    }
+                    throw error
+                }
+            }
         }
         
         do {
-            // Decide whether to update at family-level or member-level based on selectedMemberId
-            if let selectedMemberId = selectedMemberId {
-                let memberIdString = selectedMemberId.uuidString
-                print("📤 [FoodNotesStore] updateFoodNotes: Sending PUT request for member")
-                print("   → PUT /ingredicheck/family/members/\(memberIdString)/food-notes")
-                print("   → Version: \(currentVersion)")
-                print("   → Merged content keys: \(Array(mergedContent.keys))")
-                
-                let response = try await webService.updateMemberFoodNotes(
-                    memberId: memberIdString,
-                    content: mergedContent,
-                    version: currentVersion
-                )
-                
-                currentVersion = response.version
-                print("✅ [FoodNotesStore] updateFoodNotes: Member update success")
-                print("   → New version: \(response.version)")
-                print("   → Updated at: \(response.updatedAt)")
-                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                
-                // Refresh canvas union view after member update
-                Task {
-                    await loadFoodNotesAll()
-                }
-            } else {
-                print("📤 [FoodNotesStore] updateFoodNotes: Sending PUT request for family (Everyone)")
-                print("   → PUT /ingredicheck/family/food-notes")
-                print("   → Version: \(currentVersion)")
-                print("   → Merged content keys: \(Array(mergedContent.keys))")
-                
-                let response = try await webService.updateFoodNotes(content: mergedContent, version: currentVersion)
-                
-                currentVersion = response.version
-                print("✅ [FoodNotesStore] updateFoodNotes: Family update success")
-                print("   → New version: \(response.version)")
-                print("   → Updated at: \(response.updatedAt)")
-                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                
-                // Refresh canvas union view after family-level update
-                Task {
-                    await loadFoodNotesAll()
-                }
+            // 1) Optimistic update with local content and currentVersion
+            let initialResponse = try await sendUpdate(content: newContent, version: currentVersion)
+            currentVersion = initialResponse.version
+            print("✅ [FoodNotesStore] updateFoodNotes: Optimistic update success")
+            print("   → New version: \(initialResponse.version)")
+            print("   → Updated at: \(initialResponse.updatedAt)")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            
+            // Refresh canvas union view after successful update
+            Task {
+                await loadFoodNotesAll()
             }
         } catch let error as WebService.VersionMismatchError {
-            // Handle version mismatch - backend provides currentNote with actual data
-            print("⚠️  [FoodNotesStore] updateFoodNotes: Version mismatch detected")
+            // 2) Version mismatch: merge server note with new content and retry once
+            print("⚠️  [FoodNotesStore] updateFoodNotes: Version mismatch (409) detected")
             print("   → Expected version: \(error.expectedVersion)")
             print("   → Current server version: \(error.currentNote.version)")
+            print("   → Server content keys: \(Array(error.currentNote.content.keys))")
+            
+            let serverContent = error.currentNote.content
+            let merged = mergedContent(existingContent: serverContent, newContent: newContent)
             
             currentVersion = error.currentNote.version
+            print("🔄 [FoodNotesStore] updateFoodNotes: Retrying with merged content and server version")
+            print("   → Retry version: \(currentVersion)")
             
-            // Retry with the correct version using the same endpoint decision
             do {
-                if let selectedMemberId = selectedMemberId {
-                    let memberIdString = selectedMemberId.uuidString
-                    print("🔄 [FoodNotesStore] updateFoodNotes: Retrying member-specific update")
-                    print("   → Version: \(currentVersion)")
-                    
-                    let response = try await webService.updateMemberFoodNotes(
-                        memberId: memberIdString,
-                        content: mergedContent,
-                        version: currentVersion
-                    )
-                    currentVersion = response.version
-                    print("✅ [FoodNotesStore] updateFoodNotes: Member retry success")
-                    print("   → New version: \(response.version)")
-                    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                    
-                    Task {
-                        await loadFoodNotesAll()
-                    }
-                } else {
-                    print("🔄 [FoodNotesStore] updateFoodNotes: Retrying family-level update")
-                    print("   → Version: \(currentVersion)")
-                    
-                    let response = try await webService.updateFoodNotes(content: mergedContent, version: currentVersion)
-                    currentVersion = response.version
-                    print("✅ [FoodNotesStore] updateFoodNotes: Family retry success")
-                    print("   → New version: \(response.version)")
-                    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                    
-                    Task {
-                        await loadFoodNotesAll()
-                    }
+                let retryResponse = try await sendUpdate(content: merged, version: currentVersion)
+                currentVersion = retryResponse.version
+                print("✅ [FoodNotesStore] updateFoodNotes: Retry success after merge")
+                print("   → New version: \(retryResponse.version)")
+                print("   → Updated at: \(retryResponse.updatedAt)")
+                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                
+                Task {
+                    await loadFoodNotesAll()
                 }
             } catch {
-                print("❌ [FoodNotesStore] updateFoodNotes: Failed on retry: \(error.localizedDescription)")
+                print("❌ [FoodNotesStore] updateFoodNotes: Failed on retry after merge: \(error.localizedDescription)")
                 print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             }
         } catch {
