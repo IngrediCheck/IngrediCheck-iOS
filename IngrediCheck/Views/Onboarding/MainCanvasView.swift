@@ -108,8 +108,18 @@ struct MainCanvasView: View {
                     return
                 }
                 
-                // Build content structure and call API immediately
-                await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
+                // Determine which section just changed: use the current onboarding section name.
+                let changedSectionName = store.currentSection.name
+                let changedSections: Set<String> = [changedSectionName]
+                
+                // Optimistically update the canvas summary view from local preferences for this member.
+                foodNotesStore?.applyLocalPreferencesOptimistic(selectedMemberId: familyStore.selectedMemberId)
+                
+                // Build content structure for the changed section(s) and call API in the background.
+                await foodNotesStore?.updateFoodNotes(
+                    selectedMemberId: familyStore.selectedMemberId,
+                    changedSections: changedSections
+                )
             }
         }
         .onChange(of: familyStore.selectedMemberId) { _ in

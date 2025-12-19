@@ -162,8 +162,13 @@ struct EditableCanvasView: View {
                     // Check if task was cancelled
                     try Task.checkCancellation()
                     
-                    // Build content structure and call API
-                    await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
+                    // Build content structure and call API for the currently visible section only
+                    let changedSectionName = store.currentSection.name
+                    let changedSections: Set<String> = [changedSectionName]
+                    await foodNotesStore?.updateFoodNotes(
+                        selectedMemberId: familyStore.selectedMemberId,
+                        changedSections: changedSections
+                    )
                 } catch {
                     // Task was cancelled or sleep interrupted - ignore
                     if !(error is CancellationError) {
