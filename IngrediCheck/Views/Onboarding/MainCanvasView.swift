@@ -75,17 +75,6 @@ struct MainCanvasView: View {
             }
 		}
 		.onChange(of: store.currentSectionIndex) { newIndex in
-            // Save preferences immediately when moving forward to next step
-            // This ensures preferences are persisted before navigation and prevents data loss
-            if newIndex > previousSectionIndex && !isLoadingMemberPreferences && !store.preferences.sections.isEmpty {
-                print("[MainCanvasView] Moving forward to section \(newIndex), saving preferences immediately before navigation")
-                
-                // Save immediately to ensure data is persisted
-                Task {
-                    await foodNotesStore?.updateFoodNotes(selectedMemberId: familyStore.selectedMemberId)
-                }
-            }
-            
             // Update previous section index
             previousSectionIndex = newIndex
             
