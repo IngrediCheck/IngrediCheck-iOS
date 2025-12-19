@@ -73,52 +73,57 @@ struct PersistentBottomSheet: View {
                 .frame(maxWidth: .infinity)
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
-                .shadow(radius: 27.5)
-                .overlay(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.red.opacity(1.0),
-                            Color.red.opacity(0.0)
-                        ]),
-                        startPoint: .bottom,
-                        endPoint: .top
-                    )
-                    .frame(height: 161)
-                    .allowsHitTesting(false)
-                    .offset(y: -120),
-                    alignment: .top
-                )
+                
+                .shadow(color :.grayScale70, radius: 27.5)
+                
+//                .overlay(
+//                    LinearGradient(
+//                        gradient: Gradient(colors: [
+//                            Color.red.opacity(1.0),
+//                            Color.red.opacity(0.0)
+//                        ]),
+//                        startPoint: .bottom,
+//                        endPoint: .top
+//                    )
+//                    .frame(height: 161)
+//                    .allowsHitTesting(false)
+//                    .offset(y: -120),
+//                    alignment: .top
+//                )
                 .ignoresSafeArea(edges: .bottom)
         } else {
             sheet
                 .frame(maxWidth: .infinity, alignment: .top)
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
-                .shadow(radius: 27.5)
-                .overlay(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(1.0),
-                            Color.white.opacity(0.0)
-                        ]),
-                        startPoint: .bottom,
-                        endPoint: .top
-                    )
-                    .frame(height: 123)
-                    .allowsHitTesting(false)
-                    .offset(y: -23),
-                    alignment: .top
-                )
+                .shadow(color :.grayScale70, radius: 27.5)
+//                .shadow(radius: 27.5)
+//                .overlay(
+//                    LinearGradient(
+//                        gradient: Gradient(colors: [
+//                            Color.white.opacity(1.0),
+//                            Color.white.opacity(0.0)
+//                        ]),
+//                        startPoint: .bottom,
+//                        endPoint: .top
+//                    )
+//                    .frame(height: 123)
+//                    .allowsHitTesting(false)
+//                    .offset(y: -23),
+//                    alignment: .top
+//                )
                 .ignoresSafeArea(edges: .bottom)
         }
     }
     
     private func getBottomSheetHeight() -> CGFloat? {
         switch coordinator.currentBottomSheetRoute {
-        case .alreadyHaveAnAccount, .doYouHaveAnInviteCode:
+        case .alreadyHaveAnAccount:
             return 275
+        case  .doYouHaveAnInviteCode:
+            return 241
         case .welcomeBack:
-            return 291
+            return 275
         case .enterInviteCode:
             return 397
         case .whosThisFor:

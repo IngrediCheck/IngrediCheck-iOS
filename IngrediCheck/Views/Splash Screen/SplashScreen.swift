@@ -147,14 +147,14 @@ struct FillingPipeLine: View {
         .frame(height: 4)
         .onAppear {
             withAnimation(
-                .linear(duration: 3)
+                .linear(duration: 5)
                 //change duration  acording to GIF
             ) {
                 progress = 1
             }
             // Trigger completion after animation duration
             Task {
-                try? await Task.sleep(nanoseconds: UInt64(2 * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(5 * 1_000_000_000))
                 await MainActor.run {
                     onComplete()
                 }

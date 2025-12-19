@@ -9,11 +9,27 @@ import SwiftUI
 
 struct MeetYourIngrediFam: View {
     @State var addMemberPressed: () -> Void = { }
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     var body: some View {
         VStack(spacing: 20) {
-            Image("IngrediFamGroup")
-                .resizable()
-                .frame(width: 295, height: 146)
+            HStack{
+                Image("IngrediFamGroup")
+                    .resizable()
+                    .frame(width: 295, height: 146)
+            }
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .topLeading) {
+                Button {
+                    coordinator.navigateInBottomSheet(.whosThisFor)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
             
             VStack(spacing: 16) {
                 Text("Let's meet your IngrediFam!")
@@ -23,13 +39,15 @@ struct MeetYourIngrediFam: View {
                 Text("Add everyone’s name and a fun avatar so we can tailor tips and scans just for them.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
+                    .frame(width : 338)
                     .multilineTextAlignment(.center)
                 
                 Button {
                     addMemberPressed()
                 } label: {
-                    GreenCapsule(title: "Add Members")
+                    GreenCapsule(title: "Continue")
                         .frame(width: 156)
+                        .padding(.bottom ,30)
                 }
             }
         }

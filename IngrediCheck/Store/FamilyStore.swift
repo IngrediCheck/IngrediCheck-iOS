@@ -73,6 +73,14 @@ final class FamilyStore {
         )
     }
     
+    /// Set or update the avatar image for the pending self member.
+    func setPendingSelfMemberAvatar(imageName: String?) {
+        guard let imageName else { return }
+        guard var member = pendingSelfMember else { return }
+        member.imageFileHash = imageName
+        pendingSelfMember = member
+    }
+    
     /// Add an additional family member to the pending list.
     func addPendingOtherMember(name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -91,6 +99,14 @@ final class FamilyStore {
             imageFileHash: nil
         )
         pendingOtherMembers.append(member)
+    }
+    
+    func setAvatarForLastPendingOtherMember(imageName: String?) {
+        guard let imageName else { return }
+        guard !pendingOtherMembers.isEmpty else { return }
+        var last = pendingOtherMembers.removeLast()
+        last.imageFileHash = imageName
+        pendingOtherMembers.append(last)
     }
     
     /// Creates the family on the backend using any pending members, if present.

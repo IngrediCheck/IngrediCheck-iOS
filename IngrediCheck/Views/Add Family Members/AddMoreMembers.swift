@@ -129,14 +129,16 @@ struct AddMoreMembers: View {
                 } else {
                     print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
                     familyStore.addPendingOtherMember(name: trimmed)
+                    familyStore.setAvatarForLastPendingOtherMember(imageName: selectedFamilyMember?.image)
                     let memberName = trimmed
                     name = ""
                     showError = false
                     continuePressed(memberName)
                 }
             } label: {
-                GreenCapsule(title: "Continue")
+                GreenCapsule(title: "Add Member")
                     .frame(width: 159)
+                    .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
             }
             .padding(.horizontal, 20)
         }

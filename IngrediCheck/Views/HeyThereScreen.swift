@@ -8,24 +8,68 @@
 import SwiftUI
 
 struct HeyThereScreen: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    
+    private var showOnboardingFamilyImage: Bool {
+        switch coordinator.currentBottomSheetRoute {
+        case .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
+            return true
+        default:
+            return false
+        }
+    }
     
     var body: some View {
         
-        VStack {
-            Image("Ingredicheck-logo")
-                .frame(width : 107.3 ,height: 36)
-               .padding(.top,10)
-               .padding(.bottom,44)
-             
-               
+        
+        if showOnboardingFamilyImage {
+            VStack {
+               Text("Welcome to IngrediFam !")
+                    .font(ManropeFont.bold.size(16))
+                    .padding(.top ,32)
+                    .padding(.bottom ,4)
+                Text("Join your family space and personalize food choices together.")
+                
+                    .font(ManropeFont.regular.size(13))
+                    .foregroundColor(Color(hex: "#BDBDBD"))
+                    .lineLimit(2)
+                    .frame(width : 247)
+                    .multilineTextAlignment(.center )
+                   
+                
+                let imageName: String = {
+                    switch coordinator.currentBottomSheetRoute {
+                    case .whosThisFor: return "onbordingfamilyimg2"
+                    default: return "onbordingfamilyimg"
+                    }
+                }()
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 369)
+                    .frame(maxWidth: .infinity)
+                    .offset(y : -50)
+                  
+                Spacer()
+            }
+            .navigationBarBackButtonHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
+        } else {
+            VStack {
+                Image("Ingredicheck-logo")
+                    .frame(width : 107.3 ,height: 36)
+                    .padding(.top,44)
+                    .padding(.bottom,33)
+                
+                ZStack {
+                    Image("Iphone-image")
+                        .resizable()
+                        .frame(width: 238 ,height: 460)
+                }
+                Spacer()
+            }
             
-            
-            
-            Image("Iphone-image")
-                .resizable()
-                .frame(width: 238 ,height: 450)
-            Spacer()
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 LinearGradient(
                     colors: [
@@ -40,7 +84,24 @@ struct HeyThereScreen: View {
                     endPoint: .bottom
                 )
             )
-        
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        
+                        Color.white.opacity(0.1),
+                        Color.white,
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 150)
+                .frame(maxWidth: .infinity)
+                .offset(y: 75)
+            )
+            .navigationBarBackButtonHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
+            
+        }
     }
 }
 

@@ -19,11 +19,11 @@ struct GreenOutlinedCapsule: View {
                     .renderingMode(.template)
                     .resizable()
                     .frame(width: 20, height: 20)
-                    .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
+                    .foregroundStyle(Color(hex: "91B640"))
             }
             Text(title)
                 .font(NunitoFont.semiBold.size(16))
-                .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
+                .foregroundStyle(Color(hex: "91B640"))
         }
         .frame(height: height)
         .frame(minWidth: 152)
@@ -35,7 +35,7 @@ struct GreenOutlinedCapsule: View {
         .overlay(
             Capsule()
                 .stroke(lineWidth: 1.5)
-                .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 85))
+                .foregroundStyle(Color(hex: "91B640"))
         )
     }
 }

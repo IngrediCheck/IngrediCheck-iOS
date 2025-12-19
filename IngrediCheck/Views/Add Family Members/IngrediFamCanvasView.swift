@@ -879,6 +879,7 @@ struct LetsScanSmarter: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -909,6 +910,7 @@ struct AccessDenied: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -951,6 +953,7 @@ struct StayUpdated: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -980,6 +983,7 @@ struct PreferenceAreReady: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -1052,15 +1056,31 @@ struct AlreadyHaveAnAccount: View {
 struct DoYouHaveAnInviteCode: View {
     @State var yesPressed: (() -> Void)? = nil
     @State var noPressed: (() -> Void)? = nil
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Do you have an invite code?")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
+                HStack {
+                    Text("Do you have an invite code?")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        coordinator.navigateInBottomSheet(.alreadyHaveAnAccount)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
 
-                Text("If someone invited you to their IngrediCheck family, tap Yes to join them.")
+                Text("Got a family invite to IngrediFam? Enter code.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -1068,34 +1088,32 @@ struct DoYouHaveAnInviteCode: View {
             .padding(.bottom, 24)
 
             HStack(spacing: 16) {
+               
+               Button {
+                    yesPressed?()
+                
+                    } label: {
+                    Text("Enter invite code")
+                                        .font(NunitoFont.semiBold.size(16))
+                                        .foregroundStyle(.grayScale110)
+                                        .frame(height: 52)
+                                        .frame(minWidth: 152)
+                                        .frame(maxWidth: .infinity)
+                                        .background(
+                                            Capsule()
+                                                .foregroundStyle(.grayScale40)
+                                        )
+                                }
                 Button {
                     noPressed?()
                 } label: {
-                    Text("No, continue")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(height: 52)
-                        .frame(minWidth: 152)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Capsule()
-                                .foregroundStyle(.grayScale40)
-                        )
-                }
-
-                Button {
-                    yesPressed?()
-                } label: {
-                    GreenCapsule(title: "Yes, I have one")
+                    GreenCapsule(title: "No, Continue")
                 }
                 
             }
             .padding(.bottom, 20)
 
-            Text("No code? No problem — we’ll set things up for you.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale120)
-                .multilineTextAlignment(.center)
+         
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1118,12 +1136,27 @@ struct WelcomeBack: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Welcome back 👋")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-
-                Text("Log in to access your saved preferences and food insights.")
+                HStack {
+                    Text("Welcome back !")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        // Go back one bottom sheet route
+                        coordinator.navigateInBottomSheet(.alreadyHaveAnAccount)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24) // comfortable tap target
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Text("Log in to your existing IngrediCheck account.")
                     .font(ManropeFont.medium.size(12))                    .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
@@ -1192,21 +1225,21 @@ struct WelcomeBack: View {
                 }
                 .disabled(isSigningIn)
             }
-            .padding(.bottom, 20)
+           .padding(.bottom, 20)
 
-            HStack(spacing: 4) {
-                Text("New here?")
-                    .font(ManropeFont.regular.size(12))
-                    .foregroundStyle(.grayScale120)
-
-                Button {
-                    
-                } label: {
-                    Text("Get started instead")
-                        .font(ManropeFont.semiBold.size(12))
-                        .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
-                }
-            }
+//            HStack(spacing: 4) {
+//                Text("New here?")
+//                    .font(ManropeFont.regular.size(12))
+//                    .foregroundStyle(.grayScale120)
+//
+//                Button {
+//                    
+//                } label: {
+//                    Text("Get started instead")
+//                        .font(ManropeFont.semiBold.size(12))
+//                        .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
+//                }
+//            }
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1235,13 +1268,29 @@ struct WelcomeBack: View {
 struct WhosThisFor: View {
     @State var justmePressed: (() -> Void)? = nil
     @State var addFamilyPressed: (() -> Void)? = nil
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Hey there! Who’s this for?")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
+                HStack {
+                    Text("Hey there! Who’s this for?")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 Text("Is it just you, or your whole IngrediFam — family, friends, anyone you care about?")
                     .font(ManropeFont.medium.size(12))
@@ -1324,6 +1373,7 @@ struct AllSetToJoinYourFamily: View {
 
 struct EnterYourInviteCode : View {
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
@@ -1333,11 +1383,26 @@ struct EnterYourInviteCode : View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Enter your invite code")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-                
+                HStack {
+                    Text("Enter your invite code")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Text("This connects you to your family or shared\nIngrediCheck space.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
@@ -1416,10 +1481,13 @@ struct EnterYourInviteCode : View {
                 .disabled(isVerifying)
             }
             .padding(.bottom, 20)
-            
-            Text("By continuing, you agree to our Terms & Privacy Policy.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale90)
+            HStack{
+                Image("jam-sheld-half")
+                    .frame(width: 16, height: 16)
+                Text("By continuing, you agree to our Terms & Privacy Policy.")
+                    .font(ManropeFont.regular.size(12))
+                    .foregroundStyle(.grayScale100)
+            }
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1430,6 +1498,7 @@ struct EnterYourInviteCode : View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 
     struct InviteTextField: View {
