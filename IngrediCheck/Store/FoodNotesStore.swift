@@ -728,6 +728,13 @@ final class FoodNotesStore {
             let sectionName = step.header.name
             
             guard let preferenceValue = preferences.sections[sectionName] else {
+                // If preference is missing, it means the section is cleared.
+                // We must still include the key with an empty value so mergedContent knows to remove it.
+                if step.type == .type1 {
+                    content[step.id] = [[String: Any]]()
+                } else {
+                    content[step.id] = [String: Any]()
+                }
                 continue
             }
             
@@ -743,9 +750,8 @@ final class FoodNotesStore {
                     ]
                 }
                 
-                if !itemsArray.isEmpty {
-                    content[step.id] = itemsArray
-                }
+                // Always set the key, even if itemsArray is empty
+                content[step.id] = itemsArray
                 
             case .nested(let nestedDict):
                 // Nested structure - for type-2 steps (Avoid, LifeStyle, Nutrition)
@@ -790,9 +796,8 @@ final class FoodNotesStore {
                     }
                 }
                 
-                if !nestedContent.isEmpty {
-                    content[step.id] = nestedContent
-                }
+                // Always set the key, even if nestedContent is empty
+                content[step.id] = nestedContent
             }
         }
         
