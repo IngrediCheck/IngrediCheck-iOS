@@ -15,21 +15,27 @@ struct GreenCapsule: View {
     var width: CGFloat? = 152
     var height: CGFloat? = 52
     var takeFullWidth: Bool = true
+    var isLoading: Bool = false
     
     var body: some View {
         HStack(spacing: 8) {
-            
-            if icon != nil {
-                Image(icon ?? "")
-                    .renderingMode(.template)
-                    .resizable()
-                    .foregroundStyle(.white)
-                    .frame(width: iconWidth, height: iconHeight)
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .grayScale10))
+                    .scaleEffect(0.8)
+            } else {
+                if icon != nil {
+                    Image(icon ?? "")
+                        .renderingMode(.template)
+                        .resizable()
+                        .foregroundStyle(.white)
+                        .frame(width: iconWidth, height: iconHeight)
+                }
+                
+                Text(title)
+                    .font(NunitoFont.semiBold.size(16))
+                    .foregroundStyle(.grayScale10)
             }
-            
-            Text(title)
-                .font(NunitoFont.semiBold.size(16))
-                .foregroundStyle(.grayScale10)
         }
         .frame(height: height)
         .frame(minWidth: 152)

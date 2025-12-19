@@ -114,7 +114,8 @@ struct EditableCanvasView: View {
                     EditSectionBottomSheet(
                         isPresented: $isEditSheetPresented,
                         stepId: stepId,
-                        currentSectionIndex: currentEditingSectionIndex
+                        currentSectionIndex: currentEditingSectionIndex,
+                        foodNotesStore: foodNotesStore
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -474,6 +475,7 @@ struct EditSectionBottomSheet: View {
     
     let stepId: String
     let currentSectionIndex: Int
+    let foodNotesStore: FoodNotesStore?
     
     // Determine flow type: use .family if user has a family, otherwise use store's flow type
     private var effectiveFlowType: OnboardingFlowType {
@@ -505,9 +507,14 @@ struct EditSectionBottomSheet: View {
                     isPresented = false
                 }
             }) {
-                GreenCapsule(title: "Done", takeFullWidth: false)
+                GreenCapsule(
+                    title: "Done",
+                    takeFullWidth: false,
+                    isLoading: foodNotesStore?.isLoadingFoodNotes ?? false
+                )
             }
             .buttonStyle(.plain)
+            .disabled(foodNotesStore?.isLoadingFoodNotes ?? false)
             .padding(.trailing, 20)
             .padding(.bottom, 24)
         }

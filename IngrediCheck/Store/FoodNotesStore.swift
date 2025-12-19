@@ -468,6 +468,9 @@ final class FoodNotesStore {
     /// 3. If backend returns version_mismatch (409), merge currentNote.content with filtered
     ///    new content, bump version to currentNote.version, and retry PUT once with merged content.
     func updateFoodNotes(selectedMemberId: UUID?, changedSections: Set<String>) async {
+        isLoadingFoodNotes = true
+        defer { isLoadingFoodNotes = false }
+        
         // STEP 1: Ensure preferences come from the correct note before building content,
         // but avoid clobbering fresh in-memory edits for the same owner.
         if let memberId = selectedMemberId?.uuidString.lowercased() {
@@ -587,6 +590,7 @@ final class FoodNotesStore {
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             
             // Refresh canvas union view after successful update
+            // Note: We don't await this so the loading state can finish
             Task {
                 await loadFoodNotesAll()
             }
