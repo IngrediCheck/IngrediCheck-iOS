@@ -11,6 +11,7 @@ struct SplashScreen: View {
     @State private var isFirstLaunch: Bool = true
     @State private var isCheckingLaunchState: Bool = true
     @State private var isFillingComplete: Bool = false
+    @State private var shouldNavigateToHome: Bool = false
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     
@@ -21,7 +22,7 @@ struct SplashScreen: View {
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
-            } else if !isFirstLaunch, authController.session != nil {
+            } else if shouldNavigateToHome {
                 // In preview flow, if there's already a Supabase session
                 // (including anonymous/guest), skip the marketing carousel
                 // and go straight into the main container.
@@ -113,6 +114,11 @@ struct SplashScreen: View {
                 }
             } else {
                 isFirstLaunch = false
+            }
+            
+            // Calculate navigation decision once based on initial state
+            if !isFirstLaunch && authController.session != nil {
+                shouldNavigateToHome = true
             }
 
             isCheckingLaunchState = false
