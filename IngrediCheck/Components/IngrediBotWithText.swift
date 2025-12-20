@@ -6,20 +6,39 @@
 //
 
 import SwiftUI
+import AVKit
 
 struct IngrediBotWithText: View {
     let text: String
     var viewDidAppear: (() -> Void)? = nil
     var delay: TimeInterval = 2.0
+    private let player: AVPlayer? = {
+        if let url = Bundle.main.url(forResource: "IngrediBotLoading", withExtension: "mp4") {
+            return AVPlayer(url: url)
+        }
+        return nil
+    }()
     
     var body: some View {
         VStack(spacing: 32) {
             // Robot image
-            Image("ingrediBot")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 147, height: 147)
-                .clipped()
+            if let player = player {
+                VideoPlayer(player: player)
+                    .onAppear {
+                        player.play()
+                    }
+                    .onDisappear {
+                        player.pause()
+                    }
+                    .frame(width: 147, height: 147)
+                    .clipped()
+            } else {
+                Image("ingrediBot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 147, height: 147)
+                    .clipped()
+            }
             
             VStack(spacing: 24) {
                 Text(text)

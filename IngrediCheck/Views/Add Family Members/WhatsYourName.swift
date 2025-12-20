@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WhatsYourName: View {
     
+    @Environment(MemojiStore.self) private var memojiStore
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
@@ -29,10 +30,26 @@ struct WhatsYourName: View {
             
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
-                    Text("What's your name?")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                    
+                    HStack {
+                        Text("What's your name?")
+                            .font(NunitoFont.bold.size(22))
+                            .foregroundStyle(.grayScale150)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .overlay(alignment: .leading) {
+                        Button {
+                            coordinator.navigateInBottomSheet(.letsMeetYourIngrediFam)
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.black)
+                                .frame(width: 24, height: 24)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Text("This helps us personalize your experience and scan tips—just for you!")
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(.grayScale120)
@@ -52,6 +69,7 @@ struct WhatsYourName: View {
                                 .foregroundStyle(showError ? .red : .grayScale60)
                         )
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                        .autocorrectionDisabled(true)   // ✅ stops autocorrect
                         .onChange(of: name) { _, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 showError = false
@@ -76,7 +94,11 @@ struct WhatsYourName: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
-                                coordinator.navigateInBottomSheet(.generateAvatar)
+                                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !trimmed.isEmpty {
+                                    memojiStore.displayName = trimmed
+                                    coordinator.navigateInBottomSheet(.generateAvatar)
+                                }
                             } label: {
                                 ZStack {
                                     Circle()
@@ -91,6 +113,8 @@ struct WhatsYourName: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
                             
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {
@@ -133,12 +157,14 @@ struct WhatsYourName: View {
                 } else {
                     print("[WhatsYourName] Continue tapped with name=\(trimmed)")
                     familyStore.setPendingSelfMember(name: trimmed)
+                    familyStore.setPendingSelfMemberAvatar(imageName: selectedFamilyMember?.image)
                     continuePressed()
                 }
             } label: {
                 GreenCapsule(title: "Continue")
                     .frame(width: 159)
             }
+            .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
