@@ -21,6 +21,7 @@ struct EditableCanvasView: View {
     @State private var currentEditingSectionIndex: Int = 0
     @State private var isProgrammaticChange: Bool = false
     @State private var debounceTask: Task<Void, Never>? = nil
+    @State private var isLoadingMemberPreferences: Bool = false
     
     var body: some View {
         let cards = selectedCards()
@@ -85,7 +86,8 @@ struct EditableCanvasView: View {
                             editingStepId = card.stepId
                             isEditSheetPresented = true
                         },
-                        itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:]
+                        itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                        showFamilyIcons: familyStore.family?.otherMembers.isEmpty == false
                     )
                                     .padding(.top, index == 0 ? 16 : 0)
                                 }
@@ -142,6 +144,14 @@ struct EditableCanvasView: View {
             // Fetch and load food notes data when view appears
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
+                
+                // If a member is selected (e.g. single-member family), load their 
+                // preferences so they are ready when the edit sheet opens.
+                if let memberId = familyStore.selectedMemberId?.uuidString.lowercased() {
+                    print("[EditableCanvasView] onAppear: Loading preferences for selected member \(memberId)")
+                    isLoadingMemberPreferences = true
+                    await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+                }
             }
         }
         .onDisappear {
@@ -152,6 +162,14 @@ struct EditableCanvasView: View {
         .onChange(of: store.preferences) { _ in
             // Update completion status whenever preferences change
             store.updateSectionCompletionStatus()
+            
+            // If we were loading member/family preferences, this change came from a backend load.
+            // Clear the flag and DO NOT save.
+            if isLoadingMemberPreferences {
+                print("[EditableCanvasView] Preferences updated after load, clearing flag (no save)")
+                isLoadingMemberPreferences = false
+                return
+            }
             
             // Debounce API call - cancel previous task and start new one
             debounceTask?.cancel()
@@ -362,6 +380,7 @@ struct EditableCanvasCard: View {
     var iconName: String = "allergies"
     var onEdit: (() -> Void)? = nil
     var itemMemberAssociations: [String: [String: [String]]] = [:]
+    var showFamilyIcons: Bool = true
     
     // Helper function to get member identifiers for an item
     // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
@@ -429,7 +448,7 @@ struct EditableCanvasCard: View {
                                         title: chip.name,
                                         bgColor: .secondary200,
                                         image: chip.icon,
-                                        familyList: getMemberIdentifiers(for: title, itemName: chip.name),
+                                        familyList: showFamilyIcons ? getMemberIdentifiers(for: title, itemName: chip.name) : [],
                                         outlined: false
                                     )
                                 }
@@ -443,7 +462,7 @@ struct EditableCanvasCard: View {
                                 title: chip.name,
                                 bgColor: .secondary200,
                                 image: chip.icon,
-                                familyList: getMemberIdentifiers(for: title, itemName: chip.name),
+                                familyList: showFamilyIcons ? getMemberIdentifiers(for: title, itemName: chip.name) : [],
                                 outlined: false
                             )
                         }
@@ -479,12 +498,12 @@ struct EditSectionBottomSheet: View {
     
     // Determine flow type: use .family if user has a family, otherwise use store's flow type
     private var effectiveFlowType: OnboardingFlowType {
-        // If user has a family, show family selection carousel
-        if familyStore.family != nil {
+        // If there are other members in the family, show the family selection carousel
+        if let family = familyStore.family, !family.otherMembers.isEmpty {
             return .family
         }
-        // Otherwise use the store's current flow type
-        return store.onboardingFlowtype
+        // Otherwise treat as an individual flow (hides carousel)
+        return .individual
     }
     
     var body: some View {

@@ -220,6 +220,7 @@ struct PersistentBottomSheet: View {
             WhosThisFor {
                 Task { @MainActor in
                     await authController.signIn()
+                    await familyStore.createBiteBuddyFamily()
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
                     coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
                 }
@@ -411,14 +412,17 @@ struct PersistentBottomSheet: View {
     }
     
     private func getOnboardingFlowType() -> OnboardingFlowType {
-        // If user has a family, show family selection carousel (same logic as EditableCanvasView)
-        if familyStore.family != nil {
-            return .family
-        }
-        // Otherwise check the route for flow type
+        // If we are in the main canvas onboarding flow, use the flow type from the route.
+        // This ensures that "Just Me" (individual flow) doesn't show family UI even if a family exists.
         if case .mainCanvas(let flow) = coordinator.currentCanvasRoute {
             return flow
         }
+        
+        // If there are other members in the family, show the family selection carousel
+        if let family = familyStore.family, !family.otherMembers.isEmpty {
+            return .family
+        }
+        
         return .individual
     }
 }

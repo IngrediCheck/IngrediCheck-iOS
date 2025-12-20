@@ -23,6 +23,7 @@ struct CanvasCard: View {
     var title: String = "allergies"
     var iconName: String = "allergies"
     var itemMemberAssociations: [String: [String: [String]]] = [:]
+    var showFamilyIcons: Bool = true
     
     // Helper function to get member identifiers for an item
     // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
@@ -66,7 +67,7 @@ struct CanvasCard: View {
                                         title: chip.name,
                                         bgColor: .secondary200,
                                         image: chip.icon,
-                                        familyList: getMemberIdentifiers(for: title, itemName: chip.name),
+                                        familyList: showFamilyIcons ? getMemberIdentifiers(for: title, itemName: chip.name) : [],
                                         outlined: false
                                     )
                                 }
@@ -80,7 +81,7 @@ struct CanvasCard: View {
                                 title: chip.name,
                                 bgColor: .secondary200,
                                 image: chip.icon,
-                                familyList: getMemberIdentifiers(for: title, itemName: chip.name),
+                                familyList: showFamilyIcons ? getMemberIdentifiers(for: title, itemName: chip.name) : [],
                                 outlined: false
                             )
                         }

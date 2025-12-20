@@ -181,5 +181,27 @@ struct FamilyAPI {
             body: nil
         )
     }
+
+    // POST /ingredicheck/family/personal
+    static func createPersonalFamily(
+        baseURL: String,
+        apiKey: String,
+        jwt: String,
+        name: String,
+        memberID: String
+    ) async throws -> (statusCode: Int, body: String) {
+        let body: [String: Any] = [
+            "name": name,
+            "memberID": memberID
+        ]
+        return try await makeRequest(
+            baseURL: baseURL,
+            path: "family/personal",
+            method: "POST",
+            apiKey: apiKey,
+            jwt: jwt,
+            body: body
+        )
+    }
 }
 

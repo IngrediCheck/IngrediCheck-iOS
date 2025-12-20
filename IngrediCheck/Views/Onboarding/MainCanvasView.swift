@@ -50,7 +50,8 @@ struct MainCanvasView: View {
                 cards: cards ?? [],
                 scrollTarget: $cardScrollTarget,
                 showPlaceholder: cards?.isEmpty ?? true,
-                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:]
+                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                showFamilyIcons: flow == .family
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -72,6 +73,14 @@ struct MainCanvasView: View {
             // This loads the union view (Everyone + all members) for display
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
+                
+                // If a member is already selected (e.g. Just Me flow), load their specific 
+                // preferences so the bottom sheet steps show the correct selections.
+                if let memberId = familyStore.selectedMemberId?.uuidString.lowercased() {
+                    print("[MainCanvasView] onAppear: Loading preferences for selected member \(memberId)")
+                    isLoadingMemberPreferences = true
+                    await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+                }
             }
 		}
 		.onChange(of: store.currentSectionIndex) { newIndex in
@@ -292,6 +301,7 @@ struct CanvasSummaryScrollView: View {
     @Binding var scrollTarget: UUID?
     let showPlaceholder: Bool
     let itemMemberAssociations: [String: [String: [String]]]
+    let showFamilyIcons: Bool
     @State private var previousCardCount: Int = 0
     
     var body: some View {
@@ -317,7 +327,8 @@ struct CanvasSummaryScrollView: View {
                                 sectionedChips: card.sectionedChips,
                                 title: card.title,
                                 iconName: card.icon,
-                                itemMemberAssociations: itemMemberAssociations
+                                itemMemberAssociations: itemMemberAssociations,
+                                showFamilyIcons: showFamilyIcons
                             )
                             .id(card.id)
                             // Add visual gap from the top edge so the card
