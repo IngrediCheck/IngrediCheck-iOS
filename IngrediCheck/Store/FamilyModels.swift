@@ -45,6 +45,9 @@ struct FamilyMember: Codable, Identifiable, Hashable {
     var joined: Bool
     /// Optional hash of the member's avatar image file, if present.
     var imageFileHash: String?
+    /// Indicates whether an invite was initiated but deferred ("Maybe later").
+    /// Local-only during onboarding; may not be present in backend payloads.
+    var invitePending: Bool?
     
     private enum CodingKeys: String, CodingKey {
         case id
@@ -52,6 +55,7 @@ struct FamilyMember: Codable, Identifiable, Hashable {
         case color
         case joined
         case imageFileHash
+        case invitePending
     }
 }
 

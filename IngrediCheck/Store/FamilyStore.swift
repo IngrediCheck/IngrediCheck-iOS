@@ -81,6 +81,15 @@ final class FamilyStore {
         pendingSelfMember = member
     }
     
+    /// Update the name for the pending self member.
+    func updatePendingSelfMemberName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard var member = pendingSelfMember else { return }
+        member.name = trimmed
+        pendingSelfMember = member
+    }
+    
     /// Add an additional family member to the pending list.
     func addPendingOtherMember(name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -107,6 +116,27 @@ final class FamilyStore {
         var last = pendingOtherMembers.removeLast()
         last.imageFileHash = imageName
         pendingOtherMembers.append(last)
+    }
+    
+    func updatePendingOtherMemberName(id: UUID, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
+            pendingOtherMembers[idx].name = trimmed
+        }
+    }
+    
+    func setAvatarForPendingOtherMember(id: UUID, imageName: String?) {
+        guard let imageName else { return }
+        if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
+            pendingOtherMembers[idx].imageFileHash = imageName
+        }
+    }
+    
+    func setInvitePendingForPendingOtherMember(id: UUID, pending: Bool = true) {
+        if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
+            pendingOtherMembers[idx].invitePending = pending
+        }
     }
     
     /// Creates the family on the backend using any pending members, if present.

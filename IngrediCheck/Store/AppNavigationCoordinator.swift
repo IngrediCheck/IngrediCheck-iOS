@@ -82,6 +82,16 @@ class AppNavigationCoordinator {
     // Navigate bottom sheet
     func navigateInBottomSheet(_ route: BottomSheetRoute) {
         withAnimation(.easeInOut) {
+            // When navigating back to the early onboarding sheets that live on the HeyThere canvas,
+            // ensure the canvas is reset to .heyThere so the correct background imagery shows.
+            switch route {
+            case .alreadyHaveAnAccount, .welcomeBack, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
+                if currentCanvasRoute != .heyThere {
+                    currentCanvasRoute = .heyThere
+                }
+            default:
+                break
+            }
             currentBottomSheetRoute = route
         }
     }

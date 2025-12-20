@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WhatsYourName: View {
     
+    @Environment(MemojiStore.self) private var memojiStore
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
@@ -93,7 +94,11 @@ struct WhatsYourName: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
-                                coordinator.navigateInBottomSheet(.generateAvatar)
+                                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !trimmed.isEmpty {
+                                    memojiStore.displayName = trimmed
+                                    coordinator.navigateInBottomSheet(.generateAvatar)
+                                }
                             } label: {
                                 ZStack {
                                     Circle()
@@ -108,6 +113,8 @@ struct WhatsYourName: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
                             
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {

@@ -182,6 +182,7 @@ struct GenerateAvatar: View {
     ]
     
     @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
+    @State var familyIdx: Int = 0
     
     // Restore state from memojiStore when view appears
     private func restoreState() {
@@ -190,6 +191,11 @@ struct GenerateAvatar: View {
             familyMemberName: memojiStore.selectedFamilyMemberName,
             familyMemberImage: memojiStore.selectedFamilyMemberImage
         )
+        if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+            familyIdx = idx
+        } else {
+            familyIdx = 0
+        }
         
         // Restore other selections
         selectedTool = memojiStore.selectedTool
@@ -486,7 +492,7 @@ struct GenerateAvatar: View {
                         VStack(spacing: 40) {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Text("Generate Avatar: \(idx)")
+                                    Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
@@ -518,16 +524,8 @@ struct GenerateAvatar: View {
                                 VStack {
                                     switch selectedTool {
                                     case "family-member":
-                                        Text("Tell us how you’re related to them so we can create the perfect avatar!")
-                                            .font(ManropeFont.medium.size(12))
-                                            .foregroundStyle(.grayScale120)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.horizontal, 20)
+                                        minimalFamilySelector()
                                         
-                                        selectedMemberRow()
-                                            .padding(.horizontal, 20)
-                                            .matchedGeometryEffect(id: "circle", in: animation)
-                                            
                                     case "gesture":
                                         minimalToolsSelector(toolIdx: 0)
                                         
@@ -663,6 +661,65 @@ struct GenerateAvatar: View {
                     )
             }
             .disabled(idx == tools[toolIdx].tools.count - 1)
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    func minimalFamilySelector() -> some View {
+        let current = familyMember[familyIdx]
+        let isCurrentSelected = selectedFamilyMember.name == current.name
+        
+        HStack {
+            Button {
+                familyIdx = max(0, familyIdx - 1)
+            } label: {
+                Circle()
+                    .fill(.grayScale60)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(.arrowLeft)
+                            .resizable()
+                            .rotationEffect(.degrees(180))
+                            .frame(width: 22, height: 22)
+                    )
+            }
+            .disabled(familyIdx == 0)
+
+            Spacer()
+            
+            Button {
+                selectedFamilyMember = current
+            } label: {
+                VStack {
+                    Image(current.image)
+                        .resizable()
+                        .frame(width: 56, height: 50)
+                    
+                    Text(current.name)
+                        .font(ManropeFont.medium.size(14))
+                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            Button {
+                familyIdx = min(familyIdx + 1, familyMember.count - 1)
+            } label: {
+                Circle()
+                    .fill(.grayScale60)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(.arrowLeft)
+                            .resizable()
+                            .frame(width: 22, height: 22)
+                    )
+            }
+            .disabled(familyIdx == familyMember.count - 1)
         }
         .padding(.horizontal, 20)
     }
@@ -1645,7 +1702,7 @@ struct WouldYouLikeToInvite: View {
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                 
-                Text("No worries if you skip this step. You can share the code with Neha later too.")
+                Text("No worries if you skip this step. You can share the code with \(name) later too.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -1654,16 +1711,22 @@ struct WouldYouLikeToInvite: View {
             
             HStack(spacing: 16) {
                 Button {
-                    invitePressed()
-                } label: {
-                    GreenOutlinedCapsule(image: "share", title: "Invite")
-                }
-                
-                Button {
                     continuePressed()
                 } label: {
-                    GreenOutlinedCapsule(title: "Continue")
+                    Text("Maybe later")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
                 }
+                Button {
+                    invitePressed()
+                } label: {
+                    GreenCapsule(title: "Invite" , icon: "share" ,iconWidth: 12 , iconHeight: 12 ,)
+                }
+                
+               
 
                 
             }

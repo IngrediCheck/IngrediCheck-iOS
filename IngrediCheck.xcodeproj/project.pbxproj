@@ -193,6 +193,7 @@
 		D3BECC372ED98A3E0088E044 /* ProductDetails */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ProductDetails; sourceTree = "<group>"; };
 		D3BECC732ED98CFF0088E044 /* Splash Screen */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Splash Screen"; sourceTree = "<group>"; };
 		D3BECC742ED98CFF0088E044 /* Add Family Members */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Add Family Members"; sourceTree = "<group>"; };
+		FAA88CBC2EF6B62300449EDF /* Resource */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resource; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -366,6 +367,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				FAA88CBC2EF6B62300449EDF /* Resource */,
 				D3BECC852ED98E380088E044 /* ContentView.swift */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
@@ -427,6 +429,7 @@
 				D3BECC372ED98A3E0088E044 /* ProductDetails */,
 				D3BECC732ED98CFF0088E044 /* Splash Screen */,
 				D3BECC742ED98CFF0088E044 /* Add Family Members */,
+				FAA88CBC2EF6B62300449EDF /* Resource */,
 			);
 			name = IngrediCheck;
 			packageProductDependencies = (

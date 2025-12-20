@@ -51,7 +51,7 @@ struct LetsMeetYourIngrediFamView: View {
             }
             .navigationBarBackButtonHidden(true)
         } else if let me = familyStore.pendingSelfMember {
-            VStack(spacing: 20) {
+            VStack(spacing: 12) {
                 Text("Your Family Overview")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
@@ -108,7 +108,6 @@ struct LetsMeetYourIngrediFamView: View {
 //                        .padding(.vertical, 8)
 //                        .padding(.horizontal, 18)
 //                        .background(.grayScale40, in: .capsule)
-////                        .opacity(0.6)
                 }
                 .padding(16)
                 .background(
@@ -124,6 +123,10 @@ struct LetsMeetYourIngrediFamView: View {
                             )
                 )
                 .padding(.horizontal, 20)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    coordinator.navigateInBottomSheet(.editMember(memberId: me.id, isSelf: true))
+                }
 
                 VStack(spacing: 12) {
                     ForEach(familyStore.pendingOtherMembers) { member in
@@ -164,9 +167,49 @@ struct LetsMeetYourIngrediFamView: View {
                                 Text(member.name)
                                     .font(NunitoFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
+                                if member.invitePending == true {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "exclamationmark.circle.fill")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(Color(hex: "F4A100"))
+                                        Text("Pending")
+                                            .font(ManropeFont.semiBold.size(12))
+                                            .foregroundStyle(Color(hex: "F4A100"))
+                                    }
+                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, 10)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color(hex: "FFF7E6"))
+                                    )
+                                }
                             }
 
                             Spacer()
+
+                            Button {
+                                coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image( "share")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color(hex: "91B640"))
+                                    Text("Invite")
+                                        .font(NunitoFont.semiBold.size(12))
+                                        .foregroundStyle(Color(hex: "91B640"))
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 18)
+                                .background(
+                                    Capsule().fill(Color.white)
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(lineWidth: 1.5)
+                                        .foregroundStyle(Color(hex: "91B640"))
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(16)
                         .background(
@@ -180,9 +223,12 @@ struct LetsMeetYourIngrediFamView: View {
                                 )
                         )
                         .padding(.horizontal, 20)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: false))
+                        }
                     }
                 }
-                .padding(.top, 12)
 
                 Spacer()
             }

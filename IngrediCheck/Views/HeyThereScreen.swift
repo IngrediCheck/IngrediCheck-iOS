@@ -20,37 +20,42 @@ struct HeyThereScreen: View {
     }
     
     var body: some View {
-        
-        
         if showOnboardingFamilyImage {
-            VStack {
-               Text("Welcome to IngrediFam !")
-                    .font(ManropeFont.bold.size(16))
-                    .padding(.top ,32)
-                    .padding(.bottom ,4)
-                Text("Join your family space and personalize food choices together.")
-                
-                    .font(ManropeFont.regular.size(13))
-                    .foregroundColor(Color(hex: "#BDBDBD"))
-                    .lineLimit(2)
-                    .frame(width : 247)
-                    .multilineTextAlignment(.center )
-                   
-                
-                let imageName: String = {
-                    switch coordinator.currentBottomSheetRoute {
-                    case .whosThisFor: return "onbordingfamilyimg2"
-                    default: return "onbordingfamilyimg"
+            Group {
+                switch coordinator.currentBottomSheetRoute {
+                case .whosThisFor:
+                    VStack {
+                        Text("Welcome to IngrediFam !")
+                            .font(ManropeFont.bold.size(16))
+                            .padding(.top ,32)
+                            .padding(.bottom ,4)
+                        Text("Join your family space and personalize food choices together.")
+                            .font(ManropeFont.regular.size(13))
+                            .foregroundColor(Color(hex: "#BDBDBD"))
+                            .lineLimit(2)
+                            .frame(width : 247)
+                            .multilineTextAlignment(.center )
+                        Image("onbordingfamilyimg2")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 369)
+                            .frame(maxWidth: .infinity)
+                            .offset(y : -50)
+                        Spacer()
                     }
-                }()
-                Image(imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 369)
-                    .frame(maxWidth: .infinity)
-                    .offset(y : -50)
-                  
-                Spacer()
+                case .doYouHaveAnInviteCode, .enterInviteCode:
+                    VStack {
+                        Spacer()
+                        Image("onbordingfamilyimg")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 269)
+                            .frame(maxWidth: .infinity)
+                        Spacer()
+                    }
+                default:
+                    EmptyView()
+                }
             }
             .navigationBarBackButtonHidden(true)
             .toolbar(.hidden, for: .navigationBar)
