@@ -38,7 +38,8 @@ struct EditableCanvasView: View {
                         },
                         scrollTarget: $tagBarScrollTarget,
                         currentBottomSheetRoute: nil,
-                        allowTappingIncompleteSections: true // Allow tapping any section in edit mode
+                        allowTappingIncompleteSections: true, // Allow tapping any section in edit mode
+                        forceDarkGreen: true
                     )
                     .onChange(of: store.currentSectionIndex) { newIndex in
                         // When section changes via tag bar tap, update/edit sheet for that section
