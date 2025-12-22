@@ -13,6 +13,8 @@ struct CanvasTagBar: View {
     var onTapCurrentSection: (() -> Void)? = nil
     @Binding var scrollTarget: UUID?
     var currentBottomSheetRoute: BottomSheetRoute? = nil
+    var allowTappingIncompleteSections: Bool = false // Allow tapping even if section is not completed (for EditableCanvasView)
+    var forceDarkGreen: Bool = false
 
     /// Derived tag items from the dynamic sections / JSON, so that ordering,
     /// titles and icons always match the config.
@@ -56,7 +58,8 @@ struct CanvasTagBar: View {
                                 }
                             ),
                             isFirst: (index == 0),
-                            visited: $visited
+                            visited: $visited,
+                            forceDarkGreen: forceDarkGreen
                         )
                         .id(store.sections[safe: index]?.id)
                         .onTapGesture {
@@ -118,7 +121,8 @@ struct CanvasTagBar: View {
         }
         
         let tappedName = store.sections[index].name
-        if store.sections[index].isComplete || visited.contains(tappedName) {
+        // Allow tapping if: section is complete, has been visited, or if we're in edit mode (EditableCanvasView)
+        if allowTappingIncompleteSections || store.sections[index].isComplete || visited.contains(tappedName) {
             store.currentSectionIndex = index
             store.currentScreenIndex = 0
             if visited.contains(tappedName) == false {
@@ -146,13 +150,14 @@ struct TagIconCapsule : View {
     var isFirst: Bool = false
     
     @Binding var visited: [String]
+    var forceDarkGreen: Bool = false
     
     var body: some View {
         HStack(spacing: -1) {
             
             if isFirst == false {
                 Rectangle()
-                    .fill(visited.contains(title) ? .primary700 : .primary100)
+                    .fill((forceDarkGreen || visited.contains(title)) ? .primary700 : .primary100)
                     .frame(width: 14, height: 12)   // in figma this rectrangles width is of 12, but due to the capsule shape it looks like the rectangle is not a part of capsule to due to that the width is increased to 14, 1 from leading and trailing and adjust with the spacing.
                     .zIndex(1)
             }
@@ -162,7 +167,7 @@ struct TagIconCapsule : View {
                     .renderingMode(.template)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .foregroundStyle(visited.contains(title) ? .grayScale10 : .primary500)
+                    .foregroundStyle((forceDarkGreen || visited.contains(title)) ? .grayScale10 : .primary500)
                     .frame(width: (isSelected == title) ? 18 : 24, height: (isSelected == title) ? 18 : 24)
                 
                 if isSelected == title {
@@ -173,10 +178,10 @@ struct TagIconCapsule : View {
             .padding(.vertical,(isSelected == title) ? 11 : 8)
             .padding(.trailing, (isSelected == title) ? 16 : 20)
             .padding(.leading, (isSelected == title) ? 12 : 20)
-            .background(visited.contains(title) ? .primary700 : .primary100, in: .capsule)
+            .background((forceDarkGreen || visited.contains(title)) ? .primary700 : .primary100, in: .capsule)
             .zIndex(10)
         }
-        .foregroundStyle(visited.contains(title) ? Color.white : Color(hex: "#4A4A4A"))
+        .foregroundStyle((forceDarkGreen || visited.contains(title)) ? Color.white : Color(hex: "#4A4A4A"))
     }
 }
 

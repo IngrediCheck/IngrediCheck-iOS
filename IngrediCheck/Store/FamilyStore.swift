@@ -20,6 +20,14 @@ final class FamilyStore {
     private(set) var pendingSelfMember: FamilyMember?
     private(set) var pendingOtherMembers: [FamilyMember] = []
     
+    /// Currently selected member in the family preferences UI.
+    /// `nil` means "Everyone" (family-level).
+    var selectedMemberId: UUID? = nil
+    
+    /// Target member for avatar assignment from the MeetYourAvatar flow.
+    /// When non-nil, this is the member whose avatar should be updated.
+    var avatarTargetMemberId: UUID? = nil
+    
     init(service: FamilyService = FamilyService()) {
         self.service = service
     }
@@ -173,6 +181,14 @@ final class FamilyStore {
         
         do {
             family = try await service.fetchFamily()
+            
+            // If this is a single-member family and no member is selected,
+            // auto-select the self member so preferences load correctly.
+            if let family = family, family.otherMembers.isEmpty, selectedMemberId == nil {
+                selectedMemberId = family.selfMember.id
+                print("[FamilyStore] loadCurrentFamily: Auto-selected self member for single-member family")
+            }
+            
             print("[FamilyStore] loadCurrentFamily success: family=\(String(describing: family))")
         } catch {
             // Not being in a family is a valid state; treat errors as UI feedback only.
@@ -300,6 +316,37 @@ final class FamilyStore {
         } catch {
             errorMessage = (error as NSError).localizedDescription
             print("[FamilyStore] leave error: \(error)")
+        }
+    }
+
+    /// Creates a default family named "Bite Buddy" for the "Just Me" flow using the standard family endpoint.
+    func createBiteBuddyFamily() async {
+        print("[FamilyStore] createBiteBuddyFamily called")
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        
+        do {
+            let selfMember = FamilyMember(
+                id: UUID(),
+                name: "Me",
+                color: randomColor(),
+                joined: true,
+                imageFileHash: nil
+            )
+            
+            family = try await service.createFamily(
+                name: "Bite Buddy",
+                selfMember: selfMember,
+                otherMembers: nil
+            )
+            if let family = family {
+                selectedMemberId = family.selfMember.id
+            }
+            print("[FamilyStore] createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
+        } catch {
+            errorMessage = (error as NSError).localizedDescription
+            print("[FamilyStore] createBiteBuddyFamily error: \(error)")
         }
     }
 

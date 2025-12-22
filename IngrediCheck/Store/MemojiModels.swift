@@ -16,6 +16,23 @@ struct MemojiResponse: Decodable {
     let success: Bool
     let cached: Bool?
     let imageUrl: String?
+    
+    private enum CodingKeys: String, CodingKey {
+        case success
+        case cached
+        case imageUrl
+        case image_url
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        cached = try container.decodeIfPresent(Bool.self, forKey: .cached)
+        // Support both camelCase (`imageUrl`) and snake_case (`image_url`) from the API
+        imageUrl =
+            (try? container.decodeIfPresent(String.self, forKey: .imageUrl)) ??
+            (try? container.decodeIfPresent(String.self, forKey: .image_url))
+    }
 }
 
 struct MemojiSelection {
