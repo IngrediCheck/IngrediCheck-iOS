@@ -111,8 +111,12 @@ struct MainCanvasView: View {
                 return
             }
             
+            // Capture the section that just changed so we don't lose it if the user navigates
+            // before the Task starts executing.
+            let changedSectionName = store.currentSection.name
+            
             // Call API immediately when preferences change
-            print("[MainCanvasView] Preferences changed, saving immediately")
+            print("[MainCanvasView] Preferences changed, saving section \(changedSectionName)")
             Task {
                 // Double-check we're not loading and preferences aren't empty before saving
                 guard !isLoadingMemberPreferences, !store.preferences.sections.isEmpty else {
@@ -120,8 +124,6 @@ struct MainCanvasView: View {
                     return
                 }
                 
-                // Determine which section just changed: use the current onboarding section name.
-                let changedSectionName = store.currentSection.name
                 let changedSections: Set<String> = [changedSectionName]
                 
                 // Optimistically update the canvas summary view from local preferences for this member.

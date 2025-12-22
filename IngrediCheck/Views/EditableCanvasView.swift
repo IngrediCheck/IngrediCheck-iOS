@@ -22,6 +22,7 @@ struct EditableCanvasView: View {
     @State private var isProgrammaticChange: Bool = false
     @State private var debounceTask: Task<Void, Never>? = nil
     @State private var isLoadingMemberPreferences: Bool = false
+    @State private var pendingChangedSections: Set<String> = []
     
     var body: some View {
         let cards = selectedCards()
@@ -175,6 +176,10 @@ struct EditableCanvasView: View {
                 return
             }
             
+            // Capture the section that just changed so we don't lose it if the user navigates
+            // before the debounce timer fires.
+            pendingChangedSections.insert(store.currentSection.name)
+            
             // Debounce API call - cancel previous task and start new one
             debounceTask?.cancel()
             debounceTask = Task {
@@ -185,12 +190,15 @@ struct EditableCanvasView: View {
                     // Check if task was cancelled
                     try Task.checkCancellation()
                     
-                    // Build content structure and call API for the currently visible section only
-                    let changedSectionName = store.currentSection.name
-                    let changedSections: Set<String> = [changedSectionName]
+                    // Take a snapshot of all sections that changed since the last save
+                    let sectionsToSave = pendingChangedSections
+                    pendingChangedSections.removeAll()
+                    
+                    print("[EditableCanvasView] Debounce timer fired, saving sections: \(sectionsToSave)")
+                    
                     await foodNotesStore?.updateFoodNotes(
                         selectedMemberId: familyStore.selectedMemberId,
-                        changedSections: changedSections
+                        changedSections: sectionsToSave
                     )
                 } catch {
                     // Task was cancelled or sleep interrupted - ignore
