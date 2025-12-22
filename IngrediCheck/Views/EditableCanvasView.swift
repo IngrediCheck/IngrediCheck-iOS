@@ -20,9 +20,7 @@ struct EditableCanvasView: View {
     @State private var tagBarScrollTarget: UUID? = nil
     @State private var currentEditingSectionIndex: Int = 0
     @State private var isProgrammaticChange: Bool = false
-    @State private var debounceTask: Task<Void, Never>? = nil
     @State private var isLoadingMemberPreferences: Bool = false
-    @State private var pendingChangedSections: Set<String> = []
     
     var body: some View {
         let cards = selectedCards()
@@ -160,11 +158,6 @@ struct EditableCanvasView: View {
                 isLoadingMemberPreferences = false
             }
         }
-        .onDisappear {
-            // Cancel any pending debounce task when view disappears
-            debounceTask?.cancel()
-            debounceTask = nil
-        }
         .onChange(of: store.preferences) { _ in
             // Update completion status whenever preferences change
             store.updateSectionCompletionStatus()
@@ -177,35 +170,16 @@ struct EditableCanvasView: View {
             }
             
             // Capture the section that just changed so we don't lose it if the user navigates
-            // before the debounce timer fires.
-            pendingChangedSections.insert(store.currentSection.name)
+            // before the Task starts executing.
+            let changedSectionName = store.currentSection.name
+            let changedSections: Set<String> = [changedSectionName]
             
-            // Debounce API call - cancel previous task and start new one
-            debounceTask?.cancel()
-            debounceTask = Task {
-                do {
-                    // Wait 5 seconds
-                    try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
-                    
-                    // Check if task was cancelled
-                    try Task.checkCancellation()
-                    
-                    // Take a snapshot of all sections that changed since the last save
-                    let sectionsToSave = pendingChangedSections
-                    pendingChangedSections.removeAll()
-                    
-                    print("[EditableCanvasView] Debounce timer fired, saving sections: \(sectionsToSave)")
-                    
-                    await foodNotesStore?.updateFoodNotes(
-                        selectedMemberId: familyStore.selectedMemberId,
-                        changedSections: sectionsToSave
-                    )
-                } catch {
-                    // Task was cancelled or sleep interrupted - ignore
-                    if !(error is CancellationError) {
-                        print("[EditableCanvasView] Debounce task error: \(error)")
-                    }
-                }
+            print("[EditableCanvasView] Preferences changed, saving section \(changedSectionName) immediately")
+            Task {
+                await foodNotesStore?.updateFoodNotes(
+                    selectedMemberId: familyStore.selectedMemberId,
+                    changedSections: changedSections
+                )
             }
         }
         .onChange(of: familyStore.selectedMemberId) { newValue in
