@@ -75,11 +75,31 @@ struct DynamicOptionsQuestionView: View {
     
     private func toggleSelection(for name: String) {
         var values = valuesForCurrentStep()
-        if let index = values.firstIndex(of: name) {
-            values.remove(at: index)
+        let lowerName = name.lowercased()
+        let isExclusive = (lowerName == "other" || lowerName == "none of these apply")
+        
+        if isExclusive {
+            // If Exclusive option is selected:
+            // 1. Clear everything else
+            // 2. Toggle itself (if already selected, remove it; if not, set it as the only item)
+            if values.contains(name) {
+                values.removeAll { $0 == name }
+            } else {
+                values = [name]
+            }
         } else {
-            values.append(name)
+            // Normal option selected
+            // 1. Remove any exclusive options ("Other", "None of these apply")
+            values.removeAll { $0.lowercased() == "other" || $0.lowercased() == "none of these apply" }
+            
+            // 2. Toggle the selected option
+            if let index = values.firstIndex(of: name) {
+                values.remove(at: index)
+            } else {
+                values.append(name)
+            }
         }
+        
         setValues(values)
     }
 }
@@ -156,11 +176,32 @@ struct DynamicSubStepsQuestionView: View {
     
     private func toggleSelection(cardTitle: String, chipName: String) {
         var set = selections(for: cardTitle)
-        if set.contains(chipName) {
-            set.remove(chipName)
+        let lowerName = chipName.lowercased()
+        let isExclusive = (lowerName == "other" || lowerName == "none of these apply")
+        
+        if isExclusive {
+            // If Exclusive option is selected, clear everything else in this card and select only it
+            if set.contains(chipName) {
+                set.remove(chipName)
+            } else {
+                set = [chipName]
+            }
         } else {
-            set.insert(chipName)
+            // Normal option selected
+            // 1. Remove exclusive options if present
+            let exclusives = set.filter { $0.lowercased() == "other" || $0.lowercased() == "none of these apply" }
+            for exclusive in exclusives {
+                set.remove(exclusive)
+            }
+            
+            // 2. Toggle the selected option
+            if set.contains(chipName) {
+                set.remove(chipName)
+            } else {
+                set.insert(chipName)
+            }
         }
+        
         syncPreferences(from: set, for: cardTitle)
     }
     
@@ -294,13 +335,113 @@ struct DynamicRegionsQuestionView: View {
     }
     
     private func toggleSelection(sectionTitle: String, chipName: String) {
-        var set = selections(for: sectionTitle)
-        if set.contains(chipName) {
-            set.remove(chipName)
+        let lowerChipName = chipName.lowercased()
+        let lowerSectionTitle = sectionTitle.lowercased()
+        
+        // "None of these apply" is ALWAYS Global Exclusive.
+        // "Other" is Global Exclusive ONLY if it is in a top-level section named "Other" (The "Outer Other").
+        // Otherwise, "Other" is just Local Exclusive (e.g. "Asian" -> "Other").
+        
+        let isNone = (lowerChipName == "none of these apply")
+        let isOuterOther = (lowerChipName == "other" && lowerSectionTitle == "other")
+        
+        let isGlobalExclusive = isNone || isOuterOther
+        let isLocalExclusive = (lowerChipName == "other" && !isOuterOther)
+        
+        if isGlobalExclusive {
+            // GLOBAL EXCLUSIVE LOGIC
+            // 1. Clear ALL other sections
+            clearAllSections()
+            
+            // 2. Toggle this chip in this section
+            var set = selections(for: sectionTitle)
+            if set.contains(chipName) {
+                set.remove(chipName)
+            } else {
+                set = [chipName]
+            }
+            syncRegionPreferences(from: set, for: sectionTitle)
+            
         } else {
-            set.insert(chipName)
+            // NORMAL or LOCAL EXCLUSIVE LOGIC
+            
+            // 1. Check if we need to clear any Global Exclusives from OTHER sections
+            // (e.g. if "None of these apply" or "Outer Other" was selected, clear it)
+            clearGlobalExclusivesFromOtherSections(currentSectionTitle: sectionTitle)
+            
+            var set = selections(for: sectionTitle)
+            
+            if isLocalExclusive {
+                // Local Exclusive: Clear other chips in THIS section
+                if set.contains(chipName) {
+                    set.remove(chipName)
+                } else {
+                    set = [chipName]
+                }
+            } else {
+                // Normal Option
+                // 1. Remove Local Exclusives ("Other") in THIS section
+                if let other = set.first(where: { $0.lowercased() == "other" }) {
+                    set.remove(other)
+                }
+                // 2. Remove Global Exclusives ("None of these apply") in THIS section
+                if let none = set.first(where: { $0.lowercased() == "none of these apply" }) {
+                    set.remove(none)
+                }
+                
+                // 3. Toggle
+                if set.contains(chipName) {
+                    set.remove(chipName)
+                } else {
+                    set.insert(chipName)
+                }
+            }
+            syncRegionPreferences(from: set, for: sectionTitle)
         }
-        syncRegionPreferences(from: set, for: sectionTitle)
+    }
+    
+    private func clearAllSections() {
+        let stepSectionName = step.header.name
+        // Just empty the whole nested dictionary for this step
+        preferences.sections[stepSectionName] = .nested([:])
+    }
+    
+    private func clearGlobalExclusivesFromOtherSections(currentSectionTitle: String) {
+        let stepSectionName = step.header.name
+        guard let value = preferences.sections[stepSectionName],
+              case .nested(var nestedDict) = value else { return }
+        
+        var changed = false
+        for (key, items) in nestedDict {
+            // Skip the current section (we handle it separately)
+            if key == currentSectionTitle { continue }
+            
+            // Check if this section has "None of these apply" OR is an "Outer Other" section
+            let hasNone = items.contains(where: { $0.lowercased() == "none of these apply" })
+            let isOuterOtherSection = (key.lowercased() == "other" && items.contains(where: { $0.lowercased() == "other" }))
+            
+            if hasNone || isOuterOtherSection {
+                // Remove the global exclusive item(s)
+                // For Outer Other, we clear the whole section since "Other" is likely the only item
+                // For None, we filter it out
+                
+                if isOuterOtherSection {
+                    nestedDict[key] = nil
+                } else {
+                    let newItems = items.filter { $0.lowercased() != "none of these apply" }
+                    if newItems.isEmpty {
+                        nestedDict[key] = nil
+                    } else {
+                        nestedDict[key] = newItems
+                    }
+                }
+                changed = true
+            }
+        }
+        
+        if changed {
+            preferences.sections[stepSectionName] = .nested(nestedDict)
+        }
     }
     
     private func syncRegionPreferences(from set: Set<String>, for sectionTitle: String) {
