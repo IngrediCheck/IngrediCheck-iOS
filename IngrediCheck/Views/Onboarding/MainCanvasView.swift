@@ -74,13 +74,17 @@ struct MainCanvasView: View {
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
                 
-                // If a member is already selected (e.g. Just Me flow), load their specific 
-                // preferences so the bottom sheet steps show the correct selections.
+                // Load preferences for the current selection (member or family)
+                // so the bottom sheet steps show the correct selections.
+                isLoadingMemberPreferences = true
                 if let memberId = familyStore.selectedMemberId?.uuidString.lowercased() {
                     print("[MainCanvasView] onAppear: Loading preferences for selected member \(memberId)")
-                    isLoadingMemberPreferences = true
                     await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+                } else {
+                    print("[MainCanvasView] onAppear: Loading preferences for family (Everyone)")
+                    await foodNotesStore?.loadFoodNotesForFamily()
                 }
+                isLoadingMemberPreferences = false
             }
 		}
 		.onChange(of: store.currentSectionIndex) { newIndex in
@@ -95,10 +99,9 @@ struct MainCanvasView: View {
             store.updateSectionCompletionStatus()
             
             // If we were loading member/family preferences, this change came from a backend load.
-            // Clear the flag and DO NOT save.
+            // DO NOT save.
             if isLoadingMemberPreferences {
-                print("[MainCanvasView] Preferences updated after member switch, clearing loading flag (no save)")
-                isLoadingMemberPreferences = false
+                print("[MainCanvasView] Preferences updated during load, skipping save")
                 return
             }
             
@@ -131,11 +134,18 @@ struct MainCanvasView: View {
                 )
             }
         }
-        .onChange(of: familyStore.selectedMemberId) { _ in
-            // When switching members, mark that the next preferences change is from a backend load.
-            // MainCanvasView should NOT save in response to that change.
-            print("[MainCanvasView] Member switched, setting loading flag")
+        .onChange(of: familyStore.selectedMemberId) { newValue in
+            // When switching members, mark that we are loading and trigger the load.
+            print("[MainCanvasView] Member switched to \(newValue?.uuidString ?? "Everyone"), loading preferences")
             isLoadingMemberPreferences = true
+            Task {
+                if let memberId = newValue?.uuidString.lowercased() {
+                    await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+                } else {
+                    await foodNotesStore?.loadFoodNotesForFamily()
+                }
+                isLoadingMemberPreferences = false
+            }
         }
         .navigationBarBackButtonHidden(true)
     }

@@ -146,13 +146,17 @@ struct EditableCanvasView: View {
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
                 
-                // If a member is selected (e.g. single-member family), load their 
-                // preferences so they are ready when the edit sheet opens.
+                // Load preferences for the current selection (member or family)
+                // so they are ready when the edit sheet opens.
+                isLoadingMemberPreferences = true
                 if let memberId = familyStore.selectedMemberId?.uuidString.lowercased() {
                     print("[EditableCanvasView] onAppear: Loading preferences for selected member \(memberId)")
-                    isLoadingMemberPreferences = true
                     await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+                } else {
+                    print("[EditableCanvasView] onAppear: Loading preferences for family (Everyone)")
+                    await foodNotesStore?.loadFoodNotesForFamily()
                 }
+                isLoadingMemberPreferences = false
             }
         }
         .onDisappear {
@@ -165,10 +169,9 @@ struct EditableCanvasView: View {
             store.updateSectionCompletionStatus()
             
             // If we were loading member/family preferences, this change came from a backend load.
-            // Clear the flag and DO NOT save.
+            // DO NOT save.
             if isLoadingMemberPreferences {
-                print("[EditableCanvasView] Preferences updated after load, clearing flag (no save)")
-                isLoadingMemberPreferences = false
+                print("[EditableCanvasView] Preferences updated during load, skipping save")
                 return
             }
             
@@ -195,6 +198,19 @@ struct EditableCanvasView: View {
                         print("[EditableCanvasView] Debounce task error: \(error)")
                     }
                 }
+            }
+        }
+        .onChange(of: familyStore.selectedMemberId) { newValue in
+            // When switching members, mark that we are loading and trigger the load.
+            print("[EditableCanvasView] Member switched to \(newValue?.uuidString ?? "Everyone"), loading preferences")
+            isLoadingMemberPreferences = true
+            Task {
+                if let memberId = newValue?.uuidString.lowercased() {
+                    await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+                } else {
+                    await foodNotesStore?.loadFoodNotesForFamily()
+                }
+                isLoadingMemberPreferences = false
             }
         }
     }
