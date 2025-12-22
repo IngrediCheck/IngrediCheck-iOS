@@ -175,6 +175,10 @@ struct EditableCanvasView: View {
             let changedSections: Set<String> = [changedSectionName]
             
             print("[EditableCanvasView] Preferences changed, saving section \(changedSectionName) immediately")
+            
+            // Optimistically update the canvas summary view from local preferences for this member.
+            foodNotesStore?.applyLocalPreferencesOptimistic(selectedMemberId: familyStore.selectedMemberId)
+            
             Task {
                 await foodNotesStore?.updateFoodNotes(
                     selectedMemberId: familyStore.selectedMemberId,
