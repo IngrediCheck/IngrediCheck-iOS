@@ -20,6 +20,14 @@ final class FamilyStore {
     private(set) var pendingSelfMember: FamilyMember?
     private(set) var pendingOtherMembers: [FamilyMember] = []
     
+    /// Currently selected member in the family preferences UI.
+    /// `nil` means "Everyone" (family-level).
+    var selectedMemberId: UUID? = nil
+    
+    /// Target member for avatar assignment from the MeetYourAvatar flow.
+    /// When non-nil, this is the member whose avatar should be updated.
+    var avatarTargetMemberId: UUID? = nil
+    
     init(service: FamilyService = FamilyService()) {
         self.service = service
     }
@@ -73,6 +81,23 @@ final class FamilyStore {
         )
     }
     
+    /// Set or update the avatar image for the pending self member.
+    func setPendingSelfMemberAvatar(imageName: String?) {
+        guard let imageName else { return }
+        guard var member = pendingSelfMember else { return }
+        member.imageFileHash = imageName
+        pendingSelfMember = member
+    }
+    
+    /// Update the name for the pending self member.
+    func updatePendingSelfMemberName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard var member = pendingSelfMember else { return }
+        member.name = trimmed
+        pendingSelfMember = member
+    }
+    
     /// Add an additional family member to the pending list.
     func addPendingOtherMember(name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -91,6 +116,35 @@ final class FamilyStore {
             imageFileHash: nil
         )
         pendingOtherMembers.append(member)
+    }
+    
+    func setAvatarForLastPendingOtherMember(imageName: String?) {
+        guard let imageName else { return }
+        guard !pendingOtherMembers.isEmpty else { return }
+        var last = pendingOtherMembers.removeLast()
+        last.imageFileHash = imageName
+        pendingOtherMembers.append(last)
+    }
+    
+    func updatePendingOtherMemberName(id: UUID, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
+            pendingOtherMembers[idx].name = trimmed
+        }
+    }
+    
+    func setAvatarForPendingOtherMember(id: UUID, imageName: String?) {
+        guard let imageName else { return }
+        if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
+            pendingOtherMembers[idx].imageFileHash = imageName
+        }
+    }
+    
+    func setInvitePendingForPendingOtherMember(id: UUID, pending: Bool = true) {
+        if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
+            pendingOtherMembers[idx].invitePending = pending
+        }
     }
     
     /// Creates the family on the backend using any pending members, if present.
@@ -127,6 +181,14 @@ final class FamilyStore {
         
         do {
             family = try await service.fetchFamily()
+            
+            // If this is a single-member family and no member is selected,
+            // auto-select the self member so preferences load correctly.
+            if let family = family, family.otherMembers.isEmpty, selectedMemberId == nil {
+                selectedMemberId = family.selfMember.id
+                print("[FamilyStore] loadCurrentFamily: Auto-selected self member for single-member family")
+            }
+            
             print("[FamilyStore] loadCurrentFamily success: family=\(String(describing: family))")
         } catch {
             // Not being in a family is a valid state; treat errors as UI feedback only.
@@ -254,6 +316,37 @@ final class FamilyStore {
         } catch {
             errorMessage = (error as NSError).localizedDescription
             print("[FamilyStore] leave error: \(error)")
+        }
+    }
+
+    /// Creates a default family named "Bite Buddy" for the "Just Me" flow using the standard family endpoint.
+    func createBiteBuddyFamily() async {
+        print("[FamilyStore] createBiteBuddyFamily called")
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        
+        do {
+            let selfMember = FamilyMember(
+                id: UUID(),
+                name: "Me",
+                color: randomColor(),
+                joined: true,
+                imageFileHash: nil
+            )
+            
+            family = try await service.createFamily(
+                name: "Bite Buddy",
+                selfMember: selfMember,
+                otherMembers: nil
+            )
+            if let family = family {
+                selectedMemberId = family.selfMember.id
+            }
+            print("[FamilyStore] createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
+        } catch {
+            errorMessage = (error as NSError).localizedDescription
+            print("[FamilyStore] createBiteBuddyFamily error: \(error)")
         }
     }
 

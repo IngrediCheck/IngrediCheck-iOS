@@ -526,16 +526,33 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
 
     func uploadImage(image: UIImage) async throws -> String {
-
+    
         let imageData = image.jpegData(compressionQuality: 1.0)!
         let imageFileName = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
-
-        try await supabaseClient.storage.from("productimages").upload(
-            path: imageFileName,
-            file: imageData,
-            options: FileOptions(contentType: "image/jpeg")
-        )
-
+        
+        print("[WebService] uploadImage: Uploading image to storage with key=\(imageFileName)")
+        
+        do {
+            try await supabaseClient.storage.from("productimages").upload(
+                path: imageFileName,
+                file: imageData,
+                options: FileOptions(contentType: "image/jpeg")
+            )
+            print("[WebService] uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
+        } catch {
+            let message = String(describing: error)
+            // Supabase storage returns "The resource already exists" when the same
+            // object key is uploaded again. In our case the key is a SHA256 hash
+            // of the image bytes, so if the content is identical we can safely
+            // treat this as a success and reuse the existing object.
+            if message.contains("resource already exists") {
+                print("[WebService] uploadImage: ℹ️ Resource already exists for key=\(imageFileName), reusing existing file")
+            } else {
+                print("[WebService] uploadImage: ❌ Upload failed for key=\(imageFileName): \(error.localizedDescription)")
+                throw error
+            }
+        }
+    
         return imageFileName
     }
 
@@ -1122,5 +1139,346 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                 print("Ping API call failed: \(error.localizedDescription)")
             }
         }
+    }
+    
+    // MARK: - Food Notes API
+    
+    // Pretty-print helper for logging JSON responses in the console.
+    private func prettyPrintedJSON(from data: Data) -> String {
+        guard !data.isEmpty else { return "<empty body>" }
+        
+        if let jsonObject = try? JSONSerialization.jsonObject(with: data),
+           JSONSerialization.isValidJSONObject(jsonObject),
+           let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            return prettyString
+        }
+        
+        // Fallback to raw UTF-8 string if not valid JSON
+        return String(data: data, encoding: .utf8) ?? "<non-UTF8 body>"
+    }
+    
+    struct FoodNotesResponse {
+        let content: [String: Any]
+        let version: Int
+        let updatedAt: String
+    }
+    
+    struct FoodNotesAllResponse {
+        let familyNote: FoodNotesResponse?
+        let memberNotes: [String: FoodNotesResponse] // Key is member ID
+    }
+    
+    struct VersionMismatchError: Error {
+        let currentNote: FoodNotesResponse
+        let expectedVersion: Int
+    }
+    
+    func fetchFoodNotes() async throws -> FoodNotesResponse? {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        print("[WebService] fetchFoodNotes: Starting GET request to /family/food-notes")
+        
+        let request = SupabaseRequestBuilder(endpoint: .family_food_notes)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] fetchFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            // 404 means no food notes exist yet, which is fine
+            if httpResponse.statusCode == 404 {
+                print("[WebService] fetchFoodNotes: No food notes found (404), returning nil")
+                return nil
+            }
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("[WebService] fetchFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        // Backend returns null if no food notes exist (status 200 with null body)
+        let responseString = String(data: data, encoding: .utf8) ?? ""
+        if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
+            print("[WebService] fetchFoodNotes: No food notes found (null response), returning nil")
+            return nil
+        }
+        
+        // Parse response - include content, version and updatedAt
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let version = jsonObject["version"] as? Int,
+              let updatedAt = jsonObject["updatedAt"] as? String,
+              let content = jsonObject["content"] as? [String: Any] else {
+            print("[WebService] fetchFoodNotes: ❌ Failed to parse response")
+            print("[WebService] fetchFoodNotes: Response body: \(responseString)")
+            throw NetworkError.decodingError
+        }
+        
+        print("[WebService] fetchFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: ", "))")
+        
+        return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+    }
+    
+    func fetchFoodNotesAll() async throws -> FoodNotesAllResponse? {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        print("[WebService] fetchFoodNotesAll: Starting GET request to /family/food-notes/all")
+        
+        let request = SupabaseRequestBuilder(endpoint: .family_food_notes_all)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] fetchFoodNotesAll: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            // 404 means no food notes exist yet, which is fine
+            if httpResponse.statusCode == 404 {
+                print("[WebService] fetchFoodNotesAll: No food notes found (404), returning nil")
+                return nil
+            }
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("[WebService] fetchFoodNotesAll: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        // Backend returns null if no food notes exist (status 200 with null body)
+        let responseString = String(data: data, encoding: .utf8) ?? ""
+        if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
+            print("[WebService] fetchFoodNotesAll: No food notes found (null response), returning nil")
+            return nil
+        }
+        
+        // Parse response - includes familyNote and memberNotes
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("[WebService] fetchFoodNotesAll: ❌ Failed to parse response")
+            print("[WebService] fetchFoodNotesAll: Response body: \(responseString)")
+            throw NetworkError.decodingError
+        }
+        
+        // Parse familyNote (can be null)
+        var familyNote: FoodNotesResponse? = nil
+        if let familyNoteDict = jsonObject["familyNote"] as? [String: Any],
+           let version = familyNoteDict["version"] as? Int,
+           let updatedAt = familyNoteDict["updatedAt"] as? String,
+           let content = familyNoteDict["content"] as? [String: Any] {
+            familyNote = FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+        }
+        
+        // Parse memberNotes (dictionary of member ID -> FoodNotesResponse)
+        var memberNotes: [String: FoodNotesResponse] = [:]
+        if let memberNotesDict = jsonObject["memberNotes"] as? [String: [String: Any]] {
+            for (memberId, noteDict) in memberNotesDict {
+                if let version = noteDict["version"] as? Int,
+                   let updatedAt = noteDict["updatedAt"] as? String,
+                   let content = noteDict["content"] as? [String: Any] {
+                    memberNotes[memberId] = FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+                }
+            }
+        }
+        
+        print("[WebService] fetchFoodNotesAll: ✅ Success! Family note: \(familyNote != nil ? "present" : "null"), Member notes: \(memberNotes.count)")
+        
+        return FoodNotesAllResponse(familyNote: familyNote, memberNotes: memberNotes)
+    }
+    
+    func updateFoodNotes(content: [String: Any], version: Int) async throws -> FoodNotesResponse {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        // Convert content to JSON
+        let requestBody: [String: Any] = [
+            "content": content,
+            "version": version
+        ]
+        
+        let requestBodyData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        
+        let request = SupabaseRequestBuilder(endpoint: .family_food_notes)
+            .setAuthorization(with: token)
+            .setMethod(to: "PUT")
+            .setJsonBody(to: requestBodyData)
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] updateFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("[WebService] updateFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
+            
+            // Handle version mismatch (409 Conflict) - backend now returns currentNote in response.
+            // For family notes, currentNote may be null when there is no existing note yet.
+            if httpResponse.statusCode == 409 {
+                if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let currentNoteDict = jsonObject["currentNote"] as? [String: Any],
+                       let currentVersion = currentNoteDict["version"] as? Int,
+                       let currentUpdatedAt = currentNoteDict["updatedAt"] as? String,
+                       let currentContent = currentNoteDict["content"] as? [String: Any] {
+                        let currentNote = FoodNotesResponse(
+                            content: currentContent,
+                            version: currentVersion,
+                            updatedAt: currentUpdatedAt
+                        )
+                        print("[WebService] updateFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
+                        throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
+                    } else {
+                        // currentNote is null or missing: treat this as "no existing note",
+                        // so retry once with version=0 to create the family note.
+                        print("[WebService] updateFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
+                        return try await updateFoodNotes(content: content, version: 0)
+                    }
+                }
+            }
+            
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        // Parse response - include content, version and updatedAt
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let version = jsonObject["version"] as? Int,
+              let updatedAt = jsonObject["updatedAt"] as? String,
+              let content = jsonObject["content"] as? [String: Any] else {
+            print("[WebService] updateFoodNotes: Failed to parse response")
+            throw NetworkError.decodingError
+        }
+        
+        return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+    }
+    
+    // MARK: - Member-specific Food Notes API
+    
+    /// Fetch food notes for a specific family member by ID.
+    func fetchMemberFoodNotes(memberId: String) async throws -> FoodNotesResponse? {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        print("[WebService] fetchMemberFoodNotes: Starting GET request to /family/members/\(memberId)/food-notes")
+        
+        let request = SupabaseRequestBuilder(endpoint: .family_member_food_notes, itemId: memberId)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] fetchMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            // 404 means no food notes exist yet for this member, which is fine
+            if httpResponse.statusCode == 404 {
+                print("[WebService] fetchMemberFoodNotes: No member food notes found (404), returning nil")
+                return nil
+            }
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("[WebService] fetchMemberFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        // Backend returns null if no food notes exist (status 200 with null body)
+        let responseString = String(data: data, encoding: .utf8) ?? ""
+        if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
+            print("[WebService] fetchMemberFoodNotes: No food notes found (null response), returning nil")
+            return nil
+        }
+        
+        // Parse response - include content, version and updatedAt
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let version = jsonObject["version"] as? Int,
+              let updatedAt = jsonObject["updatedAt"] as? String,
+              let content = jsonObject["content"] as? [String: Any] else {
+            print("[WebService] fetchMemberFoodNotes: ❌ Failed to parse response")
+            print("[WebService] fetchMemberFoodNotes: Response body: \(responseString)")
+            throw NetworkError.decodingError
+        }
+        
+        print("[WebService] fetchMemberFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: ", "))")
+        
+        return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+    }
+    
+    /// Update food notes for a specific family member by ID.
+    func updateMemberFoodNotes(memberId: String, content: [String: Any], version: Int) async throws -> FoodNotesResponse {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        // Convert content to JSON
+        let requestBody: [String: Any] = [
+            "content": content,
+            "version": version
+        ]
+        
+        let requestBodyData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        
+        let request = SupabaseRequestBuilder(endpoint: .family_member_food_notes, itemId: memberId)
+            .setAuthorization(with: token)
+            .setMethod(to: "PUT")
+            .setJsonBody(to: requestBodyData)
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("[WebService] updateMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("[WebService] updateMemberFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
+            
+            // Handle version mismatch (409 Conflict).
+            // For member notes, the backend may return { "error": "version_mismatch", "currentNote": null }
+            // when there is no existing note yet. In that case we should retry once with version=0.
+            if httpResponse.statusCode == 409 {
+                if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let currentNoteDict = jsonObject["currentNote"] as? [String: Any],
+                       let currentVersion = currentNoteDict["version"] as? Int,
+                       let currentUpdatedAt = currentNoteDict["updatedAt"] as? String,
+                       let currentContent = currentNoteDict["content"] as? [String: Any] {
+                        let currentNote = FoodNotesResponse(
+                            content: currentContent,
+                            version: currentVersion,
+                            updatedAt: currentUpdatedAt
+                        )
+                        print("[WebService] updateMemberFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
+                        throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
+                    } else {
+                        // currentNote is null or missing: treat this as "no existing note",
+                        // so retry once with version=0 to create the member note.
+                        print("[WebService] updateMemberFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
+                        return try await updateMemberFoodNotes(memberId: memberId, content: content, version: 0)
+                    }
+                }
+            }
+            
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        // Parse response - include content, version and updatedAt
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let version = jsonObject["version"] as? Int,
+              let updatedAt = jsonObject["updatedAt"] as? String,
+              let content = jsonObject["content"] as? [String: Any] else {
+            print("[WebService] updateMemberFoodNotes: Failed to parse response")
+            print("[WebService] updateMemberFoodNotes: Response body: \(String(data: data, encoding: .utf8) ?? "")")
+            throw NetworkError.decodingError
+        }
+        
+        return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
     }
 }

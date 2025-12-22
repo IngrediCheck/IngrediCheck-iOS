@@ -20,18 +20,22 @@ struct SettingsSheet: View {
                     Toggle("Start Scanning on App Start", isOn: $userPreferences.startScanningOnAppStart)
                 }
                 Section("Account") {
-                    if authController.signedInWithApple || authController.signedInWithGoogle {
+                    if authController.session != nil && !authController.signedInAsGuest {
                         // Provider badge
                         if let providerDisplay = authController.currentSignInProviderDisplay {
                             HStack(spacing: 10) {
                                 if authController.signedInWithApple {
                                     Image(systemName: "applelogo")
                                         .foregroundStyle(.primary)
-                                } else {
+                                } else if authController.signedInWithGoogle {
                                     Image("google_logo")
                                         .resizable()
                                         .scaledToFit()
                                         .frame(width: 18, height: 18)
+                                } else {
+                                    // Fallback icon
+                                    Image(systemName: providerDisplay.icon)
+                                        .foregroundStyle(.secondary)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(providerDisplay.text)
@@ -49,6 +53,12 @@ struct SettingsSheet: View {
                                 SignoutButton()
                             }
                             .padding(.vertical, 2)
+                        } else {
+                            // Fallback if providerDisplay returns nil but we are signed in
+                             HStack(spacing: 10) {
+                                SignoutButton()
+                                Spacer()
+                            }
                         }
 
                         // Danger Zone
@@ -262,6 +272,7 @@ struct DeleteAccountView: View {
     
     let labelText: String
 
+    @Environment(\.dismiss) var dismiss
     @Environment(AuthController.self) var authController
     @Environment(OnboardingState.self) var onboardingState
     @Environment(UserPreferences.self) var userPreferences
@@ -297,6 +308,12 @@ struct DeleteAccountView: View {
                         onboardingState.clearAll()
                         userPreferences.clearAll()
                         dietaryPreferences.clearAll()
+                        
+                        dismiss()
+                        NotificationCenter.default.post(
+                            name: Notification.Name("AppDidReset"),
+                            object: nil
+                        )
                     }
                 }
             }
@@ -379,6 +396,7 @@ private struct InternalModeToastView: View {
 struct SignoutButton: View {
 
     @Environment(AuthController.self) var authController
+    @Environment(\.dismiss) var dismiss
     @Environment(OnboardingState.self) var onboardingState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
@@ -387,7 +405,7 @@ struct SignoutButton: View {
     var body: some View {
         Button {
             Task {
-                await authController.signOut()
+                await authController.resetForAppReset()
                 await MainActor.run {
                     appState.activeSheet = nil
                     appState.activeTab = .home
@@ -396,6 +414,12 @@ struct SignoutButton: View {
                     onboardingState.clearAll()
                     userPreferences.clearAll()
                     dietaryPreferences.clearAll()
+                    
+                    dismiss()
+                    NotificationCenter.default.post(
+                        name: Notification.Name("AppDidReset"),
+                        object: nil
+                    )
                 }
             }
         } label: {

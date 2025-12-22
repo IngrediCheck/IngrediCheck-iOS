@@ -9,6 +9,9 @@ final class MemojiStore {
     var backgroundColorHex: String?
     var isGenerating = false
     
+    // Display context for UI (e.g., show typed name in Generate Avatar header)
+    var displayName: String? = nil
+    
     // Store avatar generation selections to preserve state when navigating back
     var selectedFamilyMemberName: String = "young-son"
     var selectedFamilyMemberImage: String = "image-bg1"
@@ -31,6 +34,8 @@ final class MemojiStore {
             image = generated
             coordinator.navigateInBottomSheet(.meetYourAvatar)
         } catch {
+            // Log error so we can debug why memoji generation failed
+            print("Memoji generation failed: \(error.localizedDescription)")
             image = UIImage(named: "ingrediBot")
             coordinator.navigateInBottomSheet(.meetYourAvatar)
         }

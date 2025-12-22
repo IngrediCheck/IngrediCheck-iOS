@@ -182,6 +182,7 @@ struct GenerateAvatar: View {
     ]
     
     @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
+    @State var familyIdx: Int = 0
     
     // Restore state from memojiStore when view appears
     private func restoreState() {
@@ -190,6 +191,11 @@ struct GenerateAvatar: View {
             familyMemberName: memojiStore.selectedFamilyMemberName,
             familyMemberImage: memojiStore.selectedFamilyMemberImage
         )
+        if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+            familyIdx = idx
+        } else {
+            familyIdx = 0
+        }
         
         // Restore other selections
         selectedTool = memojiStore.selectedTool
@@ -486,7 +492,7 @@ struct GenerateAvatar: View {
                         VStack(spacing: 40) {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Text("Generate Avatar: \(idx)")
+                                    Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
@@ -518,16 +524,8 @@ struct GenerateAvatar: View {
                                 VStack {
                                     switch selectedTool {
                                     case "family-member":
-                                        Text("Tell us how you’re related to them so we can create the perfect avatar!")
-                                            .font(ManropeFont.medium.size(12))
-                                            .foregroundStyle(.grayScale120)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.horizontal, 20)
+                                        minimalFamilySelector()
                                         
-                                        selectedMemberRow()
-                                            .padding(.horizontal, 20)
-                                            .matchedGeometryEffect(id: "circle", in: animation)
-                                            
                                     case "gesture":
                                         minimalToolsSelector(toolIdx: 0)
                                         
@@ -663,6 +661,65 @@ struct GenerateAvatar: View {
                     )
             }
             .disabled(idx == tools[toolIdx].tools.count - 1)
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    func minimalFamilySelector() -> some View {
+        let current = familyMember[familyIdx]
+        let isCurrentSelected = selectedFamilyMember.name == current.name
+        
+        HStack {
+            Button {
+                familyIdx = max(0, familyIdx - 1)
+            } label: {
+                Circle()
+                    .fill(.grayScale60)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(.arrowLeft)
+                            .resizable()
+                            .rotationEffect(.degrees(180))
+                            .frame(width: 22, height: 22)
+                    )
+            }
+            .disabled(familyIdx == 0)
+
+            Spacer()
+            
+            Button {
+                selectedFamilyMember = current
+            } label: {
+                VStack {
+                    Image(current.image)
+                        .resizable()
+                        .frame(width: 56, height: 50)
+                    
+                    Text(current.name)
+                        .font(ManropeFont.medium.size(14))
+                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            Button {
+                familyIdx = min(familyIdx + 1, familyMember.count - 1)
+            } label: {
+                Circle()
+                    .fill(.grayScale60)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(.arrowLeft)
+                            .resizable()
+                            .frame(width: 22, height: 22)
+                    )
+            }
+            .disabled(familyIdx == familyMember.count - 1)
         }
         .padding(.horizontal, 20)
     }
@@ -879,6 +936,7 @@ struct LetsScanSmarter: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -909,6 +967,7 @@ struct AccessDenied: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -951,6 +1010,7 @@ struct StayUpdated: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -980,6 +1040,7 @@ struct PreferenceAreReady: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -989,13 +1050,18 @@ struct AlreadyHaveAnAccount: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 12) {
-                Text("Already have an account?")
+            VStack(spacing: 0) {
+                Text("Are you an existing user?")
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
+                    .padding(.bottom ,12)
 
-                Text("We'll help you log in or start fresh.")
+                Text("Have you used IngrediCheck earlier? If yes, continue. ")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+                Text("If not, start new.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -1006,7 +1072,7 @@ struct AlreadyHaveAnAccount: View {
                 Button {
                     yesPressed()
                 } label: {
-                    Text("Yes, I have")
+                    Text("Yes, continue")
                         .font(NunitoFont.semiBold.size(16))
                         .foregroundStyle(.grayScale110)
                         .frame(height: 52)
@@ -1021,16 +1087,16 @@ struct AlreadyHaveAnAccount: View {
                 Button {
                     noPressed()
                 } label: {
-                    GreenCapsule(title: "No")
+                    GreenCapsule(title: "No, start new")
                 }
                 
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 32)
 
-            Text("You can switch anytime before continuing.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale120)
-                .multilineTextAlignment(.center)
+//            Text("You can switch anytime before continuing.")
+//                .font(ManropeFont.regular.size(12))
+//                .foregroundStyle(.grayScale120)
+//                .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1047,15 +1113,31 @@ struct AlreadyHaveAnAccount: View {
 struct DoYouHaveAnInviteCode: View {
     @State var yesPressed: (() -> Void)? = nil
     @State var noPressed: (() -> Void)? = nil
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Do you have an invite code?")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
+                HStack {
+                    Text("Do you have an invite code?")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        coordinator.navigateInBottomSheet(.alreadyHaveAnAccount)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
 
-                Text("If someone invited you to their IngrediCheck family, tap Yes to join them.")
+                Text("Got a family invite to IngrediFam? Enter code.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -1063,34 +1145,32 @@ struct DoYouHaveAnInviteCode: View {
             .padding(.bottom, 24)
 
             HStack(spacing: 16) {
+               
+               Button {
+                    yesPressed?()
+                
+                    } label: {
+                    Text("Enter invite code")
+                                        .font(NunitoFont.semiBold.size(16))
+                                        .foregroundStyle(.grayScale110)
+                                        .frame(height: 52)
+                                        .frame(minWidth: 152)
+                                        .frame(maxWidth: .infinity)
+                                        .background(
+                                            Capsule()
+                                                .foregroundStyle(.grayScale40)
+                                        )
+                                }
                 Button {
                     noPressed?()
                 } label: {
-                    Text("No, continue")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(height: 52)
-                        .frame(minWidth: 152)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Capsule()
-                                .foregroundStyle(.grayScale40)
-                        )
-                }
-
-                Button {
-                    yesPressed?()
-                } label: {
-                    GreenCapsule(title: "Yes, I have one")
+                    GreenCapsule(title: "No, Continue")
                 }
                 
             }
             .padding(.bottom, 20)
 
-            Text("No code? No problem — we’ll set things up for you.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale120)
-                .multilineTextAlignment(.center)
+         
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1113,12 +1193,27 @@ struct WelcomeBack: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Welcome back 👋")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-
-                Text("Log in to access your saved preferences and food insights.")
+                HStack {
+                    Text("Welcome back !")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        // Go back one bottom sheet route
+                        coordinator.navigateInBottomSheet(.alreadyHaveAnAccount)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24) // comfortable tap target
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Text("Log in to your existing IngrediCheck account.")
                     .font(ManropeFont.medium.size(12))                    .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
@@ -1187,21 +1282,21 @@ struct WelcomeBack: View {
                 }
                 .disabled(isSigningIn)
             }
-            .padding(.bottom, 20)
+           .padding(.bottom, 20)
 
-            HStack(spacing: 4) {
-                Text("New here?")
-                    .font(ManropeFont.regular.size(12))
-                    .foregroundStyle(.grayScale120)
-
-                Button {
-                    
-                } label: {
-                    Text("Get started instead")
-                        .font(ManropeFont.semiBold.size(12))
-                        .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
-                }
-            }
+//            HStack(spacing: 4) {
+//                Text("New here?")
+//                    .font(ManropeFont.regular.size(12))
+//                    .foregroundStyle(.grayScale120)
+//
+//                Button {
+//                    
+//                } label: {
+//                    Text("Get started instead")
+//                        .font(ManropeFont.semiBold.size(12))
+//                        .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
+//                }
+//            }
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1230,13 +1325,29 @@ struct WelcomeBack: View {
 struct WhosThisFor: View {
     @State var justmePressed: (() -> Void)? = nil
     @State var addFamilyPressed: (() -> Void)? = nil
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Hey there! Who’s this for?")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
+                HStack {
+                    Text("Hey there! Who’s this for?")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 Text("Is it just you, or your whole IngrediFam — family, friends, anyone you care about?")
                     .font(ManropeFont.medium.size(12))
@@ -1288,6 +1399,7 @@ struct AllSetToJoinYourFamily: View {
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
+                    .padding(.bottom , 12)
 
                 Text("Welcome to the Patel Family! Your ingredient lists and preferences will now sync automatically.")
                     .font(ManropeFont.medium.size(12))
@@ -1318,6 +1430,7 @@ struct AllSetToJoinYourFamily: View {
 
 struct EnterYourInviteCode : View {
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
@@ -1327,11 +1440,26 @@ struct EnterYourInviteCode : View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Enter your invite code")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-                
+                HStack {
+                    Text("Enter your invite code")
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(.grayScale150)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    Button {
+                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Text("This connects you to your family or shared\nIngrediCheck space.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
@@ -1410,10 +1538,13 @@ struct EnterYourInviteCode : View {
                 .disabled(isVerifying)
             }
             .padding(.bottom, 20)
-            
-            Text("By continuing, you agree to our Terms & Privacy Policy.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale90)
+            HStack{
+                Image("jam-sheld-half")
+                    .frame(width: 16, height: 16)
+                Text("By continuing, you agree to our Terms & Privacy Policy.")
+                    .font(ManropeFont.regular.size(12))
+                    .foregroundStyle(.grayScale100)
+            }
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1424,6 +1555,7 @@ struct EnterYourInviteCode : View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .navigationBarBackButtonHidden(true)
     }
 
     struct InviteTextField: View {
@@ -1570,7 +1702,7 @@ struct WouldYouLikeToInvite: View {
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                 
-                Text("No worries if you skip this step. You can share the code with Neha later too.")
+                Text("No worries if you skip this step. You can share the code with \(name) later too.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -1579,16 +1711,22 @@ struct WouldYouLikeToInvite: View {
             
             HStack(spacing: 16) {
                 Button {
-                    invitePressed()
-                } label: {
-                    GreenOutlinedCapsule(image: "share", title: "Invite")
-                }
-                
-                Button {
                     continuePressed()
                 } label: {
-                    GreenOutlinedCapsule(title: "Continue")
+                    Text("Maybe later")
+                        .font(NunitoFont.semiBold.size(16))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(.grayScale40, in: .capsule)
                 }
+                Button {
+                    invitePressed()
+                } label: {
+                    GreenCapsule(title: "Invite" , icon: "share" ,iconWidth: 12 , iconHeight: 12 ,)
+                }
+                
+               
 
                 
             }
@@ -1659,16 +1797,41 @@ struct WantToAddPreference: View {
 }
 
 struct YourCurrentAvatar: View {
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
     @State var createNewPressed: () -> Void = { }
     
+    private var currentMember: FamilyMember? {
+        guard let family = familyStore.family else { return nil }
+        
+        // If a member was selected in SetUpAvatarFor, show that member's avatar
+        if let targetMemberId = familyStore.avatarTargetMemberId {
+            if targetMemberId == family.selfMember.id {
+                return family.selfMember
+            } else if let member = family.otherMembers.first(where: { $0.id == targetMemberId }) {
+                return member
+            }
+        }
+        
+        // Otherwise, default to selfMember
+        return family.selfMember
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            Circle()
-                .frame(width: 120, height: 120)
-                .padding(.bottom, 26)
+            // Show actual member avatar
+            if let member = currentMember {
+                YourCurrentAvatarView(member: member)
+                    .padding(.bottom, 26)
+            } else {
+                Circle()
+                    .fill(Color(hex: "#D9D9D9"))
+                    .frame(width: 120, height: 120)
+                    .padding(.bottom, 26)
+            }
             
-            Text("Here’s your current avatar. would you like to make a new one?")
+            Text("Here's your current avatar. would you like to make a new one?")
                 .font(NunitoFont.bold.size(20))
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 23)
@@ -1694,32 +1857,86 @@ struct YourCurrentAvatar: View {
     }
 }
 
-struct SetUpAvatarFor: View {
-    @Environment(FamilyStore.self) private var familyStore
+// MARK: - Your Current Avatar View
+
+/// Large avatar view (120x120) used in YourCurrentAvatar sheet to show the member's current memoji.
+struct YourCurrentAvatarView: View {
+    @Environment(WebService.self) private var webService
+    let member: FamilyMember
     
-    private struct Member: Identifiable {
-        let id: UUID
-        let name: String
-        let image: String
-        let background: Color
+    @State private var avatarImage: UIImage? = nil
+    @State private var loadedHash: String? = nil
+    
+    var body: some View {
+        // Base colored circle - always visible as background
+        Circle()
+            .fill(Color(hex: member.color))
+            .frame(width: 120, height: 120)
+            .overlay {
+                // Content layer overlaid on background
+                if let avatarImage {
+                    // Show loaded memoji avatar - slightly smaller to show background border
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 110, height: 110)
+                        .clipShape(Circle())
+                } else {
+                    // Fallback: first letter of name
+                    Text(String(member.name.prefix(1)))
+                        .font(NunitoFont.semiBold.size(48))
+                        .foregroundStyle(.white)
+                }
+            }
+            .overlay(
+                // White stroke overlay on top
+                Circle()
+                    .stroke(lineWidth: 2)
+                    .foregroundStyle(Color.white)
+            )
+            .task(id: member.imageFileHash) {
+                await loadAvatarIfNeeded()
+            }
     }
     
-    private var members: [Member] {
-        guard let family = familyStore.family else { return [] }
-        let allMembers = [family.selfMember] + family.otherMembers
-        return allMembers.map { member in
-            // Use member name as image identifier (matching original asset-based approach)
-            // If imageFileHash is needed later, it can be handled separately for remote image loading
-            return Member(
-                id: member.id,
-                name: member.name,
-                image: member.name,
-                background: Color(hex: member.color)
+    @MainActor
+    private func loadAvatarIfNeeded() async {
+        guard let hash = member.imageFileHash, !hash.isEmpty else {
+            avatarImage = nil
+            loadedHash = nil
+            return
+        }
+        
+        // Skip if already loaded for this hash
+        if loadedHash == hash, avatarImage != nil {
+            return
+        }
+        
+        print("[YourCurrentAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+        do {
+            let uiImage = try await webService.fetchImage(
+                imageLocation: .imageFileHash(hash),
+                imageSize: .small
             )
+            avatarImage = uiImage
+            loadedHash = hash
+            print("[YourCurrentAvatarView] ✅ Loaded avatar for \(member.name)")
+        } catch {
+            print("[YourCurrentAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
         }
     }
+}
+
+struct SetUpAvatarFor: View {
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
-    @State private var selectedMember: Member? = nil
+    private var members: [FamilyMember] {
+        guard let family = familyStore.family else { return [] }
+        return [family.selfMember] + family.otherMembers
+    }
+    
+    @State private var selectedMember: FamilyMember? = nil
     @State var nextPressed: () -> Void = { }
     
     var body: some View {
@@ -1744,16 +1961,8 @@ struct SetUpAvatarFor: View {
                     ForEach(members) { member in
                         VStack(spacing: 8) {
                             ZStack(alignment: .topTrailing) {
-                                Circle()
-                                    .fill(member.background)
-                                    .frame(width: 46, height: 46)
-                                    .overlay {
-                                        Image(member.image)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 46, height: 46)
-                                            .clipShape(Circle())
-                                    }
+                                // Member avatar view that loads actual memoji if available
+                                SetUpAvatarMemberView(member: member)
                                     .grayscale(selectedMember?.id == member.id ? 0 : 1)
                                 
                                 if selectedMember?.id == member.id {
@@ -1786,6 +1995,16 @@ struct SetUpAvatarFor: View {
             }
             
             Button {
+                guard let selected = selectedMember else {
+                    print("[SetUpAvatarFor] Next tapped with no member selected, ignoring")
+                    return
+                }
+                
+                // Remember which member's avatar we are about to generate,
+                // so that MeetYourAvatar can upload the image for this member.
+                print("[SetUpAvatarFor] Next tapped, setting avatarTargetMemberId=\(selected.id)")
+                familyStore.avatarTargetMemberId = selected.id
+                
                 nextPressed()
             } label: {
                 GreenCapsule(title: "Next")
@@ -1803,6 +2022,76 @@ struct SetUpAvatarFor: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+    }
+}
+
+// MARK: - SetUpAvatar Member Avatar View
+
+/// Avatar view used in SetUpAvatarFor sheet to show actual member memoji avatars.
+struct SetUpAvatarMemberView: View {
+    @Environment(WebService.self) private var webService
+    let member: FamilyMember
+    
+    @State private var avatarImage: UIImage? = nil
+    @State private var loadedHash: String? = nil
+    
+    var body: some View {
+        // Base colored circle - always visible as background
+        Circle()
+            .fill(Color(hex: member.color))
+            .frame(width: 46, height: 46)
+            .overlay {
+                // Content layer overlaid on background
+                if let avatarImage {
+                    // Show loaded memoji avatar - slightly smaller to show background border
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 42, height: 42)
+                        .clipShape(Circle())
+                } else {
+                    // Fallback: first letter of name
+                    Text(String(member.name.prefix(1)))
+                        .font(NunitoFont.semiBold.size(18))
+                        .foregroundStyle(.white)
+                }
+            }
+            .overlay(
+                // White stroke overlay on top
+                Circle()
+                    .stroke(lineWidth: 1)
+                    .foregroundStyle(Color.white)
+            )
+            .task(id: member.imageFileHash) {
+                await loadAvatarIfNeeded()
+            }
+    }
+    
+    @MainActor
+    private func loadAvatarIfNeeded() async {
+        guard let hash = member.imageFileHash, !hash.isEmpty else {
+            avatarImage = nil
+            loadedHash = nil
+            return
+        }
+        
+        // Skip if already loaded for this hash
+        if loadedHash == hash, avatarImage != nil {
+            return
+        }
+        
+        print("[SetUpAvatarMemberView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+        do {
+            let uiImage = try await webService.fetchImage(
+                imageLocation: .imageFileHash(hash),
+                imageSize: .small
+            )
+            avatarImage = uiImage
+            loadedHash = hash
+            print("[SetUpAvatarMemberView] ✅ Loaded avatar for \(member.name)")
+        } catch {
+            print("[SetUpAvatarMemberView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+        }
     }
 }
 

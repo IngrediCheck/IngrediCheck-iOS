@@ -9,6 +9,7 @@ import SwiftUI
 
 
 struct CanvasCard: View {
+    @Environment(FamilyStore.self) private var familyStore
     
     var chips: [ChipsModel]? = [
         ChipsModel(name: "Peanuts", icon: "🥜"),
@@ -21,6 +22,20 @@ struct CanvasCard: View {
     
     var title: String = "allergies"
     var iconName: String = "allergies"
+    var itemMemberAssociations: [String: [String: [String]]] = [:]
+    var showFamilyIcons: Bool = true
+    
+    // Helper function to get member identifiers for an item
+    // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
+    private func getMemberIdentifiers(for sectionName: String, itemName: String) -> [String] {
+        guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
+            return []
+        }
+        
+        // Return member IDs directly (already UUID strings or "Everyone")
+        // ChipMemberAvatarView will resolve these to FamilyMember objects
+        return memberIds
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -52,7 +67,7 @@ struct CanvasCard: View {
                                         title: chip.name,
                                         bgColor: .secondary200,
                                         image: chip.icon,
-//                                        familyList: ["image 1", "image 2", "image 3"],
+                                        familyList: showFamilyIcons ? getMemberIdentifiers(for: title, itemName: chip.name) : [],
                                         outlined: false
                                     )
                                 }
@@ -66,6 +81,7 @@ struct CanvasCard: View {
                                 title: chip.name,
                                 bgColor: .secondary200,
                                 image: chip.icon,
+                                familyList: showFamilyIcons ? getMemberIdentifiers(for: title, itemName: chip.name) : [],
                                 outlined: false
                             )
                         }

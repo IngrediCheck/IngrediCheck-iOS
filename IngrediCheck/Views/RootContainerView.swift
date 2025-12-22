@@ -40,6 +40,19 @@ struct RootContainerView: View {
             canvasContent(for: coordinator.currentCanvasRoute)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+            // Dim background when certain sheets are presented (e.g., Invite)
+            Group {
+                switch coordinator.currentBottomSheetRoute {
+                case .wouldYouLikeToInvite(_, _):
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                default:
+                    EmptyView()
+                }
+            }
+
             PersistentBottomSheet()
         }
         .environment(coordinator)
@@ -72,6 +85,17 @@ struct RootContainerView: View {
             // - Otherwise use the locally cached metadata
             print("[OnboardingMeta] RootContainerView.task: attempting restoreOnboardingPosition on launch")
             authController.restoreOnboardingPosition(into: coordinator)
+        }
+        // Whenever authentication completes (including first-time login or
+        // upgrading a guest account), refresh the family from the backend so
+        // the home screen immediately reflects the latest household state
+        // without requiring an app restart.
+        .onChange(of: authController.signInState) { _, newValue in
+            if newValue == .signedIn {
+                Task {
+                    await familyStore.loadCurrentFamily()
+                }
+            }
         }
     }
 

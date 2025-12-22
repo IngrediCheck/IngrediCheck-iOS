@@ -8,24 +8,10 @@
 import SwiftUI
 
 struct SplashScreen: View {
-    private let slides: [SplashSlide] = [
-        .init(
-            title: "Know What's Inside, Instantly",
-            subtitle: "Scan any product and get clear, simple answers, no more confusing labels."
-        ),
-        .init(
-            title: "Made for Your IngrediFam",
-            subtitle: "Allergies, diets, or family needs, your scans adapt to everyone you care for."
-        ),
-        .init(
-            title: "Shop & Eat with Confidence",
-            subtitle: "Get healthier, safer alternatives without second-guessing."
-        )
-    ]
-    
-    @State private var currentIndex: Int = 0
     @State private var isFirstLaunch: Bool = true
     @State private var isCheckingLaunchState: Bool = true
+    @State private var isFillingComplete: Bool = false
+    @State private var shouldNavigateToHome: Bool = false
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     
@@ -49,7 +35,7 @@ struct SplashScreen: View {
                         .environment(authController)
                         .environment(familyStore)
                 }
-            } else if !isFirstLaunch, authController.session != nil {
+            } else if shouldNavigateToHome {
                 // In preview flow, if there's already a Supabase session
                 // (including anonymous/guest), skip the marketing carousel
                 // and go straight into the main container.
@@ -65,62 +51,59 @@ struct SplashScreen: View {
                 }
             } else {
                 NavigationStack {
-                    VStack {
-                    
-                    Spacer()
-                    Spacer()
-                    
-                    VStack {
-                        Text(slide.title)
-                            .font(NunitoFont.bold.size(22))
-                            .foregroundStyle(.grayScale150)
-                        Text(slide.subtitle)
-                            .font(ManropeFont.medium.size(14))
-                            .foregroundStyle(.grayScale100)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    Spacer()
-                    
-                    HStack {
+                    VStack(spacing: 0) {
+                        FillingPipeLine(onComplete: {
+                            isFillingComplete = true
+                        })
+                      
+                     
                         
-                        HStack {
-                            ForEach(slides.indices, id: \.self) { index in
-                                Capsule()
-                                    .frame(width: currentIndex == index ? 24 : 5.5, height: 5.5)
-                                    .foregroundStyle(
-                                        currentIndex == index
-                                        ? LinearGradient(colors: [Color(hex: "8DB90D"), Color(hex: "6B8E06")], startPoint: .top, endPoint: .bottom)
-                                        : LinearGradient(colors: [.primary800.opacity(0.3)], startPoint: .top, endPoint: .bottom)
-                                    )
+                        Image("onbording-emptyimg1s")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 610)
+                            .padding(.top, 18)
+                            .padding(.bottom , 46)
+                        
+                        if isFillingComplete {
+                            HStack {
+                                Spacer()
+                                NavigationLink {
+                                    RootContainerView()
+                                        .environment(authController)
+                                        .environment(familyStore)
+                                } label: {
+                                    GreenCapsule(title: "Get Started")
+                                }
                             }
-                        }
-                        
-                        Spacer()
-                        
-                        if isLastSlide {
-                            NavigationLink {
-                                RootContainerView()
-                                    .environment(authController)
-                                    .environment(familyStore)
-                            } label: {
-                                GreenCapsule(title: "Get Started")
-                                    .frame(width: 159)
-                            }
+                            .transition(.scale.combined(with: .opacity))
                         } else {
                             Button {
-                                withAnimation(.smooth) {
-                                    currentIndex = min(currentIndex + 1, slides.count - 1)
-                                }
+                                // Disabled - do nothing
                             } label: {
-                                GreenCircle()
+                                HStack(spacing: 8) {
+                                    Text("Get Started")
+                                        .font(NunitoFont.semiBold.size(16))
+                                        .foregroundStyle(.grayScale80)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(
+                                    Capsule()
+                                        .fill(.grayScale30)
+                                )
                             }
+                            .disabled(true)
+                            .transition(.scale.combined(with: .opacity))
                         }
                     }
-                    .animation(.smooth, value: currentIndex)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isFillingComplete)
+                    .padding(.horizontal, 20)
+                    .navigationBarHidden(true)
                 }
-                .padding(.horizontal, 20)
-            }
+                .ignoresSafeArea(edges: .top)
+              
+               
             }
         }
         .task {
@@ -133,6 +116,7 @@ struct SplashScreen: View {
                 // first launch even if a stale session exists in keychain.
                 UserDefaults.standard.set(true, forKey: firstLaunchKey)
                 isFirstLaunch = true
+                
 
                 // If we somehow already have a Supabase session on first
                 // launch (e.g., carried over via keychain from a previous
@@ -144,30 +128,62 @@ struct SplashScreen: View {
             } else {
                 isFirstLaunch = false
             }
+            
+            // Calculate navigation decision once based on initial state
+            if !isFirstLaunch && authController.session != nil {
+                shouldNavigateToHome = true
+            }
 
             isCheckingLaunchState = false
             // Do NOT auto-sign-in here; login should only happen when
             // the user explicitly chooses a provider or taps "Sign-in later".
         }
     }
-    
-    private var slide: SplashSlide {
-        guard slides.indices.contains(currentIndex) else {
-            return slides.first ?? .init(title: "", subtitle: "")
+}
+
+struct FillingPipeLine: View {
+    @State private var progress: CGFloat = 0
+    @State private var shimmerOffset: CGFloat = -1
+    let onComplete: () -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+
+                // 1️⃣ Empty pipe (track)
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(Color(hex:"#EEEEEE"), lineWidth: 1)
+
+                // 2️⃣ Filling layer
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color(hex:"#D3D3D3"))
+                    .frame(width: geo.size.width)
+                                        .scaleEffect(x: progress, y: 1, anchor: .leading)
+                                       
+                
+            }
         }
-        return slides[currentIndex]
-    }
-    
-    private var isLastSlide: Bool {
-        currentIndex >= slides.count - 1
+        .frame(height: 4)
+        .onAppear {
+            withAnimation(
+                .linear(duration: 5)
+                //change duration  acording to GIF
+            ) {
+                progress = 1
+            }
+            // Trigger completion after animation duration
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(5 * 1_000_000_000))
+                await MainActor.run {
+                    onComplete()
+                }
+            }
+        }
     }
 }
 
 #Preview {
     SplashScreen()
-}
-
-private struct SplashSlide: Hashable {
-    let title: String
-    let subtitle: String
+        .environment(AuthController())
+        .environment(FamilyStore())
 }

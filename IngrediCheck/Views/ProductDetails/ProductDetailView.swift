@@ -186,7 +186,7 @@ struct ProductDetailView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.grayScale150)
+                    .foregroundStyle(.black)
             }
             
             Spacer()

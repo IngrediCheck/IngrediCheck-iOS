@@ -184,4 +184,33 @@ class Onboarding: ObservableObject {
             return updatedSection
         }
     }
+    
+    /// Update section completion status based on whether they have data in preferences
+    func updateSectionCompletionStatus() {
+        for (index, section) in sections.enumerated() {
+            guard let stepId = section.screens.first?.stepId,
+                  let step = step(for: stepId) else { continue }
+            
+            let sectionName = step.header.name
+            
+            // Check if section has data in preferences
+            var hasData = false
+            if let value = preferences.sections[sectionName] {
+                switch value {
+                case .list(let items):
+                    hasData = !items.isEmpty
+                case .nested(let nestedDict):
+                    // Check if any nested section has data
+                    hasData = nestedDict.values.contains { !$0.isEmpty }
+                }
+            }
+            
+            // Update completion status if it differs
+            if sections[index].isComplete != hasData {
+                var updatedSection = sections[index]
+                updatedSection.isComplete = hasData
+                sections[index] = updatedSection
+            }
+        }
+    }
 }

@@ -14,10 +14,13 @@ struct IngredientsChips: View {
     var fontSize: CGFloat = 12
     var fontWeight: Font.Weight = .regular
     var image: String? = nil
-    var familyList: [String] = []
+    var familyList: [String] = [] // Can be "Everyone" or member IDs (UUID strings)
     var onClick: (() -> Void)? = nil
     var isSelected: Bool = false
     var outlined: Bool = true
+    
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
     var body: some View {
         Button {
@@ -38,8 +41,8 @@ struct IngredientsChips: View {
                 
                 if !familyList.isEmpty {
                     HStack(spacing: -7) {
-                        ForEach(familyList.prefix(4), id: \.self) { image in
-                            familyIcon(image: image)
+                        ForEach(familyList.prefix(4), id: \.self) { memberIdentifier in
+                            ChipMemberAvatarView(memberIdentifier: memberIdentifier)
                         }
                     }
                 }
@@ -79,18 +82,116 @@ struct IngredientsChips: View {
         }
     }
     
-    @ViewBuilder
-    func familyIcon(image: String) -> some View {
-        Circle()
-            .stroke(lineWidth: 1)
-            .frame(width: 24, height: 24)
-            .foregroundStyle(Color(hex: "#B6B6B6"))
-            .background(Color(hex: "#D9D9D9"))
-            .overlay(
-                Image(image)
-                    .resizable()
-                    .frame(width: 24, height: 24)
-            )
+    // MARK: - Chip Member Avatar View
+    
+    /// Small avatar (24x24) used on chips to show which member selected an item.
+    /// Shows the member's memoji if imageFileHash is present, otherwise shows
+    /// "Everyone" icon or the first letter of their name.
+    struct ChipMemberAvatarView: View {
+        @Environment(FamilyStore.self) private var familyStore
+        @Environment(WebService.self) private var webService
+        
+        let memberIdentifier: String // "Everyone" or member UUID string
+        
+        @State private var avatarImage: UIImage? = nil
+        @State private var loadedHash: String? = nil
+        
+        var body: some View {
+            // Base colored circle - always visible as background
+            Circle()
+                .fill(circleBackgroundColor)
+                .frame(width: 24, height: 24)
+                .overlay {
+                    // Content layer overlaid on background
+                    if memberIdentifier == "Everyone" {
+                        // Show "Everyone" icon
+                        Image("Everyone")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 22, height: 22)
+                            .clipShape(Circle())
+                    } else if let avatarImage {
+                        // Show loaded memoji avatar - slightly smaller to show background border
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 22, height: 22)
+                            .clipShape(Circle())
+                    } else if let member = resolvedMember {
+                        // Fallback: first letter of name
+                        Text(String(member.name.prefix(1)))
+                            .font(NunitoFont.semiBold.size(10))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .overlay {
+                    // White stroke overlay on top
+                    Circle()
+                        .stroke(lineWidth: 1)
+                        .frame(width: 24, height: 24)
+                        .foregroundStyle(Color.white)
+                }
+                .task(id: memberIdentifier) {
+                    await loadAvatarIfNeeded()
+                }
+        }
+        
+        private var circleBackgroundColor: Color {
+            if memberIdentifier == "Everyone" {
+                return Color(hex: "#D9D9D9")
+            }
+            if let member = resolvedMember {
+                return Color(hex: member.color)
+            }
+            return Color(hex: "#D9D9D9")
+        }
+        
+        private var resolvedMember: FamilyMember? {
+            guard memberIdentifier != "Everyone",
+                  let uuid = UUID(uuidString: memberIdentifier),
+                  let family = familyStore.family else {
+                return nil
+            }
+            
+            if uuid == family.selfMember.id {
+                return family.selfMember
+            }
+            return family.otherMembers.first { $0.id == uuid }
+        }
+        
+        @MainActor
+        private func loadAvatarIfNeeded() async {
+            guard memberIdentifier != "Everyone",
+                  let member = resolvedMember else {
+                avatarImage = nil
+                loadedHash = nil
+                return
+            }
+            
+            guard let hash = member.imageFileHash, !hash.isEmpty else {
+                avatarImage = nil
+                loadedHash = nil
+                return
+            }
+            
+            // Skip if already loaded for this hash
+            if loadedHash == hash, avatarImage != nil {
+                return
+            }
+            
+            print("[IngredientsChips.ChipMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+            do {
+                let uiImage = try await webService.fetchImage(
+                    imageLocation: .imageFileHash(hash),
+                    imageSize: .small
+                )
+                avatarImage = uiImage
+                loadedHash = hash
+                print("[IngredientsChips.ChipMemberAvatarView] ✅ Loaded avatar for \(member.name)")
+            } catch {
+                print("[IngredientsChips.ChipMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+            }
+        }
     }
 
 }

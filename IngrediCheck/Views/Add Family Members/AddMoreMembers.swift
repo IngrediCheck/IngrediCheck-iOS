@@ -26,10 +26,26 @@ struct AddMoreMembers: View {
             
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
-                    Text("Add more members?")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                    
+                    HStack {
+                        Text("Add more members?")
+                            .font(NunitoFont.bold.size(22))
+                            .foregroundStyle(.grayScale150)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .overlay(alignment: .leading) {
+                        Button {
+                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.black)
+                                .frame(width: 24, height: 24)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(.grayScale120)
@@ -129,14 +145,16 @@ struct AddMoreMembers: View {
                 } else {
                     print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
                     familyStore.addPendingOtherMember(name: trimmed)
+                    familyStore.setAvatarForLastPendingOtherMember(imageName: selectedFamilyMember?.image)
                     let memberName = trimmed
                     name = ""
                     showError = false
                     continuePressed(memberName)
                 }
             } label: {
-                GreenCapsule(title: "Continue")
+                GreenCapsule(title: "Add Member")
                     .frame(width: 159)
+                    .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
             }
             .padding(.horizontal, 20)
         }
