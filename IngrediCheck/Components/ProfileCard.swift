@@ -9,7 +9,6 @@ import SwiftUI
 	
 struct ProfileCard: View {
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(WebService.self) private var webService
     
     @State var isProfileCompleted: Bool = false
     

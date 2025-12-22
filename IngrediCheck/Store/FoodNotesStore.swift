@@ -334,7 +334,7 @@ final class FoodNotesStore {
                                     }
                                     
                                     // If after removal the whole nested dict is empty, clear section
-                                    if existingNested.values.allSatisfy({ $0.isEmpty ?? true }) {
+                                    if existingNested.values.allSatisfy({ $0.isEmpty }) {
                                         newCanvas.sections[sectionName] = nil
                                     } else {
                                         newCanvas.sections[sectionName] = .nested(existingNested.compactMapValues { $0 })
