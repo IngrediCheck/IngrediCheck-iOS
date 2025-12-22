@@ -64,15 +64,13 @@ struct RootContainerView: View {
         .task {
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
-            // If Supabase already has a restored *non-guest* session at launch,
-            // skip straight to Home so returning Google/Apple users land on
-            // their main experience instead of replaying onboarding.
-            // NOTE: This behavior is currently disabled for preview-first
-            // installs so that users must explicitly choose a login method
-            // before being routed to Home.
-            // if authController.session != nil, !authController.signedInAsGuest {
-            //     coordinator.showCanvas(.home)
-            // }
+            // If Supabase already has a restored non-guest session at launch,
+            // route directly to Home instead of replaying onboarding.
+            if authController.session != nil && !authController.signedInAsGuest {
+                await MainActor.run {
+                    coordinator.showCanvas(.home)
+                }
+            }
         }
         // Whenever authentication completes (including first-time login or
         // upgrading a guest account), refresh the family from the backend so
@@ -82,6 +80,11 @@ struct RootContainerView: View {
             if newValue == .signedIn {
                 Task {
                     await familyStore.loadCurrentFamily()
+                    if !authController.signedInAsGuest {
+                        await MainActor.run {
+                            coordinator.showCanvas(.home)
+                        }
+                    }
                 }
             }
         }

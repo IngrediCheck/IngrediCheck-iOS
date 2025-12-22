@@ -125,6 +125,13 @@ struct SplashScreen: View {
             // Do NOT auto-sign-in here; login should only happen when
             // the user explicitly chooses a provider or taps "Sign-in later".
         }
+        // If a session restores slightly after first frame, reactively
+        // navigate to Home for returning users (non-first launch).
+        .onChange(of: authController.signInState) { _, newValue in
+            if !isFirstLaunch && newValue == .signedIn {
+                shouldNavigateToHome = true
+            }
+        }
     }
 }
 
