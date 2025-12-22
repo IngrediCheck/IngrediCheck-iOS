@@ -224,140 +224,66 @@ final class FoodNotesStore {
         
         for step in onboardingStore.dynamicSteps {
             let sectionName = step.header.name
+            let localPreference = onboardingStore.preferences.sections[sectionName]
             
-            // Local selection for this member in this section (may be nil)
-            switch onboardingStore.preferences.sections[sectionName] {
-            case .list(let localItems):
-                // Current local items for this member
-                let localSet = Set(localItems)
-                
-                // Server-selected items for this member: from associations where this memberKey is present
-                let serverItemsForSection = newAssociations[sectionName] ?? [:]
-                let serverSelected = Set(
-                    serverItemsForSection.compactMap { (itemName, members) in
-                        members.contains(memberKey) ? itemName : nil
-                    }
-                )
-                
-                let toAdd = localSet.subtracting(serverSelected)
-                let toRemove = serverSelected.subtracting(localSet)
-                
-                // Handle removals
-                for item in toRemove {
-                    // Remove this member from associations
-                    if var members = newAssociations[sectionName]?[item] {
-                        members.removeAll { $0 == memberKey }
-                        if members.isEmpty {
-                            // No members left for this item; remove it entirely from associations and canvas
-                            newAssociations[sectionName]?[item] = nil
-                            
-                            if case .list(var existingItems) = newCanvas.sections[sectionName] {
-                                existingItems.removeAll { $0 == item }
-                                if existingItems.isEmpty {
-                                    newCanvas.sections[sectionName] = nil
-                                } else {
-                                    newCanvas.sections[sectionName] = .list(existingItems)
-                                }
-                            }
-                        } else {
-                            newAssociations[sectionName]?[item] = members
-                        }
-                    }
-                }
-                
-                // Handle additions
-                for item in toAdd {
-                    // Ensure the item exists in associations
-                    if newAssociations[sectionName] == nil {
-                        newAssociations[sectionName] = [:]
-                    }
-                    if newAssociations[sectionName]?[item] == nil {
-                        newAssociations[sectionName]?[item] = []
-                    }
-                    if !newAssociations[sectionName]![item]!.contains(memberKey) {
-                        newAssociations[sectionName]![item]!.append(memberKey)
-                    }
-                    
-                    // Ensure the item exists in canvas list
-                    if case .list(var existingItems) = newCanvas.sections[sectionName] {
-                        if !existingItems.contains(item) {
-                            existingItems.append(item)
-                            newCanvas.sections[sectionName] = .list(existingItems)
-                        }
-                    } else if newCanvas.sections[sectionName] == nil {
-                        newCanvas.sections[sectionName] = .list([item])
-                    }
-                }
-                
-            case .nested(let localNested):
-                // Nested sections (type-2/type-3)
-                
-                // Build serverSelected as a map nestedKey -> Set(items where memberKey present)
-                var serverSelectedNested: [String: Set<String>] = [:]
-                let serverItemsForSection = newAssociations[sectionName] ?? [:]
-                
-                // To compute serverSelectedNested we need to know, for each nested group,
-                // which items belong there. We can derive from canvasPreferences structure.
-                if case .nested(let existingNested) = newCanvas.sections[sectionName] {
-                    for (nestedKey, items) in existingNested {
-                        let selectedItemsForMember = items.filter { itemName in
-                            serverItemsForSection[itemName]?.contains(memberKey) == true
-                        }
-                        if !selectedItemsForMember.isEmpty {
-                            serverSelectedNested[nestedKey] = Set(selectedItemsForMember)
-                        }
-                    }
-                }
-                
-                // Process each nested key in localNested
-                for (nestedKey, localItems) in localNested {
-                    let localSet = Set(localItems)
-                    let serverSet = serverSelectedNested[nestedKey] ?? []
-                    
-                    let toAdd = localSet.subtracting(serverSet)
-                    let toRemove = serverSet.subtracting(localSet)
-                    
-                    // Removals
-                    for item in toRemove {
-                        if var members = newAssociations[sectionName]?[item] {
-                            members.removeAll { $0 == memberKey }
-                            if members.isEmpty {
-                                newAssociations[sectionName]?[item] = nil
-                                
-                                if case .nested(var existingNested) = newCanvas.sections[sectionName] {
-                                    var items = existingNested[nestedKey] ?? []
-                                    items.removeAll { $0 == item }
-                                    if items.isEmpty {
-                                        existingNested[nestedKey] = nil
-                                    } else {
-                                        existingNested[nestedKey] = items
-                                    }
-                                    
-                                    // If after removal the whole nested dict is empty, clear section
-                                    if existingNested.values.allSatisfy({ $0.isEmpty }) {
-                                        newCanvas.sections[sectionName] = nil
-                                    } else {
-                                        newCanvas.sections[sectionName] = .nested(existingNested.compactMapValues { $0 })
-                                    }
-                                }
-                            } else {
-                                newAssociations[sectionName]?[item] = members
-                            }
-                        }
-                    }
-                    
-                    // Additions
-                    for item in toAdd {
-                        if newAssociations[sectionName] == nil {
-                            newAssociations[sectionName] = [:]
-                        }
-                        if newAssociations[sectionName]?[item] == nil {
-                            newAssociations[sectionName]?[item] = []
-                        }
-                        if !newAssociations[sectionName]![item]!.contains(memberKey) {
-                            newAssociations[sectionName]![item]!.append(memberKey)
-                        }
+            // 1. Identify what the member currently has on the server (from associations)
+            let serverItemsForSection = newAssociations[sectionName] ?? [:]
+            let serverSelectedItems = serverItemsForSection.filter { $0.value.contains(memberKey) }.map { $0.key }
+            let serverSelectedSet = Set(serverSelectedItems)
+            
+            // 2. Identify what the member has locally
+            var localSelectedSet = Set<String>()
+            if case .list(let items) = localPreference {
+                localSelectedSet = Set(items)
+            } else if case .nested(let nestedDict) = localPreference {
+                localSelectedSet = Set(nestedDict.values.flatMap { $0 })
+            }
+            
+            // 3. Compute diffs
+            let toAdd = localSelectedSet.subtracting(serverSelectedSet)
+            let toRemove = serverSelectedSet.subtracting(localSelectedSet)
+            
+            // 4. Handle Removals
+            for item in toRemove {
+                if var members = newAssociations[sectionName]?[item] {
+                    members.removeAll { $0 == memberKey }
+                    if members.isEmpty {
+                        // No members left for this item; remove it entirely
+                        newAssociations[sectionName]?[item] = nil
                         
+                        // Also remove from canvasPreferences
+                        switch newCanvas.sections[sectionName] {
+                        case .list(var items):
+                            items.removeAll { $0 == item }
+                            newCanvas.sections[sectionName] = items.isEmpty ? nil : .list(items)
+                        case .nested(var nestedDict):
+                            for (nestedKey, var items) in nestedDict {
+                                items.removeAll { $0 == item }
+                                nestedDict[nestedKey] = items.isEmpty ? nil : items
+                            }
+                            let cleaned = nestedDict.compactMapValues { $0 }
+                            newCanvas.sections[sectionName] = cleaned.isEmpty ? nil : .nested(cleaned)
+                        case nil:
+                            break
+                        }
+                    } else {
+                        newAssociations[sectionName]?[item] = members
+                    }
+                }
+            }
+            
+            // 5. Handle Additions
+            for item in toAdd {
+                // Update associations safely using dictionary default values
+                if !newAssociations[sectionName, default: [:]][item, default: []].contains(memberKey) {
+                    newAssociations[sectionName, default: [:]][item, default: []].append(memberKey)
+                }
+                
+                // Update canvasPreferences
+                // To know WHERE to add it in a nested section, we need to look at localPreference
+                if case .nested(let localNested) = localPreference {
+                    // Find which nested key this item belongs to
+                    if let nestedKey = localNested.first(where: { $0.value.contains(item) })?.key {
                         if case .nested(var existingNested) = newCanvas.sections[sectionName] {
                             var items = existingNested[nestedKey] ?? []
                             if !items.contains(item) {
@@ -365,41 +291,21 @@ final class FoodNotesStore {
                                 existingNested[nestedKey] = items
                             }
                             newCanvas.sections[sectionName] = .nested(existingNested)
-                        } else if newCanvas.sections[sectionName] == nil {
+                        } else {
+                            // Section was nil or list (mismatch), initialize as nested
                             newCanvas.sections[sectionName] = .nested([nestedKey: [item]])
                         }
                     }
-                }
-                
-            case nil:
-                // No local selection for this section: remove this member's contribution
-                let serverItemsForSection = newAssociations[sectionName] ?? [:]
-                let serverSelected = serverItemsForSection.filter { $0.value.contains(memberKey) }.map { $0.key }
-                
-                for item in serverSelected {
-                    if var members = newAssociations[sectionName]?[item] {
-                        members.removeAll { $0 == memberKey }
-                        if members.isEmpty {
-                            newAssociations[sectionName]?[item] = nil
-                            
-                            switch newCanvas.sections[sectionName] {
-                            case .list(var items):
-                                items.removeAll { $0 == item }
-                                newCanvas.sections[sectionName] = items.isEmpty ? nil : .list(items)
-                            case .nested(var nestedDict):
-                                for (nestedKey, var items) in nestedDict {
-                                    items.removeAll { $0 == item }
-                                    nestedDict[nestedKey] = items
-                                }
-                                // Clean up any empty nested arrays
-                                let cleaned = nestedDict.compactMapValues { $0.isEmpty ? nil : $0 }
-                                newCanvas.sections[sectionName] = cleaned.isEmpty ? nil : .nested(cleaned)
-                            case nil:
-                                break
-                            }
-                        } else {
-                            newAssociations[sectionName]?[item] = members
+                } else {
+                    // Simple list
+                    if case .list(var existingItems) = newCanvas.sections[sectionName] {
+                        if !existingItems.contains(item) {
+                            existingItems.append(item)
+                            newCanvas.sections[sectionName] = .list(existingItems)
                         }
+                    } else {
+                        // Section was nil or nested (mismatch), initialize as list
+                        newCanvas.sections[sectionName] = .list([item])
                     }
                 }
             }
@@ -409,6 +315,7 @@ final class FoodNotesStore {
         itemMemberAssociations = newAssociations
         print("[FoodNotesStore] applyLocalPreferencesOptimistic: Updated canvasPreferences & itemMemberAssociations for memberKey=\(memberKey)")
     }
+
     
     /// Merges server-side content with new user-selected content.
     /// Strategy: for any step present in newContent, replace that step entirely on the server;
