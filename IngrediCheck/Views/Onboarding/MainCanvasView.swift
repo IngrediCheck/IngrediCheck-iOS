@@ -74,17 +74,8 @@ struct MainCanvasView: View {
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
                 
-                // Load preferences for the current selection (member or family)
-                // so the bottom sheet steps show the correct selections.
-                isLoadingMemberPreferences = true
-                if let memberId = familyStore.selectedMemberId?.uuidString.lowercased() {
-                    print("[MainCanvasView] onAppear: Loading preferences for selected member \(memberId)")
-                    await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
-                } else {
-                    print("[MainCanvasView] onAppear: Loading preferences for family (Everyone)")
-                    await foodNotesStore?.loadFoodNotesForFamily()
-                }
-                isLoadingMemberPreferences = false
+                // Prepare preferences for the current selection locally from the loaded data
+                foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
             }
 		}
 		.onChange(of: store.currentSectionIndex) { newIndex in
@@ -127,27 +118,21 @@ struct MainCanvasView: View {
                 let changedSections: Set<String> = [changedSectionName]
                 
                 // Optimistically update the canvas summary view from local preferences for this member.
-                foodNotesStore?.applyLocalPreferencesOptimistic(selectedMemberId: familyStore.selectedMemberId)
+                foodNotesStore?.applyLocalPreferencesOptimistic()
                 
                 // Build content structure for the changed section(s) and call API in the background.
-                await foodNotesStore?.updateFoodNotes(
-                    selectedMemberId: familyStore.selectedMemberId,
-                    changedSections: changedSections
-                )
+                foodNotesStore?.updateFoodNotes()
             }
         }
         .onChange(of: familyStore.selectedMemberId) { newValue in
-            // When switching members, mark that we are loading and trigger the load.
-            print("[MainCanvasView] Member switched to \(newValue?.uuidString ?? "Everyone"), loading preferences")
+            // When switching members, prepare preferences locally from associations.
+            print("[MainCanvasView] Member switched to \(newValue?.uuidString ?? "Everyone"), preparing local preferences")
+            
+            // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
+            // for the newly loaded member's existing state.
             isLoadingMemberPreferences = true
-            Task {
-                if let memberId = newValue?.uuidString.lowercased() {
-                    await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
-                } else {
-                    await foodNotesStore?.loadFoodNotesForFamily()
-                }
-                isLoadingMemberPreferences = false
-            }
+            foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
+            isLoadingMemberPreferences = false
         }
         .navigationBarBackButtonHidden(true)
     }
