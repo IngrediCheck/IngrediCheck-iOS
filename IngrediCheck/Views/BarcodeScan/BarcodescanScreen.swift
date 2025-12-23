@@ -241,7 +241,7 @@ struct CameraScreen: View {
                     
                     ZStack {
                         // Capture guide frame
-                        Image("imagecaptureUI")
+                        Image("photo-scan-overlay-capture")
                             .resizable()
                             .frame(width: guideSize, height: guideSize)
                             .position(x: centerX, y: guideCenterY)
@@ -301,7 +301,9 @@ struct CameraScreen: View {
                     .onAppear {
                         updateToastState()
                     }
+                
                 Spacer()
+                
                 if mode == .photo {
                     HStack {
                         Flashcapsul(
