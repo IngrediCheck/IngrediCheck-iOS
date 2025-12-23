@@ -79,7 +79,6 @@
 		D3BECC8C2ED98E860088E044 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC882ED98E860088E044 /* Onboarding.swift */; };
 		D3BECC8D2ED98E860088E044 /* AppNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC872ED98E860088E044 /* AppNavigationCoordinator.swift */; };
 		635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */; };
-		D7F3A1B34C9D4E7A8B1C2D3E /* OnboardingResumeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F3A1B24C9D4E7A8B1C2D3E /* OnboardingResumeStore.swift */; };
 		D3BECC8E2ED98E860088E044 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC8A2ED98E860088E044 /* User.swift */; };
 		D3BECC992ED98EA10088E044 /* NunitoFontEnum.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */; };
 		D3BECC9A2ED98EA10088E044 /* ManropeFontEnum.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */; };
@@ -168,7 +167,6 @@
 		D3BECC882ED98E860088E044 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
 		D3BECC892ED98E860088E044 /* TempStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempStore.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
-		D7F3A1B24C9D4E7A8B1C2D3E /* OnboardingResumeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingResumeStore.swift; sourceTree = "<group>"; };
 		D3BECC8A2ED98E860088E044 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		D3BECC8F2ED98EA10088E044 /* BottomSheetRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetRoute.swift; sourceTree = "<group>"; };
 		D3BECC902ED98EA10088E044 /* CanvasRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasRoute.swift; sourceTree = "<group>"; };
@@ -273,7 +271,6 @@
 				D3BECC882ED98E860088E044 /* Onboarding.swift */,
 				D3BECC892ED98E860088E044 /* TempStore.swift */,
 				E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */,
-				D7F3A1B24C9D4E7A8B1C2D3E /* OnboardingResumeStore.swift */,
 				D3BECC8A2ED98E860088E044 /* User.swift */,
 				397C85F92B6B538500FB9DAD /* AuthController.swift */,
 				A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */,
@@ -527,7 +524,6 @@
 				D3BECC8C2ED98E860088E044 /* Onboarding.swift in Sources */,
 				D3BECC8D2ED98E860088E044 /* AppNavigationCoordinator.swift in Sources */,
 				635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */,
-				D7F3A1B34C9D4E7A8B1C2D3E /* OnboardingResumeStore.swift in Sources */,
 				D3BECC8E2ED98E860088E044 /* User.swift in Sources */,
 				390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */,
 				D3BECC862ED98E380088E044 /* ContentView.swift in Sources */,

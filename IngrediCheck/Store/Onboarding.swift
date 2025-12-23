@@ -213,4 +213,20 @@ class Onboarding: ObservableObject {
             }
         }
     }
+    func restoreState(forStepId stepId: String) {
+        guard let stepIndex = dynamicSteps.firstIndex(where: { $0.id == stepId }) else { return }
+        
+        // Find which section this step belongs to
+        var accumulatedSteps = 0
+        for (secIndex, section) in sections.enumerated() {
+            let screenCount = section.screens.count
+            if stepIndex < accumulatedSteps + screenCount {
+                // Found the section
+                currentSectionIndex = secIndex
+                currentScreenIndex = stepIndex - accumulatedSteps
+                return
+            }
+            accumulatedSteps += screenCount
+        }
+    }
 }
