@@ -254,14 +254,14 @@ struct PersistentBottomSheet: View {
         case .whosThisFor:
             WhosThisFor {
                 Task { @MainActor in
-                    await authController.signIn()
+                    // Guest login already happened on .heyThere screen, just proceed
                     await familyStore.createBiteBuddyFamily()
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
                     coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
                 }
             } addFamilyPressed: {
                 Task { @MainActor in
-                    await authController.signIn()
+                    // Guest login already happened on .heyThere screen, just proceed
                     coordinator.showCanvas(.letsMeetYourIngrediFam)
                 }
             }

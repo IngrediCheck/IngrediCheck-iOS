@@ -13,8 +13,23 @@ struct RootContainerView: View {
     @State private var webService = WebService()
     @State private var memojiStore = MemojiStore()
 
-    init(initialRoute: CanvasRoute = .heyThere) {
-        _coordinator = State(initialValue: AppNavigationCoordinator(initialRoute: initialRoute))
+    init(restoredState: (canvas: CanvasRoute, sheet: BottomSheetRoute)? = nil) {
+        if let state = restoredState {
+            let coordinator = AppNavigationCoordinator(initialRoute: state.canvas)
+            // Force the sheet immediately without animation for launch
+            coordinator.navigateInBottomSheet(state.sheet)
+            _coordinator = State(initialValue: coordinator)
+            
+            // Also sync the Onboarding view model if we are in main canvas
+            if case .mainCanvas(let flow) = state.canvas {
+                 _onboarding = StateObject(wrappedValue: Onboarding(onboardingFlowtype: flow))
+            }
+             // Should we restore step ID? Onboarding model needs it.
+             // We can do that in .task since Onboarding is a StateObject and accessing it int init is tricky if we want to call methods.
+             // But initializing with flow type is good.
+        } else {
+            _coordinator = State(initialValue: AppNavigationCoordinator(initialRoute: .heyThere))
+        }
     }
 
     // --- HEAD BRANCH (keep these)
@@ -61,15 +76,34 @@ struct RootContainerView: View {
             familyStore.resetLocalState()
             dismiss()
         }
+        .onAppear {
+            // Set up callback to sync onboarding state to Supabase whenever navigation changes
+            coordinator.onNavigationChange = {
+                print("[OnboardingMeta] onNavigationChange fired with canvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
+                await authController.syncRemoteOnboardingMetadata(from: coordinator)
+            }
+        }
         .task {
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
-            // If Supabase already has a restored non-guest session at launch,
-            // route directly to Home instead of replaying onboarding.
-            if authController.session != nil && !authController.signedInAsGuest {
-                await MainActor.run {
-                    coordinator.showCanvas(.home)
-                }
+// <<<<<<< HEAD
+//             // If Supabase already has a restored non-guest session at launch,
+//             // route directly to Home instead of replaying onboarding.
+//             if authController.session != nil && !authController.signedInAsGuest {
+//                 await MainActor.run {
+//                     coordinator.showCanvas(.home)
+//                 }
+// =======
+            
+            // Always attempt to restore onboarding position on launch from Supabase metadata.
+            // Guest login should happen at whosThisFor, so session should exist by then.
+            print("[OnboardingMeta] RootContainerView.task: attempting restoreOnboardingPosition on launch")
+            authController.restoreOnboardingPosition(into: coordinator)
+            
+            // Sync Onboarding view model to match the restored coordinator state
+            if let stepId = coordinator.currentOnboardingStepId {
+                onboarding.restoreState(forStepId: stepId)
+// >>>>>>> Develop
             }
         }
         // Whenever authentication completes (including first-time login or
