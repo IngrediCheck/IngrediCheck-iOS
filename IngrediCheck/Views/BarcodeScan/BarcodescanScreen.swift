@@ -61,6 +61,8 @@ struct CameraScreen: View {
     @State private var isProductDetailPresented: Bool = false
     @State private var photoFlashEnabled: Bool = false
     
+    @State private var showProTipCard: Bool = false
+    
     private func updateToastState() {
         // When in photo mode, show a dedicated guidance toast
         if mode == .photo {
@@ -186,6 +188,15 @@ struct CameraScreen: View {
                             isShowingPhotoModeGuide = true
                             UserDefaults.standard.set(true, forKey: key)
                         }
+                        
+                        let cardKey = "hasSeenProTipCard"
+                        let hasSeenCard = UserDefaults.standard.bool(forKey: cardKey)
+                        if !hasSeenCard {
+                            showProTipCard = true
+                            UserDefaults.standard.set(true, forKey: cardKey)
+                        } else {
+                            showProTipCard = false
+                        }
                     }
                     updateToastState()
                 }
@@ -279,7 +290,7 @@ struct CameraScreen: View {
                                 .frame(height: cardHeight)
                                 .position(x: centerX, y: cardCenterY)
                             }
-                        } else {
+                        } else if showProTipCard {
                             ProTipCard {
                                 withAnimation(.easeInOut) {
                                     isShowingPhotoModeGuide = true
