@@ -13,8 +13,9 @@ struct HomeView: View {
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
-    @State private var previousScrollOffset: CGFloat = 0
-    @State private var collapseReferenceOffset: CGFloat = 0
+    @State private var scrollY: CGFloat = 0
+    @State private var prevValue: CGFloat = 0
+    @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
 
     // ---------------------------
@@ -47,6 +48,84 @@ struct HomeView: View {
 
     private var primaryMemberName: String {
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
+    }
+
+    // MARK: - Family avatars
+
+    /// Small avatar used under "Your IngrediFam". Shows the member's memoji
+    /// if an imageFileHash is present, otherwise falls back to the first
+    /// letter of their name on top of their color.
+    struct FamilyMemberAvatarView: View {
+        @Environment(WebService.self) private var webService
+        let member: FamilyMember
+        
+        @State private var avatarImage: UIImage? = nil
+        @State private var loadedHash: String? = nil
+        
+        var body: some View {
+            // Base colored circle - always visible as background
+            Circle()
+                .fill(Color(hex: member.color))
+                .frame(width: 36, height: 36)
+                .overlay {
+                    // Content layer overlaid on background
+                    if let avatarImage {
+                        // Show loaded memoji avatar - slightly smaller to show background border
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                    } else {
+                        // Fallback: first letter of name
+                        Text(String(member.name.prefix(1)))
+                            .font(NunitoFont.semiBold.size(14))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .overlay(
+                    // White stroke overlay on top
+                    Circle()
+                        .stroke(lineWidth: 1)
+                        .foregroundStyle(Color.white)
+                )
+                // Re-evaluate whenever the member's imageFileHash changes.
+                .task(id: member.imageFileHash) {
+                    await loadAvatarForCurrentHash()
+                }
+        }
+        
+        @MainActor
+        private func loadAvatarForCurrentHash() async {
+            // If there is no hash, clear any cached avatar and fall back to initials.
+            guard let hash = member.imageFileHash, !hash.isEmpty else {
+                if avatarImage != nil {
+                    print("[HomeView.FamilyMemberAvatarView] imageFileHash cleared for \(member.name), resetting avatarImage")
+                }
+                avatarImage = nil
+                loadedHash = nil
+                return
+            }
+
+            // If we've already loaded this exact hash, skip re-fetching.
+            if loadedHash == hash, avatarImage != nil {
+                print("[HomeView.FamilyMemberAvatarView] Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
+                return
+            }
+            
+            print("[HomeView.FamilyMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+            do {
+                let uiImage = try await webService.fetchImage(
+                    imageLocation: .imageFileHash(hash),
+                    imageSize: .small
+                )
+                avatarImage = uiImage
+                loadedHash = hash
+                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded avatar for \(member.name) (hash=\(hash))")
+            } catch {
+                print("[HomeView.FamilyMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+            }
+        }
     }
 
     var body: some View {
@@ -122,41 +201,29 @@ struct HomeView: View {
                     // Lifestyle + Family + Average scans
                     HStack {
                         LifestyleAndChoicesCard()
-
+                    
                         Spacer()
-
+                    
                         VStack {
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
                                     .font(ManropeFont.medium.size(18))
                                     .foregroundStyle(.grayScale150)
-
+                            
                                 Text("Your people, their choices.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
-
+                            
                                 HStack {
                                     ZStack(alignment: .bottomTrailing) {
                                         let membersToShow = Array(familyMembers.prefix(3))
-
+                            
                                         HStack(spacing: -8) {
                                             ForEach(membersToShow, id: \.id) { member in
-                                                Circle()
-                                                    .fill(Color(hex: member.color))
-                                                    .frame(width: 36, height: 36)
-                                                    .overlay(
-                                                        Text(String(member.name.prefix(1)))
-                                                            .font(NunitoFont.semiBold.size(14))
-                                                            .foregroundStyle(.white)
-                                                    )
-                                                    .overlay(
-                                                        Circle()
-                                                            .stroke(lineWidth: 1)
-                                                            .foregroundStyle(Color.white)
-                                                    )
+                                                FamilyMemberAvatarView(member: member)
                                             }
                                         }
-
+                            
                                         if familyMembers.count > 3 {
                                             Text("+\(familyMembers.count - 3)")
                                                 .font(NunitoFont.semiBold.size(12))
@@ -169,9 +236,9 @@ struct HomeView: View {
                                                 .offset(x: 10, y: -2)
                                         }
                                     }
-
+                            
                                     Spacer()
-
+                            
                                     Button {
                                         coordinator.navigateInBottomSheet(.addMoreMembers)
                                     } label: {
@@ -181,7 +248,7 @@ struct HomeView: View {
                                 }
                             }
                             .frame(height: 103)
-
+                        
                             AverageScansCard()
                         }
                     }
@@ -341,55 +408,39 @@ struct HomeView: View {
                     GeometryReader { geo in
                         Color.clear
                             .onAppear {
-                                previousScrollOffset = geo.frame(in: .named("homeScroll")).minY
-                                collapseReferenceOffset = previousScrollOffset
+                                scrollY = geo.frame(in: .named("homeScroll")).minY
+                                prevValue = scrollY
+                                maxScrollOffset = scrollY < 0 ? scrollY : 0
                             }
                             .onChange(of: geo.frame(in: .named("homeScroll")).minY) { newValue in
-                                let currentOffset = newValue
-                                let threshold: CGFloat = 8           // minimum meaningful movement per frame
-                                let topGuardOffset: CGFloat = -12    // how far past top before we consider expansion
-                                let requiredLiftFromBottom: CGFloat = 180 // distance user must scroll up from bottom to expand
-
-                                // Only react to scroll changes when we're within the "normal"
-                                // scroll range (offset <= 0). This avoids reacting to rubber-band
-                                // stretching at the very top (offset > 0).
-                                if currentOffset <= 0 && previousScrollOffset <= 0 {
-                                    let delta = currentOffset - previousScrollOffset
-
-                                    // When user scrolls down with a meaningful movement -> collapse.
-                                    // When user scrolls up with a meaningful movement -> expand.
-                                    // Ignore tiny bounces so the tab bar doesn't flicker or auto-expand.
-                                    if delta < -threshold {
+                                scrollY = newValue
+                                
+                                // Only change state when scrolled past the top (scrollY < 0)
+                                if scrollY < 0 {
+                                    // Track the maximum (most negative) scroll offset reached
+                                    maxScrollOffset = min(maxScrollOffset, newValue)
+                                    
+                                    let scrollDelta = newValue - prevValue
+                                    let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
+                                    
+                                    if scrollDelta < -minScrollDelta {
+                                        // Scrolling down significantly -> collapse
                                         isTabBarExpanded = false
-
-                                        // Track the deepest (most negative) offset reached since we
-                                        // last collapsed; this is our "bottom reference" to compare
-                                        // against when deciding whether an upward motion is just a
-                                        // spring-back or a real intent to scroll up.
-                                        if collapseReferenceOffset == 0 {
-                                            collapseReferenceOffset = currentOffset
-                                        } else {
-                                            collapseReferenceOffset = min(collapseReferenceOffset, currentOffset)
-                                        }
-                                    } else if delta > threshold {
-                                        // Only allow expansion when  :
-                                        // - we're safely away from the very top, AND
-                                        // - the user has moved a meaningful distance up from the
-                                        //   deepest offset reached since collapsing (to avoid
-                                        //   spring-back-at-bottom from expanding the tab bar).
-                                        let distanceFromBottom = currentOffset - collapseReferenceOffset
-
-                                        if distanceFromBottom > requiredLiftFromBottom,
-                                           currentOffset < topGuardOffset,
-                                           previousScrollOffset < topGuardOffset {
+                                    } else if scrollDelta > minScrollDelta {
+                                        // Only expand if scrolling up significantly AND not at the bottom
+                                        // Check if we're significantly above the maximum scroll offset
+                                        let bottomThreshold: CGFloat = 100 // Minimum distance from bottom to allow expansion
+                                        if newValue > (maxScrollOffset + bottomThreshold) {
                                             isTabBarExpanded = true
-                                            // Reset the reference for the next cycle.
-                                            collapseReferenceOffset = currentOffset
                                         }
                                     }
+                                    // If scrollDelta is too small (bounce/noise), don't change state
+                                } else {
+                                    // Reset max scroll offset when at the top
+                                    maxScrollOffset = 0
                                 }
-
-                                previousScrollOffset = currentOffset
+                                
+                                prevValue = newValue
                             }
                     }
                 )

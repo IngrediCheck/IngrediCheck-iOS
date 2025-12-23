@@ -13,6 +13,7 @@ struct PersistentBottomSheet: View {
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(WebService.self) private var webService
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
@@ -254,6 +255,7 @@ struct PersistentBottomSheet: View {
             WhosThisFor {
                 Task { @MainActor in
                     await authController.signIn()
+                    await familyStore.createBiteBuddyFamily()
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
                     coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
                 }
@@ -353,12 +355,20 @@ struct PersistentBottomSheet: View {
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
-                // If opened from home screen, dismiss the sheet
-                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
-                if case .home = coordinator.currentCanvasRoute {
-                    coordinator.navigateInBottomSheet(.homeDefault)
-                } else {
-                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                Task {
+                    await handleAssignAvatar(
+                        memojiStore: memojiStore,
+                        familyStore: familyStore,
+                        webService: webService
+                    )
+                    
+                    // If opened from home screen, dismiss the sheet
+                    // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                    if case .home = coordinator.currentCanvasRoute {
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    } else {
+                        coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                    }
                 }
             }
             
@@ -447,10 +457,85 @@ struct PersistentBottomSheet: View {
     }
     
     private func getOnboardingFlowType() -> OnboardingFlowType {
+        // If we are in the main canvas onboarding flow, use the flow type from the route.
+        // This ensures that "Just Me" (individual flow) doesn't show family UI even if a family exists.
         if case .mainCanvas(let flow) = coordinator.currentCanvasRoute {
             return flow
         }
+        
+        // If there are other members in the family, show the family selection carousel
+        if let family = familyStore.family, !family.otherMembers.isEmpty {
+            return .family
+        }
+        
         return .individual
+    }
+}
+
+// MARK: - Avatar Assignment Helpers
+
+@MainActor
+private func handleAssignAvatar(
+    memojiStore: MemojiStore,
+    familyStore: FamilyStore,
+    webService: WebService
+) async {
+    guard let image = memojiStore.image else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji image to upload, skipping")
+        return
+    }
+    
+    guard let targetMemberId = familyStore.avatarTargetMemberId else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set, skipping upload")
+        return
+    }
+    
+    print("[PersistentBottomSheet] handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
+    
+    do {
+        // 1. Upload the avatar image to Supabase and get an imageFileHash
+        let imageFileHash = try await webService.uploadImage(image: image)
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+        
+        // 2. Find the matching FamilyMember and update its imageFileHash
+        guard let family = familyStore.family else {
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No family loaded, cannot update member")
+            return
+        }
+        
+        let allMembers = [family.selfMember] + family.otherMembers
+        guard let member = allMembers.first(where: { $0.id == targetMemberId }) else {
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member not found in current family for id=\(targetMemberId)")
+            return
+        }
+        
+        var updatedMember = member
+        updatedMember.imageFileHash = imageFileHash
+        
+        // Also persist the memoji background color as the member's color so
+        // small avatars (e.g. in HomeView) use the same color as the
+        // MeetYourAvatar sheet.
+        if let bgHex = memojiStore.backgroundColorHex, !bgHex.isEmpty {
+            // Ensure color has a # prefix (backend check constraint requires it)
+            let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+            print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
+            updatedMember.color = normalizedColor
+        }
+        
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
+        
+        // 3. Persist the updated member via FamilyStore
+        await familyStore.editMember(updatedMember)
+        
+        // Check if editMember succeeded (it doesn't throw, but sets errorMessage on failure)
+        if let errorMsg = familyStore.errorMessage {
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Failed to update member in backend: \(errorMsg)")
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Avatar uploaded but member update failed - imageFileHash may not be persisted")
+        } else {
+            print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
+        }
+    } catch {
+        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to upload or assign avatar: \(error.localizedDescription)")
     }
 }
 

@@ -281,6 +281,28 @@ final class FamilyService {
         print("[FamilyService] deleteMember decoded family name=\(family.name)")
         return family
     }
+
+    func createPersonalFamily(name: String, memberID: String) async throws -> Family {
+        print("[FamilyService] createPersonalFamily request name=\(name), memberID=\(memberID)")
+        let jwt = try await currentJWT()
+        
+        let result = try await FamilyAPI.createPersonalFamily(
+            baseURL: baseURL,
+            apiKey: apiKey,
+            jwt: jwt,
+            name: name,
+            memberID: memberID
+        )
+        
+        guard (200 ..< 300).contains(result.statusCode) else {
+            print("[FamilyService] createPersonalFamily bad status: \(result.statusCode), body=\(result.body)")
+            throw NetworkError.invalidResponse(result.statusCode)
+        }
+        
+        let family = try decodeFamily(from: result.body)
+        print("[FamilyService] createPersonalFamily decoded family name=\(family.name)")
+        return family
+    }
 }
 
 
