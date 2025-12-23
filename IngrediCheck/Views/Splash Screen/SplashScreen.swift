@@ -122,11 +122,11 @@ struct SplashScreen: View {
         }
         // If a session restores slightly after first frame, reactively
         // navigate to Home for returning users (non-first launch).
-        .onChange(of: authController.signInState) { _, newValue in
-            if !isFirstLaunch && newValue == .signedIn {
-                shouldNavigateToHome = true
-            }
-        }
+//        .onChange(of: authController.signInState) { _, newValue in
+//            if !isFirstLaunch && newValue == .signedIn {
+//                shouldNavigateToHome = true
+//            }
+//        }
     }
 }
 
