@@ -475,10 +475,11 @@ struct HomeView: View {
                 }
             }
 
-            // ------------ SETTINGS SHEET ------------
-            .sheet(isPresented: $isSettingsPresented) {
+            // ------------ SETTINGS SCREEN ------------
+            .navigationDestination(isPresented: $isSettingsPresented) {
                 SettingsSheet()
                     .environment(userPreferences)
+                    .environment(coordinator)
             }
 
             // ------------ CHAT SHEET ------------

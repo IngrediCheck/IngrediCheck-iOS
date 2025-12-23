@@ -86,7 +86,6 @@ struct RootContainerView: View {
         .task {
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
-            
             // Always attempt to restore onboarding position on launch from Supabase metadata.
             // Guest login should happen at whosThisFor, so session should exist by then.
             print("[OnboardingMeta] RootContainerView.task: attempting restoreOnboardingPosition on launch")
@@ -95,6 +94,7 @@ struct RootContainerView: View {
             // Sync Onboarding view model to match the restored coordinator state
             if let stepId = coordinator.currentOnboardingStepId {
                 onboarding.restoreState(forStepId: stepId)
+
             }
         }
         // Whenever authentication completes (including first-time login or
@@ -105,6 +105,11 @@ struct RootContainerView: View {
             if newValue == .signedIn {
                 Task {
                     await familyStore.loadCurrentFamily()
+                    if !authController.signedInAsGuest {
+                        await MainActor.run {
+                            coordinator.showCanvas(.home)
+                        }
+                    }
                 }
             }
         }
