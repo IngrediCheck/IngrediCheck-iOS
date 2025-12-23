@@ -428,6 +428,7 @@ struct HomeView: View {
             .navigationDestination(isPresented: $isSettingsPresented) {
                 SettingsSheet()
                     .environment(userPreferences)
+                    .environment(coordinator)
             }
 
             // ------------ CHAT SHEET ------------

@@ -102,9 +102,16 @@ struct SettingsSheet: View {
                         
                         sectionCard {
                             VStack(spacing: 0) {
-                                settingsRow(icon: "create-family-icon", title: (familyStore.family != nil ? "Manage Family" : "Create Family"), iconColor: Color(hex: "#75990E")) {
-                                    // TODO: wire navigation
+                                NavigationLink {
+                                    ManageFamilyView()
+                                } label: {
+                                    rowContent(
+                                        image: Image("create-family-icon"),
+                                        title: (familyStore.family != nil ? "Manage Family" : "Create Family"),
+                                        iconColor: Color(hex: "#75990E")
+                                    )
                                 }
+                                .buttonStyle(.plain)
                                 Divider()
                                     .padding(.horizontal, 16)
                                 settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {
