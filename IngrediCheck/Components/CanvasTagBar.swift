@@ -87,10 +87,10 @@ struct CanvasTagBar: View {
             visited = initial
         }
         .onReceive(store.$sections) { _ in
-            // Refresh visited whenever completion state changes
+            // Refresh visited whenever completion state changes, but keep existing visited history
             let completed = store.sections.filter { $0.isComplete }.map { $0.name }
             let current = store.sections[store.currentSectionIndex].name
-            let updated = Array(Set(completed + [current]))
+            let updated = Array(Set(visited + completed + [current]))
             visited = updated
         }
         .onChange(of: store.currentSectionIndex) { _ in
