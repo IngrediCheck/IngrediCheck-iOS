@@ -57,7 +57,7 @@ struct ProductInfo: Codable {
     // I will assume the detailed one is correct for the final response, but maybe the initial one is valid too.
     // I'll define a struct IngredientItem.
     
-    let images: [ProductImage]?
+    let images: [ScanProductImage]?
 }
 
 // Helper for ingredients which might be strings or objects
@@ -100,7 +100,7 @@ struct IngredientItem: Codable {
     let name: String
 }
 
-struct ProductImage: Codable {
+struct ScanProductImage: Codable {
     let url: String
 }
 
