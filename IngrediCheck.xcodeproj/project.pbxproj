@@ -56,6 +56,8 @@
 		397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397DA1D82B7C153100BFB26F /* FeedbackView.swift */; };
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
+		85BA25DBBE00A129BB554FE6 /* PhotoScanModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 030B39DD08BC485810EC9115 /* PhotoScanModels.swift */; };
+		8CE69BF71F7EE0FCC4905C28 /* PhotoScanAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84AC58DDC5EBD3C9CCD6EAA /* PhotoScanAPI.swift */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
@@ -96,9 +98,11 @@
 		D3F0E0032F0A1B2C3D4E5F60 /* MemojiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */; };
 		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
+		FE13D8AFB32EC43170CB3F33 /* PhotoScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AF6526DFB04AB91F9A3FB30 /* PhotoScanStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		030B39DD08BC485810EC9115 /* PhotoScanModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhotoScanModels.swift; sourceTree = "<group>"; };
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
 		0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
@@ -146,6 +150,7 @@
 		39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IngrediCheck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngrediCheckApp.swift; sourceTree = "<group>"; };
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5AF6526DFB04AB91F9A3FB30 /* PhotoScanStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhotoScanStore.swift; sourceTree = "<group>"; };
 		A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
 		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		D35FB7F12E56E859009A5AA1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
@@ -183,9 +188,11 @@
 		D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiModels.swift; sourceTree = "<group>"; };
 		D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiStore.swift; sourceTree = "<group>"; };
 		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
+		D84AC58DDC5EBD3C9CCD6EAA /* PhotoScanAPI.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhotoScanAPI.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0C84D69A2EFA69B200E81DEF /* Photo Scan */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Photo Scan"; sourceTree = "<group>"; };
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
@@ -317,6 +324,7 @@
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				0C84D69A2EFA69B200E81DEF /* Photo Scan */,
 				D3BED0612ED997490088E044 /* HomeView.swift */,
 				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
 				D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */,
@@ -387,6 +395,7 @@
 				397C86002B6C090B00FB9DAD /* WebService.swift */,
 				397C86032B6C1AF400FB9DAD /* SupabaseRequestBuilder.swift */,
 				1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */,
+				A9F26C36F30AF9A7C3BED5A2 /* Photo Scan */,
 			);
 			path = IngrediCheck;
 			sourceTree = "<group>";
@@ -397,6 +406,16 @@
 				1F5987B52E30E6DA00381E32 /* StoreKit.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A9F26C36F30AF9A7C3BED5A2 /* Photo Scan */ = {
+			isa = PBXGroup;
+			children = (
+				030B39DD08BC485810EC9115 /* PhotoScanModels.swift */,
+				D84AC58DDC5EBD3C9CCD6EAA /* PhotoScanAPI.swift */,
+				5AF6526DFB04AB91F9A3FB30 /* PhotoScanStore.swift */,
+			);
+			path = "Photo Scan";
 			sourceTree = "<group>";
 		};
 		D35FB7F02E56E704009A5AA1 /* Recovered References */ = {
@@ -423,6 +442,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				0C84D69A2EFA69B200E81DEF /* Photo Scan */,
 				D3BECBA72ED9898E0088E044 /* Components */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
@@ -585,6 +605,9 @@
 				3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
 				39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */,
+				85BA25DBBE00A129BB554FE6 /* PhotoScanModels.swift in Sources */,
+				8CE69BF71F7EE0FCC4905C28 /* PhotoScanAPI.swift in Sources */,
+				FE13D8AFB32EC43170CB3F33 /* PhotoScanStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
