@@ -12,6 +12,8 @@ struct SplashScreen: View {
     @State private var isCheckingLaunchState: Bool = true
     @State private var isFillingComplete: Bool = false
     @State private var shouldNavigateToHome: Bool = false
+    @State private var shouldNavigateToOnboarding: Bool = false
+    @State private var restoredState: (canvas: CanvasRoute, sheet: BottomSheetRoute)?
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
     
@@ -22,19 +24,6 @@ struct SplashScreen: View {
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
-            } else if !isFirstLaunch, OnboardingResumeStore.load() != nil {
-                // Resume in-progress onboarding (pre-login supported) by skipping
-                // the marketing carousel and going straight to the container.
-                Splash {
-                    Image("SplashScreen")
-                        .resizable()
-                        .scaledToFill()
-                        .ignoresSafeArea()
-                } content: {
-                    RootContainerView()
-                        .environment(authController)
-                        .environment(familyStore)
-                }
             } else if shouldNavigateToHome {
                 // In preview flow, if there's already a Supabase session
                 // (including anonymous/guest), skip the marketing carousel
@@ -45,7 +34,20 @@ struct SplashScreen: View {
                         .scaledToFill()
                         .ignoresSafeArea()
                 } content: {
-                    RootContainerView(initialRoute: .home)
+                    RootContainerView(restoredState: (canvas: .home, sheet: .homeDefault))
+                        .environment(authController)
+                        .environment(familyStore)
+                }
+            } else if shouldNavigateToOnboarding {
+                // If there's a session but onboarding isn't complete,
+                // go to RootContainerView which will restore from metadata
+                Splash {
+                    Image("SplashScreen")
+                        .resizable()
+                        .scaledToFill()
+                        .ignoresSafeArea()
+                } content: {
+                    RootContainerView(restoredState: restoredState)
                         .environment(authController)
                         .environment(familyStore)
                 }
@@ -129,9 +131,43 @@ struct SplashScreen: View {
                 isFirstLaunch = false
             }
             
-            // Calculate navigation decision once based on initial state
-            if !isFirstLaunch && authController.session != nil {
-                shouldNavigateToHome = true
+            // Wait a bit for session to be fully restored and metadata to be available
+            // The session might be restored from keychain but userMetadata might need a moment
+            if !isFirstLaunch {
+                // Check if session exists (or wait briefly if we suspect it should)
+                // Actually authController.session might be nil initially but update shortly.
+                // We'll give it a tiny grace period if it's nil? 
+                // Checks on kill/launch typically have session ready from keychain immediately if using GoTrue synchronously or fast async.
+                
+                if authController.session != nil {
+                     print("[SplashScreen] Session exists, checking metadata...")
+                    // Session exists
+                } else {
+                     // Maybe wait 0.1s just in case session is being restored async?
+                     try? await Task.sleep(nanoseconds: 100_000_000)
+                }
+                
+                if authController.session != nil {
+                    // Check metadata
+                    let metadata = authController.readRemoteOnboardingMetadata()
+                    print("[SplashScreen] Metadata check result: \(metadata != nil ? "found" : "not found")")
+                    
+                    if let metadata = metadata {
+                        if metadata.stage == .completed {
+                            shouldNavigateToHome = true
+                            print("[SplashScreen] ✅ Onboarding complete, navigating to home")
+                        } else {
+                            // Restore state specifically
+                            restoredState = AppNavigationCoordinator.restoreState(from: metadata)
+                            shouldNavigateToOnboarding = true
+                            print("[SplashScreen] ⚠️ Onboarding not complete, restoring to \(restoredState?.canvas ?? .heyThere)")
+                        }
+                    } else {
+                        // Session exists but no metadata? Navigate to onboarding start I guess.
+                        shouldNavigateToOnboarding = true
+                        print("[SplashScreen] ⚠️ No metadata found, navigating to Onboarding Default")
+                    }
+                }
             }
 
             isCheckingLaunchState = false

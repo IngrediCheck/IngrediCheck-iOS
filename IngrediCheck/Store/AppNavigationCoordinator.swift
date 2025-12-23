@@ -65,73 +65,10 @@ class AppNavigationCoordinator {
 
     init(initialRoute: CanvasRoute = .heyThere) {
         self.currentCanvasRoute = initialRoute
+        if case .mainCanvas(let flow) = initialRoute {
+            self.onboardingFlow = flow
+        }
         self.currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: initialRoute)
-    }
-    
-    // MARK: - Local Resume Snapshot
-    
-    private var canvasRouteIdentifier: (id: String, param: String?) {
-        switch currentCanvasRoute {
-        case .heyThere:
-            return ("heyThere", nil)
-        case .blankScreen:
-            return ("blankScreen", nil)
-        case .letsGetStarted:
-            return ("letsGetStarted", nil)
-        case .letsMeetYourIngrediFam:
-            return ("letsMeetYourIngrediFam", nil)
-        case .dietaryPreferencesAndRestrictions(let isFamilyFlow):
-            return ("dietaryPreferencesAndRestrictions", isFamilyFlow ? "true" : "false")
-        case .welcomeToYourFamily:
-            return ("welcomeToYourFamily", nil)
-        case .mainCanvas(let flow):
-            return ("mainCanvas", flow.rawValue)
-        case .home:
-            return ("home", nil)
-        }
-    }
-    
-    private static func restoreCanvasRoute(id: String, param: String?) -> CanvasRoute {
-        switch id {
-        case "heyThere":
-            return .heyThere
-        case "blankScreen":
-            return .blankScreen
-        case "letsGetStarted":
-            return .letsGetStarted
-        case "letsMeetYourIngrediFam":
-            return .letsMeetYourIngrediFam
-        case "dietaryPreferencesAndRestrictions":
-            return .dietaryPreferencesAndRestrictions(isFamilyFlow: param == "true")
-        case "welcomeToYourFamily":
-            return .welcomeToYourFamily
-        case "mainCanvas":
-            return .mainCanvas(flow: OnboardingFlowType(rawValue: param ?? "individual") ?? .individual)
-        case "home":
-            return .home
-        default:
-            return .heyThere
-        }
-    }
-    
-    private func persistResumeSnapshot() {
-        let canvas = canvasRouteIdentifier
-        let sheet = bottomSheetRouteIdentifier
-        let snapshot = OnboardingResumeSnapshot(
-            canvasRouteId: canvas.id,
-            canvasRouteParam: canvas.param,
-            bottomSheetRouteId: sheet?.identifier.rawValue ?? "homeDefault",
-            bottomSheetRouteParam: sheet?.param,
-            savedAt: Date()
-        )
-        OnboardingResumeStore.save(snapshot)
-    }
-    
-    static func restoreFromSnapshot(_ snapshot: OnboardingResumeSnapshot) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
-        let canvas = restoreCanvasRoute(id: snapshot.canvasRouteId, param: snapshot.canvasRouteParam)
-        let sheetId = BottomSheetRouteIdentifier(rawValue: snapshot.bottomSheetRouteId) ?? .homeDefault
-        let sheet = restoreBottomSheetRoute(from: sheetId, param: snapshot.bottomSheetRouteParam)
-        return (canvas, sheet)
     }
     
     func setCanvasRoute(_ route: CanvasRoute) {
@@ -143,10 +80,6 @@ class AppNavigationCoordinator {
             currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: route)
         }
         
-        persistResumeSnapshot()
-        if case .home = route {
-            OnboardingResumeStore.clear()
-        }
         // Sync to Supabase after navigation change
         Task {
             await onNavigationChange?()
@@ -172,7 +105,6 @@ class AppNavigationCoordinator {
             }
             currentBottomSheetRoute = route
         }
-        persistResumeSnapshot()
         // Sync to Supabase after navigation change
         Task {
             await onNavigationChange?()
@@ -252,8 +184,20 @@ class AppNavigationCoordinator {
     
     // MARK: - Remote Onboarding Metadata Helpers
     
-    /// Derives the high-level onboarding stage from current canvas route
+    /// Derives the high-level onboarding stage from current canvas route and bottom sheet
     var remoteOnboardingStage: RemoteOnboardingStage {
+        // Check bottom sheet first for more specific stage detection
+        switch currentBottomSheetRoute {
+        case .whosThisFor:
+            // whosThisFor is part of choosing flow, even though canvas might be .heyThere
+            return .choosingFlow
+        case .letsMeetYourIngrediFam, .whatsYourName, .addMoreMembers, .addMoreMembersMinimal:
+            return .choosingFlow
+        default:
+            break
+        }
+        
+        // Fall back to canvas route-based stage
         switch currentCanvasRoute {
         case .heyThere, .blankScreen, .letsGetStarted:
             return .preOnboarding
@@ -305,8 +249,10 @@ class AppNavigationCoordinator {
             return (.addMoreMembers, nil)
         case .addMoreMembersMinimal:
             return (.addMoreMembersMinimal, nil)
-        case .wouldYouLikeToInvite(let name):
-            return (.wouldYouLikeToInvite, name)
+        case .editMember(let memberId, let isSelf):
+            return (.editMember, "\(memberId.uuidString)|\(isSelf)")
+        case .wouldYouLikeToInvite(let memberId, let name):
+            return (.wouldYouLikeToInvite, "\(memberId.uuidString)|\(name)")
         case .wantToAddPreference(let name):
             return (.wantToAddPreference, name)
         case .generateAvatar:
@@ -371,8 +317,19 @@ class AppNavigationCoordinator {
             return .addMoreMembers
         case .addMoreMembersMinimal:
             return .addMoreMembersMinimal
+        case .editMember:
+             let parts = (param ?? "").split(separator: "|")
+             if parts.count >= 2, let id = UUID(uuidString: String(parts[0])), let isSelf = Bool(String(parts[1])) {
+                  return .editMember(memberId: id, isSelf: isSelf)
+             }
+             return .homeDefault
         case .wouldYouLikeToInvite:
-            return .wouldYouLikeToInvite(name: param ?? "")
+            let parts = (param ?? "").split(separator: "|")
+            if parts.count >= 2, let id = UUID(uuidString: String(parts[0])) {
+                let name = String(parts[1])
+                return .wouldYouLikeToInvite(memberId: id, name: name)
+            }
+            return .homeDefault
         case .wantToAddPreference:
             return .wantToAddPreference(name: param ?? "")
         case .generateAvatar:
@@ -403,5 +360,57 @@ class AppNavigationCoordinator {
         case .workingOnSummary:
             return .workingOnSummary
         }
+    }
+    static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
+        // 1. Restore Sheet
+        let sheetId = metadata.bottomSheetRoute ?? .homeDefault
+        let sheet = restoreBottomSheetRoute(from: sheetId, param: metadata.bottomSheetRouteParam)
+
+        // 2. Restore Canvas based on Stage + Flow
+        var canvas: CanvasRoute
+        let flow = metadata.flowType ?? .individual
+        
+        switch metadata.stage ?? .none {
+        case .none, .preOnboarding:
+            canvas = .heyThere
+        case .choosingFlow:
+            canvas = .letsMeetYourIngrediFam
+        case .dietaryIntro:
+            canvas = .dietaryPreferencesAndRestrictions(isFamilyFlow: flow == .family)
+        case .dynamicOnboarding:
+            canvas = .mainCanvas(flow: flow)
+        case .fineTune:
+            canvas = .mainCanvas(flow: flow)
+        case .completed:
+            canvas = .home
+        }
+
+        // 3. Refine Canvas based on specific Sheets that map to specific Canvases
+        // This overrides the broader 'stage' based guess for accuracy
+        switch sheet {
+        case .alreadyHaveAnAccount, .welcomeBack, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
+             // These sheets all appear on .heyThere canvas (consistent with navigateInBottomSheet logic)
+             canvas = .heyThere
+        case .letsMeetYourIngrediFam, .whatsYourName, .addMoreMembers, .addMoreMembersMinimal, .editMember, .wouldYouLikeToInvite, .wantToAddPreference, .generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor:
+             canvas = .letsMeetYourIngrediFam
+        case .dietaryPreferencesSheet:
+             // handled by stage .dietaryIntro usually, but enforce correct canvas
+             canvas = .dietaryPreferencesAndRestrictions(isFamilyFlow: flow == .family)
+        case .allSetToJoinYourFamily:
+             canvas = .welcomeToYourFamily
+        case .onboardingStep:
+             canvas = .mainCanvas(flow: flow)
+        case .fineTuneYourExperience:
+             canvas = .mainCanvas(flow: flow)
+        case .chatIntro, .chatConversation:
+             // Chat can be presented anywhere, usually preserves background. 
+             // If we are restoring fresh, we might not know background. 
+             // Defaulting to home or based on stage is safe.
+             break 
+        default:
+             break
+        }
+
+        return (canvas, sheet)
     }
 }
