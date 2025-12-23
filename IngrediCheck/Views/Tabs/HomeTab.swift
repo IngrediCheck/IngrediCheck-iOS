@@ -24,6 +24,7 @@ enum ValidationResult {
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
     @Environment(DietaryPreferences.self) var dp
+    @Environment(UserPreferences.self) var userPreferences
 
     var body: some View {
         NavigationStack {
@@ -70,11 +71,12 @@ enum ValidationResult {
     }
     
     private var settingsButton: some View {
-        Button(action: {
-            appState.activeSheet = .settings
-        }, label: {
+        NavigationLink {
+            SettingsSheet()
+                .environment(userPreferences)
+        } label: {
             Image(systemName: "gearshape")
-        })
+        }
     }
     
     private var textInputField: some View {

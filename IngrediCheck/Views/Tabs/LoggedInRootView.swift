@@ -81,12 +81,11 @@ struct ListsTabState {
         }
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {
-            case .settings:
-                SettingsSheet()
-                    .environment(userPreferences)
             case .scan:
                 CheckTab()
                     .environment(userPreferences)
+            default:
+                EmptyView()
             }
         }
         .sheet(item: $appState.feedbackConfig) { feedbackConfig in

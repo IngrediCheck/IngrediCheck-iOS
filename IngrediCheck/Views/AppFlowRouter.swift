@@ -30,6 +30,7 @@ struct AppFlowRouter: View {
                     .environment(appState)
                     .environment(dietaryPreferences)
                     .environment(onboardingState)
+                    .environment(familyStore)
             }
         }
         .id(appResetID)
