@@ -32,8 +32,7 @@ struct ManageFamilyView: View {
                 VStack(spacing: 16) {
                     familyCard
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
+                .padding(20)
             }
             .scrollIndicators(.hidden)
         }
@@ -97,7 +96,7 @@ struct ManageFamilyView: View {
                         Image(imageName)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 36, height: 36)
+                            .frame(width: 23, height: 23)
                             .clipShape(Circle())
                             .overlay(
                                 Circle()
@@ -107,10 +106,10 @@ struct ManageFamilyView: View {
                     } else {
                         Circle()
                             .fill(Color(hex: member.color))
-                            .frame(width: 36, height: 36)
+                            .frame(width: 23, height: 23)
                             .overlay(
                                 Text(String(member.name.prefix(1)))
-                                    .font(NunitoFont.semiBold.size(14))
+                                    .font(NunitoFont.semiBold.size(12))
                                     .foregroundStyle(.white)
                             )
                             .overlay(
@@ -125,22 +124,23 @@ struct ManageFamilyView: View {
                     coordinator.navigateInBottomSheet(.addMoreMembers)
                 } label: {
                     GreenCapsule(title: "+ Add Member")
-                        .frame(width: 164)
+                        .frame(width: 110, height: 36)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(16)
+        .padding(20)
+        .frame(height: 143)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 28)
                 .fill(Color.white)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 28)
                 .stroke(lineWidth: 0.75)
                 .foregroundStyle(Color(hex: "#EEEEEE"))
         )
-        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+        .shadow(color: Color.black.opacity(0.03), radius: 10.1, x: 0, y: 2)
     }
 }
 
