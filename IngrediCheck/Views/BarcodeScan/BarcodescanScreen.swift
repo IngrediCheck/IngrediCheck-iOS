@@ -232,7 +232,7 @@ struct CameraScreen: View {
                 // - 26 pt gap below frame, then result cards (LazyHStack)
                 GeometryReader { geo in
                     let centerX = geo.size.width / 2
-                    let guideTop: CGFloat = 213
+                    let guideTop: CGFloat = 180
                     let guideSize: CGFloat = 244
                     let cardHeight: CGFloat = 120
                     let cardTop: CGFloat = guideTop + guideSize + 26
@@ -279,6 +279,13 @@ struct CameraScreen: View {
                                 .frame(height: cardHeight)
                                 .position(x: centerX, y: cardCenterY)
                             }
+                        } else {
+                            ProTipCard {
+                                withAnimation(.easeInOut) {
+                                    isShowingPhotoModeGuide = true
+                                }
+                            }
+                            .position(x: centerX, y: cardCenterY)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -760,6 +767,67 @@ struct CameraScreen: View {
                     }
                 }
             }
+        }
+    }
+
+    struct ProTipCard: View {
+        let action: () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 0) {
+                    ZStack {
+                        
+                        Image("systemuiconscapture")
+                            .resizable()
+                            .frame(width: 88, height: 94)
+                        
+                        Image("takeawafood")
+                            .resizable()
+                            .frame(width: 42, height: 50)
+                    }
+                    .padding(.trailing, 8)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        (
+                            Text("Pro tip — Take shots of ")
+                                .font(ManropeFont.regular.size(12))
+                            + Text("front")
+                                .font(ManropeFont.bold.size(12))
+                            + Text(", ")
+                                .font(ManropeFont.regular.size(12))
+                            + Text("back")
+                                .font(ManropeFont.bold.size(12))
+                            + Text(", and any ")
+                                .font(ManropeFont.regular.size(12))
+                            + Text("folded panels")
+                                .font(ManropeFont.bold.size(12))
+                            + Text(" for best results.")
+                                .font(ManropeFont.regular.size(12))
+                        )
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer(minLength: 0)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .frame(height: 120)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                )
+                .padding(.horizontal, 38)
+            }
+            .buttonStyle(.plain)
         }
     }
 
