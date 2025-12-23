@@ -3,6 +3,7 @@ import AVFoundation
 import UIKit
 import Combine
 import PhotosUI
+import Supabase
 
 struct BarcodeCameraPreview: UIViewRepresentable {
 
@@ -36,6 +37,7 @@ struct BarcodeCameraPreview: UIViewRepresentable {
 struct CameraScreen: View {
     
     @StateObject var camera = BarcodeCameraManager()
+    @StateObject private var photoScanStore = PhotoScanStore()
     @State private var cameraStatus: AVAuthorizationStatus = .notDetermined
     @Environment(\.scenePhase) var scenePhase
     @State private var isCaptured: Bool = false
@@ -265,7 +267,7 @@ struct CameraScreen: View {
                                     LazyHStack(spacing: 8) {
                                         ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                             let image = capturedPhotoHistory[idx]
-                                            PhotoContentView4(image: image)
+                                            PhotoContentView4(image: image, productInfo: idx == 0 ? photoScanStore.scanDetails?.productInfo : nil)
                                                 .transition(.opacity)
                                         }
                                     }
@@ -281,7 +283,7 @@ struct CameraScreen: View {
                                     LazyHStack(spacing: 8) {
                                         ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                             let image = capturedPhotoHistory[idx]
-                                            PhotoContentView4(image: image)
+                                            PhotoContentView4(image: image, productInfo: idx == 0 ? photoScanStore.scanDetails?.productInfo : nil)
                                                 .transition(.opacity)
                                         }
                                     }
@@ -336,16 +338,32 @@ struct CameraScreen: View {
                         // MARK: - Image Capturing Button
                         // Center: Capture photo button - captures a photo from the camera and adds it to the photo history
                         Button(action: {
-                            camera.capturePhoto(useFlash: photoFlashEnabled) { image in
-                                if let image = image {
-                                    capturedPhoto = image
-                                    capturedPhotoHistory.insert(image, at: 0)
-                                    if capturedPhotoHistory.count > 10 {
-                                        capturedPhotoHistory.removeLast(capturedPhotoHistory.count - 10)
-                                    }
-                                }
-                            }
-                        }) {
+        camera.capturePhoto(useFlash: photoFlashEnabled) { image in
+            if let image = image {
+                capturedPhoto = image
+                capturedPhotoHistory.insert(image, at: 0)
+                if capturedPhotoHistory.count > 10 {
+                    capturedPhotoHistory.removeLast(capturedPhotoHistory.count - 10)
+                }
+                
+                // Start new scan and upload
+                if capturedPhotoHistory.count == 1 {
+                    photoScanStore.startNewScan()
+                }
+                
+                Task {
+                    if let jwt = try? await supabaseClient.auth.session.accessToken {
+                        await photoScanStore.uploadImage(
+                            image: image,
+                            baseURL: Config.supabaseFunctionsURLBase,
+                            apiKey: Config.supabaseKey,
+                            jwt: jwt
+                        )
+                    }
+                }
+            }
+        }
+    }) {
                             ZStack {
                                 Circle()
                                     .fill(Color.white.opacity(0.9))
@@ -739,44 +757,136 @@ struct CameraScreen: View {
     
     struct PhotoContentView4: View {
         let image: UIImage
+        var productInfo: ProductInfo?
         
         var body: some View {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.thinMaterial.opacity(0.2))
-                    .frame(width: 300, height: 120)
-                
-                HStack {
-                    HStack(spacing: 47) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(.thinMaterial.opacity(0.4))
-                                .frame(width: 68, height: 92)
-                            
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 64, height: 88)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
+            if let info = productInfo {
+                // === LOADED STATE ===
+                HStack(spacing: 16) {
+                    // Image Thumbnail with Frame
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.white.opacity(0.1))
+                            .frame(width: 68, height: 92)
+                        
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 64, height: 88)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .padding(.leading, 16)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let brand = info.brand {
+                            Text(brand)
+                                .font(ManropeFont.medium.size(12))
+                                .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+                        
+                        Text(info.name ?? "Unknown Product")
+                            .font(NunitoFont.semiBold.size(16))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        if let netQty = info.netQuantity {
+                            Text("Net Qty : \(netQty)")
+                                .font(ManropeFont.regular.size(12))
+                                .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer().frame(height: 8)
+                        
+                        // Analyzing Pill
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white)
+                            
+                            Text("Analyzing")
+                                .font(ManropeFont.bold.size(12))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color(hex: "3B9AFF"))
+                        .clipShape(Capsule())
+                    }
+                    .padding(.vertical, 16)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.trailing, 16)
+                }
+                .frame(width: 300, height: 120)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                )
+            } else {
+                // === FETCHING STATE ===
+                HStack(spacing: 0) {
+                    // Icons
+                    ZStack {
+                        Image("systemuiconscapture")
+                            .resizable()
+                            .frame(width: 88, height: 94)
+                        
+                        Image("takeawafood")
+                            .resizable()
+                            .frame(width: 42, height: 50)
+                    }
+                    .padding(.trailing, 8)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 185, height: 25)
-                            .opacity(0.3)
+                        Text("Want to add more angles? Take another.")
+                            .font(ManropeFont.bold.size(12))
+                            .foregroundColor(.white)
+                            .fixedSize(horizontal: false, vertical: true)
                         
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 132, height: 20)
-                            .padding(.bottom, 7)
+                        Text("This helps us read small or folded text.")
+                            .font(ManropeFont.regular.size(12))
+                            .foregroundColor(.white.opacity(0.8))
+                            .fixedSize(horizontal: false, vertical: true)
                         
-                        RoundedRectangle(cornerRadius: 52)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 79, height: 24)
+                        // Fetching Pill
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .tint(.black)
+                                .frame(width: 12, height: 12)
+                            
+                            Text("Fetching details")
+                                .font(ManropeFont.bold.size(10))
+                                .foregroundColor(.black)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.9))
+                        .clipShape(Capsule())
                     }
+                    .padding(.vertical, 16)
+                    
+                    Spacer(minLength: 8)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.trailing, 16)
                 }
+                .frame(width: 300, height: 120)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                )
             }
         }
     }

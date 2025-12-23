@@ -58,6 +58,12 @@ struct ProductInfo: Codable {
     // I'll define a struct IngredientItem.
     
     let images: [ScanProductImage]?
+    let netQuantity: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name, brand, ingredients, images
+        case netQuantity = "net_quantity"
+    }
 }
 
 // Helper for ingredients which might be strings or objects
