@@ -164,10 +164,10 @@ struct SettingsSheet: View {
                                 .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
-                            Button {
-                                if let url = URL(string: "https://www.ingredicheck.app") { openURL(url) }
-                            } label: { rowContent(image: Image("share") , title: "Share us", iconColor: Color(hex: "#75990E")) }
-                                .buttonStyle(.plain)
+                            ShareLink(item: URL(string: "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615")!, subject: Text("IngrediCheck"), message: Text("Check out IngrediCheck, it helps you and your family check food ingredients easily!")) {
+                                rowContent(image: Image("share") , title: "Share us", iconColor: Color(hex: "#75990E"))
+                            }
+                            .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
                             NavigationLink { TipJarView() } label: { rowContent(image: Image("Tip-Jar-icon"), title: "Tip Jar") }
