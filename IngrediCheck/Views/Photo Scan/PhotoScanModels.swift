@@ -41,21 +41,7 @@ struct ScanDetailsResponse: Codable, Identifiable {
 struct ProductInfo: Codable {
     let name: String?
     let brand: String?
-    let ingredients: [String]? // The example shows strings, but the polling response example shows objects { "name": "..." }. I should check the polling example carefully.
-    // Polling example: "ingredients": [ { "name": "Carbonated Water" }, ... ]
-    // Initial example: "ingredients": ["Ingredient 1", "Ingredient 2"]
-    // I will support both or check which one is correct. The polling example is more detailed.
-    // Let's use a custom decoding or just [IngredientItem] if I can confirm.
-    // The user provided two JSONs.
-    // 1. "ingredients": ["Ingredient 1", "Ingredient 2"]
-    // 2. "ingredients": [ { "name": "Carbonated Water" }, ... ]
-    // I'll stick to the detailed one (Polling example) as it's likely the actual implementation, or try to decode as [IngredientItem] first.
-    // Actually, let's look at the "Get Scan Details (Polling)" JSON in the prompt again.
-    // It says: "ingredients": ["Ingredient 1", "Ingredient 2"]
-    // BUT later in "Expected Response for Dr Pepper Image":
-    // "ingredients": [ { "name": "Carbonated Water" }, ... ]
-    // I will assume the detailed one is correct for the final response, but maybe the initial one is valid too.
-    // I'll define a struct IngredientItem.
+    let ingredients: [IngredientEntry]?
     
     let images: [ScanProductImage]?
     let netQuantity: String?

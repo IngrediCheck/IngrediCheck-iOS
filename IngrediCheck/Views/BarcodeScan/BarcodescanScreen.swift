@@ -299,6 +299,9 @@ struct CameraScreen: View {
                                 }
                             }
                             .position(x: centerX, y: cardCenterY)
+                        } else {
+                            BarcodeDataCard(code: "")
+                                .position(x: centerX, y: cardCenterY)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
