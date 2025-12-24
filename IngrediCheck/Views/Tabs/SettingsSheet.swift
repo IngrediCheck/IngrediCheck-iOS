@@ -9,6 +9,7 @@ struct SettingsSheet: View {
     @Environment(AuthController.self) var authController
     @Environment(FamilyStore.self) var familyStore
     @Environment(\.openURL) var openURL
+    @Environment(AppNavigationCoordinator.self) var coordinator
     
     @State private var showInternalModeToast = false
     @State private var internalModeToastMessage = "Internal Mode Unlocked"
@@ -32,13 +33,21 @@ struct SettingsSheet: View {
             // Sticky Header Section
             VStack(spacing: 24) {
                 // Top bar with back chevron and title (effective 12pt horizontal padding)
-                HStack(spacing: 8) {
+                HStack() {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(.grayScale150)
+                            .padding(.horizontal , 8)
+                            
                     }
-                    Text("Profile & Settings")
+                    Text("Profile")
+                        .onTapGesture {
+                            dismiss()
+                        }
+                        .font(NunitoFont.bold.size(18))
+                        .foregroundStyle(.grayScale150)
+                    Text("& Settings")
                         .font(NunitoFont.bold.size(18))
                         .foregroundStyle(.grayScale150)
                     Spacer()
@@ -104,6 +113,7 @@ struct SettingsSheet: View {
                             VStack(spacing: 0) {
                                 NavigationLink {
                                     ManageFamilyView()
+                                        .environment(coordinator)
                                 } label: {
                                     rowContent(
                                         image: Image("create-family-icon"),

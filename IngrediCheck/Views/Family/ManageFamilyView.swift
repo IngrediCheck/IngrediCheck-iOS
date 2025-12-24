@@ -4,6 +4,7 @@ struct ManageFamilyView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(WebService.self) private var webService
 
     private var familyName: String {
         if let family = familyStore.family {
@@ -31,6 +32,12 @@ struct ManageFamilyView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     familyCard
+                    
+                    VStack(spacing: 12) {
+                        ForEach(members) { member in
+                            MemberRow(member: member)
+                        }
+                    }
                 }
                 .padding(20)
             }
@@ -141,6 +148,222 @@ struct ManageFamilyView: View {
                 .foregroundStyle(Color(hex: "#EEEEEE"))
         )
         .shadow(color: Color.black.opacity(0.03), radius: 10.1, x: 0, y: 2)
+    }
+
+    private struct MemberRow: View {
+        let member: FamilyMember
+        @Environment(FamilyStore.self) private var familyStore
+        @Environment(AppNavigationCoordinator.self) private var coordinator
+
+        private var isSelf: Bool {
+            if let family = familyStore.family {
+                return member.id == family.selfMember.id
+            }
+            return member.id == familyStore.pendingSelfMember?.id
+        }
+
+        var body: some View {
+            HStack(spacing: 12) {
+                // Avatar with Pencil Overlay
+                ZStack(alignment: .bottomTrailing) {
+                    SmartMemberAvatar(member: member)
+                        .frame(width: 48, height: 48)
+                    
+                    // Small Pencil Icon
+                    Circle()
+                        .fill(.grayScale40) // Using grayScale40 to match onboarding or a light bg? Onboarding card uses `Stroke(.grayScale40)` for avatar ring?
+                        // Actually in LetsMeetYourIngrediFamView, the PENCIL is NOT there for other members, only for self maybe?
+                        // But previous request asked for pencil. I will keep pencil but make sure the main avatar matches.
+                        // LetsMeetYourIngrediFamView uses a Stroke(.grayScale40) around the avatar.
+                        // SmartMemberAvatar now has that stroke.
+                        // I will attach the pencil overlay here.
+                        .frame(width: 16, height: 16)
+                        .overlay(
+                            Image("pen-line")
+                                .resizable()
+                                .frame(width: 7.43, height: 7.43)
+                        )
+                        .offset(x: -4, y: 4)
+                }
+                .onTapGesture {
+                    coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: isSelf))
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(member.name)
+                        .font(NunitoFont.semiBold.size(18))
+                        .foregroundStyle(.grayScale150)
+                    
+                    statusView
+                }
+
+                Spacer()
+
+                actionButton
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.white)
+                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(lineWidth: 0.75)
+                    .foregroundStyle(Color(hex: "#EEEEEE"))
+            )
+        }
+
+        @ViewBuilder
+        private var statusView: some View {
+            if isSelf {
+                Text("(You)")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale110)
+            } else if member.joined {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color(hex: "#2C9C3D"))
+                    Text("Joined")
+                        .font(ManropeFont.semiBold.size(10))
+                        .foregroundStyle(Color(hex: "#2C9C3D"))
+                }
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Color(hex: "#EAF6ED"), in: Capsule())
+            } else if member.invitePending == true {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color(hex: "#F4A100"))
+                    Text("Pending")
+                        .font(ManropeFont.semiBold.size(10))
+                        .foregroundStyle(Color(hex: "#F4A100"))
+                }
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Color(hex: "#FFF7E6"), in: Capsule())
+            } else {
+                Text("Not joined yet !")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale110)
+            }
+        }
+
+        @ViewBuilder
+        private var actionButton: some View {
+            if isSelf {
+                Button {
+                    Task { await familyStore.leave() }
+                } label: {
+                    Text("Leave Family")
+                        .font(NunitoFont.semiBold.size(12))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(Color(hex: "#F2F2F2"), in: Capsule())
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                } label: {
+                    HStack(spacing: 6) {
+                        Image("share")
+                            .resizable()
+                            .frame(width: 14, height: 14)
+                            .foregroundStyle(Color(hex: "#91B640"))
+                        Text(member.joined ? "Re-invite" : "Invite")
+                            .font(NunitoFont.semiBold.size(12))
+                            .foregroundStyle(Color(hex: "#91B640"))
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color(hex: "#91B640"), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private struct SmartMemberAvatar: View {
+        let member: FamilyMember
+        @Environment(WebService.self) private var webService
+        @State private var remoteImage: UIImage? = nil
+        @State private var searchFailed: Bool = false
+        
+        var body: some View {
+            ZStack {
+                // Background circle
+                Circle()
+                    .stroke(Color.grayScale40, lineWidth: 2)
+                    .frame(width: 48, height: 48)
+                
+                // Image content
+                if let imageName = member.imageFileHash, !imageName.isEmpty, !searchFailed {
+                    // Try to load as a local asset named 'imageName' (for pre-defined avatars)
+                    // If it is a generated hash, UIImage(named:) returns nil.
+                    if let localImage = UIImage(named: imageName) {
+                        Image(uiImage: localImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 42, height: 42)
+                            .clipShape(Circle())
+                    } else if let remote = remoteImage {
+                        // Remote image loaded
+                        Image(uiImage: remote)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 42, height: 42)
+                            .clipShape(Circle())
+                    } else {
+                        // Placeholder / Loading for remote
+                        Circle()
+                            .fill(Color(hex: member.color))
+                            .frame(width: 42, height: 42)
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.5)
+                            )
+                            .task {
+                                await loadRemoteAvatar(hash: imageName)
+                            }
+                    }
+                } else {
+                    // Default generic avatar (initials) - Fallback if no hash OR if load failed
+                    Circle()
+                        .fill(Color(hex: member.color))
+                        .frame(width: 42, height: 42)
+                        .overlay(
+                            Text(String(member.name.prefix(1)))
+                                .font(NunitoFont.semiBold.size(18))
+                                .foregroundStyle(.white)
+                        )
+                }
+            }
+        }
+        
+        @MainActor
+        private func loadRemoteAvatar(hash: String) async {
+            do {
+                // Attempt to fetch from Supabase
+                let uiImage = try await webService.fetchImage(
+                    imageLocation: .imageFileHash(hash),
+                    imageSize: .small
+                )
+                self.remoteImage = uiImage
+                self.searchFailed = false
+            } catch {
+                print("Failed to load remote avatar for \(member.name): \(error.localizedDescription)")
+                self.searchFailed = true
+            }
+        }
     }
 }
 
