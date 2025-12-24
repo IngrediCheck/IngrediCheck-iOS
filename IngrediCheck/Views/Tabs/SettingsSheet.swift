@@ -393,6 +393,7 @@ struct SettingsSheet: View {
                         .foregroundStyle(.grayScale150)
                 }
                 .padding( 16)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
@@ -412,6 +413,7 @@ struct SettingsSheet: View {
                     .foregroundStyle(.grayScale150)
             }
             .padding( 12)
+            .contentShape(Rectangle())
             
         }
         
@@ -436,6 +438,7 @@ struct SettingsSheet: View {
                 }
             }
             .padding( 16)
+            .contentShape(Rectangle())
         }
         
         // MARK: - Account Cards

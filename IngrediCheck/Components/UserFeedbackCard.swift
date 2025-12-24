@@ -11,6 +11,7 @@ struct UserFeedbackCard: View {
     
     /// Current selected star rating (0–5). 0 means “not rated yet”.
     @State private var rating: Int = 0
+    @Environment(\.openURL) private var openURL
     
     var body: some View {
         VStack {
@@ -41,6 +42,15 @@ struct UserFeedbackCard: View {
                         // Tapping a star sets the rating to that value.
                         // All stars up to this index become “active”.
                         rating = index
+                        if let writeURL = URL(string: "itms-apps://apps.apple.com/app/id6477521615?action=write-review") {
+                            openURL(writeURL) { accepted in
+                                if !accepted {
+                                    if let webURL = URL(string: "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615?see-all=reviews&platform=iphone") {
+                                        openURL(webURL)
+                                    }
+                                }
+                            }
+                        }
                     } label: {
                         Image("star-rating")
                             .renderingMode(.template)
