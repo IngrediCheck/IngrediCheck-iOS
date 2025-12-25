@@ -194,6 +194,9 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
 
         let requestBody = try JSONEncoder().encode(["barcode": barcode])
+        
+        // Pretty print the request body
+        prettyPrintJSON(data: requestBody, label: "Barcode Scan - Request Body")
 
         var request = SupabaseRequestBuilder(endpoint: .scan_barcode)
             .setAuthorization(with: token)
@@ -405,6 +408,19 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             .setMethod(to: "POST")
             .setFormData(name: "image", value: imageData, contentType: "image/jpeg")
             .build()
+        
+        // Print request body info for photo scan (multipart form data)
+        if let requestBody = request.httpBody {
+            let bodySizeKB = Double(requestBody.count) / 1024.0
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("📤 [Photo Scan - Submit Image] Request Body:")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("Content-Type: multipart/form-data")
+            print("Body Size: \(String(format: "%.2f", bodySizeKB)) KB (\(requestBody.count) bytes)")
+            print("Scan ID: \(scanId)")
+            print("Image Data Size: \(String(format: "%.2f", Double(imageData.count) / 1024.0)) KB")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        }
 
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse

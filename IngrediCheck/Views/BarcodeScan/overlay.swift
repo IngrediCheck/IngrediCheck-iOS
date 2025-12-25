@@ -697,19 +697,25 @@ struct BarcodeDataCard: View {
                             print("[BarcodeOverlay] onProductInfo scanId=\(scanId) name='\(productInfo.name ?? "nil")'")
                             // Convert ScanProductInfo to Product for UI compatibility
                             let convertedProduct = service.convertScanProductInfoToProduct(productInfo, barcode: codeToAnalyze)
-                            product = convertedProduct
-                            isAnalyzing = true
-
-                            let intermediate = BarcodeScanAnalysisResult(
-                                product: product,
-                                ingredientRecommendations: nil,
-                                matchStatus: nil,
-                                notFound: false,
-                                errorMessage: nil,
-                                barcode: codeToAnalyze,
-                                clientActivityId: clientActivityId
-                            )
+                            
                             Task { @MainActor in
+                                // Update state on MainActor
+                                product = convertedProduct
+                                isAnalyzing = true
+                                isLoading = false  // Product found, stop loading spinner
+                                
+                                print("[BarcodeOverlay] onProductInfo state updated: isAnalyzing=\(isAnalyzing), isLoading=\(isLoading)")
+
+                                let intermediate = BarcodeScanAnalysisResult(
+                                    product: product,
+                                    ingredientRecommendations: nil,
+                                    matchStatus: nil,
+                                    notFound: false,
+                                    errorMessage: nil,
+                                    barcode: codeToAnalyze,
+                                    clientActivityId: clientActivityId
+                                )
+                                
                                 print("[BarcodeOverlay] onProductInfo storing intermediate result")
                                 BarcodeScanAnalysisService.storeResult(intermediate)
                                 onResultUpdated?()
@@ -719,28 +725,40 @@ struct BarcodeDataCard: View {
                             // Convert ScanAnalysisResult to IngredientRecommendations for UI compatibility
                             let recs = service.convertScanAnalysisResultToRecommendations(analysisResult)
                             print("[BarcodeOverlay] onAnalysis count=\(recs.count)")
-                            ingredientRecommendations = recs
-                            if let p = product {
-                                matchStatus = p.calculateMatch(ingredientRecommendations: recs)
-                            }
-                            let result = BarcodeScanAnalysisResult(
-                                product: product,
-                                ingredientRecommendations: ingredientRecommendations,
-                                matchStatus: matchStatus,
-                                notFound: false,
-                                errorMessage: nil,
-                                barcode: codeToAnalyze,
-                                clientActivityId: clientActivityId
-                            )
+                            print("[BarcodeOverlay] onAnalysis analysis complete, updating state")
+                            
                             Task { @MainActor in
+                                // Update all state on MainActor
+                                ingredientRecommendations = recs
+                                if let p = product {
+                                    matchStatus = p.calculateMatch(ingredientRecommendations: recs)
+                                }
+                                
+                                let result = BarcodeScanAnalysisResult(
+                                    product: product,
+                                    ingredientRecommendations: ingredientRecommendations,
+                                    matchStatus: matchStatus,
+                                    notFound: false,
+                                    errorMessage: nil,
+                                    barcode: codeToAnalyze,
+                                    clientActivityId: clientActivityId
+                                )
+                                
                                 print("[BarcodeOverlay] onAnalysis storing final result")
                                 BarcodeScanAnalysisService.storeResult(result)
+                                
+                                // Mark analysis as complete
                                 isAnalyzing = false
                                 isLoading = false
+                                hasCompleted = true
+                                
+                                print("[BarcodeOverlay] onAnalysis state updated: isAnalyzing=\(isAnalyzing), isLoading=\(isLoading), hasCompleted=\(hasCompleted)")
+                                
                                 if product != nil {
                                     userPreferences.incrementScanCount()
                                 }
                                 onResultUpdated?()
+                                
                                 Task {
                                     print("[BarcodeOverlay] onAnalysis fetching history")
                                     if let history = try? await service.fetchHistory() {
@@ -793,6 +811,21 @@ struct BarcodeDataCard: View {
                         }
                     )
                     print("[BarcodeOverlay] Task.detached completed successfully for code=\(codeToAnalyze)")
+                    
+                    // Ensure state is updated when stream completes
+                    await MainActor.run {
+                        // If we still have product but analysis hasn't completed, mark as complete
+                        if product != nil && isAnalyzing {
+                            print("[BarcodeOverlay] Stream completed but still analyzing, checking if we have results")
+                            if ingredientRecommendations != nil {
+                                print("[BarcodeOverlay] We have recommendations, marking analysis complete")
+                                isAnalyzing = false
+                                isLoading = false
+                                hasCompleted = true
+                                onResultUpdated?()
+                            }
+                        }
+                    }
                 } catch let error as NetworkError {
                     print("[BarcodeOverlay] Task.detached catch NetworkError: \(error)")
                     print("[BarcodeOverlay] Task.detached NetworkError details:")
@@ -880,30 +913,45 @@ struct BarcodeDataCard: View {
                         print("[BarcodeOverlay] retry onProductInfo scanId=\(scanId) name='\(productInfo.name ?? "nil")'")
                         // Convert ScanProductInfo to Product for UI compatibility
                         let convertedProduct = service.convertScanProductInfoToProduct(productInfo, barcode: codeToAnalyze)
-                        product = convertedProduct
-                        isAnalyzing = true
+                        
+                        Task { @MainActor in
+                            product = convertedProduct
+                            isAnalyzing = true
+                            isLoading = false
+                        }
                     },
                     onAnalysis: { analysisResult in
                         // Convert ScanAnalysisResult to IngredientRecommendations for UI compatibility
                         let recs = service.convertScanAnalysisResultToRecommendations(analysisResult)
                         print("[BarcodeOverlay] retry onAnalysis count=\(recs.count)")
-                        ingredientRecommendations = recs
-                        if let p = product {
-                            matchStatus = p.calculateMatch(ingredientRecommendations: recs)
-                        }
-                        let result = BarcodeScanAnalysisResult(
-                            product: product,
-                            ingredientRecommendations: ingredientRecommendations,
-                            matchStatus: matchStatus,
-                            notFound: false,
-                            errorMessage: nil,
-                            barcode: codeToAnalyze,
-                            clientActivityId: clientActivityId
-                        )
+                        print("[BarcodeOverlay] retry onAnalysis analysis complete, updating state")
+                        
                         Task { @MainActor in
+                            // Update all state on MainActor
+                            ingredientRecommendations = recs
+                            if let p = product {
+                                matchStatus = p.calculateMatch(ingredientRecommendations: recs)
+                            }
+                            
+                            let result = BarcodeScanAnalysisResult(
+                                product: product,
+                                ingredientRecommendations: ingredientRecommendations,
+                                matchStatus: matchStatus,
+                                notFound: false,
+                                errorMessage: nil,
+                                barcode: codeToAnalyze,
+                                clientActivityId: clientActivityId
+                            )
+                            
                             BarcodeScanAnalysisService.storeResult(result)
+                            
+                            // Mark analysis as complete
                             isAnalyzing = false
                             isLoading = false
+                            hasCompleted = true
+                            
+                            print("[BarcodeOverlay] retry onAnalysis state updated: isAnalyzing=\(isAnalyzing), isLoading=\(isLoading), hasCompleted=\(hasCompleted)")
+                            
                             if product != nil {
                                 userPreferences.incrementScanCount()
                             }

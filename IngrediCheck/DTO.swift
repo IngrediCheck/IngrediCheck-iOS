@@ -38,6 +38,14 @@ class DTO {
             case ingredients
         }
         
+        // Public initializer for creating Ingredient instances
+        init(name: String, vegan: Bool? = nil, vegetarian: Bool? = nil, ingredients: [Ingredient] = []) {
+            self.name = name
+            self.vegan = vegan
+            self.vegetarian = vegetarian
+            self.ingredients = ingredients
+        }
+        
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             name = try container.decode(String.self, forKey: .name)
@@ -443,6 +451,45 @@ class DTO {
         let brand: String?
         let ingredients: [Ingredient]
         let images: [ScanImageInfo]?
+        
+        enum CodingKeys: String, CodingKey {
+            case name
+            case brand
+            case ingredients
+            case images
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            name = try container.decodeIfPresent(String.self, forKey: .name)
+            brand = try container.decodeIfPresent(String.self, forKey: .brand)
+            images = try container.decodeIfPresent([ScanImageInfo].self, forKey: .images)
+            
+            // Handle ingredients as mixed array (strings and/or Ingredient objects)
+            var ingredientsContainer = try container.nestedUnkeyedContainer(forKey: .ingredients)
+            var decodedIngredients: [Ingredient] = []
+            
+            while !ingredientsContainer.isAtEnd {
+                // Try to decode as Ingredient object first
+                if let ingredient = try? ingredientsContainer.decode(Ingredient.self) {
+                    decodedIngredients.append(ingredient)
+                } else {
+                    // If that fails, try as string and convert to Ingredient
+                    let ingredientName = try ingredientsContainer.decode(String.self)
+                    decodedIngredients.append(Ingredient(name: ingredientName, vegan: nil, vegetarian: nil, ingredients: []))
+                }
+            }
+            
+            ingredients = decodedIngredients
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(name, forKey: .name)
+            try container.encodeIfPresent(brand, forKey: .brand)
+            try container.encode(ingredients, forKey: .ingredients)
+            try container.encodeIfPresent(images, forKey: .images)
+        }
     }
     
     struct ScanImageInfo: Codable, Hashable {
@@ -453,6 +500,40 @@ class DTO {
         let overall_analysis: String
         let overall_match: String  // "matched", "uncertain", "unmatched"
         let ingredient_analysis: [ScanIngredientAnalysis]
+        
+        enum CodingKeys: String, CodingKey {
+            case overall_analysis = "overallAnalysis"
+            case overall_match = "overallMatch"
+            case ingredient_analysis
+            case flaggedIngredients
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            // Decode overall_analysis from camelCase (overallAnalysis)
+            overall_analysis = try container.decode(String.self, forKey: .overall_analysis)
+            
+            // Decode overall_match from camelCase (overallMatch)
+            overall_match = try container.decode(String.self, forKey: .overall_match)
+            
+            // Decode ingredient_analysis - try ingredient_analysis first, then flaggedIngredients, default to empty
+            if let value = try? container.decodeIfPresent([ScanIngredientAnalysis].self, forKey: .ingredient_analysis) {
+                ingredient_analysis = value
+            } else {
+                // flaggedIngredients might be a different structure, so we'll default to empty for now
+                // If backend sends ingredient_analysis later, it will be picked up
+                ingredient_analysis = []
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            // Encode to camelCase to match backend format
+            try container.encode(overall_analysis, forKey: .overall_analysis)
+            try container.encode(overall_match, forKey: .overall_match)
+            try container.encode(ingredient_analysis, forKey: .ingredient_analysis)
+        }
     }
     
     struct ScanIngredientAnalysis: Codable, Hashable {
@@ -471,6 +552,7 @@ class DTO {
     }
     
     struct ScanAnalysisEvent: Codable {
+        let analysis_id: String?  // Optional - backend sends this but guide doesn't require it
         let analysis_status: String
         let analysis_result: ScanAnalysisResult
     }
