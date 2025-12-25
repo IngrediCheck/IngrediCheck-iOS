@@ -523,8 +523,10 @@ class DTO {
         let ingredient_analysis: [ScanIngredientAnalysis]
         
         enum CodingKeys: String, CodingKey {
-            case overall_analysis = "overallAnalysis"
-            case overall_match = "overallMatch"
+            case overall_analysis
+            case overallAnalysis
+            case overall_match
+            case overallMatch
             case ingredient_analysis
             case flaggedIngredients
         }
@@ -532,11 +534,19 @@ class DTO {
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            // Decode overall_analysis from camelCase (overallAnalysis)
-            overall_analysis = try container.decode(String.self, forKey: .overall_analysis)
+            // Decode overall_analysis - try snake_case first (from GET /scan endpoint), then camelCase (from SSE events)
+            if let value = try? container.decode(String.self, forKey: .overall_analysis) {
+                overall_analysis = value
+            } else {
+                overall_analysis = try container.decode(String.self, forKey: .overallAnalysis)
+            }
             
-            // Decode overall_match from camelCase (overallMatch)
-            overall_match = try container.decode(String.self, forKey: .overall_match)
+            // Decode overall_match - try snake_case first (from GET /scan endpoint), then camelCase (from SSE events)
+            if let value = try? container.decode(String.self, forKey: .overall_match) {
+                overall_match = value
+            } else {
+                overall_match = try container.decode(String.self, forKey: .overallMatch)
+            }
             
             // Decode ingredient_analysis - try ingredient_analysis first, then flaggedIngredients, default to empty
             if let value = try? container.decodeIfPresent([ScanIngredientAnalysis].self, forKey: .ingredient_analysis) {
@@ -550,7 +560,7 @@ class DTO {
         
         func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            // Encode to camelCase to match backend format
+            // Encode to snake_case (what GET /scan endpoint expects)
             try container.encode(overall_analysis, forKey: .overall_analysis)
             try container.encode(overall_match, forKey: .overall_match)
             try container.encode(ingredient_analysis, forKey: .ingredient_analysis)
