@@ -272,6 +272,7 @@ struct CameraScreen: View {
                         
                         // Result cards directly under the frame
                         if !capturedPhotoHistory.isEmpty {
+                            
                             if #available(iOS 17.0, *) {
                                 // iOS 17+ smooth snapping carousel
                                 ScrollView(.horizontal, showsIndicators: false) {
@@ -285,6 +286,21 @@ struct CameraScreen: View {
                                     .scrollTargetLayout() // each card acts as a scroll target
                                     .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
                                 }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .frame(width: 30, height: cardHeight)
+                                        .foregroundStyle(.ultraThinMaterial)
+                                        .opacity(0.8)
+                                        .overlay(
+                                            Image("photo-screen-add-card")
+                                                .resizable()
+                                                .frame(width: 16, height: 16)
+                                                .padding(.trailing, 4)
+                                            , alignment: .trailing
+                                        )
+                                        .offset(x: -8)
+                                    , alignment: .leading
+                                )
                                 .scrollTargetBehavior(.viewAligned) // snap nearest card to center
                                 .frame(height: cardHeight)
                                 .position(x: centerX, y: cardCenterY)
@@ -300,6 +316,21 @@ struct CameraScreen: View {
                                     }
                                     .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
                                 }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .frame(width: 30, height: cardHeight)
+                                        .foregroundStyle(.ultraThinMaterial)
+                                        .opacity(0.8)
+                                        .overlay(
+                                            Image("photo-screen-add-card")
+                                                .resizable()
+                                                .frame(width: 16, height: 16)
+                                                .padding(.trailing, 4)
+                                            , alignment: .trailing
+                                        )
+                                        .offset(x: -8)
+                                    , alignment: .leading
+                                )
                                 .frame(height: cardHeight)
                                 .position(x: centerX, y: cardCenterY)
                             }
