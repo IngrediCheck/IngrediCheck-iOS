@@ -37,9 +37,11 @@ struct BarcodeCameraPreview: UIViewRepresentable {
 struct CameraScreen: View {
     
     @StateObject var camera = BarcodeCameraManager()
+    @Environment(WebService.self) var webService
     @StateObject private var photoScanStore = PhotoScanStore()
     @State private var cameraStatus: AVAuthorizationStatus = .notDetermined
     @Environment(\.scenePhase) var scenePhase
+    
     @State private var isCaptured: Bool = false
     @State private var overlayRect: CGRect = .zero
     @State private var overlayContainerSize: CGSize = .zero
@@ -154,7 +156,16 @@ struct CameraScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
                 .onAppear {
+                    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    print("📸 [CameraScreen] onAppear called")
+                    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    
+                    // Set webService in photoScanStore
+                    print("[CameraScreen] Setting webService in photoScanStore...")
+                    photoScanStore.setWebService(webService)
+                    
                     let status = AVCaptureDevice.authorizationStatus(for: .video)
+                    print("[CameraScreen] Camera authorization status: \(status.rawValue)")
                     cameraStatus = status
                     switch status {
                     case .authorized:
@@ -267,7 +278,7 @@ struct CameraScreen: View {
                                     LazyHStack(spacing: 8) {
                                         ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                             let image = capturedPhotoHistory[idx]
-                                            PhotoContentView4(image: image, productInfo: idx == 0 ? photoScanStore.scanDetails?.productInfo : nil)
+                                            PhotoContentView4(image: image, productInfo: idx == 0 ? photoScanStore.productInfo : nil)
                                                 .transition(.opacity)
                                         }
                                     }
@@ -283,7 +294,7 @@ struct CameraScreen: View {
                                     LazyHStack(spacing: 8) {
                                         ForEach(Array(capturedPhotoHistory.indices), id: \.self) { idx in
                                             let image = capturedPhotoHistory[idx]
-                                            PhotoContentView4(image: image, productInfo: idx == 0 ? photoScanStore.scanDetails?.productInfo : nil)
+                                            PhotoContentView4(image: image, productInfo: idx == 0 ? photoScanStore.productInfo : nil)
                                                 .transition(.opacity)
                                         }
                                     }
@@ -350,18 +361,28 @@ struct CameraScreen: View {
                 }
                 
                 // Start new scan and upload
-                if capturedPhotoHistory.count == 1 {
-                    photoScanStore.startNewScan()
-                }
-                
                 Task {
-                    if let jwt = try? await supabaseClient.auth.session.accessToken {
-                        await photoScanStore.uploadImage(
-                            image: image,
-                            baseURL: Config.supabaseFunctionsURLBase,
-                            apiKey: Config.supabaseKey,
-                            jwt: jwt
-                        )
+                    if capturedPhotoHistory.count == 1 {
+                        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                        print("📸 [CameraScreen] First photo captured, starting new scan...")
+                        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                        // Wait for scan to be created before uploading
+                        await photoScanStore.startNewScan()
+                        
+                        // Check if scan was created successfully
+                        if photoScanStore.scanId != nil {
+                            print("📸 [CameraScreen] ✅ Scan created, now uploading image...")
+                            await photoScanStore.uploadImage(image: image)
+                        } else {
+                            print("📸 [CameraScreen] ❌ Failed to create scan, cannot upload image")
+                        }
+                    } else {
+                        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                        print("📸 [CameraScreen] Photo captured, uploading image...")
+                        print("📸 [CameraScreen] Photo history count: \(capturedPhotoHistory.count)")
+                        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                        // For subsequent photos, just upload (scan already exists)
+                        await photoScanStore.uploadImage(image: image)
                     }
                 }
             }

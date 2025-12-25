@@ -392,6 +392,144 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
     }
     
+    // MARK: - Create Photo Scan
+    
+    /// Creates a new photo scan and returns the scan ID
+    /// This is done by calling the barcode endpoint with an empty barcode
+    func createPhotoScan() async throws -> String {
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("🌐 [WebService] createPhotoScan() called")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        print("[WebService] Getting auth token...")
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[WebService] ❌ Failed to get auth token")
+            throw NetworkError.authError
+        }
+        print("[WebService] ✅ Got auth token: \(String(token.prefix(20)))...")
+        
+        // Create a photo scan by calling barcode endpoint with empty barcode
+        print("[WebService] Encoding request body (empty barcode)...")
+        let requestBody = try JSONEncoder().encode(["barcode": ""])
+        print("[WebService] Request body: \(String(data: requestBody, encoding: .utf8) ?? "nil")")
+        
+        print("[WebService] Building request...")
+        var request = SupabaseRequestBuilder(endpoint: .scan_barcode)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setJsonBody(to: requestBody)
+            .build()
+        
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 30
+        
+        print("[WebService] Request URL: \(request.url?.absoluteString ?? "nil")")
+        print("[WebService] Making SSE request...")
+        
+        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+        print("[WebService] ✅ Received response")
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("[WebService] ❌ Response is not HTTPURLResponse")
+            throw NetworkError.invalidResponse(-1)
+        }
+        
+        print("[WebService] HTTP Status Code: \(httpResponse.statusCode)")
+        
+        guard httpResponse.statusCode == 200 else {
+            print("[WebService] ❌ HTTP status code is not 200: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        print("[WebService] ✅ HTTP 200 OK, parsing SSE stream...")
+        
+        // Parse SSE stream to get scan_id from first product_info event
+        var buffer = ""
+        let doubleNewline = "\n\n"
+        var eventCount = 0
+        
+        print("[WebService] Reading SSE bytes...")
+        for try await byte in asyncBytes {
+            buffer.append(Character(UnicodeScalar(byte)))
+            
+            if buffer.contains(doubleNewline) {
+                eventCount += 1
+                let parts = buffer.components(separatedBy: doubleNewline)
+                if parts.count > 1 {
+                    let eventString = parts[0]
+                    buffer = parts.dropFirst().joined(separator: doubleNewline)
+                    
+                    print("[WebService] Parsing SSE event #\(eventCount)...")
+                    
+                    // Parse event
+                    var eventType: String?
+                    var dataLines: [String] = []
+                    
+                    eventString.split(whereSeparator: \.isNewline).forEach { line in
+                        if line.hasPrefix("event:") {
+                            eventType = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                        } else if line.hasPrefix("data:") {
+                            dataLines.append(String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces))
+                        }
+                    }
+                    
+                    print("[WebService] Event type: \(eventType ?? "nil")")
+                    
+                    if eventType == "product_info" {
+                        print("[WebService] ✅ Found product_info event, decoding...")
+                        let payloadString = dataLines.joined(separator: "\n")
+                        if let payloadData = payloadString.data(using: .utf8),
+                           let event = try? JSONDecoder().decode(DTO.ScanProductInfoEvent.self, from: payloadData) {
+                            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            print("🌐 [WebService] ✅ Created photo scan with ID: \(event.scan_id)")
+                            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            return event.scan_id
+                        } else {
+                            print("[WebService] ❌ Failed to decode product_info event")
+                        }
+                    } else if eventType == "error" {
+                        print("[WebService] ❌ Received error event from backend")
+                        let payloadString = dataLines.joined(separator: "\n")
+                        print("[WebService] Error payload: \(payloadString)")
+                        
+                        // For photo scans with empty barcode, the backend still creates a scan
+                        // and returns the scan_id in the error event. Extract it!
+                        if let payloadData = payloadString.data(using: .utf8),
+                           let errorDict = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] {
+                            
+                            // Check if this is a photo scan (empty barcode) - if so, extract scan_id
+                            if let scanId = errorDict["scan_id"] as? String, !scanId.isEmpty {
+                                let errorMessage = errorDict["error"] as? String ?? errorDict["message"] as? String ?? "Unknown error"
+                                print("[WebService] Error message: \(errorMessage)")
+                                print("[WebService] ⚠️  For photo scan, backend created scan despite error")
+                                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                print("🌐 [WebService] ✅ Extracted scan_id from error event: \(scanId)")
+                                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                // Return the scan_id even though there was an error
+                                // This is expected for photo scans with empty barcode
+                                return scanId
+                            } else {
+                                // Real error without scan_id
+                                let errorMessage = errorDict["error"] as? String ?? errorDict["message"] as? String ?? "Unknown error"
+                                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                print("🌐 [WebService] ❌ Backend error: \(errorMessage)")
+                                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                throw NetworkError.decodingError
+                            }
+                        } else {
+                            // Couldn't parse error, throw
+                            print("[WebService] ❌ Could not parse error event")
+                            throw NetworkError.decodingError
+                        }
+                    }
+                }
+            }
+        }
+        
+        print("[WebService] ❌ No product_info event found in SSE stream")
+        throw NetworkError.decodingError
+    }
+    
     // MARK: - Submit Image (Photo Scan)
     
     func submitScanImage(
@@ -447,32 +585,63 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     // MARK: - Get Scan
     
     func getScan(scanId: String) async throws -> DTO.Scan {
-
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("🌐 [WebService] getScan() called")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("[WebService] Scan ID: \(scanId)")
+        
+        print("[WebService] Getting auth token...")
         guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[WebService] ❌ Failed to get auth token")
             throw NetworkError.authError
         }
+        print("[WebService] ✅ Got auth token")
 
+        print("[WebService] Building GET request...")
         let request = SupabaseRequestBuilder(endpoint: .scan_get, itemId: scanId)
             .setAuthorization(with: token)
             .setMethod(to: "GET")
             .build()
 
+        print("[WebService] Request URL: \(request.url?.absoluteString ?? "nil")")
+        print("[WebService] Making request...")
+        
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
+        
+        print("[WebService] ✅ Received response")
+        print("[WebService] HTTP Status Code: \(httpResponse.statusCode)")
+        print("[WebService] Response Data Size: \(data.count) bytes")
         
         // Pretty print the response body
         prettyPrintJSON(data: data, label: "Photo Scan - Get Scan")
 
         switch httpResponse.statusCode {
         case 200:
-            return try JSONDecoder().decode(DTO.Scan.self, from: data)
+            print("[WebService] ✅ HTTP 200 OK, decoding scan data...")
+            do {
+                let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
+                print("[WebService] ✅ Successfully decoded scan:")
+                print("[WebService]   - ID: \(scan.id)")
+                print("[WebService]   - Type: \(scan.scan_type)")
+                print("[WebService]   - Status: \(scan.status)")
+                print("[WebService]   - Analysis Status: \(scan.analysis_status ?? "nil")")
+                return scan
+            } catch {
+                print("[WebService] ❌ Failed to decode scan: \(error)")
+                throw error
+            }
         case 401:
+            print("[WebService] ❌ HTTP 401 Unauthorized")
             throw NetworkError.authError
         case 403:
+            print("[WebService] ❌ HTTP 403 Forbidden - Scan belongs to another user")
             throw NetworkError.notFound("Scan belongs to another user")
         case 404:
+            print("[WebService] ❌ HTTP 404 Not Found - Scan not found")
             throw NetworkError.notFound("Scan not found")
         default:
+            print("[WebService] ❌ HTTP \(httpResponse.statusCode) - Unexpected status code")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }

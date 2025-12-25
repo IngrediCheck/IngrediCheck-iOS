@@ -465,22 +465,34 @@ class DTO {
             brand = try container.decodeIfPresent(String.self, forKey: .brand)
             images = try container.decodeIfPresent([ScanImageInfo].self, forKey: .images)
             
-            // Handle ingredients as mixed array (strings and/or Ingredient objects)
-            var ingredientsContainer = try container.nestedUnkeyedContainer(forKey: .ingredients)
-            var decodedIngredients: [Ingredient] = []
-            
-            while !ingredientsContainer.isAtEnd {
-                // Try to decode as Ingredient object first
-                if let ingredient = try? ingredientsContainer.decode(Ingredient.self) {
-                    decodedIngredients.append(ingredient)
+            // Handle ingredients - can be null, array of strings, or array of Ingredient objects
+            if container.contains(.ingredients) {
+                // Check if it's null
+                if try container.decodeNil(forKey: .ingredients) {
+                    // ingredients is null, use empty array
+                    ingredients = []
                 } else {
-                    // If that fails, try as string and convert to Ingredient
-                    let ingredientName = try ingredientsContainer.decode(String.self)
-                    decodedIngredients.append(Ingredient(name: ingredientName, vegan: nil, vegetarian: nil, ingredients: []))
+                    // Handle ingredients as mixed array (strings and/or Ingredient objects)
+                    var ingredientsContainer = try container.nestedUnkeyedContainer(forKey: .ingredients)
+                    var decodedIngredients: [Ingredient] = []
+                    
+                    while !ingredientsContainer.isAtEnd {
+                        // Try to decode as Ingredient object first
+                        if let ingredient = try? ingredientsContainer.decode(Ingredient.self) {
+                            decodedIngredients.append(ingredient)
+                        } else {
+                            // If that fails, try as string and convert to Ingredient
+                            let ingredientName = try ingredientsContainer.decode(String.self)
+                            decodedIngredients.append(Ingredient(name: ingredientName, vegan: nil, vegetarian: nil, ingredients: []))
+                        }
+                    }
+                    
+                    ingredients = decodedIngredients
                 }
+            } else {
+                // ingredients key is missing, use empty array
+                ingredients = []
             }
-            
-            ingredients = decodedIngredients
         }
         
         func encode(to encoder: Encoder) throws {
