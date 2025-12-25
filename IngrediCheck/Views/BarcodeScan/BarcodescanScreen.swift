@@ -68,6 +68,7 @@ struct CameraScreen: View {
     @State private var capturedPhoto: UIImage? = nil
     @State private var photoScanSessions: [PhotoScanSession] = [] // Array of scan sessions (like codes array for barcode)
     @State private var currentSessionId: String? = nil // Current active session scanId
+    @State private var scrollTargetSessionId: String? = nil // Target session to scroll to (like scrollTargetCode for barcode)
     @State private var galleryLimitHit: Bool = false
     @State private var isShowingPhotoPicker: Bool = false
     @State private var isShowingPhotoModeGuide: Bool = false
@@ -299,18 +300,26 @@ struct CameraScreen: View {
                             
                             if #available(iOS 17.0, *) {
                                 // iOS 17+ smooth snapping carousel
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 8) {
-                                        ForEach(photoScanSessions) { session in
-                                            // Show all photos from session with stacked images
-                                            PhotoContentView4(photos: session.photos, productInfo: session.productInfo)
-                                                .transition(.opacity)
+                                ScrollViewReader { proxy in
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        LazyHStack(spacing: 8) {
+                                            ForEach(photoScanSessions) { session in
+                                                // Show all photos from session with stacked images
+                                                PhotoContentView4(photos: session.photos, productInfo: session.productInfo)
+                                                    .transition(.opacity)
+                                                    .id(session.id)
+                                            }
+                                        }
+                                        .scrollTargetLayout() // each card acts as a scroll target
+                                        .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
+                                    }
+                                    .onChange(of: scrollTargetSessionId) { targetId in
+                                        guard let targetId else { return }
+                                        withAnimation(.easeInOut) {
+                                            proxy.scrollTo(targetId, anchor: .center)
                                         }
                                     }
-                                    .scrollTargetLayout() // each card acts as a scroll target
-                                    .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
-                                }
-                                .overlay(
+                                    .overlay(
                                     Button(action: {
                                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                                         print("📸 [CameraScreen] Plus button tapped - starting new session...")
@@ -347,19 +356,28 @@ struct CameraScreen: View {
                                 .scrollTargetBehavior(.viewAligned) // snap nearest card to center
                                 .frame(height: cardHeight)
                                 .position(x: centerX, y: cardCenterY)
+                                }
                             } else {
                                 // iOS 16 and earlier: keep existing non-snapping behavior
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 8) {
-                                        ForEach(photoScanSessions) { session in
-                                            // Show all photos from session with stacked images
-                                            PhotoContentView4(photos: session.photos, productInfo: session.productInfo)
-                                                .transition(.opacity)
+                                ScrollViewReader { proxy in
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        LazyHStack(spacing: 8) {
+                                            ForEach(photoScanSessions) { session in
+                                                // Show all photos from session with stacked images
+                                                PhotoContentView4(photos: session.photos, productInfo: session.productInfo)
+                                                    .transition(.opacity)
+                                                    .id(session.id)
+                                            }
+                                        }
+                                        .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
+                                    }
+                                    .onChange(of: scrollTargetSessionId) { targetId in
+                                        guard let targetId else { return }
+                                        withAnimation(.easeInOut) {
+                                            proxy.scrollTo(targetId, anchor: .center)
                                         }
                                     }
-                                    .padding(.horizontal, max((geo.size.width - 300) / 2, 0))
-                                }
-                                .overlay(
+                                    .overlay(
                                     Button(action: {
                                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                                         print("📸 [CameraScreen] Plus button tapped - starting new session...")
@@ -395,6 +413,7 @@ struct CameraScreen: View {
                                 )
                                 .frame(height: cardHeight)
                                 .position(x: centerX, y: cardCenterY)
+                                }
                             }
                         } else if showProTipCard {
                             ProTipCard {
@@ -449,13 +468,52 @@ struct CameraScreen: View {
             if let image = image {
                 capturedPhoto = image
                 
-                // Upload photo to current session (or create new session if none exists)
+                // IMMEDIATELY add photo to UI to show loading card right away
+                // This happens synchronously on main thread before any async operations
+                let targetSessionId = currentSessionId ?? photoScanStore.scanId
+                
+                if targetSessionId == nil {
+                    // No session exists - create a temporary session immediately to show loading card
+                    // We'll replace it with the real scanId once it's created
+                    let tempSessionId = UUID().uuidString
+                    currentSessionId = tempSessionId
+                    var newSession = PhotoScanSession(scanId: tempSessionId)
+                    newSession.photos.insert(image, at: 0)
+                    photoScanSessions.insert(newSession, at: 0)
+                    
+                    // Scroll to the new session
+                    withAnimation(.easeInOut) {
+                        scrollTargetSessionId = tempSessionId
+                    }
+                } else {
+                    // Session exists - add photo immediately
+                    if let sessionIndex = photoScanSessions.firstIndex(where: { $0.id == targetSessionId }) {
+                        photoScanSessions[sessionIndex].photos.insert(image, at: 0)
+                        // Limit photos per session
+                        if photoScanSessions[sessionIndex].photos.count > 10 {
+                            photoScanSessions[sessionIndex].photos.removeLast(photoScanSessions[sessionIndex].photos.count - 10)
+                        }
+                    } else if let sessionId = targetSessionId {
+                        // Session not found in array, create it immediately
+                        var newSession = PhotoScanSession(scanId: sessionId)
+                        newSession.photos.insert(image, at: 0)
+                        photoScanSessions.insert(newSession, at: 0)
+                        currentSessionId = sessionId
+                        
+                        // Scroll to the new session
+                        withAnimation(.easeInOut) {
+                            scrollTargetSessionId = sessionId
+                        }
+                    }
+                }
+                
+                // Now start async upload operations
                 Task {
                     // Determine which session to use: currentSessionId takes priority, then photoScanStore.scanId
                     let targetSessionId = currentSessionId ?? photoScanStore.scanId
                     
-                    // If no session exists, create one first
-                    if targetSessionId == nil {
+                    // If no session exists (or we have a temp session), create one first
+                    if photoScanStore.scanId == nil {
                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                         print("📸 [CameraScreen] No active scan, starting new scan...")
                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -465,12 +523,38 @@ struct CameraScreen: View {
                         // Check if scan was created successfully
                         if let newScanId = photoScanStore.scanId {
                             print("📸 [CameraScreen] ✅ Scan created, now uploading image...")
-                            currentSessionId = newScanId
                             
-                            // Create new session and add photo
-                            var newSession = PhotoScanSession(scanId: newScanId)
-                            newSession.photos.insert(image, at: 0)
-                            photoScanSessions.insert(newSession, at: 0)
+                            // Update the temporary session with the real scanId
+                            if let tempSessionId = currentSessionId,
+                               let sessionIndex = photoScanSessions.firstIndex(where: { $0.id == tempSessionId }) {
+                                // Replace temp session with real session (create new one since id is immutable)
+                                let existingSession = photoScanSessions[sessionIndex]
+                                var newSession = PhotoScanSession(scanId: newScanId)
+                                newSession.photos = existingSession.photos
+                                newSession.productInfo = existingSession.productInfo
+                                photoScanSessions[sessionIndex] = newSession
+                                currentSessionId = newScanId
+                                
+                                // Update scroll target
+                                withAnimation(.easeInOut) {
+                                    scrollTargetSessionId = newScanId
+                                }
+                            } else {
+                                // If temp session wasn't found, create new one
+                                currentSessionId = newScanId
+                                if let sessionIndex = photoScanSessions.firstIndex(where: { $0.photos.contains(image) }) {
+                                    // Replace existing session with new scanId
+                                    let existingSession = photoScanSessions[sessionIndex]
+                                    var newSession = PhotoScanSession(scanId: newScanId)
+                                    newSession.photos = existingSession.photos
+                                    newSession.productInfo = existingSession.productInfo
+                                    photoScanSessions[sessionIndex] = newSession
+                                } else {
+                                    var newSession = PhotoScanSession(scanId: newScanId)
+                                    newSession.photos.insert(image, at: 0)
+                                    photoScanSessions.insert(newSession, at: 0)
+                                }
+                            }
                             
                             await photoScanStore.uploadImage(image: image)
                         } else {
@@ -488,24 +572,6 @@ struct CameraScreen: View {
                         if let sessionId = targetSessionId {
                             photoScanStore.scanId = sessionId
                             currentSessionId = sessionId // Keep currentSessionId in sync
-                        }
-                        
-                        // Find current session and add photo (stack images in same session)
-                        if let sessionId = targetSessionId,
-                           let sessionIndex = photoScanSessions.firstIndex(where: { $0.id == sessionId }) {
-                            photoScanSessions[sessionIndex].photos.insert(image, at: 0)
-                            // Limit photos per session
-                            if photoScanSessions[sessionIndex].photos.count > 10 {
-                                photoScanSessions[sessionIndex].photos.removeLast(photoScanSessions[sessionIndex].photos.count - 10)
-                            }
-                            print("📸 [CameraScreen] ✅ Added photo to session. Total photos: \(photoScanSessions[sessionIndex].photos.count)")
-                        } else if let sessionId = targetSessionId {
-                            // Session not found in array, create it
-                            print("📸 [CameraScreen] Session not found in array, creating new session entry...")
-                            var newSession = PhotoScanSession(scanId: sessionId)
-                            newSession.photos.insert(image, at: 0)
-                            photoScanSessions.insert(newSession, at: 0)
-                            currentSessionId = sessionId
                         }
                         
                         // Upload to existing scan session (multiple photos in same session)
@@ -1054,8 +1120,8 @@ struct CameraScreen: View {
                 )
             } else {
                 // === FETCHING STATE ===
-                HStack(spacing: 0) {
-                    // Stacked Image Thumbnails or Icons
+                HStack(spacing: 16) {
+                    // Icon with dashed bracket frame (for first image loading state)
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(.white.opacity(0.1))
@@ -1110,19 +1176,69 @@ struct CameraScreen: View {
                                 }
                             }
                         } else {
-                            // No photos yet - show placeholder icons
+                            // First image loading state - show icon with dashed bracket frame
                             ZStack {
-                                Image("systemuiconscapture")
-                                    .resizable()
-                                    .frame(width: 88, height: 94)
+                                // Dashed bracket frame - square bracket style
+                                ZStack {
+                                    // Left bracket (vertical line with top and bottom segments)
+                                    VStack(spacing: 0) {
+                                        Rectangle()
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(width: 2, height: 8)
+                                        Spacer()
+                                            .frame(height: 52)
+                                        Rectangle()
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(width: 2, height: 8)
+                                    }
+                                    .frame(width: 2, height: 68)
+                                    .offset(x: -30)
+                                    
+                                    // Right bracket (vertical line with top and bottom segments)
+                                    VStack(spacing: 0) {
+                                        Rectangle()
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(width: 2, height: 8)
+                                        Spacer()
+                                            .frame(height: 52)
+                                        Rectangle()
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(width: 2, height: 8)
+                                    }
+                                    .frame(width: 2, height: 68)
+                                    .offset(x: 30)
+                                    
+                                    // Top horizontal dashed line
+                                    HStack(spacing: 3) {
+                                        ForEach(0..<8) { _ in
+                                            Rectangle()
+                                                .fill(Color.white.opacity(0.6))
+                                                .frame(width: 3, height: 1.5)
+                                        }
+                                    }
+                                    .frame(width: 60)
+                                    .offset(y: -34)
+                                    
+                                    // Bottom horizontal dashed line
+                                    HStack(spacing: 3) {
+                                        ForEach(0..<8) { _ in
+                                            Rectangle()
+                                                .fill(Color.white.opacity(0.6))
+                                                .frame(width: 3, height: 1.5)
+                                        }
+                                    }
+                                    .frame(width: 60)
+                                    .offset(y: 34)
+                                }
                                 
-                                Image("takeawafood")
-                                    .resizable()
-                                    .frame(width: 42, height: 50)
+                                // Orange paper bag icon (placeholder - replace with actual asset if available)
+                                Image(systemName: "bag.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundColor(Color.orange)
                             }
                         }
                     }
-                    .padding(.trailing, 8)
+                    .padding(.leading, 16)
                     
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Want to add more angles? Take another.")
@@ -1135,7 +1251,7 @@ struct CameraScreen: View {
                             .foregroundColor(.white.opacity(0.8))
                             .fixedSize(horizontal: false, vertical: true)
                         
-                        // Fetching Pill
+                        // Fetching Pill - light grey with loading indicator
                         HStack(spacing: 6) {
                             ProgressView()
                                 .scaleEffect(0.6)
@@ -1148,12 +1264,12 @@ struct CameraScreen: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.9))
+                        .background(Color.gray.opacity(0.3)) // Light grey background
                         .clipShape(Capsule())
                     }
                     .padding(.vertical, 16)
                     
-                    Spacer(minLength: 8)
+                    Spacer()
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
