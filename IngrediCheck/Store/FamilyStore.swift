@@ -172,6 +172,13 @@ final class FamilyStore {
             }
         }
     }
+
+    func removePendingOtherMember(id: UUID) {
+        pendingOtherMembers.removeAll { $0.id == id }
+        var ids = pendingInviteIds
+        ids.remove(id.uuidString)
+        pendingInviteIds = ids
+    }
     
     /// Creates the family on the backend using any pending members, if present.
     func createFamilyFromPendingIfNeeded() async {

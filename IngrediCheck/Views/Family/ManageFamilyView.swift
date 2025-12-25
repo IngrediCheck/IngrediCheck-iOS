@@ -29,19 +29,67 @@ struct ManageFamilyView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            ScrollView {
-                VStack(spacing: 16) {
+            List {
+                Section {
                     familyCard
-                    
-                    VStack(spacing: 12) {
-                        ForEach(members) { member in
-                            MemberRow(member: member)
-                        }
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+                Section {
+                    ForEach(members) { member in
+                        MemberRow(member: member)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 0, trailing: 20))
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                let isSelfRow: Bool = {
+                                    if let family = familyStore.family {
+                                        return member.id == family.selfMember.id
+                                    }
+                                    return member.id == familyStore.pendingSelfMember?.id
+                                }()
+                             
+                                    if !isSelfRow {
+                                        Button {
+                                            Task {
+                                                if familyStore.family != nil {
+                                                    await familyStore.deleteMember(id: member.id)
+                                                } else {
+                                                    familyStore.removePendingOtherMember(id: member.id)
+                                                }
+                                            }
+                                        } label: {
+                                            VStack(spacing: 4) {
+                                                Image("Delete-icon")
+                                                    .resizable()
+                                                    .frame(width: 14, height: 14)
+                                                Text("Remove")
+                                                    .font(NunitoFont.regular.size(8))
+                                                    .foregroundStyle(Color(hex: "#F04438"))
+                                            }
+                                            .padding(.vertical, 10)
+                                            .padding(.horizontal, 12)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 24)
+                                                    .fill(Color(hex: "#F7F7F7"))
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 24)
+                                                    .stroke(Color(hex: "#F7F7F7"), lineWidth: 0.75)
+                                            )
+                                        }
+                                        .tint(Color(hex: "#F7F7F7"))
+                                    }
+                               
+                            }
                     }
                 }
-                .padding(20)
             }
+            .listStyle(.plain)
             .scrollIndicators(.hidden)
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "#F7F7F7"))
         }
         .background(Color(hex: "#F7F7F7"))
         .navigationBarBackButtonHidden(true)
@@ -212,6 +260,7 @@ struct ManageFamilyView: View {
                     .stroke(lineWidth: 0.75)
                     .foregroundStyle(Color(hex: "#EEEEEE"))
             )
+            .contentShape(Rectangle())
         }
 
         @ViewBuilder
