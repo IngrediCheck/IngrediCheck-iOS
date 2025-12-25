@@ -19,6 +19,9 @@ struct SettingsSheet: View {
     @State private var primaryMemberName: String = ""
     @FocusState private var isEditingPrimaryName: Bool
     @State private var isFeedbackPresented = false
+    @State private var showSignOutConfirm = false
+    @State private var showDeleteConfirm = false
+    @State private var deleteConfirmText: String = ""
     
     // Binding helper to avoid local @Bindable in body
     private var startScanningOnAppStartBinding: Binding<Bool> {
@@ -230,7 +233,7 @@ struct SettingsSheet: View {
                     VStack(spacing: 12) {
                         sectionCard {
                             if authController.session != nil && !authController.signedInAsGuest {
-                                DeleteAccountView(labelText: "Delete Data & Account")
+                                DeleteAccountView(labelText: "Delete Data & Account", showDeleteConfirm: $showDeleteConfirm)
                                     .padding(16)
                                 
                             } else {
@@ -294,6 +297,134 @@ struct SettingsSheet: View {
                 options: SimpleToastOptions(alignment: .top, hideAfter: 2)
             ) {
                 InternalModeToastView(message: internalModeToastMessage)
+            }
+            .overlay {
+                if showSignOutConfirm || showDeleteConfirm {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture { /* block background taps */ }
+
+                        if showSignOutConfirm {
+                            VStack(spacing: 6) {
+                                Text("Are you sure you want to Sign out?")
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .font(ManropeFont.medium.size(17))
+                                    .foregroundStyle(.grayScale150)
+
+                                Divider()
+
+                                Button {
+                                    // Confirm sign out
+                                    Task {
+                                        await authController.resetForAppReset()
+                                        await MainActor.run {
+                                            appState.activeSheet = nil
+                                            appState.activeTab = .home
+                                            appState.feedbackConfig = nil
+                                            appState.listsTabState = ListsTabState()
+                                            familyStore.selectedMemberId = nil
+                                            showSignOutConfirm = false
+                                        }
+                                    }
+                                } label: {
+                                    Text("Sign out")
+                                        .font(ManropeFont.medium.size(16))
+                                        .foregroundStyle(Color(hex: "#FF1100"))
+                                        .frame(maxWidth: .infinity)
+                                }
+
+                                Divider()
+
+                                Button {
+                                    showSignOutConfirm = false
+                                } label: {
+                                    Text("Not now")
+                                        .font(ManropeFont.medium.size(16))
+                                        .foregroundStyle(.grayScale150)
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
+                            .padding(12)
+                            .frame(width: 270, height: 167)
+                            .background(Color.grayScale10)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+
+                        if showDeleteConfirm {
+                            VStack(spacing: 12) {
+                                Text("Type \"DELETE\" to confirm")
+                                    .multilineTextAlignment(.center)
+                                    .font(ManropeFont.medium.size(17))
+                                    .foregroundStyle(.grayScale150)
+
+                                Text("This action can not be undone")
+                                    .font(ManropeFont.medium.size(14))
+                                    .foregroundStyle(.grayScale110)
+                                    .multilineTextAlignment(.center)
+
+                                VStack(spacing: 0) {
+                                    TextField("", text: $deleteConfirmText)
+                                        .textInputAutocapitalization(.characters)
+                                        .disableAutocorrection(true)
+                                        .font(ManropeFont.medium.size(16))
+                                    Rectangle()
+                                        .fill(Color(hex: "#E3E3E3"))
+                                        .frame(height: 1)
+                                }
+
+                                Divider()
+
+                                HStack(spacing: 0) {
+                                    Button {
+                                        deleteConfirmText = ""
+                                        showDeleteConfirm = false
+                                    } label: {
+                                        Text("Cancel")
+                                            .font(ManropeFont.medium.size(16))
+                                            .foregroundStyle(.grayScale150)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 8)
+                                    }
+
+                                    Rectangle()
+                                        .fill(Color(hex: "#E3E3E3"))
+                                        .frame(width: 1, height: 44)
+
+                                    Button {
+                                        guard deleteConfirmText.uppercased() == "DELETE" else { return }
+                                        Task {
+                                            await authController.deleteAccount()
+                                            await MainActor.run {
+                                                appState.activeSheet = nil
+                                                appState.activeTab = .home
+                                                appState.feedbackConfig = nil
+                                                appState.listsTabState = ListsTabState()
+                                                deleteConfirmText = ""
+                                                showDeleteConfirm = false
+                                            }
+                                        }
+                                    } label: {
+                                        Text("Confirm")
+                                            .font(ManropeFont.medium.size(16))
+                                            .foregroundStyle(Color(hex: "#FF1100"))
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 8)
+                                    }
+                                    .disabled(deleteConfirmText.uppercased() != "DELETE")
+                                    .opacity(deleteConfirmText.uppercased() == "DELETE" ? 1 : 0.5)
+                                }
+                            }.padding(.top, 20)
+                            .padding(20)
+                            .frame(width: 270, height: 166)
+                            .background(Color.grayScale10)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                    }
+                }
             }
     }
         
@@ -516,7 +647,7 @@ struct SettingsSheet: View {
                         }
                     }
                     Spacer()
-                    SignoutButton()
+                    SignoutButton(showConfirm: $showSignOutConfirm)
                 }
                 .padding(16)
                 .background(Color(hex: "#F7F7F7"))
@@ -609,6 +740,7 @@ struct SettingsSheet: View {
     struct DeleteAccountView: View {
         
         let labelText: String
+        @Binding var showDeleteConfirm: Bool
         
         @Environment(\.dismiss) var dismiss
         @Environment(AuthController.self) var authController
@@ -617,11 +749,9 @@ struct SettingsSheet: View {
         @Environment(DietaryPreferences.self) var dietaryPreferences
         @Environment(AppState.self) var appState
         
-        @State private var confirmationShown = false
-        
         var body: some View {
             Button {
-                confirmationShown = true
+                showDeleteConfirm = true
             } label: {
                 Label {
                     Text(labelText)
@@ -633,32 +763,6 @@ struct SettingsSheet: View {
                         .frame(width: 20, height: 20)
                 }
                 .foregroundStyle(Color(hex: "#F04438"))
-            }
-            .confirmationDialog(
-                "Your Data cannot be recovered",
-                isPresented: $confirmationShown,
-                titleVisibility: .visible
-            ) {
-                Button("I Understand") {
-                    Task {
-                        await authController.deleteAccount()
-                        await MainActor.run {
-                            appState.activeSheet = nil
-                            appState.activeTab = .home
-                            appState.feedbackConfig = nil
-                            appState.listsTabState = ListsTabState()
-                            onboardingState.clearAll()
-                            userPreferences.clearAll()
-                            dietaryPreferences.clearAll()
-                            
-                            dismiss()
-                            NotificationCenter.default.post(
-                                name: Notification.Name("AppDidReset"),
-                                object: nil
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -739,7 +843,7 @@ struct SettingsSheet: View {
     }
     
     struct SignoutButton: View {
-        
+        @Binding var showConfirm: Bool
         @Environment(AuthController.self) var authController
         @Environment(\.dismiss) var dismiss
         @Environment(OnboardingState.self) var onboardingState
@@ -749,24 +853,8 @@ struct SettingsSheet: View {
         
         var body: some View {
             Button {
-                Task {
-                    await authController.resetForAppReset()
-                    await MainActor.run {
-                        appState.activeSheet = nil
-                        appState.activeTab = .home
-                        appState.feedbackConfig = nil
-                        appState.listsTabState = ListsTabState()
-                        onboardingState.clearAll()
-                        userPreferences.clearAll()
-                        dietaryPreferences.clearAll()
-                        
-                        dismiss()
-                        NotificationCenter.default.post(
-                            name: Notification.Name("AppDidReset"),
-                            object: nil
-                        )
-                    }
-                }
+                // Present confirmation modal; actual sign-out handled from overlay
+                showConfirm = true
             } label: {
                 ZStack {
                     Text("Sign out")
