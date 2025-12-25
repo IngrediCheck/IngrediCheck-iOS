@@ -16,6 +16,7 @@ struct GreenCapsule: View {
     var height: CGFloat? = 52
     var takeFullWidth: Bool = true
     var isLoading: Bool = false
+    var labelFont: Font = NunitoFont.semiBold.size(16)
     
     var body: some View {
         HStack(spacing: 8) {
@@ -33,12 +34,13 @@ struct GreenCapsule: View {
                 }
                 
                 Text(title)
-                    .font(NunitoFont.semiBold.size(16))
+                    .font(labelFont)
                     .foregroundStyle(.grayScale10)
             }
         }
-        .frame(height: height)
-        .frame(minWidth: 152)
+        // Respect explicit width/height when takeFullWidth is false, otherwise fill horizontally with a sensible min width
+        .frame(width: takeFullWidth ? nil : width, height: height)
+        .frame(minWidth: takeFullWidth ? 152 : 0)
         .frame(maxWidth: takeFullWidth ? .infinity : nil)
         .background(
             Capsule()

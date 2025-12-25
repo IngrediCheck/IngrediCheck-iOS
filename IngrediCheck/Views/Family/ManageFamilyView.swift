@@ -5,14 +5,14 @@ struct ManageFamilyView: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(WebService.self) private var webService
+    @State private var selfMemberName: String = ""
+    @FocusState private var isEditingFamilyName: Bool
+    @State private var nameFieldWidth: CGFloat = 0
 
-    private var familyName: String {
-        if let family = familyStore.family {
-            return "\(family.selfMember.name)’s Family"
-        } else if let pending = familyStore.pendingSelfMember {
-            return "\(pending.name)’s Family"
-        } else {
-            return "Your Family"
+    private struct NameWidthPreferenceKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = nextValue()
         }
     }
 
@@ -24,6 +24,17 @@ struct ManageFamilyView: View {
         if let me = familyStore.pendingSelfMember { result.append(me) }
         result.append(contentsOf: familyStore.pendingOtherMembers)
         return result
+    }
+    
+    private var extraMemberCount: Int {
+        let maxShown = 6
+        return max(members.count - maxShown, 0)
+    }
+
+    // Keep type-checking simple by pulling complex width math out of the view modifiers
+    private var nameFieldEffectiveWidth: CGFloat {
+        let measured = (nameFieldWidth == 0 ? 300 : nameFieldWidth)
+        return min(max(measured, 144), 300)
     }
 
     var body: some View {
@@ -94,9 +105,35 @@ struct ManageFamilyView: View {
         .background(Color(hex: "#F7F7F7"))
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            selfMemberName = familyStore.family?.selfMember.name
+            ?? familyStore.pendingSelfMember?.name
+            ?? ""
+        }
+        .onChange(of: (familyStore.family?.selfMember.name ?? familyStore.pendingSelfMember?.name ?? "")) { _, newValue in
+            guard !newValue.isEmpty, !isEditingFamilyName else { return }
+            if selfMemberName != newValue { selfMemberName = newValue }
+        }
         .task {
             if familyStore.family == nil {
                 await familyStore.loadCurrentFamily()
+            }
+        }
+    }
+
+    private func commitSelfName() {
+        let trimmed = selfMemberName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        Task { @MainActor in
+            if let family = familyStore.family {
+                var me = family.selfMember
+                guard me.name != trimmed else { return }
+                me.name = trimmed
+                await familyStore.editMember(me)
+            } else if familyStore.pendingSelfMember != nil {
+                if familyStore.pendingSelfMember?.name != trimmed {
+                    familyStore.updatePendingSelfMemberName(trimmed)
+                }
             }
         }
     }
@@ -122,36 +159,62 @@ struct ManageFamilyView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(familyName)
-                        .font(NunitoFont.semiBold.size(20))
-                        .foregroundStyle(.grayScale150)
-                    Text("Everyone stays connected and updated here.")
-                        .font(ManropeFont.regular.size(12))
-                        .foregroundStyle(.grayScale110)
-                }
-                Spacer()
-                Button { } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Edit")
-                            .font(ManropeFont.semiBold.size(12))
+                    HStack(spacing: 4) {
+                        TextField("", text: $selfMemberName)
+                            .font(NunitoFont.semiBold.size(20))
+                            .foregroundStyle(.grayScale150)
+                            .textInputAutocapitalization(.words)
+                            .disableAutocorrection(true)
+                            .focused($isEditingFamilyName)
+                            .submitLabel(.done)
+                            .onSubmit { commitSelfName() }
+                            .onChange(of: isEditingFamilyName) { _, editing in
+                                if !editing { commitSelfName() }
+                            }
+                            .frame(width: nameFieldEffectiveWidth)
+                            .overlay(alignment: .leading) {
+                                Text(selfMemberName.isEmpty ? " " : selfMemberName)
+                                    .font(NunitoFont.semiBold.size(20))
+                                    .background(
+                                        GeometryReader { proxy in
+                                            Color.clear.preference(key: NameWidthPreferenceKey.self, value: min(proxy.size.width, 300))
+                                        }
+                                    )
+                                    .hidden()
+                            }
+                        Button { isEditingFamilyName = true } label: {
+                            Image("pen-line")
+                                .resizable()
+                                .frame(width: 12, height: 12)
+                                .foregroundStyle(.grayScale100)
+                        }
+                        .buttonStyle(.plain)
+                            .contentShape(Rectangle())
+                            .onTapGesture { isEditingFamilyName = true }
                     }
-                    .foregroundStyle(.grayScale100)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(hex: "#F2F2F2"), in: Capsule())
+                    .padding(.horizontal, 4)
+                    .onPreferenceChange(NameWidthPreferenceKey.self) { width in
+                        if nameFieldWidth != width { nameFieldWidth = width }
+                    }
+                        Text("Everyone stays connected and updated here.")
+                            .font(ManropeFont.regular.size(12))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(width: 161, alignment: .leading)
+                            .foregroundStyle(.grayScale110)
+                    
                 }
-                .buttonStyle(.plain)
+                
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: -8) {
                 ForEach(Array(members.prefix(6)), id: \.id) { member in
                     if let imageName = member.imageFileHash, !imageName.isEmpty {
                         Image(imageName)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 23, height: 23)
+                            .frame(width: 32, height:32)
                             .clipShape(Circle())
                             .overlay(
                                 Circle()
@@ -174,16 +237,33 @@ struct ManageFamilyView: View {
                             )
                     }
                 }
+                if extraMemberCount > 0 {
+                    Circle()
+                        .fill(Color(hex: "#F2F2F2"))
+                        .frame(width: 23, height: 23)
+                        .overlay(
+                            Text("+\(extraMemberCount)")
+                                .font(NunitoFont.semiBold.size(10))
+                                .foregroundStyle(.grayScale130)
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
+                }
                 Spacer()
                 Button {
                     coordinator.navigateInBottomSheet(.addMoreMembers)
                 } label: {
-                    GreenCapsule(title: "+ Add Member")
+                    GreenCapsule(title: "Add Member", width: 110, height: 36, takeFullWidth: false, labelFont: NunitoFont.semiBold.size(12))
                         .frame(width: 110, height: 36)
                 }
                 .buttonStyle(.plain)
             }
         }
+     
+      
         .padding(20)
         .frame(height: 143)
         .background(
@@ -196,6 +276,9 @@ struct ManageFamilyView: View {
                 .foregroundStyle(Color(hex: "#EEEEEE"))
         )
         .shadow(color: Color.black.opacity(0.03), radius: 10.1, x: 0, y: 2)
+        .padding(20)
+        
+        
     }
 
     private struct MemberRow: View {
