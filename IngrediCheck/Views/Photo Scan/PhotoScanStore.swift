@@ -202,11 +202,12 @@ class PhotoScanStore: ObservableObject {
                         print("[PhotoScanStore] ✅ Updated scanDetails on MainActor")
                     }
                     
-                    // Check completion according to document: status == "idle" && analysis_status == "complete"
-                    if scan.status == "idle" && scan.analysis_status == "complete" {
-                        // Analysis is complete according to document specification
+                    // Stop polling when status is "idle" (scan processing is complete)
+                    // If analysis_status is "complete", we have full analysis results
+                    // If analysis_status is null or other, we still have product info from extraction
+                    if scan.status == "idle" {
                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                        print("📱 [PhotoScanStore] ✅ Analysis complete for scan \(scanId)")
+                        print("📱 [PhotoScanStore] ✅ Scan processing complete for scan \(scanId)")
                         print("📱 [PhotoScanStore] Status: \(scan.status)")
                         print("📱 [PhotoScanStore] Analysis Status: \(scan.analysis_status ?? "nil")")
                         if let analysisResult = scan.analysis_result {
@@ -214,7 +215,7 @@ class PhotoScanStore: ObservableObject {
                             print("📱 [PhotoScanStore] Overall Analysis: \(analysisResult.overall_analysis)")
                             print("📱 [PhotoScanStore] Ingredient Analysis Count: \(analysisResult.ingredient_analysis.count)")
                         } else {
-                            print("📱 [PhotoScanStore] ⚠️  Analysis status is complete but no analysis_result yet")
+                            print("📱 [PhotoScanStore] ℹ️  No analysis result yet, but scan is idle (product info available)")
                         }
                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                         
@@ -224,9 +225,9 @@ class PhotoScanStore: ObservableObject {
                         }
                         return
                     } else {
-                        print("[PhotoScanStore] ⏳ Analysis not complete yet:")
-                        print("[PhotoScanStore]   - Status: \(scan.status) (expected: 'idle')")
-                        print("[PhotoScanStore]   - Analysis Status: \(scan.analysis_status ?? "nil") (expected: 'complete')")
+                        print("[PhotoScanStore] ⏳ Scan still processing:")
+                        print("[PhotoScanStore]   - Status: \(scan.status) (waiting for 'idle')")
+                        print("[PhotoScanStore]   - Analysis Status: \(scan.analysis_status ?? "nil")")
                         print("[PhotoScanStore] Will poll again in 2 seconds...")
                     }
                     
