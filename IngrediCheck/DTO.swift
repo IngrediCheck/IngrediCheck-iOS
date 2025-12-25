@@ -446,6 +446,28 @@ class DTO {
     
     // MARK: - Scan API Models
     
+    // Helper type to decode ingredients that can be either strings or Ingredient objects
+    private struct IngredientOrString: Codable {
+        let ingredient: Ingredient
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            // Try to decode as string first (most common case)
+            if let name = try? container.decode(String.self) {
+                self.ingredient = Ingredient(name: name, vegan: nil, vegetarian: nil, ingredients: [])
+            } else {
+                // If string fails, decode as Ingredient object using the same decoder
+                // The decoder position hasn't advanced because singleValueContainer doesn't consume
+                // the value until a successful decode, so we can decode as Ingredient
+                self.ingredient = try Ingredient(from: decoder)
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            try ingredient.encode(to: encoder)
+        }
+    }
+    
     struct ScanProductInfo: Codable, Hashable {
         let name: String?
         let brand: String?
@@ -472,22 +494,9 @@ class DTO {
                     // ingredients is null, use empty array
                     ingredients = []
                 } else {
-                    // Handle ingredients as mixed array (strings and/or Ingredient objects)
-                    var ingredientsContainer = try container.nestedUnkeyedContainer(forKey: .ingredients)
-                    var decodedIngredients: [Ingredient] = []
-                    
-                    while !ingredientsContainer.isAtEnd {
-                        // Try to decode as Ingredient object first
-                        if let ingredient = try? ingredientsContainer.decode(Ingredient.self) {
-                            decodedIngredients.append(ingredient)
-                        } else {
-                            // If that fails, try as string and convert to Ingredient
-                            let ingredientName = try ingredientsContainer.decode(String.self)
-                            decodedIngredients.append(Ingredient(name: ingredientName, vegan: nil, vegetarian: nil, ingredients: []))
-                        }
-                    }
-                    
-                    ingredients = decodedIngredients
+                    // Decode as array of IngredientOrString, then extract the ingredients
+                    let ingredientOrStrings = try container.decode([IngredientOrString].self, forKey: .ingredients)
+                    ingredients = ingredientOrStrings.map { $0.ingredient }
                 }
             } else {
                 // ingredients key is missing, use empty array
