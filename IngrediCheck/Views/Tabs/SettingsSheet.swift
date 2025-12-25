@@ -8,6 +8,7 @@ struct SettingsSheet: View {
     @Environment(AppState.self) var appState
     @Environment(AuthController.self) var authController
     @Environment(FamilyStore.self) var familyStore
+    @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(\.openURL) var openURL
     @Environment(AppNavigationCoordinator.self) var coordinator
     
@@ -29,6 +30,27 @@ struct SettingsSheet: View {
             get: { userPreferences.startScanningOnAppStart },
             set: { userPreferences.startScanningOnAppStart = $0 }
         )
+    }
+
+    private struct FeedbackSubmittedToastView: View {
+        var body: some View {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 18, height: 18)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.paletteAccent)
+                }
+                Text("Feedback Submitted")
+                    .font(NunitoFont.semiBold.size(12))
+                    .foregroundStyle(.grayScale10)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(.paletteAccent))
+        }
     }
     
     var body: some View {
@@ -256,7 +278,10 @@ struct SettingsSheet: View {
                 FeedbackView(
                     feedbackData: $settingsFeedbackData,
                     feedbackCaptureOptions: .feedbackOnly,
-                    onSubmit: { showFeedbackToast = true }
+                    onSubmit: {
+                        showFeedbackToast = true
+                        settingsFeedbackData = FeedbackData()
+                    }
                 )
                 .environment(userPreferences)
             }
@@ -292,11 +317,23 @@ struct SettingsSheet: View {
                 guard !newValue.isEmpty, !isEditingPrimaryName else { return }
                 if primaryMemberName != newValue { primaryMemberName = newValue }
             }
+            // If the user turns on "Start Scanning on App Start" from Settings, open the scan screen immediately
+            .onChange(of: userPreferences.startScanningOnAppStart) { _, newValue in
+                if newValue && !dietaryPreferences.preferences.isEmpty {
+                    appState.activeSheet = .scan
+                }
+            }
             .simpleToast(
                 isPresented: $showInternalModeToast,
                 options: SimpleToastOptions(alignment: .top, hideAfter: 2)
             ) {
                 InternalModeToastView(message: internalModeToastMessage)
+            }
+            .simpleToast(
+                isPresented: $showFeedbackToast,
+                options: SimpleToastOptions(alignment: .top, hideAfter: 3)
+            ) {
+                FeedbackSubmittedToastView()
             }
             .overlay {
                 if showSignOutConfirm || showDeleteConfirm {
@@ -419,7 +456,7 @@ struct SettingsSheet: View {
                                 }
                             }.padding(.top, 20)
                             .padding(20)
-                            .frame(width: 270, height: 166)
+                            .frame(width: 270, height: 170)
                             .background(Color.grayScale10)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
