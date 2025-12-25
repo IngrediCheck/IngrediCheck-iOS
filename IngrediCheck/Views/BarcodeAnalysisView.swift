@@ -96,6 +96,8 @@ struct StarButton: View {
         let userPreferenceText = dietaryPreferences.asString
         var streamErrorHandled = false
 
+        print("[BarcodeAnalysisView] analyze() started requestId=\(requestId) barcode=\(barcode) userPreferenceText='\(userPreferenceText)'")
+
         PostHogSDK.shared.capture("Barcode Analysis Started", properties: [
             "request_id": requestId,
             "client_activity_id": clientActivityId,
@@ -104,13 +106,14 @@ struct StarButton: View {
         ])
 
         do {
-            try await webService.streamUnifiedAnalysis(
-                input: .barcode(barcode),
-                clientActivityId: clientActivityId,
-                userPreferenceText: userPreferenceText,
-                onProduct: { product in
+            try await webService.streamBarcodeScan(
+                barcode: barcode,
+                onProductInfo: { [self] productInfo, scanId in
+                    print("[BarcodeAnalysisView] onProductInfo scanId=\(scanId) name='\(productInfo.name ?? "nil")'")
+                    // Convert ScanProductInfo to Product for UI compatibility
+                    let convertedProduct = self.webService.convertScanProductInfoToProduct(productInfo, barcode: barcode)
                     withAnimation {
-                        self.product = product
+                        self.product = convertedProduct
                     }
                     self.impactOccurred()
 
@@ -118,11 +121,15 @@ struct StarButton: View {
                         "request_id": requestId,
                         "client_activity_id": self.clientActivityId,
                         "barcode": self.barcode,
-                        "product_name": product.name ?? "Unknown",
+                        "scan_id": scanId,
+                        "product_name": productInfo.name ?? "Unknown",
                         "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
                     ])
                 },
-                onAnalysis: { recommendations in
+                onAnalysis: { [self] analysisResult in
+                    // Convert ScanAnalysisResult to IngredientRecommendations for UI compatibility
+                    let recommendations = self.webService.convertScanAnalysisResultToRecommendations(analysisResult)
+                    print("[BarcodeAnalysisView] onAnalysis count=\(recommendations.count)")
                     withAnimation {
                         self.ingredientRecommendations = recommendations
                     }
@@ -142,10 +149,11 @@ struct StarButton: View {
                     // Track successful scan for rating prompt - only when analysis is fully complete
                     self.userPreferences.incrementScanCount()
                 },
-                onError: { streamError in
+                onError: { streamError, _ in
+                    print("[BarcodeAnalysisView] onError message='\(streamError.message)' status=\(String(describing: streamError.statusCode))")
                     streamErrorHandled = true
 
-                    if streamError.statusCode == 404 {
+                    if streamError.message.lowercased().contains("not found") {
                         self.notFound = true
                     } else {
                         self.errorMessage = streamError.message
@@ -154,7 +162,7 @@ struct StarButton: View {
                     let endTime = Date().timeIntervalSince1970
                     let totalLatency = (endTime - startTime) * 1000
 
-                    if streamError.statusCode == 404 {
+                    if streamError.message.lowercased().contains("not found") {
                         PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
                             "request_id": requestId,
                             "client_activity_id": self.clientActivityId,
@@ -172,21 +180,9 @@ struct StarButton: View {
                     }
                 }
             )
-        } catch NetworkError.notFound {
-            if !streamErrorHandled {
-                self.notFound = true
-                let endTime = Date().timeIntervalSince1970
-                let totalLatency = (endTime - startTime) * 1000
-
-                PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
-                    "request_id": requestId,
-                    "client_activity_id": clientActivityId,
-                    "barcode": barcode,
-                    "total_latency_ms": totalLatency
-                ])
-            }
         } catch {
             if !streamErrorHandled {
+                print("[BarcodeAnalysisView] catch error=\(error.localizedDescription)")
                 self.errorMessage = error.localizedDescription
                 let endTime = Date().timeIntervalSince1970
                 let totalLatency = (endTime - startTime) * 1000

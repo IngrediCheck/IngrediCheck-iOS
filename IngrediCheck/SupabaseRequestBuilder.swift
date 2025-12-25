@@ -8,6 +8,11 @@ enum SafeEatsEndpoint: String {
     case feedback = "feedback"
     case memoji = "memoji"
     case history = "history"
+    // Scan API endpoints
+    case scan_barcode = "v2/scan/barcode"
+    case scan_image = "v2/scan/%@/image"
+    case scan_get = "v2/scan/%@"
+    case scan_history = "v2/scan/history"
     case list_items = "lists/%@"
     case list_items_item = "lists/%@/%@"
     case preference_lists_grandfathered = "preferencelists/grandfathered"
@@ -29,17 +34,31 @@ class SupabaseRequestBuilder {
     private let boundary = UUID().uuidString
     private let endpoint: SafeEatsEndpoint
     private let url: URL
+    
+    /// Returns the appropriate base URL based on the endpoint type
+    private static func baseURL(for endpoint: SafeEatsEndpoint) -> String {
+        switch endpoint {
+        case .scan_barcode, .scan_image, .scan_get, .scan_history:
+            return Config.flyDevAPIBase
+        default:
+            return Config.supabaseFunctionsURLBase
+        }
+    }
 
     init(endpoint: SafeEatsEndpoint) {
         self.endpoint = endpoint
-        self.url = URL(string: (Config.supabaseFunctionsURLBase + endpoint.rawValue))!
+        let baseURL = Self.baseURL(for: endpoint)
+        self.url = URL(string: (baseURL + endpoint.rawValue))!
         self.request = URLRequest(url: self.url)
+        print("[SupabaseRequestBuilder] init endpoint=\(endpoint.rawValue) baseURL=\(baseURL) url=\(self.url.absoluteString)")
     }
     
     init(endpoint: SafeEatsEndpoint, itemId: String, subItemId: String? = nil) {
-
+        self.endpoint = endpoint
+        let baseURL = Self.baseURL(for: endpoint)
+        
         func formattedUrlString() -> String {
-            let urlFormat = Config.supabaseFunctionsURLBase + endpoint.rawValue
+            let urlFormat = baseURL + endpoint.rawValue
             if let subItemId = subItemId {
                 return String(format: urlFormat, itemId, subItemId)
             } else {
@@ -47,9 +66,9 @@ class SupabaseRequestBuilder {
             }
         }
 
-        self.endpoint = endpoint
         self.url = URL(string: formattedUrlString())!
         self.request = URLRequest(url: self.url)
+        print("[SupabaseRequestBuilder] init endpoint=\(endpoint.rawValue) baseURL=\(baseURL) url=\(self.url.absoluteString)")
     }
     
     func setQueryItems(queryItems: [URLQueryItem]) -> SupabaseRequestBuilder {
@@ -63,18 +82,25 @@ class SupabaseRequestBuilder {
 
     func setMethod(to method: String) -> SupabaseRequestBuilder {
         request.httpMethod = method
+        print("[SupabaseRequestBuilder] setMethod endpoint=\(endpoint.rawValue) method=\(method)")
         return self
     }
     
     func setJsonBody(to body: Data) -> SupabaseRequestBuilder {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
+        print("[SupabaseRequestBuilder] setJsonBody endpoint=\(endpoint.rawValue) bodySize=\(body.count) bytes")
+        if let jsonString = String(data: body, encoding: .utf8) {
+            print("[SupabaseRequestBuilder] setJsonBody body=\(jsonString)")
+        }
         return self
     }
 
     func setAuthorization(with token: String) -> SupabaseRequestBuilder {
         let authHeaderString = "Bearer \(token)"
         request.setValue(authHeaderString, forHTTPHeaderField: "Authorization")
+        print("[SupabaseRequestBuilder] setAuthorization endpoint=\(endpoint.rawValue) tokenPrefix=\(String(token.prefix(20)))...")
+        print("[SupabaseRequestBuilder] setAuthorization FULL Authorization header: \(authHeaderString)")
         return self
     }
 
@@ -102,7 +128,11 @@ class SupabaseRequestBuilder {
     }
 
     private func setAPIKey() {
-        request.setValue(Config.supabaseKey, forHTTPHeaderField: "apikey")
+        // Only set API key for Supabase endpoints, not Fly.dev endpoints
+        let baseURL = Self.baseURL(for: endpoint)
+        if baseURL == Config.supabaseFunctionsURLBase {
+            request.setValue(Config.supabaseKey, forHTTPHeaderField: "apikey")
+        }
     }
     
     private func finishMultipartFormDataIfNeeded() {
@@ -118,8 +148,15 @@ class SupabaseRequestBuilder {
         setAPIKey()
         finishMultipartFormDataIfNeeded()
         
+        print("[SupabaseRequestBuilder] build() endpoint=\(endpoint.rawValue) method=\(request.httpMethod ?? "nil") url=\(request.url?.absoluteString ?? "nil")")
+        print("[SupabaseRequestBuilder] build() headers=\(request.allHTTPHeaderFields ?? [:])")
+        if let authHeader = request.value(forHTTPHeaderField: "Authorization") {
+            print("[SupabaseRequestBuilder] build() FULL Authorization header value: \(authHeader)")
+        }
         if hasMultipartFormData {
-            print("Size of Supabase \(endpoint.rawValue) request body is: \(request.httpBody?.count ?? 0)")
+            print("[SupabaseRequestBuilder] build() multipart bodySize=\(request.httpBody?.count ?? 0)")
+        } else if request.httpBody != nil {
+            print("[SupabaseRequestBuilder] build() json bodySize=\(request.httpBody?.count ?? 0)")
         }
 
         return request

@@ -435,4 +435,123 @@ class DTO {
         let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
         return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
     }
+    
+    // MARK: - Scan API Models
+    
+    struct ScanProductInfo: Codable, Hashable {
+        let name: String?
+        let brand: String?
+        let ingredients: [Ingredient]
+        let images: [ScanImageInfo]?
+    }
+    
+    struct ScanImageInfo: Codable, Hashable {
+        let url: String?
+    }
+    
+    struct ScanAnalysisResult: Codable, Hashable {
+        let overall_analysis: String
+        let overall_match: String  // "matched", "uncertain", "unmatched"
+        let ingredient_analysis: [ScanIngredientAnalysis]
+    }
+    
+    struct ScanIngredientAnalysis: Codable, Hashable {
+        let ingredient: String
+        let match: String  // "unmatched", "uncertain"
+        let reasoning: String
+        let members_affected: [String]
+    }
+    
+    // SSE Event payloads
+    struct ScanProductInfoEvent: Codable {
+        let scan_id: String
+        let product_info: ScanProductInfo
+        let product_info_source: String
+        let images: [ScanImage]
+    }
+    
+    struct ScanAnalysisEvent: Codable {
+        let analysis_status: String
+        let analysis_result: ScanAnalysisResult
+    }
+    
+    // Image types in scan response
+    enum ScanImage: Codable, Hashable {
+        case inventory(InventoryScanImage)
+        case user(UserScanImage)
+        
+        struct InventoryScanImage: Codable, Hashable {
+            let type: String  // "inventory"
+            let url: String
+        }
+        
+        struct UserScanImage: Codable, Hashable {
+            let type: String  // "user"
+            let content_hash: String
+            let storage_path: String?
+            let status: String  // "pending", "processing", "processed", "failed"
+            let extraction_error: String?
+        }
+        
+        private enum CodingKeys: String, CodingKey {
+            case type
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let type = try container.decode(String.self, forKey: .type)
+            
+            switch type {
+            case "inventory":
+                self = .inventory(try InventoryScanImage(from: decoder))
+            case "user":
+                self = .user(try UserScanImage(from: decoder))
+            default:
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Unknown image type: \(type)"
+                )
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            switch self {
+            case .inventory(let img):
+                try img.encode(to: encoder)
+            case .user(let img):
+                try img.encode(to: encoder)
+            }
+        }
+    }
+    
+    // Full Scan object
+    struct Scan: Codable, Hashable {
+        let id: String
+        let scan_type: String  // "barcode" or "photo"
+        let barcode: String?
+        let status: String  // "idle" or "processing"
+        let product_info: ScanProductInfo
+        let product_info_source: String?  // "openfoodfacts", "extraction", "enriched"
+        let analysis_status: String?  // "analyzing", "complete", "stale"
+        let analysis_result: ScanAnalysisResult?
+        let images: [ScanImage]
+        let latest_guidance: String?
+        let created_at: String
+        let last_activity_at: String
+    }
+    
+    // Submit image response
+    struct SubmitImageResponse: Codable {
+        let queued: Bool
+        let queue_position: Int
+        let content_hash: String
+    }
+    
+    // Scan history response
+    struct ScanHistoryResponse: Codable {
+        let scans: [Scan]
+        let total: Int
+        let has_more: Bool
+    }
 }

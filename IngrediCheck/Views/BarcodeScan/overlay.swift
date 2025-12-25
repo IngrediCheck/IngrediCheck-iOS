@@ -645,11 +645,17 @@ struct BarcodeDataCard: View {
         )
         .clipped()
         .task(id: code) {
-            guard !code.isEmpty else { return }
+            guard !code.isEmpty else {
+                print("[BarcodeOverlay] task(id: code) code is empty, returning")
+                return
+            }
+
+            print("[BarcodeOverlay] task(id: code) started code=\(code)")
 
             // If we already analyzed this barcode in this app session, reuse
             // the cached result immediately so we don't block the UI.
             if let cached = BarcodeScanAnalysisService.cachedResult(for: code) {
+                print("[BarcodeOverlay] task(id: code) using cached result for code=\(code)")
                 analysisResult = cached
                 product = cached.product
                 ingredientRecommendations = cached.ingredientRecommendations
@@ -661,6 +667,8 @@ struct BarcodeDataCard: View {
                 onResultUpdated?()
                 return
             }
+
+            print("[BarcodeOverlay] task(id: code) no cache, starting fresh analysis code=\(code)")
 
             // Reset local UI state before kicking off background analysis.
             isLoading = true
@@ -676,24 +684,22 @@ struct BarcodeDataCard: View {
             let preferenceText = DietaryPreferenceConfig.defaultText
             let service = webService
 
+            print("[BarcodeOverlay] task(id: code) calling streamBarcodeScan code=\(codeToAnalyze) clientActivityId=\(clientActivityId)")
+
             // Run the streaming analysis on a detached background task so
             // camera preview + scan-line animation stay responsive.
             Task.detached {
                 do {
-                    try await service.streamUnifiedAnalysis(
-                        input: .barcode(codeToAnalyze),
-                        clientActivityId: clientActivityId,
-                        userPreferenceText: preferenceText,
-                        onProduct: { value in
-                            // onProduct/onAnalysis/onError are already
-                            // dispatched to the MainActor inside
-                            // WebService.streamUnifiedAnalysis.
-                            product = value
+                    print("[BarcodeOverlay] Task.detached started for code=\(codeToAnalyze)")
+                    try await service.streamBarcodeScan(
+                        barcode: codeToAnalyze,
+                        onProductInfo: { productInfo, scanId in
+                            print("[BarcodeOverlay] onProductInfo scanId=\(scanId) name='\(productInfo.name ?? "nil")'")
+                            // Convert ScanProductInfo to Product for UI compatibility
+                            let convertedProduct = service.convertScanProductInfoToProduct(productInfo, barcode: codeToAnalyze)
+                            product = convertedProduct
                             isAnalyzing = true
-                            
-                            // Cache an intermediate result so UI like the toast
-                            // can reflect that a product was detected and we're
-                            // now reading ingredients.
+
                             let intermediate = BarcodeScanAnalysisResult(
                                 product: product,
                                 ingredientRecommendations: nil,
@@ -704,11 +710,15 @@ struct BarcodeDataCard: View {
                                 clientActivityId: clientActivityId
                             )
                             Task { @MainActor in
+                                print("[BarcodeOverlay] onProductInfo storing intermediate result")
                                 BarcodeScanAnalysisService.storeResult(intermediate)
                                 onResultUpdated?()
                             }
                         },
-                        onAnalysis: { recs in
+                        onAnalysis: { analysisResult in
+                            // Convert ScanAnalysisResult to IngredientRecommendations for UI compatibility
+                            let recs = service.convertScanAnalysisResultToRecommendations(analysisResult)
+                            print("[BarcodeOverlay] onAnalysis count=\(recs.count)")
                             ingredientRecommendations = recs
                             if let p = product {
                                 matchStatus = p.calculateMatch(ingredientRecommendations: recs)
@@ -722,21 +732,17 @@ struct BarcodeDataCard: View {
                                 barcode: codeToAnalyze,
                                 clientActivityId: clientActivityId
                             )
-                            // Cache update must happen on the main actor because
-                            // BarcodeScanAnalysisService is @MainActor.
                             Task { @MainActor in
+                                print("[BarcodeOverlay] onAnalysis storing final result")
                                 BarcodeScanAnalysisService.storeResult(result)
                                 isAnalyzing = false
                                 isLoading = false
-                                // Increment scan count when analysis completes successfully
-                                // Only increment if we have a product (not for "not found" cases)
                                 if product != nil {
                                     userPreferences.incrementScanCount()
                                 }
                                 onResultUpdated?()
-                                // After a successful analysis, refresh history so Home/Lists
-                                // Recent Scans reflect this scan immediately.
                                 Task {
+                                    print("[BarcodeOverlay] onAnalysis fetching history")
                                     if let history = try? await service.fetchHistory() {
                                         await MainActor.run {
                                             appState.listsTabState.historyItems = history
@@ -745,11 +751,10 @@ struct BarcodeDataCard: View {
                                 }
                             }
                         },
-                        onError: { streamError in
-                            if streamError.statusCode == 404 {
-                                // Cache a not-found result so revisiting this
-                                // barcode shows the not-found message instead
-                                // of re-fetching every time.
+                        onError: { streamError, scanId in
+                            print("[BarcodeOverlay] onError scanId=\(scanId ?? "nil") message='\(streamError.message)' status=\(String(describing: streamError.statusCode))")
+                            if streamError.message.lowercased().contains("not found") {
+                                print("[BarcodeOverlay] onError handling 'not found' case")
                                 let result = BarcodeScanAnalysisResult(
                                     product: nil,
                                     ingredientRecommendations: nil,
@@ -767,8 +772,7 @@ struct BarcodeDataCard: View {
                                     onResultUpdated?()
                                 }
                             } else {
-                                // For non-404 errors, cache an error result so
-                                // the toast and other UI can show a retry hint.
+                                print("[BarcodeOverlay] onError handling generic error")
                                 let result = BarcodeScanAnalysisResult(
                                     product: product,
                                     ingredientRecommendations: ingredientRecommendations,
@@ -788,26 +792,22 @@ struct BarcodeDataCard: View {
                             }
                         }
                     )
-                } catch NetworkError.notFound(_) {
-                    let result = BarcodeScanAnalysisResult(
-                        product: nil,
-                        ingredientRecommendations: nil,
-                        matchStatus: nil,
-                        notFound: true,
-                        errorMessage: nil,
-                        barcode: codeToAnalyze,
-                        clientActivityId: clientActivityId
-                    )
-                    await MainActor.run {
-                        BarcodeScanAnalysisService.storeResult(result)
-                        notFoundState = true
-                        isAnalyzing = false
-                        isLoading = false
-                        onResultUpdated?()
+                    print("[BarcodeOverlay] Task.detached completed successfully for code=\(codeToAnalyze)")
+                } catch let error as NetworkError {
+                    print("[BarcodeOverlay] Task.detached catch NetworkError: \(error)")
+                    print("[BarcodeOverlay] Task.detached NetworkError details:")
+                    switch error {
+                    case .invalidResponse(let code):
+                        print("[BarcodeOverlay] NetworkError.invalidResponse(\(code))")
+                    case .badUrl:
+                        print("[BarcodeOverlay] NetworkError.badUrl")
+                    case .decodingError:
+                        print("[BarcodeOverlay] NetworkError.decodingError")
+                    case .authError:
+                        print("[BarcodeOverlay] NetworkError.authError")
+                    case .notFound(let message):
+                        print("[BarcodeOverlay] NetworkError.notFound(\(message))")
                     }
-                } catch {
-                    // Generic failure: cache an error result so the toast can
-                    // show a retry message for this barcode.
                     let result = BarcodeScanAnalysisResult(
                         product: product,
                         ingredientRecommendations: ingredientRecommendations,
@@ -818,6 +818,28 @@ struct BarcodeDataCard: View {
                         clientActivityId: clientActivityId
                     )
                     await MainActor.run {
+                        print("[BarcodeOverlay] Task.detached storing error result")
+                        BarcodeScanAnalysisService.storeResult(result)
+                        errorState = error.localizedDescription
+                        isAnalyzing = false
+                        isLoading = false
+                        onResultUpdated?()
+                    }
+                } catch {
+                    print("[BarcodeOverlay] Task.detached catch generic error=\(error.localizedDescription)")
+                    print("[BarcodeOverlay] Task.detached error type=\(type(of: error))")
+                    print("[BarcodeOverlay] Task.detached error description=\(error)")
+                    let result = BarcodeScanAnalysisResult(
+                        product: product,
+                        ingredientRecommendations: ingredientRecommendations,
+                        matchStatus: matchStatus,
+                        notFound: false,
+                        errorMessage: error.localizedDescription,
+                        barcode: codeToAnalyze,
+                        clientActivityId: clientActivityId
+                    )
+                    await MainActor.run {
+                        print("[BarcodeOverlay] Task.detached storing error result")
                         BarcodeScanAnalysisService.storeResult(result)
                         errorState = error.localizedDescription
                         isAnalyzing = false
@@ -848,18 +870,23 @@ struct BarcodeDataCard: View {
         let preferenceText = DietaryPreferenceConfig.defaultText
         let service = webService
         
-        // Re-run the streaming analysis
+        print("[BarcodeOverlay] retryAnalysis() code=\(codeToAnalyze)")
+        // Re-run the streaming analysis using Scan API v2
         Task.detached {
             do {
-                try await service.streamUnifiedAnalysis(
-                    input: .barcode(codeToAnalyze),
-                    clientActivityId: clientActivityId,
-                    userPreferenceText: preferenceText,
-                    onProduct: { value in
-                        product = value
+                try await service.streamBarcodeScan(
+                    barcode: codeToAnalyze,
+                    onProductInfo: { productInfo, scanId in
+                        print("[BarcodeOverlay] retry onProductInfo scanId=\(scanId) name='\(productInfo.name ?? "nil")'")
+                        // Convert ScanProductInfo to Product for UI compatibility
+                        let convertedProduct = service.convertScanProductInfoToProduct(productInfo, barcode: codeToAnalyze)
+                        product = convertedProduct
                         isAnalyzing = true
                     },
-                    onAnalysis: { recs in
+                    onAnalysis: { analysisResult in
+                        // Convert ScanAnalysisResult to IngredientRecommendations for UI compatibility
+                        let recs = service.convertScanAnalysisResultToRecommendations(analysisResult)
+                        print("[BarcodeOverlay] retry onAnalysis count=\(recs.count)")
                         ingredientRecommendations = recs
                         if let p = product {
                             matchStatus = p.calculateMatch(ingredientRecommendations: recs)
@@ -877,16 +904,15 @@ struct BarcodeDataCard: View {
                             BarcodeScanAnalysisService.storeResult(result)
                             isAnalyzing = false
                             isLoading = false
-                            // Increment scan count when analysis completes successfully
-                            // Only increment if we have a product (not for "not found" cases)
                             if product != nil {
                                 userPreferences.incrementScanCount()
                             }
                             onResultUpdated?()
                         }
                     },
-                    onError: { streamError in
-                        if streamError.statusCode == 404 {
+                    onError: { streamError, scanId in
+                        print("[BarcodeOverlay] retry onError scanId=\(scanId ?? "nil") message='\(streamError.message)'")
+                        if streamError.message.lowercased().contains("not found") {
                             let result = BarcodeScanAnalysisResult(
                                 product: nil,
                                 ingredientRecommendations: nil,
@@ -924,6 +950,7 @@ struct BarcodeDataCard: View {
                     }
                 )
             } catch NetworkError.notFound(_) {
+                print("[BarcodeOverlay] retry NetworkError.notFound")
                 let result = BarcodeScanAnalysisResult(
                     product: nil,
                     ingredientRecommendations: nil,
@@ -941,6 +968,7 @@ struct BarcodeDataCard: View {
                     onResultUpdated?()
                 }
             } catch {
+                print("[BarcodeOverlay] retry generic error=\(error.localizedDescription)")
                 let result = BarcodeScanAnalysisResult(
                     product: product,
                     ingredientRecommendations: ingredientRecommendations,

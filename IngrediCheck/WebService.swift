@@ -49,6 +49,27 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
 
 @Observable final class WebService {
     
+    // MARK: - Helper: Pretty Print JSON
+    private func prettyPrintJSON(data: Data, label: String) {
+        if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
+           let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("📦 [\(label)] Response Body (Pretty Printed):")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print(prettyString)
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        } else if let string = String(data: data, encoding: .utf8) {
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("📦 [\(label)] Response Body (Raw String):")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print(string)
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        } else {
+            print("📦 [\(label)] Response Body (Binary, \(data.count) bytes)")
+        }
+    }
+    
     private let smallImageStore: FileStore
     private let mediumImageStore: FileStore
     private let largeImageStore: FileStore
@@ -103,6 +124,404 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         return UIImage(data: try await imageData)!
     }
 
+    // MARK: - Scan API
+
+    struct ScanStreamError: Error, LocalizedError {
+        let message: String
+        let statusCode: Int?
+        var errorDescription: String? { message }
+    }
+
+    /// New barcode scan flow using v2 Scan API: POST /v2/scan/barcode (SSE)
+    /// This keeps the same high-level behavior as `streamUnifiedAnalysis(.barcode)`
+    /// but talks to the new backend and surfaces scanId for later photo uploads.
+    // Helper functions to convert Scan API DTOs to legacy DTOs for UI compatibility
+    func convertScanProductInfoToProduct(_ info: DTO.ScanProductInfo, barcode: String) -> DTO.Product {
+        // Convert ingredients - DTO.Ingredient doesn't have a public initializer,
+        // so we keep it empty and rely on the analysis results for ingredient recommendations
+        let ingredients: [DTO.Ingredient] = []
+        
+        // Convert images
+        let images: [DTO.ImageLocationInfo] = (info.images ?? []).compactMap { img in
+            guard let urlString = img.url, let url = URL(string: urlString) else { return nil }
+            return DTO.ImageLocationInfo.url(url)
+        }
+        
+        return DTO.Product(
+            barcode: barcode,
+            brand: info.brand,
+            name: info.name,
+            ingredients: ingredients,
+            images: images
+        )
+    }
+    
+    func convertScanAnalysisResultToRecommendations(_ result: DTO.ScanAnalysisResult) -> [DTO.IngredientRecommendation] {
+        return result.ingredient_analysis.map { item in
+            let safety: DTO.SafetyRecommendation
+            switch item.match.lowercased() {
+            case "unmatched":
+                safety = .definitelyUnsafe
+            case "uncertain":
+                safety = .maybeUnsafe
+            default:
+                safety = .safe
+            }
+            
+            return DTO.IngredientRecommendation(
+                ingredientName: item.ingredient,
+                safetyRecommendation: safety,
+                reasoning: item.reasoning,
+                preference: DietaryPreferenceConfig.defaultText
+            )
+        }
+    }
+    
+    func streamBarcodeScan(
+        barcode: String,
+        onProductInfo: @escaping (DTO.ScanProductInfo, String) -> Void,  // (productInfo, scanId)
+        onAnalysis: @escaping (DTO.ScanAnalysisResult) -> Void,
+        onError: @escaping (ScanStreamError, String?) -> Void  // (error, scanId)
+    ) async throws {
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        var scanId: String?
+        var hasReportedError = false
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let requestBody = try JSONEncoder().encode(["barcode": barcode])
+
+        var request = SupabaseRequestBuilder(endpoint: .scan_barcode)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setJsonBody(to: requestBody)
+            .build()
+
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 60
+
+        PostHogSDK.shared.capture("Barcode Scan Started", properties: [
+            "request_id": requestId,
+            "barcode": barcode
+        ])
+
+        print("[ScanAPI] streamBarcodeScan making URLSession.shared.bytes request")
+        print("[ScanAPI] streamBarcodeScan request URL=\(request.url?.absoluteString ?? "nil")")
+        print("[ScanAPI] streamBarcodeScan request method=\(request.httpMethod ?? "nil")")
+        
+        let (asyncBytes, response): (URLSession.AsyncBytes, URLResponse)
+        do {
+            (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+            print("[ScanAPI] streamBarcodeScan received response successfully")
+            print("[ScanAPI] streamBarcodeScan response type=\(type(of: response))")
+        } catch {
+            print("[ScanAPI] ❌ streamBarcodeScan URLSession.shared.bytes failed with error: \(error)")
+            print("[ScanAPI] ❌ streamBarcodeScan error type=\(type(of: error))")
+            print("[ScanAPI] ❌ streamBarcodeScan error description=\(error.localizedDescription)")
+            throw error
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("[ScanAPI] ❌ streamBarcodeScan response is not HTTPURLResponse, type=\(type(of: response))")
+            PostHogSDK.shared.capture("Barcode Scan Failed - Invalid Response Type", properties: [
+                "request_id": requestId,
+                "response_type": String(describing: type(of: response))
+            ])
+            throw NetworkError.invalidResponse(-1)
+        }
+        
+        print("[ScanAPI] streamBarcodeScan HTTP status code=\(httpResponse.statusCode)")
+        print("[ScanAPI] streamBarcodeScan HTTP response headers=\(httpResponse.allHeaderFields)")
+        
+        guard httpResponse.statusCode == 200 else {
+            let statusCode = httpResponse.statusCode
+            print("[ScanAPI] ❌ streamBarcodeScan HTTP status=\(statusCode)")
+            if let allowHeader = httpResponse.value(forHTTPHeaderField: "allow") {
+                print("[ScanAPI] ❌ streamBarcodeScan ALLOWED METHODS: \(allowHeader)")
+            }
+            PostHogSDK.shared.capture("Barcode Scan Failed - HTTP", properties: [
+                "request_id": requestId,
+                "status_code": statusCode
+            ])
+            throw NetworkError.invalidResponse(statusCode)
+        }
+        
+        print("[ScanAPI] streamBarcodeScan HTTP 200 OK, starting SSE stream parsing")
+
+        var buffer = ""
+        let doubleNewline = "\n\n"
+
+        func processEvent(_ rawEvent: String) async {
+            let trimmed = rawEvent.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+
+            var eventType: String?
+            var dataLines: [String] = []
+
+            trimmed.split(whereSeparator: \.isNewline).forEach { line in
+                if line.hasPrefix("event:") {
+                    eventType = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                } else if line.hasPrefix("data:") {
+                    dataLines.append(String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces))
+                }
+            }
+
+            let payloadString = dataLines.joined(separator: "\n")
+            guard let resolvedEventType = eventType,
+                  let payloadData = payloadString.data(using: .utf8) else {
+                print("[ScanAPI] streamBarcodeScan processEvent: missing eventType or payloadData")
+                return
+            }
+
+            print("[ScanAPI] streamBarcodeScan SSE event='\(resolvedEventType)' payloadSize=\(payloadData.count) bytes")
+            
+            // Pretty print the response body
+            prettyPrintJSON(data: payloadData, label: "Barcode Scan - \(resolvedEventType)")
+
+            switch resolvedEventType {
+            case "product_info":
+                do {
+                    let event = try JSONDecoder().decode(DTO.ScanProductInfoEvent.self, from: payloadData)
+                    scanId = event.scan_id
+
+                    let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+                    PostHogSDK.shared.capture("Barcode Scan Product Info", properties: [
+                        "request_id": requestId,
+                        "scan_id": event.scan_id,
+                        "source": event.product_info_source,
+                        "latency_ms": latency
+                    ])
+
+                    await MainActor.run {
+                        onProductInfo(event.product_info, event.scan_id)
+                    }
+                } catch {
+                    print("Failed to decode product_info: \(error)")
+                }
+
+            case "analysis":
+                do {
+                    let event = try JSONDecoder().decode(DTO.ScanAnalysisEvent.self, from: payloadData)
+
+                    PostHogSDK.shared.capture("Barcode Scan Analysis", properties: [
+                        "request_id": requestId,
+                        "scan_id": scanId ?? "unknown"
+                    ])
+
+                    await MainActor.run {
+                        onAnalysis(event.analysis_result)
+                    }
+                } catch {
+                    print("Failed to decode analysis: \(error)")
+                }
+
+            case "error":
+                hasReportedError = true
+                var errorMessage = "Product not found"
+
+                if let jsonObject = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] {
+                    if let id = jsonObject["scan_id"] as? String {
+                        scanId = id
+                    }
+                    if let msg = jsonObject["error"] as? String {
+                        errorMessage = msg
+                    }
+                }
+
+                PostHogSDK.shared.capture("Barcode Scan Error", properties: [
+                    "request_id": requestId,
+                    "scan_id": scanId ?? "unknown",
+                    "error": errorMessage
+                ])
+
+                await MainActor.run {
+                    onError(ScanStreamError(message: errorMessage, statusCode: nil), scanId)
+                }
+
+            case "done":
+                break
+
+            default:
+                break
+            }
+        }
+
+        do {
+            print("[ScanAPI] streamBarcodeScan entering byte reading loop")
+            var bytesRead = 0
+            for try await byte in asyncBytes {
+                bytesRead += 1
+                let scalar = UnicodeScalar(byte)
+                buffer.append(Character(scalar))
+
+                while let range = buffer.range(of: doubleNewline) {
+                    let eventString = String(buffer[..<range.lowerBound])
+                    buffer.removeSubrange(buffer.startIndex..<range.upperBound)
+                    print("[ScanAPI] streamBarcodeScan found complete SSE event (bytesRead=\(bytesRead))")
+                    await processEvent(eventString)
+                }
+                
+                if bytesRead % 1000 == 0 {
+                    print("[ScanAPI] streamBarcodeScan progress bytesRead=\(bytesRead) bufferSize=\(buffer.count)")
+                }
+            }
+
+            print("[ScanAPI] streamBarcodeScan finished reading stream bytesRead=\(bytesRead) finalBufferSize=\(buffer.count)")
+            if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                print("[ScanAPI] streamBarcodeScan processing final buffer")
+                await processEvent(buffer)
+            }
+            print("[ScanAPI] streamBarcodeScan completed successfully")
+        } catch {
+            print("[ScanAPI] ❌ streamBarcodeScan caught error in byte loop: \(error.localizedDescription)")
+            print("[ScanAPI] ❌ streamBarcodeScan error type=\(type(of: error))")
+            if !hasReportedError && !(error is CancellationError) {
+                print("[ScanAPI] ❌ streamBarcodeScan calling onError callback")
+                await MainActor.run {
+                    onError(ScanStreamError(message: error.localizedDescription, statusCode: nil), scanId)
+                }
+            }
+            throw error
+        }
+    }
+    
+    // MARK: - Submit Image (Photo Scan)
+    
+    func submitScanImage(
+        scanId: String,
+        imageData: Data
+    ) async throws -> DTO.SubmitImageResponse {
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request = SupabaseRequestBuilder(endpoint: .scan_image, itemId: scanId)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setFormData(name: "image", value: imageData, contentType: "image/jpeg")
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        // Pretty print the response body
+        prettyPrintJSON(data: data, label: "Photo Scan - Submit Image")
+
+        switch httpResponse.statusCode {
+        case 200:
+            return try JSONDecoder().decode(DTO.SubmitImageResponse.self, from: data)
+        case 401:
+            throw NetworkError.authError
+        case 403:
+            throw NetworkError.notFound("Scan belongs to another user")
+        case 413:
+            throw NetworkError.invalidResponse(413)  // Image too large (>10MB)
+        case 400:
+            throw NetworkError.invalidResponse(400)  // Max images reached (20)
+        default:
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    // MARK: - Get Scan
+    
+    func getScan(scanId: String) async throws -> DTO.Scan {
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request = SupabaseRequestBuilder(endpoint: .scan_get, itemId: scanId)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        // Pretty print the response body
+        prettyPrintJSON(data: data, label: "Photo Scan - Get Scan")
+
+        switch httpResponse.statusCode {
+        case 200:
+            return try JSONDecoder().decode(DTO.Scan.self, from: data)
+        case 401:
+            throw NetworkError.authError
+        case 403:
+            throw NetworkError.notFound("Scan belongs to another user")
+        case 404:
+            throw NetworkError.notFound("Scan not found")
+        default:
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    // MARK: - Scan History
+    
+    func fetchScanHistory(
+        limit: Int = 20,
+        offset: Int = 0
+    ) async throws -> DTO.ScanHistoryResponse {
+
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        let request = SupabaseRequestBuilder(endpoint: .scan_history)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "offset", value: String(offset))
+            ])
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            PostHogSDK.shared.capture("Scan History Fetch Failed", properties: [
+                "request_id": requestId,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+
+        do {
+            let historyResponse = try JSONDecoder().decode(DTO.ScanHistoryResponse.self, from: data)
+
+            PostHogSDK.shared.capture("Scan History Fetch Successful", properties: [
+                "request_id": requestId,
+                "scan_count": historyResponse.scans.count,
+                "total": historyResponse.total,
+                "has_more": historyResponse.has_more,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
+            return historyResponse
+        } catch {
+            print("Failed to decode ScanHistoryResponse: \(error)")
+
+            PostHogSDK.shared.capture("Scan History Decode Error", properties: [
+                "request_id": requestId,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+
+            throw NetworkError.decodingError
+        }
+    }
+
+    // Legacy unified analysis stream (deprecated in favor of Scan API)
     func streamUnifiedAnalysis(
         input: UnifiedAnalysisInput,
         clientActivityId: String,
