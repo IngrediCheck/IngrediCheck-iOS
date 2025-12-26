@@ -349,9 +349,14 @@ struct PersistentBottomSheet: View {
             IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             
         case .meetYourAvatar:
+            // CRITICAL: Capture image and background color immediately to prevent EXC_BAD_ACCESS
+            // This ensures the image is not deallocated while the view is being created
+            let capturedImage = memojiStore.image
+            let capturedBackgroundColor = memojiStore.backgroundColorHex
+            
             MeetYourAvatar(
-                image: memojiStore.image,
-                backgroundColorHex: memojiStore.backgroundColorHex
+                image: capturedImage,
+                backgroundColorHex: capturedBackgroundColor
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
@@ -480,21 +485,122 @@ private func handleAssignAvatar(
     familyStore: FamilyStore,
     webService: WebService
 ) async {
-    guard let image = memojiStore.image else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji image to upload, skipping")
+    // CRITICAL: Capture image and create a deep copy immediately to prevent accessing deallocated memory
+    // UIImage is a reference type, and its underlying CGImage can be deallocated.
+    // Creating a deep copy ensures we have our own copy of the pixel data.
+    guard let originalImage = memojiStore.image,
+          originalImage.cgImage != nil,
+          originalImage.size.width > 0 && originalImage.size.height > 0,
+          originalImage.size.width.isFinite && originalImage.size.height.isFinite else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No valid memoji image to upload, skipping")
         return
     }
     
-    guard let targetMemberId = familyStore.avatarTargetMemberId else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set, skipping upload")
+    // CRITICAL: Capture ALL data immediately BEFORE creating deep copy
+    // This prevents accessing deallocated objects during async operations
+    let backgroundColorHex = memojiStore.backgroundColorHex
+    let displayName = memojiStore.displayName
+    let currentFamily = familyStore.family
+    let currentAvatarTargetMemberId = familyStore.avatarTargetMemberId
+    let currentPendingSelfMember = familyStore.pendingSelfMember
+    let currentPendingOtherMembers = familyStore.pendingOtherMembers
+    
+    // Create a deep copy of the image to prevent EXC_BAD_ACCESS from deallocated CGImage
+    // This must be done AFTER capturing all other data to ensure we don't access deallocated stores
+    guard let image = originalImage.deepCopy() else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Failed to create deep copy of image, skipping")
+        return
+    }
+    
+    // Validate the deep copy is valid
+    guard image.cgImage != nil,
+          image.size.width > 0 && image.size.height > 0,
+          image.size.width.isFinite && image.size.height.isFinite else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Deep copy is invalid, skipping")
+        return
+    }
+    
+    // During onboarding, if avatarTargetMemberId is not set but we have displayName,
+    // it means the user generated an avatar without adding the member first.
+    // We need to add the member to the pending list first.
+    var targetMemberId: UUID? = currentAvatarTargetMemberId
+    
+    // If no targetMemberId is set but we're in onboarding and have a displayName, add the member
+    if targetMemberId == nil,
+        currentFamily == nil, // We're in onboarding (no family exists yet)
+       let name = displayName,
+        !name.isEmpty {
+        
+        // Check if this is for self member or other member
+        // If there's no pending self member, this must be for self
+        // Otherwise, it's for an other member
+        if currentPendingSelfMember == nil {
+            // This is for the self member
+            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+            familyStore.setPendingSelfMember(name: name)
+            // Re-capture after modification
+            if let newSelfMember = familyStore.pendingSelfMember {
+                targetMemberId = newSelfMember.id
+            }
+        } else {
+            // This is for an other member
+            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
+            familyStore.addPendingOtherMember(name: name)
+            // Re-capture after modification
+            let updatedPendingMembers = familyStore.pendingOtherMembers
+            if !updatedPendingMembers.isEmpty, let lastMember = updatedPendingMembers.last {
+                targetMemberId = lastMember.id
+            }
+        }
+    }
+    
+    guard let targetMemberId = targetMemberId else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
         return
     }
     
     print("[PersistentBottomSheet] handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
     
+    // CRITICAL: Re-check pending members AFTER potentially adding a new member
+    // We need to check the current state because we may have just added a member
+    // It's safe to access familyStore properties here since we're in an async function with familyStore as a parameter
+    
+    // 1. Check if this is a pending self member
+    // Check current state first (includes newly added members), fallback to captured state
+    if let pendingSelf = familyStore.pendingSelfMember ?? currentPendingSelfMember,
+       pendingSelf.id == targetMemberId {
+        // This is the pending self member - use setPendingSelfMemberAvatar
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending self member: \(pendingSelf.name)")
+        await familyStore.setPendingSelfMemberAvatar(
+            image: image,
+            webService: webService,
+            backgroundColorHex: backgroundColorHex
+        )
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending self member")
+        return
+    }
+    
+    // 2. Check if this is a pending other member
+    // Check current state first (includes newly added members), fallback to captured state
+    let currentPendingOthers = familyStore.pendingOtherMembers
+    let pendingOthersToCheck = !currentPendingOthers.isEmpty ? currentPendingOthers : currentPendingOtherMembers
+    if let pendingOther = pendingOthersToCheck.first(where: { $0.id == targetMemberId }) {
+        // This is a pending other member - use setAvatarForPendingOtherMember
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
+        await familyStore.setAvatarForPendingOtherMember(
+            id: targetMemberId,
+            image: image,
+            webService: webService,
+            backgroundColorHex: backgroundColorHex
+        )
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending other member")
+        return
+    }
+    
+    // 3. Otherwise, this is an existing member (from home view) - use the existing logic
     do {
-        // 1. Get the member first to access their color for compositing
-        guard let family = familyStore.family else {
+        // 1. Get the member first to access their color for compositing - use captured data
+        guard let family = currentFamily else {
             print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No family loaded, cannot update member")
             return
         }
@@ -506,8 +612,8 @@ private func handleAssignAvatar(
         }
         
         // 2. Composite the image with background color before uploading
-        // Use memoji background color if available, otherwise use member's existing color
-        let bgColor = memojiStore.backgroundColorHex ?? member.color
+        // Use captured background color if available, otherwise use member's existing color
+        let bgColor = backgroundColorHex ?? member.color
         print("[PersistentBottomSheet] handleAssignAvatar: Compositing image with background color: \(bgColor)")
         
         // Composite image with background color before uploading
@@ -523,7 +629,8 @@ private func handleAssignAvatar(
         // Also persist the memoji background color as the member's color so
         // small avatars (e.g. in HomeView) use the same color as the
         // MeetYourAvatar sheet.
-        if let bgHex = memojiStore.backgroundColorHex, !bgHex.isEmpty {
+        // Use captured backgroundColorHex to avoid accessing deallocated object
+        if let bgHex = backgroundColorHex, !bgHex.isEmpty {
             // Ensure color has a # prefix (backend check constraint requires it)
             let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
             print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
@@ -545,5 +652,5 @@ private func handleAssignAvatar(
     } catch {
         print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to upload or assign avatar: \(error.localizedDescription)")
     }
+    
 }
-

@@ -854,6 +854,18 @@ struct MeetYourAvatar: View {
     @State private var showConfetti = false
     
     var body: some View {
+        // CRITICAL: Capture and validate image immediately to prevent EXC_BAD_ACCESS
+        // This prevents crashes when the image is deallocated during rendering
+        let safeImage: UIImage? = {
+            guard let img = image,
+                  img.cgImage != nil,
+                  img.size.width > 0 && img.size.height > 0,
+                  img.size.width.isFinite && img.size.height.isFinite else {
+                return nil
+            }
+            return img
+        }()
+        
         // Safely parse background color with fallback
         let safeHex = backgroundColorHex?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "F2F2F2"
         let circleColor = Color(hex: safeHex.isEmpty ? "F2F2F2" : safeHex)
@@ -864,8 +876,8 @@ struct MeetYourAvatar: View {
                 .fill(circleColor)
                 .frame(width: 137, height: 137)
                 .overlay {
-                    if let image = image, image.size.width > 0 && image.size.height > 0 {
-                        Image(uiImage: image)
+                    if let safeImage = safeImage {
+                        Image(uiImage: safeImage)
                             .resizable()
                             .scaledToFill()
                             .frame(width: 137, height: 137)
