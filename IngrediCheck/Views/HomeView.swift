@@ -63,36 +63,42 @@ struct HomeView: View {
         @State private var loadedHash: String? = nil
         
         var body: some View {
-            // Base colored circle - always visible as background
-            Circle()
-                .fill(Color(hex: member.color))
-                .frame(width: 36, height: 36)
-                .overlay {
-                    // Content layer overlaid on background
-                    if let avatarImage {
-                        // Show loaded memoji avatar - slightly smaller to show background border
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 32, height: 32)
-                            .clipShape(Circle())
-                    } else {
-                        // Fallback: first letter of name
-                        Text(String(member.name.prefix(1)))
-                            .font(NunitoFont.semiBold.size(14))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .overlay(
-                    // White stroke overlay on top
+            Group {
+                // Display the composited image directly (it already has background color baked in)
+                // Or show fallback with background circle if no image
+                if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
+                    // Show composited memoji avatar - fills the entire circle with white stroke
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .mask(Circle()) // Use mask instead of clipShape for cleaner edges
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
+                } else {
+                    // Fallback: colored circle with initial letter
                     Circle()
-                        .stroke(lineWidth: 1)
-                        .foregroundStyle(Color.white)
-                )
-                // Re-evaluate whenever the member's imageFileHash changes.
-                .task(id: member.imageFileHash) {
-                    await loadAvatarForCurrentHash()
+                        .fill(Color(hex: member.color))
+                        .frame(width: 36, height: 36)
+                        .overlay {
+                            Text(String(member.name.prefix(1)))
+                                .font(NunitoFont.semiBold.size(14))
+                                .foregroundStyle(.white)
+                        }
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
                 }
+            }
+            // Re-evaluate whenever the member's imageFileHash changes.
+            .task(id: member.imageFileHash) {
+                await loadAvatarForCurrentHash()
+            }
         }
         
         @MainActor

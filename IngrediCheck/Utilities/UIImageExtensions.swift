@@ -72,12 +72,31 @@ extension UIImage {
         context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: .zero, size: size))
         
-        // Calculate centered position for the image if it's not square
-        let imageX = (size.width - originalSize.width) / 2.0
-        let imageY = (size.height - originalSize.height) / 2.0
-        let imageRect = CGRect(origin: CGPoint(x: imageX, y: imageY), size: originalSize)
+        // Scale the image to fill the entire canvas (aspect fill) to avoid any border
+        // Calculate scale factor to fill the entire square
+        let scaleX = size.width / originalSize.width
+        let scaleY = size.height / originalSize.height
+        let scaleFactor = max(scaleX, scaleY) // Use max to ensure image fills entire canvas
         
-        // Draw the image on top - transparent areas will show the background color we just filled
+        // Calculate scaled size
+        let scaledWidth = originalSize.width * scaleFactor
+        let scaledHeight = originalSize.height * scaleFactor
+        
+        // Center the scaled image
+        let imageX = (size.width - scaledWidth) / 2.0
+        let imageY = (size.height - scaledHeight) / 2.0
+        let imageRect = CGRect(
+            origin: CGPoint(x: imageX, y: imageY),
+            size: CGSize(width: scaledWidth, height: scaledHeight)
+        )
+        
+        // Draw the image scaled to fill the entire canvas - no border visible
+        // Use safe drawing with bounds checking
+        guard imageRect.width > 0 && imageRect.height > 0 else {
+            print("[UIImageExtensions] compositedWithBackground: Invalid image rect, returning original")
+            return self
+        }
+        
         self.draw(in: imageRect, blendMode: .normal, alpha: 1.0)
         
         print("[UIImageExtensions] compositedWithBackground: ✅ Composited image with background color \(backgroundColorHex), size=\(size.width)x\(size.height)")

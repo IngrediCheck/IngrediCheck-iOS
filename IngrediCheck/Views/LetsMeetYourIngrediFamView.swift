@@ -39,31 +39,37 @@ struct LetsMeetYourIngrediFamView: View {
         
         var body: some View {
             ZStack(alignment: .bottomTrailing) {
-                // Base colored circle - always visible as background (like MeetYourAvatar)
-                Circle()
-                    .fill(Color(hex: member.color))
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        // Content layer overlaid on background
-                        if let avatarImage {
-                            // Show loaded memoji avatar - slightly smaller to show background border
-                            Image(uiImage: avatarImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 42, height: 42)
-                                .clipShape(Circle())
-                        } else {
-                            // Fallback: first letter of name
+                // Display the composited image directly (it already has background color baked in)
+                // Or show fallback with background circle if no image
+                if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
+                    // Show composited memoji avatar - fills the entire circle with white stroke
+                    // Use mask to ensure perfect circular clipping with no artifacts
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 48, height: 48)
+                        .mask(Circle()) // Use mask instead of clipShape for cleaner edges
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
+                } else {
+                    // Fallback: colored circle with initial letter
+                    Circle()
+                        .fill(Color(hex: member.color))
+                        .frame(width: 48, height: 48)
+                        .overlay {
                             Text(initial(member.name))
                                 .font(NunitoFont.semiBold.size(18))
                                 .foregroundStyle(.white)
                         }
-                    }
-                    .overlay(
-                        // Gray stroke overlay on top
-                        Circle()
-                            .stroke(.grayScale40, lineWidth: 2)
-                    )
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
+                }
                 
                 // Edit button overlay
                 Circle()
@@ -89,7 +95,8 @@ struct LetsMeetYourIngrediFamView: View {
             }
             
             // Skip if already loaded for this hash
-            if loadedHash == hash, avatarImage != nil {
+            if loadedHash == hash, let existingImage = avatarImage, 
+               existingImage.size.width > 0 && existingImage.size.height > 0 {
                 return
             }
             
@@ -97,7 +104,8 @@ struct LetsMeetYourIngrediFamView: View {
             // Asset names are typically short like "image-bg1", hashes are 64-char hex strings
             if hash.count < 20 && hash.contains("-") {
                 // Likely an asset name - try loading from assets
-                if let assetImage = UIImage(named: hash) {
+                if let assetImage = UIImage(named: hash),
+                   assetImage.size.width > 0 && assetImage.size.height > 0 {
                     avatarImage = assetImage
                     loadedHash = hash
                     return
@@ -111,6 +119,13 @@ struct LetsMeetYourIngrediFamView: View {
                     imageLocation: .imageFileHash(hash),
                     imageSize: .small
                 )
+                // Validate the loaded image before assigning
+                guard uiImage.size.width > 0 && uiImage.size.height > 0 else {
+                    print("[LetsMeetYourIngrediFamView] ⚠️ Loaded image has invalid size, skipping")
+                    avatarImage = nil
+                    loadedHash = nil
+                    return
+                }
                 avatarImage = uiImage
                 loadedHash = hash
                 print("[LetsMeetYourIngrediFamView] ✅ Loaded avatar for \(member.name)")
