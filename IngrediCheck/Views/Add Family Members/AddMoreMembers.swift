@@ -74,7 +74,7 @@ struct AddMoreMembers: View {
                         }
                     
                     if showError {
-                        Text("Please enter a name")
+                        Text("Enter a name.")
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -91,7 +91,14 @@ struct AddMoreMembers: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
-                                coordinator.navigateInBottomSheet(.generateAvatar)
+                                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if trimmed.isEmpty {
+                                    // Show error if textfield is empty
+                                    showError = true
+                                } else {
+                                    // Proceed to generate avatar
+                                    coordinator.navigateInBottomSheet(.generateAvatar)
+                                }
                             } label: {
                                 ZStack {
                                     Circle()

@@ -78,7 +78,7 @@ struct WhatsYourName: View {
                         }
                     
                     if showError {
-                        Text("Please enter your name")
+                        Text("Enter a name.")
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -96,7 +96,11 @@ struct WhatsYourName: View {
                         HStack(spacing: 24) {
                             Button {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if !trimmed.isEmpty {
+                                if trimmed.isEmpty {
+                                    // Show error if textfield is empty
+                                    showError = true
+                                } else {
+                                    // Proceed to generate avatar
                                     memojiStore.displayName = trimmed
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }
@@ -114,8 +118,6 @@ struct WhatsYourName: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
                             
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {
