@@ -113,20 +113,20 @@ struct DietaryPreferencesSheetContent: View {
                 let members = familyStore.family.map { [$0.selfMember] + $0.otherMembers } ?? []
                 if members.isEmpty {
                     // Fallback visuals while family data is loading
-                    HStack(spacing: -8) {
-                        Image(.imageBg1)
-                            .resizable()
-                            .frame(width: 36, height: 36)
-                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                        Image(.imageBg2)
-                            .resizable()
-                            .frame(width: 36, height: 36)
-                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                        Image(.imageBg3)
-                            .resizable()
-                            .frame(width: 36, height: 36)
-                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-                    }
+//                    HStack(spacing: -8) {
+//                        Image(.imageBg1)
+//                            .resizable()
+//                            .frame(width: 36, height: 36)
+//                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+//                        Image(.imageBg2)
+//                            .resizable()
+//                            .frame(width: 36, height: 36)
+//                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+//                        Image(.imageBg3)
+//                            .resizable()
+//                            .frame(width: 36, height: 36)
+//                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
+//                    }
                 } else {
                     HStack(spacing: -8) {
                         ForEach(members, id: \.id) { member in

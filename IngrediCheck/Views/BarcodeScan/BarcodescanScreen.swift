@@ -368,8 +368,8 @@ struct CameraScreen: View {
                     ScrollViewReader { proxy in
                         // Always use the same layout; when there are no codes yet,
                         // show a single placeholder card with an empty code.
-                        let displayCodes = codes.isEmpty ? [""] : codes
                         let screenCenterX = UIScreen.main.bounds.width / 2
+                        let displayCodes = codes.isEmpty ? [""] : codes
                         let maxDistance: CGFloat = 220        // distance after which we clamp to minimum scale
                         let minScale: CGFloat = 97.0 / 120.0  // off-center cards should be about 97pt tall
                         

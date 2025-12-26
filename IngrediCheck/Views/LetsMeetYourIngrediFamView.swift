@@ -314,26 +314,58 @@ struct LetsMeetYourIngrediFamView: View {
             }
             .navigationBarBackButtonHidden(true)
         }
-//        ZStack {
-//            VStack {
-//                RoundedRectangle(cornerRadius: 24)
-//                    .foregroundStyle(.white)
-//                    .frame(width: UIScreen.main.bounds.width * 0.9)
-//                    .shadow(color: .gray.opacity(0.5), radius: 9, x: 0, y: 0)
-//            }
-//            
-//            VStack {
-//                Spacer()
-//                Text("Let's meet your IngrediFam")
-//                
-//                Spacer()
-//                Spacer()
-//                Spacer()
-//            }
-//        }
+    }
+}
+
+/// Helper view for Onboarding avatars that supports both local assets and remote hashes.
+fileprivate struct OnboardingSmartAvatarView: View {
+    let imageName: String
+    
+    @Environment(WebService.self) private var webService
+    @State private var remoteImage: UIImage? = nil
+    
+    var body: some View {
+        ZStack {
+            if let local = UIImage(named: imageName) {
+                Image(uiImage: local)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 42, height: 42)
+                    .clipShape(Circle())
+            } else if let remote = remoteImage {
+                Image(uiImage: remote)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 42, height: 42)
+                    .clipShape(Circle())
+            } else {
+                // Loading / Placeholder
+                Circle()
+                    .fill(Color.grayScale20)
+                    .frame(width: 42, height: 42)
+                    .overlay(ProgressView().scaleEffect(0.5))
+                    .task {
+                        await loadRemote()
+                    }
+            }
+        }
+    }
+    
+    @MainActor
+    private func loadRemote() async {
+        do {
+            let uiImage = try await webService.fetchImage(
+                imageLocation: .imageFileHash(imageName),
+                imageSize: .small
+            )
+            self.remoteImage = uiImage
+        } catch {
+            print("Failed to load onboarding avatar: \(error)")
+        }
     }
 }
 
 #Preview {
     LetsMeetYourIngrediFamView()
 }
+

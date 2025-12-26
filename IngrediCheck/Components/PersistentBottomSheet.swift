@@ -308,8 +308,22 @@ struct PersistentBottomSheet: View {
             
         case .wouldYouLikeToInvite(let memberId, let name):
             WouldYouLikeToInvite(name: name) {
-                // Invite button pressed - TODO: Implement invite functionality
-                coordinator.navigateInBottomSheet(.homeDefault)
+                // Invite button pressed - mark member as pending so the UI reflects it
+                familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+                
+                // If this is a real family (not just pending onboarding members), call the invite API
+                if familyStore.family != nil {
+                    Task {
+                        _ = await familyStore.invite(memberId: memberId)
+                    }
+                }
+                
+                // Return to previous screen or home depending on where we are
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             } continuePressed: {
                 // Maybe later -> mark member as pending and go back to minimal add members screen
                 familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
