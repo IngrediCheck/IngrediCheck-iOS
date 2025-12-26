@@ -41,10 +41,13 @@ struct LetsMeetYourIngrediFamView: View {
             ZStack(alignment: .bottomTrailing) {
                 // Display the composited image directly (it already has background color baked in)
                 // Or show fallback with background circle if no image
-                if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
+                if let img = avatarImage,
+                   img.cgImage != nil,
+                   img.size.width > 0 && img.size.height > 0,
+                   img.size.width.isFinite && img.size.height.isFinite {
                     // Show composited memoji avatar - fills the entire circle with white stroke
                     // Use mask to ensure perfect circular clipping with no artifacts
-                    Image(uiImage: avatarImage)
+                    Image(uiImage: img)
                         .resizable()
                         .scaledToFill()
                         .frame(width: 48, height: 48)
@@ -96,6 +99,7 @@ struct LetsMeetYourIngrediFamView: View {
             
             // Skip if already loaded for this hash
             if loadedHash == hash, let existingImage = avatarImage, 
+               existingImage.cgImage != nil,
                existingImage.size.width > 0 && existingImage.size.height > 0 {
                 return
             }
@@ -105,6 +109,7 @@ struct LetsMeetYourIngrediFamView: View {
             if hash.count < 20 && hash.contains("-") {
                 // Likely an asset name - try loading from assets
                 if let assetImage = UIImage(named: hash),
+                   assetImage.cgImage != nil,
                    assetImage.size.width > 0 && assetImage.size.height > 0 {
                     avatarImage = assetImage
                     loadedHash = hash
@@ -119,9 +124,11 @@ struct LetsMeetYourIngrediFamView: View {
                     imageLocation: .imageFileHash(hash),
                     imageSize: .small
                 )
-                // Validate the loaded image before assigning
-                guard uiImage.size.width > 0 && uiImage.size.height > 0 else {
-                    print("[LetsMeetYourIngrediFamView] ⚠️ Loaded image has invalid size, skipping")
+                // Validate the loaded image before assigning - check CGImage exists and size is valid
+                guard uiImage.cgImage != nil,
+                      uiImage.size.width > 0 && uiImage.size.height > 0,
+                      uiImage.size.width.isFinite && uiImage.size.height.isFinite else {
+                    print("[LetsMeetYourIngrediFamView] ⚠️ Loaded image has invalid size or no CGImage, skipping")
                     avatarImage = nil
                     loadedHash = nil
                     return

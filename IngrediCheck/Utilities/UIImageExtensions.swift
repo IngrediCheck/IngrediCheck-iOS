@@ -12,15 +12,26 @@ extension UIImage {
     /// - Parameter backgroundColorHex: Hex color string (with or without # prefix)
     /// - Returns: A new UIImage with the background color composited behind the image
     func compositedWithBackground(backgroundColorHex: String) -> UIImage? {
-        // Safety check: ensure image has valid dimensions
+        // Safety check: ensure image has valid dimensions and is not deallocated
+        guard let cgImage = self.cgImage else {
+            print("[UIImageExtensions] compositedWithBackground: Image has no CGImage, returning original")
+            return self
+        }
+        
         let originalSize = self.size
-        guard originalSize.width > 0 && originalSize.height > 0 else {
+        guard originalSize.width > 0 && originalSize.height > 0,
+              originalSize.width.isFinite && originalSize.height.isFinite else {
             print("[UIImageExtensions] compositedWithBackground: Invalid image size (\(originalSize.width)x\(originalSize.height)), returning original image")
             return self
         }
         
         // Ensure we work with a square image (use the larger dimension)
         let maxDimension = max(originalSize.width, originalSize.height)
+        guard maxDimension.isFinite && maxDimension > 0 else {
+            print("[UIImageExtensions] compositedWithBackground: Invalid maxDimension, returning original")
+            return self
+        }
+        
         let size = CGSize(width: maxDimension, height: maxDimension)
         let scale = self.scale
         
@@ -92,12 +103,19 @@ extension UIImage {
         
         // Draw the image scaled to fill the entire canvas - no border visible
         // Use safe drawing with bounds checking
-        guard imageRect.width > 0 && imageRect.height > 0 else {
-            print("[UIImageExtensions] compositedWithBackground: Invalid image rect, returning original")
+        guard imageRect.width > 0 && imageRect.height > 0,
+              imageRect.width.isFinite && imageRect.height.isFinite,
+              imageRect.origin.x.isFinite && imageRect.origin.y.isFinite,
+              imageRect.maxX <= size.width && imageRect.maxY <= size.height,
+              imageRect.origin.x >= 0 && imageRect.origin.y >= 0 else {
+            print("[UIImageExtensions] compositedWithBackground: Invalid image rect (\(imageRect)), returning original")
             return self
         }
         
-        self.draw(in: imageRect, blendMode: .normal, alpha: 1.0)
+        // Use the CGImage directly for safer drawing
+        // UIImage(cgImage:scale:orientation:) is not failable, so we can use it directly
+        let imageToDraw = UIImage(cgImage: cgImage, scale: scale, orientation: self.imageOrientation)
+        imageToDraw.draw(in: imageRect, blendMode: .normal, alpha: 1.0)
         
         print("[UIImageExtensions] compositedWithBackground: ✅ Composited image with background color \(backgroundColorHex), size=\(size.width)x\(size.height)")
         
