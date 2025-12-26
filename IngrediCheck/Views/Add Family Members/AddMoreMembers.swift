@@ -96,6 +96,8 @@ struct AddMoreMembers: View {
                                     // Show error if textfield is empty
                                     showError = true
                                 } else {
+                                    // Set display name before navigating
+                                    memojiStore.displayName = trimmed
                                     // Proceed to generate avatar
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }

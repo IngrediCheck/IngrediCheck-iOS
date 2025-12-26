@@ -164,6 +164,8 @@ struct IngrediFamCanvasView: View {
 
 struct GenerateAvatar: View {
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
     
     @State var toolIcons: [String] = [
         "family-member",
@@ -492,7 +494,25 @@ struct GenerateAvatar: View {
                         VStack(spacing: 40) {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
+                                    // Back button on leading side
+                                    Button {
+                                        // Navigate back based on context
+                                        if !familyStore.pendingOtherMembers.isEmpty {
+                                            coordinator.navigateInBottomSheet(.addMoreMembers)
+                                        } else {
+                                            coordinator.navigateInBottomSheet(.whatsYourName)
+                                        }
+                                    } label: {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundStyle(.black)
+                                            .frame(width: 24, height: 24)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    
+                                    // Text with user's name
+                                    Text("Generate Avatar For : " + (memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
