@@ -10,6 +10,7 @@ struct MemojiRequest: Encodable {
     let size: String
     let model: String
     let subscriptionTier: String
+    let mood: String // Random funny and happy string for emoji generation
 }
 
 struct MemojiResponse: Decodable {
@@ -47,6 +48,28 @@ struct MemojiSelection {
         MemojiSelection.colorHexMap[colorThemeIcon ?? ""]
     }
     
+    // Generate a random funny and happy string for emoji generation
+    private static func generateFunnyHappyMood() -> String {
+        let funnyHappyStrings = [
+            "funny and enjoying life with a big smile",
+            "extremely happy and having a great time",
+            "laughing and full of joy",
+            "cheerful and playful with lots of energy",
+            "super happy and excited about everything",
+            "grinning widely and having fun",
+            "joyful and carefree with a bright smile",
+            "hilariously happy and full of laughter",
+            "ecstatically happy and enjoying every moment",
+            "beaming with happiness and having a blast",
+            "radiating joy and positive energy",
+            "laughing out loud and having the best time",
+            "overflowing with happiness and cheer",
+            "delightfully happy and full of life",
+            "bursting with joy and excitement"
+        ]
+        return funnyHappyStrings.randomElement() ?? "funny and enjoying life with a big smile"
+    }
+    
     func toMemojiRequest() -> MemojiRequest {
         MemojiRequest(
             familyType: familyType,
@@ -57,7 +80,8 @@ struct MemojiSelection {
             background: "transparent", // user color applied in UI
             size: "1024x1024",
             model: "gpt-image-1",
-            subscriptionTier: "monthly_basic"
+            subscriptionTier: "monthly_basic",
+            mood: MemojiSelection.generateFunnyHappyMood()
         )
     }
     
