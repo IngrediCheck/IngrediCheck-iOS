@@ -175,8 +175,8 @@ struct GenerateAvatar: View {
     ]
     
     @State var familyMember: [UserModel] = [
-        UserModel(familyMemberName: "young-son", familyMemberImage: "baby-boy", backgroundColor: Color(hex: "FFD9B5")), // Baby Boy - Age (0-4)
-        UserModel(familyMemberName: "young-daughter", familyMemberImage: "baby-girl", backgroundColor: Color(hex: "F9C6D0")), // Baby Girl - Age (0-4)
+        UserModel(familyMemberName: "baby-boy", familyMemberImage: "baby-boy", backgroundColor: Color(hex: "FFD9B5")), // Baby Boy - Age (0-4)
+        UserModel(familyMemberName: "baby-girl", familyMemberImage: "baby-girl", backgroundColor: Color(hex: "F9C6D0")), // Baby Girl - Age (0-4)
         UserModel(familyMemberName: "young-girl", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "B8E6FF")), // Young Girl - Age (4-25)
         UserModel(familyMemberName: "young-boy", familyMemberImage: "Young-Son", backgroundColor: Color(hex: "FFF6B3")), // Young Boy - Age (4-25)
         UserModel(familyMemberName: "mother", familyMemberImage: "image 2", backgroundColor: Color(hex: "E6D5F5")), // Adult Woman - Age (25-50)
@@ -185,25 +185,24 @@ struct GenerateAvatar: View {
         UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     
-    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5"))
+    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "baby-boy", familyMemberImage: "baby-boy", backgroundColor: Color(hex: "FFD9B5"))
     @State var familyIdx: Int = 0
     
     // Restore state from memojiStore when view appears
     private func restoreState() {
         // Restore selected family member
-        if let existingMember = familyMember.first(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+        if !memojiStore.selectedFamilyMemberName.isEmpty,
+           let existingMember = familyMember.first(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
             selectedFamilyMember = existingMember
             if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
                 familyIdx = idx
             } else {
                 familyIdx = 0
+                selectedFamilyMember = familyMember[0] // Ensure valid selection
             }
         } else {
-            // Fallback: create from memojiStore data
-            selectedFamilyMember = UserModel(
-                familyMemberName: memojiStore.selectedFamilyMemberName,
-                familyMemberImage: memojiStore.selectedFamilyMemberImage
-            )
+            // Fallback: use first family member as default
+            selectedFamilyMember = familyMember[0]
             familyIdx = 0
         }
         
@@ -377,8 +376,16 @@ struct GenerateAvatar: View {
         let accessory = selectedAccessoriesIcon ?? tools[3].tools.first?.icon
         let colorTheme = selectedColorThemeIcon ?? tools[4].tools.first?.icon
         
+        // Ensure we always have a valid family member selected
+        let validFamilyMember = familyMember.contains(where: { $0.name == selectedFamilyMember.name }) 
+            ? selectedFamilyMember 
+            : familyMember[0]
+        
+        // Format: "baby-boy age (0 to 4)"
+        let familyTypeWithAge = "\(validFamilyMember.name.lowercased()) \(getAgeRangeForAPI(for: validFamilyMember.name))"
+        
         return MemojiSelection(
-            familyType: selectedFamilyMember.name.lowercased(),
+            familyType: familyTypeWithAge,
             gesture: gesture,
             hair: hair,
             skinTone: skinTone,
@@ -590,11 +597,8 @@ struct GenerateAvatar: View {
                                         }
                                     }
                                     .padding(.top, 9)
-                                    Divider()
-                                        .foregroundStyle(Color.grayScale60)
-//                                    .padding (.bottom, 22)
                                     
-                                  
+                                    Divider()
                                 }
                                 
                                 VStack {
@@ -660,6 +664,11 @@ struct GenerateAvatar: View {
             .animation(.easeInOut, value: isExpandedMinimal)
             .onAppear {
                 restoreState()
+                // Ensure we always have a valid family member selected
+                if !familyMember.contains(where: { $0.name == selectedFamilyMember.name }) {
+                    selectedFamilyMember = familyMember[0]
+                    familyIdx = 0
+                }
             }
             .onChange(of: selectedTool) { _, _ in
                 saveState()
@@ -741,10 +750,10 @@ struct GenerateAvatar: View {
         .padding(.horizontal, 20)
     }
     
-    // Helper function to get age range for family member
+    // Helper function to get age range for family member (for UI display)
     private func getAgeRange(for memberName: String) -> String {
         switch memberName.lowercased() {
-        case "young-son", "young-daughter":
+        case "baby-boy", "baby-girl":
             return "Age (0-4)"
         case "young-girl", "young-boy":
             return "Age (4-25)"
@@ -757,10 +766,26 @@ struct GenerateAvatar: View {
         }
     }
     
+    // Helper function to get age range for API (format: "age (0 to 4)")
+    private func getAgeRangeForAPI(for memberName: String) -> String {
+        switch memberName.lowercased() {
+        case "baby-boy", "baby-girl":
+            return "age (0 to 4)"
+        case "young-girl", "young-boy":
+            return "age (4 to 25)"
+        case "father", "mother":
+            return "age (25 to 50)"
+        case "grandfather", "grandmother":
+            return "age (50+)"
+        default:
+            return "age (4 to 25)"
+        }
+    }
+    
     @ViewBuilder
     func minimalFamilySelector() -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 ForEach(familyMember) { member in
                     let isSelected = selectedFamilyMember.name == member.name
                     
@@ -770,21 +795,12 @@ struct GenerateAvatar: View {
                             familyIdx = idx
                         }
                     } label: {
-                        VStack(spacing: 6) {
+                        VStack(spacing: 8) {
                             // Avatar with green border when selected
-                        
-                            
-                          
                             ZStack {
                                 // Background circle with color
-                                RoundedRectangle(cornerRadius: 12)
-                                                                  .stroke(
-                                                                      isSelected ? Color(hex: "#91B640") : .grayScale40,
-                                                                      lineWidth: isSelected ? 1 : 0.5
-                                                                  )
-                                                                  .frame(width: 64, height: 64)
                                 Circle()
-                                    .fill( Color(hex: "#F9F9F9"))
+                                    .fill(Color(hex: "#F9F9F9"))
                                     .frame(width: 52, height: 52)
                                 
                                 // Avatar image
@@ -794,13 +810,19 @@ struct GenerateAvatar: View {
                                     .frame(width: 43.34, height: 43.34)
                                     .clipShape(Circle())
                                 
-                               
+                                
+                                RoundedRectangle(cornerRadius: 12)
+                                                                   .stroke(
+                                                                       isSelected ? Color(hex: "#91B640") : .grayScale40,
+                                                                       lineWidth: isSelected ? 1 : 0.5
+                                                                   )
+                                                                   .frame(width: 70, height: 70)
                             }
                             
                             // Age range label
                             Text(getAgeRange(for: member.name))
                                 .font(ManropeFont.medium.size(12))
-                                .foregroundStyle(.grayScale110 )
+                                .foregroundStyle( .grayScale40)
                         }
                     }
                     .buttonStyle(.plain)
