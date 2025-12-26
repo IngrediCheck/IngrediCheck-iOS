@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @Observable
 @MainActor
@@ -82,11 +83,33 @@ final class FamilyStore {
     }
     
     /// Set or update the avatar image for the pending self member.
+    /// This method accepts an asset name string (for backward compatibility).
+    /// For immediate upload, use setPendingSelfMemberAvatar(image:webService:) instead.
     func setPendingSelfMemberAvatar(imageName: String?) {
         guard let imageName else { return }
         guard var member = pendingSelfMember else { return }
         member.imageFileHash = imageName
         pendingSelfMember = member
+    }
+    
+    /// Upload and set the avatar image for the pending self member immediately.
+    /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
+    func setPendingSelfMemberAvatar(image: UIImage, webService: WebService) async {
+        guard var member = pendingSelfMember else {
+            print("[FamilyStore] setPendingSelfMemberAvatar: No pending self member, skipping upload")
+            return
+        }
+        
+        do {
+            print("[FamilyStore] setPendingSelfMemberAvatar: Uploading avatar image for \(member.name)")
+            let imageFileHash = try await webService.uploadImage(image: image)
+            print("[FamilyStore] setPendingSelfMemberAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+            member.imageFileHash = imageFileHash
+            pendingSelfMember = member
+        } catch {
+            print("[FamilyStore] setPendingSelfMemberAvatar: ❌ Failed to upload avatar: \(error.localizedDescription)")
+            // Don't set imageFileHash if upload fails - user can retry later
+        }
     }
     
     /// Update the name for the pending self member.
@@ -118,12 +141,38 @@ final class FamilyStore {
         pendingOtherMembers.append(member)
     }
     
+    /// Set avatar for the last pending other member.
+    /// This method accepts an asset name string (for backward compatibility).
+    /// For immediate upload, use setAvatarForLastPendingOtherMember(image:webService:) instead.
     func setAvatarForLastPendingOtherMember(imageName: String?) {
         guard let imageName else { return }
         guard !pendingOtherMembers.isEmpty else { return }
         var last = pendingOtherMembers.removeLast()
         last.imageFileHash = imageName
         pendingOtherMembers.append(last)
+    }
+    
+    /// Upload and set the avatar image for the last pending other member immediately.
+    /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
+    func setAvatarForLastPendingOtherMember(image: UIImage, webService: WebService) async {
+        guard !pendingOtherMembers.isEmpty else {
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: No pending other members, skipping upload")
+            return
+        }
+        
+        var last = pendingOtherMembers.removeLast()
+        
+        do {
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: Uploading avatar image for \(last.name)")
+            let imageFileHash = try await webService.uploadImage(image: image)
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+            last.imageFileHash = imageFileHash
+            pendingOtherMembers.append(last)
+        } catch {
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
+            // Restore member without imageFileHash if upload fails
+            pendingOtherMembers.append(last)
+        }
     }
     
     func updatePendingOtherMemberName(id: UUID, name: String) {
@@ -134,10 +183,34 @@ final class FamilyStore {
         }
     }
     
+    /// Set avatar for a specific pending other member.
+    /// This method accepts an asset name string (for backward compatibility).
+    /// For immediate upload, use setAvatarForPendingOtherMember(id:image:webService:) instead.
     func setAvatarForPendingOtherMember(id: UUID, imageName: String?) {
         guard let imageName else { return }
         if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
             pendingOtherMembers[idx].imageFileHash = imageName
+        }
+    }
+    
+    /// Upload and set the avatar image for a specific pending other member immediately.
+    /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
+    func setAvatarForPendingOtherMember(id: UUID, image: UIImage, webService: WebService) async {
+        guard let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) else {
+            print("[FamilyStore] setAvatarForPendingOtherMember: Member not found for id=\(id), skipping upload")
+            return
+        }
+        
+        let memberName = pendingOtherMembers[idx].name
+        
+        do {
+            print("[FamilyStore] setAvatarForPendingOtherMember: Uploading avatar image for \(memberName)")
+            let imageFileHash = try await webService.uploadImage(image: image)
+            print("[FamilyStore] setAvatarForPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+            pendingOtherMembers[idx].imageFileHash = imageFileHash
+        } catch {
+            print("[FamilyStore] setAvatarForPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
+            // Don't set imageFileHash if upload fails - user can retry later
         }
     }
     

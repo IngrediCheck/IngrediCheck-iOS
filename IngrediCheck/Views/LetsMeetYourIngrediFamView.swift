@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct LetsMeetYourIngrediFamView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
     private var shouldShowWelcomeFamily: Bool {
         switch coordinator.currentBottomSheetRoute {
@@ -24,6 +26,94 @@ struct LetsMeetYourIngrediFamView: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmed.first else { return "" }
         return String(first).uppercased()
+    }
+    
+    // Helper view to display member avatar that handles both asset names and Supabase hashes
+    struct MemberAvatarView: View {
+        @Environment(WebService.self) private var webService
+        let member: FamilyMember
+        let initial: (String) -> String
+        
+        @State private var avatarImage: UIImage? = nil
+        @State private var loadedHash: String? = nil
+        
+        var body: some View {
+            ZStack(alignment: .bottomTrailing) {
+                if let avatarImage {
+                    ZStack {
+                        Circle()
+                            .stroke(.grayScale40, lineWidth: 2)
+                            .frame(width: 48, height: 48)
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 42, height: 42)
+                            .clipShape(Circle())
+                    }
+                } else {
+                    ZStack {
+                        Circle()
+                            .fill(Color(hex: member.color))
+                            .frame(width: 42, height: 42)
+                        Text(initial(member.name))
+                            .font(NunitoFont.semiBold.size(18))
+                            .foregroundStyle(.white)
+                    }
+                }
+                Circle()
+                    .fill(.grayScale40)
+                    .frame(width: 16, height: 16)
+                    .overlay(
+                        Image("pen-line")
+                            .frame(width: 7.43, height: 7.43)
+                    )
+                    .offset(x: -4, y: 4)
+            }
+            .task(id: member.imageFileHash) {
+                await loadAvatarIfNeeded()
+            }
+        }
+        
+        @MainActor
+        private func loadAvatarIfNeeded() async {
+            guard let hash = member.imageFileHash, !hash.isEmpty else {
+                avatarImage = nil
+                loadedHash = nil
+                return
+            }
+            
+            // Skip if already loaded for this hash
+            if loadedHash == hash, avatarImage != nil {
+                return
+            }
+            
+            // Check if hash looks like an asset name (short, contains dashes) vs uploaded hash (long hex string)
+            // Asset names are typically short like "image-bg1", hashes are 64-char hex strings
+            if hash.count < 20 && hash.contains("-") {
+                // Likely an asset name - try loading from assets
+                if let assetImage = UIImage(named: hash) {
+                    avatarImage = assetImage
+                    loadedHash = hash
+                    return
+                }
+            }
+            
+            // Otherwise, fetch from Supabase
+            print("[LetsMeetYourIngrediFamView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+            do {
+                let uiImage = try await webService.fetchImage(
+                    imageLocation: .imageFileHash(hash),
+                    imageSize: .small
+                )
+                avatarImage = uiImage
+                loadedHash = hash
+                print("[LetsMeetYourIngrediFamView] ✅ Loaded avatar for \(member.name)")
+            } catch {
+                print("[LetsMeetYourIngrediFamView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+                avatarImage = nil
+                loadedHash = nil
+            }
+        }
     }
     
     var body: some View {
@@ -58,38 +148,7 @@ struct LetsMeetYourIngrediFamView: View {
                     .padding(.top, 32)
 
                 HStack(spacing: 12) {
-                    ZStack(alignment: .bottomTrailing) {
-                        if let imageName = me.imageFileHash {
-                            ZStack{
-                                Circle()
-                                    .stroke(.grayScale40, lineWidth: 2)
-                                .frame(width: 48, height: 48)
-                                Image(imageName)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 42, height: 42)
-                                    .clipShape(Circle())
-                            }
-                        } else {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(hex: me.color))
-                                    .frame(width: 42, height: 42 )
-                                Text(initial(from: me.name))
-                                    .font(NunitoFont.semiBold.size(18))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        Circle()
-                            .fill(.grayScale40)
-                            .frame(width: 16, height: 16)
-//                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                            .overlay(
-                                Image( "pen-line")
-                                    .frame(width: 7.43, height:7.43)
-                            )
-                            .offset(x: -4, y: 4)
-                    }
+                    MemberAvatarView(member: me, initial: initial(from:))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(me.name)
@@ -131,37 +190,7 @@ struct LetsMeetYourIngrediFamView: View {
                 VStack(spacing: 12) {
                     ForEach(familyStore.pendingOtherMembers) { member in
                         HStack(spacing: 12) {
-                            ZStack(alignment: .bottomTrailing) {
-                                if let imageName = member.imageFileHash {
-                                    ZStack{
-                                        Circle()
-                                            .stroke(.grayScale40, lineWidth: 2)
-                                            .frame(width: 48, height: 48)
-                                        Image(imageName)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 42, height: 42)
-                                            .clipShape(Circle())
-                                    }
-                                } else {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color(hex: member.color))
-                                            .frame(width: 42, height: 42 )
-                                        Text(initial(from: member.name))
-                                            .font(NunitoFont.semiBold.size(18))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                Circle()
-                                    .fill(.grayScale40)
-                                    .frame(width: 16, height: 16)
-                                    .overlay(
-                                        Image("pen-line")
-                                            .frame(width: 7.43, height:7.43)
-                                    )
-                                    .offset(x: -4, y: 4)
-                            }
+                            MemberAvatarView(member: member, initial: initial(from:))
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(member.name)

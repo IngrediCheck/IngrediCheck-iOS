@@ -11,6 +11,7 @@ struct WhatsYourName: View {
     
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
@@ -155,10 +156,7 @@ struct WhatsYourName: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    print("[WhatsYourName] Continue tapped with name=\(trimmed)")
-                    familyStore.setPendingSelfMember(name: trimmed)
-                    familyStore.setPendingSelfMemberAvatar(imageName: selectedFamilyMember?.image)
-                    continuePressed()
+                    handleContinue(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Continue")
@@ -175,5 +173,31 @@ struct WhatsYourName: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+    }
+    
+    private func handleContinue(trimmed: String) {
+        print("[WhatsYourName] Continue tapped with name=\(trimmed)")
+        familyStore.setPendingSelfMember(name: trimmed)
+        
+        // Handle avatar assignment - upload in background without blocking UI
+        // Priority: selected predefined avatar > custom avatar from memojiStore
+        if let selectedImageName = selectedFamilyMember?.image,
+           let assetImage = UIImage(named: selectedImageName) {
+            // Predefined avatar selected - upload it in background
+            Task {
+                await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
+            }
+        } else if let customImage = memojiStore.image {
+            // Custom avatar from memojiStore - upload it in background
+            Task {
+                await familyStore.setPendingSelfMemberAvatar(image: customImage, webService: webService)
+            }
+        } else if let selectedImageName = selectedFamilyMember?.image {
+            // Fallback to old method if image can't be loaded
+            familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
+        }
+        
+        // Call continuePressed immediately so sheet closes
+        continuePressed()
     }
 }

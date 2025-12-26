@@ -9,6 +9,8 @@ import SwiftUI
 
 struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
@@ -143,13 +145,7 @@ struct AddMoreMembers: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
-                    familyStore.addPendingOtherMember(name: trimmed)
-                    familyStore.setAvatarForLastPendingOtherMember(imageName: selectedFamilyMember?.image)
-                    let memberName = trimmed
-                    name = ""
-                    showError = false
-                    continuePressed(memberName)
+                    handleAddMember(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Add Member")
@@ -166,5 +162,34 @@ struct AddMoreMembers: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+    }
+    
+    private func handleAddMember(trimmed: String) {
+        print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
+        familyStore.addPendingOtherMember(name: trimmed)
+        
+        // Handle avatar assignment - upload in background without blocking UI
+        // Priority: selected predefined avatar > custom avatar from memojiStore
+        if let selectedImageName = selectedFamilyMember?.image,
+           let assetImage = UIImage(named: selectedImageName) {
+            // Predefined avatar selected - upload it in background
+            Task {
+                await familyStore.setAvatarForLastPendingOtherMember(image: assetImage, webService: webService)
+            }
+        } else if let customImage = memojiStore.image {
+            // Custom avatar from memojiStore - upload it in background
+            Task {
+                await familyStore.setAvatarForLastPendingOtherMember(image: customImage, webService: webService)
+            }
+        } else if let selectedImageName = selectedFamilyMember?.image {
+            // Fallback to old method if image can't be loaded
+            familyStore.setAvatarForLastPendingOtherMember(imageName: selectedImageName)
+        }
+        
+        let memberName = trimmed
+        name = ""
+        showError = false
+        // Call continuePressed immediately so sheet closes
+        continuePressed(memberName)
     }
 }
