@@ -1,5 +1,5 @@
 
-}//
+//
 //  HomeView.swift
 //  IngrediCheckPreview
 //
@@ -47,7 +47,7 @@ struct HomeView: View {
         return [family.selfMember] + family.otherMembers
     }
 
- 014758-69   private var primaryMemberName: String {
+ private var primaryMemberName: String {
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
 
