@@ -94,7 +94,12 @@ final class FamilyStore {
     
     /// Upload and set the avatar image for the pending self member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
-    func setPendingSelfMemberAvatar(image: UIImage, webService: WebService) async {
+    /// The image is composited with the background color before uploading.
+    /// - Parameters:
+    ///   - image: The image to upload
+    ///   - webService: WebService instance for uploading
+    ///   - backgroundColorHex: Optional background color hex. If nil, uses member.color
+    func setPendingSelfMemberAvatar(image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         guard var member = pendingSelfMember else {
             print("[FamilyStore] setPendingSelfMemberAvatar: No pending self member, skipping upload")
             return
@@ -102,7 +107,11 @@ final class FamilyStore {
         
         do {
             print("[FamilyStore] setPendingSelfMemberAvatar: Uploading avatar image for \(member.name)")
-            let imageFileHash = try await webService.uploadImage(image: image)
+            // Use provided background color or fall back to member.color
+            let bgColor = backgroundColorHex ?? member.color
+            // Composite image with background color before uploading
+            let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
+            let imageFileHash = try await webService.uploadImage(image: compositedImage)
             print("[FamilyStore] setPendingSelfMemberAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             member.imageFileHash = imageFileHash
             pendingSelfMember = member
@@ -154,7 +163,12 @@ final class FamilyStore {
     
     /// Upload and set the avatar image for the last pending other member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
-    func setAvatarForLastPendingOtherMember(image: UIImage, webService: WebService) async {
+    /// The image is composited with the background color before uploading.
+    /// - Parameters:
+    ///   - image: The image to upload
+    ///   - webService: WebService instance for uploading
+    ///   - backgroundColorHex: Optional background color hex. If nil, uses member.color
+    func setAvatarForLastPendingOtherMember(image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         guard !pendingOtherMembers.isEmpty else {
             print("[FamilyStore] setAvatarForLastPendingOtherMember: No pending other members, skipping upload")
             return
@@ -164,7 +178,11 @@ final class FamilyStore {
         
         do {
             print("[FamilyStore] setAvatarForLastPendingOtherMember: Uploading avatar image for \(last.name)")
-            let imageFileHash = try await webService.uploadImage(image: image)
+            // Use provided background color or fall back to member.color
+            let bgColor = backgroundColorHex ?? last.color
+            // Composite image with background color before uploading
+            let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
+            let imageFileHash = try await webService.uploadImage(image: compositedImage)
             print("[FamilyStore] setAvatarForLastPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             last.imageFileHash = imageFileHash
             pendingOtherMembers.append(last)
@@ -195,17 +213,26 @@ final class FamilyStore {
     
     /// Upload and set the avatar image for a specific pending other member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
-    func setAvatarForPendingOtherMember(id: UUID, image: UIImage, webService: WebService) async {
+    /// The image is composited with the background color before uploading.
+    /// - Parameters:
+    ///   - id: Member ID
+    ///   - image: The image to upload
+    ///   - webService: WebService instance for uploading
+    ///   - backgroundColorHex: Optional background color hex. If nil, uses member.color
+    func setAvatarForPendingOtherMember(id: UUID, image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         guard let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) else {
             print("[FamilyStore] setAvatarForPendingOtherMember: Member not found for id=\(id), skipping upload")
             return
         }
         
         let memberName = pendingOtherMembers[idx].name
+        let memberColor = backgroundColorHex ?? pendingOtherMembers[idx].color
         
         do {
             print("[FamilyStore] setAvatarForPendingOtherMember: Uploading avatar image for \(memberName)")
-            let imageFileHash = try await webService.uploadImage(image: image)
+            // Composite image with background color before uploading
+            let compositedImage = image.compositedWithBackground(backgroundColorHex: memberColor) ?? image
+            let imageFileHash = try await webService.uploadImage(image: compositedImage)
             print("[FamilyStore] setAvatarForPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             pendingOtherMembers[idx].imageFileHash = imageFileHash
         } catch {

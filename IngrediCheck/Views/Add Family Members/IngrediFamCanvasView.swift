@@ -834,7 +834,9 @@ struct MeetYourAvatar: View {
     @State private var showConfetti = false
     
     var body: some View {
-        let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
+        // Safely parse background color with fallback
+        let safeHex = backgroundColorHex?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "F2F2F2"
+        let circleColor = Color(hex: safeHex.isEmpty ? "F2F2F2" : safeHex)
         
         VStack(spacing: 20) {
             // Avatar placeholder
@@ -842,7 +844,7 @@ struct MeetYourAvatar: View {
                 .fill(circleColor)
                 .frame(width: 137, height: 137)
                 .overlay {
-                    if let image {
+                    if let image = image, image.size.width > 0 && image.size.height > 0 {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFill()

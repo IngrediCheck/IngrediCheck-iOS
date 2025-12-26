@@ -90,6 +90,7 @@
 		D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC982ED98EA10088E044 /* Temp4.swift */; };
 		D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC912ED98EA10088E044 /* CustomSheet.swift */; };
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
+		D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
@@ -173,6 +174,7 @@
 		D3BECC912ED98EA10088E044 /* CustomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSheet.swift; sourceTree = "<group>"; };
 		D3BECC922ED98EA10088E044 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		D3BECC932ED98EA10088E044 /* HexColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexColorExtension.swift; sourceTree = "<group>"; };
+		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
 		D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManropeFontEnum.swift; sourceTree = "<group>"; };
 		D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NunitoFontEnum.swift; sourceTree = "<group>"; };
 		D3BECC962ED98EA10088E044 /* Temp2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp2.swift; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 				D3BECC912ED98EA10088E044 /* CustomSheet.swift */,
 				D3BECC922ED98EA10088E044 /* FlowLayout.swift */,
 				D3BECC932ED98EA10088E044 /* HexColorExtension.swift */,
+				D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */,
 				D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */,
 				D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */,
 				D3BECC962ED98EA10088E044 /* Temp2.swift */,
@@ -549,6 +552,7 @@
 				D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */,
 				D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */,
 				D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */,
+				D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */,
 				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */,

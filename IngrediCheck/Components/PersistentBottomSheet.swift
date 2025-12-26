@@ -493,11 +493,7 @@ private func handleAssignAvatar(
     print("[PersistentBottomSheet] handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
     
     do {
-        // 1. Upload the avatar image to Supabase and get an imageFileHash
-        let imageFileHash = try await webService.uploadImage(image: image)
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
-        
-        // 2. Find the matching FamilyMember and update its imageFileHash
+        // 1. Get the member first to access their color for compositing
         guard let family = familyStore.family else {
             print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No family loaded, cannot update member")
             return
@@ -508,6 +504,18 @@ private func handleAssignAvatar(
             print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member not found in current family for id=\(targetMemberId)")
             return
         }
+        
+        // 2. Composite the image with background color before uploading
+        // Use memoji background color if available, otherwise use member's existing color
+        let bgColor = memojiStore.backgroundColorHex ?? member.color
+        print("[PersistentBottomSheet] handleAssignAvatar: Compositing image with background color: \(bgColor)")
+        
+        // Composite image with background color before uploading
+        let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
+        
+        // 3. Upload the composited avatar image to Supabase and get an imageFileHash
+        let imageFileHash = try await webService.uploadImage(image: compositedImage)
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
         
         var updatedMember = member
         updatedMember.imageFileHash = imageFileHash
@@ -524,7 +532,7 @@ private func handleAssignAvatar(
         
         print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
         
-        // 3. Persist the updated member via FamilyStore
+        // 4. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)
         
         // Check if editMember succeeded (it doesn't throw, but sets errorMessage on failure)

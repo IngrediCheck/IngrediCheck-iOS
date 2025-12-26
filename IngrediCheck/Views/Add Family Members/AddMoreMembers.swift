@@ -177,9 +177,13 @@ struct AddMoreMembers: View {
                 await familyStore.setAvatarForLastPendingOtherMember(image: assetImage, webService: webService)
             }
         } else if let customImage = memojiStore.image {
-            // Custom avatar from memojiStore - upload it in background
+            // Custom avatar from memojiStore - upload it in background with memoji background color
             Task {
-                await familyStore.setAvatarForLastPendingOtherMember(image: customImage, webService: webService)
+                await familyStore.setAvatarForLastPendingOtherMember(
+                    image: customImage,
+                    webService: webService,
+                    backgroundColorHex: memojiStore.backgroundColorHex
+                )
             }
         } else if let selectedImageName = selectedFamilyMember?.image {
             // Fallback to old method if image can't be loaded

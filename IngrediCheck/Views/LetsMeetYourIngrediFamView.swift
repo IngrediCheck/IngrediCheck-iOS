@@ -39,27 +39,33 @@ struct LetsMeetYourIngrediFamView: View {
         
         var body: some View {
             ZStack(alignment: .bottomTrailing) {
-                if let avatarImage {
-                    ZStack {
+                // Base colored circle - always visible as background (like MeetYourAvatar)
+                Circle()
+                    .fill(Color(hex: member.color))
+                    .frame(width: 48, height: 48)
+                    .overlay {
+                        // Content layer overlaid on background
+                        if let avatarImage {
+                            // Show loaded memoji avatar - slightly smaller to show background border
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 42, height: 42)
+                                .clipShape(Circle())
+                        } else {
+                            // Fallback: first letter of name
+                            Text(initial(member.name))
+                                .font(NunitoFont.semiBold.size(18))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .overlay(
+                        // Gray stroke overlay on top
                         Circle()
                             .stroke(.grayScale40, lineWidth: 2)
-                            .frame(width: 48, height: 48)
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 42, height: 42)
-                            .clipShape(Circle())
-                    }
-                } else {
-                    ZStack {
-                        Circle()
-                            .fill(Color(hex: member.color))
-                            .frame(width: 42, height: 42)
-                        Text(initial(member.name))
-                            .font(NunitoFont.semiBold.size(18))
-                            .foregroundStyle(.white)
-                    }
-                }
+                    )
+                
+                // Edit button overlay
                 Circle()
                     .fill(.grayScale40)
                     .frame(width: 16, height: 16)
