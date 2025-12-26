@@ -164,30 +164,46 @@ struct FamilyCarouselMemberAvatarView: View {
                         }
                 } else {
                     // Individual member - show actual avatar if available
-                    Circle()
-                        .fill(color)
-                        .frame(width: 46, height: 46)
-                        .overlay {
-                            if let avatarImage {
-                                // Show loaded memoji avatar - slightly smaller to show background border
-                                Image(uiImage: avatarImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 42, height: 42)
-                                    .clipShape(Circle())
-                            } else if let member = resolvedMember {
-                                // Fallback: first letter of name
-                                Text(String(member.name.prefix(1)))
-                                    .font(NunitoFont.semiBold.size(14))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .overlay {
-                            // White stroke overlay
+                    Group {
+                        if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
+                            // Show composited memoji avatar - fills the entire circle with white stroke
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 46, height: 46)
+                                .mask(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(lineWidth: 1)
+                                        .foregroundStyle(Color.white)
+                                )
+                        } else if let member = resolvedMember {
+                            // Fallback: colored circle with initial letter
                             Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
+                                .fill(color)
+                                .frame(width: 46, height: 46)
+                                .overlay {
+                                    Text(String(member.name.prefix(1)))
+                                        .font(NunitoFont.semiBold.size(14))
+                                        .foregroundStyle(.white)
+                                }
+                                .overlay(
+                                    Circle()
+                                        .stroke(lineWidth: 1)
+                                        .foregroundStyle(Color.white)
+                                )
+                        } else {
+                            // Default fallback
+                            Circle()
+                                .fill(color)
+                                .frame(width: 46, height: 46)
+                                .overlay(
+                                    Circle()
+                                        .stroke(lineWidth: 1)
+                                        .foregroundStyle(Color.white)
+                                )
                         }
+                    }
                 }
             }
             

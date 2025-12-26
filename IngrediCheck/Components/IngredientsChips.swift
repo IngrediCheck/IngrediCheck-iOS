@@ -97,43 +97,66 @@ struct IngredientsChips: View {
         @State private var loadedHash: String? = nil
         
         var body: some View {
-            // Base colored circle - always visible as background
-            Circle()
-                .fill(circleBackgroundColor)
-                .frame(width: 24, height: 24)
-                .overlay {
-                    // Content layer overlaid on background
-                    if memberIdentifier == "Everyone" {
-                        // Show "Everyone" icon
-                        Image("Everyone")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 22, height: 22)
-                            .clipShape(Circle())
-                    } else if let avatarImage {
-                        // Show loaded memoji avatar - slightly smaller to show background border
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 22, height: 22)
-                            .clipShape(Circle())
-                    } else if let member = resolvedMember {
-                        // Fallback: first letter of name
-                        Text(String(member.name.prefix(1)))
-                            .font(NunitoFont.semiBold.size(10))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .overlay {
-                    // White stroke overlay on top
+            Group {
+                if memberIdentifier == "Everyone" {
+                    // Show "Everyone" icon with background circle
                     Circle()
-                        .stroke(lineWidth: 1)
+                        .fill(circleBackgroundColor)
                         .frame(width: 24, height: 24)
-                        .foregroundStyle(Color.white)
+                        .overlay {
+                            Image("Everyone")
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 22, height: 22)
+                                .clipShape(Circle())
+                        }
+                        .overlay {
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        }
+                } else if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
+                    // Show composited memoji avatar - fills the entire circle with white stroke
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 24, height: 24)
+                        .mask(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
+                } else if let member = resolvedMember {
+                    // Fallback: colored circle with initial letter
+                    Circle()
+                        .fill(circleBackgroundColor)
+                        .frame(width: 24, height: 24)
+                        .overlay {
+                            Text(String(member.name.prefix(1)))
+                                .font(NunitoFont.semiBold.size(10))
+                                .foregroundStyle(.white)
+                        }
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
+                } else {
+                    // Default fallback
+                    Circle()
+                        .fill(circleBackgroundColor)
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
                 }
-                .task(id: memberIdentifier) {
-                    await loadAvatarIfNeeded()
-                }
+            }
+            .task(id: memberIdentifier) {
+                await loadAvatarIfNeeded()
+            }
         }
         
         private var circleBackgroundColor: Color {
