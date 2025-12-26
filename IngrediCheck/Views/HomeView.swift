@@ -1,3 +1,4 @@
+
 //
 //  HomeView.swift
 //  IngrediCheckPreview
@@ -46,7 +47,7 @@ struct HomeView: View {
         return [family.selfMember] + family.otherMembers
     }
 
-    private var primaryMemberName: String {
+ private var primaryMemberName: String {
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
 
@@ -113,7 +114,16 @@ struct HomeView: View {
                 return
             }
             
-            print("[HomeView.FamilyMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
+            // 1) Try local asset
+            if let local = UIImage(named: hash) {
+                avatarImage = local
+                loadedHash = hash
+                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded local avatar for \(member.name) (hash=\(hash))")
+                return
+            }
+            
+            // 2) Try remote
+            print("[HomeView.FamilyMemberAvatarView] Loading remote avatar for \(member.name), imageFileHash=\(hash)")
             do {
                 let uiImage = try await webService.fetchImage(
                     imageLocation: .imageFileHash(hash),

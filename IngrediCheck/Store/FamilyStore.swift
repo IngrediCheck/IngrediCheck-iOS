@@ -28,6 +28,17 @@ final class FamilyStore {
     /// When non-nil, this is the member whose avatar should be updated.
     var avatarTargetMemberId: UUID? = nil
     
+    private let pendingInviteIdsKey = "ingredicheck_pending_invite_ids"
+    private var pendingInviteIds: Set<String> {
+        get {
+            let array = UserDefaults.standard.stringArray(forKey: pendingInviteIdsKey) ?? []
+            return Set(array)
+        }
+        set {
+            UserDefaults.standard.set(Array(newValue), forKey: pendingInviteIdsKey)
+        }
+    }
+    
     init(service: FamilyService = FamilyService()) {
         self.service = service
     }
@@ -145,6 +156,28 @@ final class FamilyStore {
         if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
             pendingOtherMembers[idx].invitePending = pending
         }
+        
+        var ids = pendingInviteIds
+        if pending {
+            ids.insert(id.uuidString)
+        } else {
+            ids.remove(id.uuidString)
+        }
+        pendingInviteIds = ids
+        
+        if var currentFamily = family {
+            if let idx = currentFamily.otherMembers.firstIndex(where: { $0.id == id }) {
+                currentFamily.otherMembers[idx].invitePending = pending
+                self.family = currentFamily
+            }
+        }
+    }
+
+    func removePendingOtherMember(id: UUID) {
+        pendingOtherMembers.removeAll { $0.id == id }
+        var ids = pendingInviteIds
+        ids.remove(id.uuidString)
+        pendingInviteIds = ids
     }
     
     /// Creates the family on the backend using any pending members, if present.
@@ -182,6 +215,9 @@ final class FamilyStore {
         do {
             family = try await service.fetchFamily()
             
+            // Sync pending invite status from local persistence
+            syncPendingInviteStatus()
+            
             // If this is a single-member family and no member is selected,
             // auto-select the self member so preferences load correctly.
             if let family = family, family.otherMembers.isEmpty, selectedMemberId == nil {
@@ -215,6 +251,10 @@ final class FamilyStore {
                 selfMember: selfMember,
                 otherMembers: otherMembers.isEmpty ? nil : otherMembers
             )
+            
+            // Sync pending invite status after update
+            syncPendingInviteStatus()
+            
             print("[FamilyStore] createOrUpdateFamily success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -232,6 +272,7 @@ final class FamilyStore {
         
         do {
             family = try await service.addMember(member)
+            syncPendingInviteStatus()
             print("[FamilyStore] addMember success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -280,6 +321,7 @@ final class FamilyStore {
         do {
             let code = try await service.createInvite(for: memberId)
             print("[FamilyStore] invite success, code=\(code)")
+            setInvitePendingForPendingOtherMember(id: memberId, pending: true)
             return code
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -358,6 +400,36 @@ final class FamilyStore {
         errorMessage = nil
         pendingSelfMember = nil
         pendingOtherMembers = []
+    }
+
+    private func syncPendingInviteStatus() {
+        guard var f = family else { return }
+        
+        var currentPendingIds = pendingInviteIds
+        var changed = false
+        
+        // Check other members
+        for i in 0..<f.otherMembers.count {
+            let memberId = f.otherMembers[i].id.uuidString
+            
+            if f.otherMembers[i].joined {
+                // If they've joined, they're no longer pending
+                if currentPendingIds.contains(memberId) {
+                    currentPendingIds.remove(memberId)
+                    changed = true
+                }
+                f.otherMembers[i].invitePending = false
+            } else if currentPendingIds.contains(memberId) {
+                // If we have them as pending locally, mark them
+                f.otherMembers[i].invitePending = true
+            }
+        }
+        
+        if changed {
+            pendingInviteIds = currentPendingIds
+        }
+        
+        self.family = f
     }
 }
 
