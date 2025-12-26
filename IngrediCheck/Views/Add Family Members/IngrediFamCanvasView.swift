@@ -175,25 +175,35 @@ struct GenerateAvatar: View {
     ]
     
     @State var familyMember: [UserModel] = [
-        UserModel(familyMemberName: "grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "young-daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "father", familyMemberImage: "image-bg4")
+        UserModel(familyMemberName: "young-son", familyMemberImage: "baby-boy", backgroundColor: Color(hex: "FFD9B5")), // Baby Boy - Age (0-4)
+        UserModel(familyMemberName: "young-daughter", familyMemberImage: "baby-girl", backgroundColor: Color(hex: "F9C6D0")), // Baby Girl - Age (0-4)
+        UserModel(familyMemberName: "young-girl", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "B8E6FF")), // Young Girl - Age (4-25)
+        UserModel(familyMemberName: "young-boy", familyMemberImage: "Young-Son", backgroundColor: Color(hex: "FFF6B3")), // Young Boy - Age (4-25)
+        UserModel(familyMemberName: "mother", familyMemberImage: "image 2", backgroundColor: Color(hex: "E6D5F5")), // Adult Woman - Age (25-50)
+        UserModel(familyMemberName: "father", familyMemberImage: "adult-man", backgroundColor: Color(hex: "D4E6F1")), // Adult Man - Age (25-50)
+        UserModel(familyMemberName: "grandfather", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
+        UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     
-    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
+    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5"))
     @State var familyIdx: Int = 0
     
     // Restore state from memojiStore when view appears
     private func restoreState() {
         // Restore selected family member
-        selectedFamilyMember = UserModel(
-            familyMemberName: memojiStore.selectedFamilyMemberName,
-            familyMemberImage: memojiStore.selectedFamilyMemberImage
-        )
-        if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
-            familyIdx = idx
+        if let existingMember = familyMember.first(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+            selectedFamilyMember = existingMember
+            if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+                familyIdx = idx
+            } else {
+                familyIdx = 0
+            }
         } else {
+            // Fallback: create from memojiStore data
+            selectedFamilyMember = UserModel(
+                familyMemberName: memojiStore.selectedFamilyMemberName,
+                familyMemberImage: memojiStore.selectedFamilyMemberImage
+            )
             familyIdx = 0
         }
         
@@ -316,6 +326,26 @@ struct GenerateAvatar: View {
             return selectedAccessoriesIcon
         case "color-theme":
             return selectedColorThemeIcon
+        default:
+            return nil
+        }
+    }
+    
+    // Helper function to get primary icon name for a tool category (for selected state)
+    func getPrimaryIcon(for toolIcon: String) -> String? {
+        switch toolIcon {
+        case "family-member":
+            return "family-member-Primary"
+        case "gesture":
+            return "gesture-Primary"
+        case "hair-style":
+            return "hair-style-Primary"
+        case "skin-tone":
+            return "skin-tone-Primary"
+        case "accessories":
+            return "accessories-Primary"
+        case "color-theme":
+            return "color-theme-Primary"
         default:
             return nil
         }
@@ -504,21 +534,67 @@ struct GenerateAvatar: View {
                                 }
                                 .padding(.horizontal, 20)
                                 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(toolIcons, id: \.self) { ele in
-                                            GenerateAvatarToolPill(
-                                                icon: ele,
-                                                title: ele,
-                                                isSelected: $selectedTool,
-                                                selectedItemIcon: getSelectedIcon(for: ele)
-                                            ) {
-                                                idx = 0
-                                                selectedTool = ele
+                                VStack(spacing: 0) {
+                                    ScrollViewReader { proxy in
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 35) {
+                                                ForEach(toolIcons, id: \.self) { ele in
+                                                    GenerateAvatarToolPill(
+                                                        icon: ele,
+                                                        title: ele,
+                                                        isSelected: $selectedTool,
+                                                        selectedItemIcon: getSelectedIcon(for: ele),
+                                                        primaryIcon: getPrimaryIcon(for: ele)
+                                                    ) {
+                                                        idx = 0
+                                                        selectedTool = ele
+                                                    }
+                                                    .id(ele)
+                                                }
+                                            }
+                                            .padding(.horizontal,25)
+                                        }
+                                        .onChange(of: selectedTool) { _, newValue in
+                                            withAnimation {
+                                                proxy.scrollTo(newValue, anchor: .center)
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 20)
+                                    
+                                    // Rectangle indicator above Divider, aligned with selected tool
+                                    ScrollViewReader { proxy in
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 35) {
+                                                ForEach(toolIcons, id: \.self) { ele in
+                                                    Group {
+                                                        if ele == selectedTool {
+                                                            Rectangle()
+                                                                .fill(Color(hex: "#91B640"))
+                                                                .frame(width: 28, height: 2)
+                                                        } else {
+                                                            Rectangle()
+                                                                .fill(Color.clear)
+                                                                .frame(width: 28, height: 2)
+                                                        }
+                                                    }
+                                                    .id(ele)
+                                                }
+                                            }
+                                            .padding(.horizontal,25)
+                                        }
+                                        .frame(height: 2)
+                                        .onChange(of: selectedTool) { _, newValue in
+                                            withAnimation {
+                                                proxy.scrollTo(newValue, anchor: .center)
+                                            }
+                                        }
+                                    }
+                                    .padding(.top, 9)
+                                    Divider()
+                                        .foregroundStyle(Color.grayScale60)
+//                                    .padding (.bottom, 22)
+                                    
+                                  
                                 }
                                 
                                 VStack {
@@ -665,63 +741,73 @@ struct GenerateAvatar: View {
         .padding(.horizontal, 20)
     }
     
+    // Helper function to get age range for family member
+    private func getAgeRange(for memberName: String) -> String {
+        switch memberName.lowercased() {
+        case "young-son", "young-daughter":
+            return "Age (0-4)"
+        case "young-girl", "young-boy":
+            return "Age (4-25)"
+        case "father", "mother":
+            return "Age (25-50)"
+        case "grandfather", "grandmother":
+            return "Age (50+)"
+        default:
+            return "Age (4-25)"
+        }
+    }
+    
     @ViewBuilder
     func minimalFamilySelector() -> some View {
-        let current = familyMember[familyIdx]
-        let isCurrentSelected = selectedFamilyMember.name == current.name
-        
-        HStack {
-            Button {
-                familyIdx = max(0, familyIdx - 1)
-            } label: {
-                Circle()
-                    .fill(.grayScale60)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(.arrowLeft)
-                            .resizable()
-                            .rotationEffect(.degrees(180))
-                            .frame(width: 22, height: 22)
-                    )
-            }
-            .disabled(familyIdx == 0)
-
-            Spacer()
-            
-            Button {
-                selectedFamilyMember = current
-            } label: {
-                VStack {
-                    Image(current.image)
-                        .resizable()
-                        .frame(width: 56, height: 50)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(familyMember) { member in
+                    let isSelected = selectedFamilyMember.name == member.name
                     
-                    Text(current.name)
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                    Button {
+                        selectedFamilyMember = member
+                        if let idx = familyMember.firstIndex(where: { $0.name == member.name }) {
+                            familyIdx = idx
+                        }
+                    } label: {
+                        VStack(spacing: 6) {
+                            // Avatar with green border when selected
+                        
+                            
+                          
+                            ZStack {
+                                // Background circle with color
+                                RoundedRectangle(cornerRadius: 12)
+                                                                  .stroke(
+                                                                      isSelected ? Color(hex: "#91B640") : .grayScale40,
+                                                                      lineWidth: isSelected ? 1 : 0.5
+                                                                  )
+                                                                  .frame(width: 64, height: 64)
+                                Circle()
+                                    .fill( Color(hex: "#F9F9F9"))
+                                    .frame(width: 52, height: 52)
+                                
+                                // Avatar image
+                                Image(member.image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 43.34, height: 43.34)
+                                    .clipShape(Circle())
+                                
+                               
+                            }
+                            
+                            // Age range label
+                            Text(getAgeRange(for: member.name))
+                                .font(ManropeFont.medium.size(12))
+                                .foregroundStyle(.grayScale110 )
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 16)
             }
-            .buttonStyle(.plain)
-            
-            Spacer()
-            
-            Button {
-                familyIdx = min(familyIdx + 1, familyMember.count - 1)
-            } label: {
-                Circle()
-                    .fill(.grayScale60)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(.arrowLeft)
-                            .resizable()
-                            .frame(width: 22, height: 22)
-                    )
-            }
-            .disabled(familyIdx == familyMember.count - 1)
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
     }
     
     @ViewBuilder
