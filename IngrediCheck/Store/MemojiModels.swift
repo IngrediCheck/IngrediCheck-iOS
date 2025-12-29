@@ -83,9 +83,9 @@ struct MemojiSelection {
     // Generate visual description of facial expression and body language
     private func generateVisualMood() -> String {
         // TEST: Simple test to verify mood parameter is working - always return "angry"
-        return "“Stern expression with furrowed brows and narrowed eyes.Firm, slightly clenched jaw with tight lips. Intense focused gaze, controlled and serious."
+//        return "“Stern expression with furrowed brows and narrowed eyes.Firm, slightly clenched jaw with tight lips. Intense focused gaze, controlled and serious."
         
-        /* COMMENTED OUT - Original mood generation logic
+       //\ COMMENTED OUT - Original mood generation logic
         let familyTypeLower = familyType.lowercased()
         
         // Check category: baby, young, adult, or older
@@ -174,7 +174,7 @@ struct MemojiSelection {
             ]
             return adultVisualMoodStrings.randomElement() ?? "smiling widely with bright eyes and cheerful expression"
         }
-        */
+       
     }
     
     func toMemojiRequest() -> MemojiRequest {

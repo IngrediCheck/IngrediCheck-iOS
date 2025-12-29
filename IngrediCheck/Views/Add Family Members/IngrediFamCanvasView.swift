@@ -597,7 +597,9 @@ struct GenerateAvatar: View {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack(spacing: 8) {
                                     Button {
-                                        coordinator.navigateInBottomSheet(.whatsYourName)
+                                        // Navigate back to the previous route, or default to whatsYourName
+                                        let previousRoute = memojiStore.previousRouteForGenerateAvatar ?? .whatsYourName
+                                        coordinator.navigateInBottomSheet(previousRoute)
                                     } label: {
                                         Image(systemName: "chevron.left")
                                             .font(.system(size: 18, weight: .semibold))

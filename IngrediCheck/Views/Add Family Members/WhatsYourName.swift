@@ -101,6 +101,7 @@ struct WhatsYourName: View {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !trimmed.isEmpty {
                                     memojiStore.displayName = trimmed
+                                    memojiStore.previousRouteForGenerateAvatar = .whatsYourName
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }
                             } label: {

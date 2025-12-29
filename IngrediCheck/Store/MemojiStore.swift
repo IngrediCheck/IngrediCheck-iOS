@@ -12,6 +12,9 @@ final class MemojiStore {
     // Display context for UI (e.g., show typed name in Generate Avatar header)
     var displayName: String? = nil
     
+    // Track where GenerateAvatar was navigated from for back button navigation
+    var previousRouteForGenerateAvatar: BottomSheetRoute? = nil
+    
     // Store avatar generation selections to preserve state when navigating back
     var selectedFamilyMemberName: String = "young-son"
     var selectedFamilyMemberImage: String = "image-bg1"

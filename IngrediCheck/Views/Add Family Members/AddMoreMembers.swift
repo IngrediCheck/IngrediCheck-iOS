@@ -97,6 +97,7 @@ struct AddMoreMembers: View {
                                     // Clear displayName if name field is empty to prevent previous name from showing
                                     memojiStore.displayName = nil
                                 }
+                                memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
                                 coordinator.navigateInBottomSheet(.generateAvatar)
                             } label: {
                                 ZStack {
@@ -194,5 +195,7 @@ struct AddMoreMembers: View {
         memojiStore.selectedColorThemeIcon = nil
         // Clear displayName to prevent previous member's name from persisting
         memojiStore.displayName = nil
+        // Clear previous route so back button works correctly for new flow
+        memojiStore.previousRouteForGenerateAvatar = nil
     }
 }
