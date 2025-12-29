@@ -6,57 +6,20 @@
 //
 
 import SwiftUI
-import AVKit
 
 struct IngrediBotWithText: View {
     let text: String
     var viewDidAppear: (() -> Void)? = nil
     var delay: TimeInterval = 2.0
-    @State private var playerLooper: AVPlayerLooper?
-    @State private var queuePlayer: AVQueuePlayer?
-    
-    private func setupPlayer() {
-        guard let url = Bundle.main.url(forResource: "IngrediBotLoading", withExtension: "mp4") else {
-            return
-        }
-        let playerItem = AVPlayerItem(url: url)
-        let newQueuePlayer = AVQueuePlayer(playerItem: playerItem)
-        queuePlayer = newQueuePlayer
-        
-        // Set up looping
-        playerLooper = AVPlayerLooper(player: newQueuePlayer, templateItem: playerItem)
-        newQueuePlayer.play()
-    }
     
     var body: some View {
         VStack(spacing: 32) {
             // Robot image
-            if let queuePlayer = queuePlayer {
-                VideoPlayer(player: queuePlayer)
-                    .onAppear {
-                        if playerLooper == nil {
-                            setupPlayer()
-                        } else {
-                            queuePlayer.play()
-                        }
-                    }
-                    .onDisappear {
-                        playerLooper?.disableLooping()
-                        playerLooper = nil
-                        queuePlayer.pause()
-                    }
-                    .frame(width: 147, height: 147)
-                    .clipped()
-            } else {
-                Image("ingrediBot")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 147, height: 147)
-                    .clipped()
-                    .onAppear {
-                        setupPlayer()
-                    }
-            }
+            Image("ingrediBot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 147, height: 147)
+                .clipped()
             
             VStack(spacing: 24) {
                 Text(text)
