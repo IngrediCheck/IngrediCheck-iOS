@@ -10,7 +10,7 @@ struct MemojiRequest: Encodable {
     let size: String
     let model: String
     let subscriptionTier: String
-    let mood: String // Random funny and happy string for emoji generation
+    let colorTheme: String? // Color theme for clothing and background style
 }
 
 struct MemojiResponse: Decodable {
@@ -48,40 +48,49 @@ struct MemojiSelection {
         MemojiSelection.colorHexMap[colorThemeIcon ?? ""]
     }
     
-    // Generate a random funny and happy string for emoji generation
-    private static func generateFunnyHappyMood() -> String {
-        let funnyHappyStrings = [
-            "funny and enjoying life with a big smile",
-            "extremely happy and having a great time",
-            "laughing and full of joy",
-            "cheerful and playful with lots of energy",
-            "super happy and excited about everything",
-            "grinning widely and having fun",
-            "joyful and carefree with a bright smile",
-            "hilariously happy and full of laughter",
-            "ecstatically happy and enjoying every moment",
-            "beaming with happiness and having a blast",
-            "radiating joy and positive energy",
-            "laughing out loud and having the best time",
-            "overflowing with happiness and cheer",
-            "delightfully happy and full of life",
-            "bursting with joy and excitement"
-        ]
-        return funnyHappyStrings.randomElement() ?? "funny and enjoying life with a big smile"
+    // Map hair icon to API format
+    private func mapHairToAPIFormat(_ hairIcon: String) -> String {
+        switch hairIcon.lowercased() {
+        case "short-hair": return "short"
+        case "long-hair": return "long"
+        case "curly-hair": return "curly"
+        case "medium-curely": return "curly"
+        case "short spiky": return "short spiky"
+        case "braided": return "braided"
+        case "ponytail": return "ponytail"
+        case "bun": return "bun"
+        case "bald": return "bald"
+        default: return hairIcon.lowercased()
+        }
+    }
+    
+    // Map color theme icon to API format
+    private func mapColorThemeToAPIFormat(_ colorThemeIcon: String?) -> String? {
+        guard let icon = colorThemeIcon else { return nil }
+        switch icon.lowercased() {
+        case "pastel-blue": return "pastel-blue"
+        case "warm-pink": return "warm-pink"
+        case "soft-green": return "soft-green"
+        case "lavender": return "lavender"
+        case "cream": return "cream"
+        case "mint": return "mint"
+        case "transparent": return "transparent"
+        default: return icon.lowercased()
+        }
     }
     
     func toMemojiRequest() -> MemojiRequest {
         MemojiRequest(
             familyType: familyType,
             gesture: gesture,
-            hair: hair,
+            hair: mapHairToAPIFormat(hair),
             skinTone: skinTone,
             accessories: accessory.map { [$0] } ?? [],
             background: "transparent", // user color applied in UI
             size: "1024x1024",
             model: "gpt-image-1",
             subscriptionTier: "monthly_basic",
-            mood: MemojiSelection.generateFunnyHappyMood()
+            colorTheme: mapColorThemeToAPIFormat(colorThemeIcon)
         )
     }
     
