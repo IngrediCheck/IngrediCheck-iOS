@@ -93,6 +93,9 @@ struct AddMoreMembers: View {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !trimmed.isEmpty {
                                     memojiStore.displayName = trimmed
+                                } else {
+                                    // Clear displayName if name field is empty to prevent previous name from showing
+                                    memojiStore.displayName = nil
                                 }
                                 coordinator.navigateInBottomSheet(.generateAvatar)
                             } label: {
@@ -189,6 +192,7 @@ struct AddMoreMembers: View {
         memojiStore.selectedSkinToneIcon = nil
         memojiStore.selectedAccessoriesIcon = nil
         memojiStore.selectedColorThemeIcon = nil
-        // Keep displayName as it will be set when user enters name
+        // Clear displayName to prevent previous member's name from persisting
+        memojiStore.displayName = nil
     }
 }
