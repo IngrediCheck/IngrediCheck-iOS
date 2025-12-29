@@ -430,20 +430,25 @@ struct GenerateAvatar: View {
         saveState()
     }
     
-    private func buildMemojiSelection() -> MemojiSelection {
+    private func buildMemojiSelection() -> MemojiSelection? {
+        // Require explicit family member selection - don't fall back to default
+        guard hasSelectedFamilyMember else {
+            return nil
+        }
+        
+        // Ensure the selected family member is valid
+        guard familyMember.contains(where: { $0.name == selectedFamilyMember.name }) else {
+            return nil
+        }
+        
         let gesture = selectedGestureIcon ?? tools[0].tools.first?.icon ?? "wave"
         let hair = selectedHairStyleIcon ?? tools[1].tools.first?.icon ?? "short-hair"
         let skinTone = selectedSkinToneIcon ?? tools[2].tools.first?.icon ?? "light"
         let accessory = selectedAccessoriesIcon ?? tools[3].tools.first?.icon
         let colorTheme = selectedColorThemeIcon ?? tools[4].tools.first?.icon
         
-        // Ensure we always have a valid family member selected
-        let validFamilyMember = familyMember.contains(where: { $0.name == selectedFamilyMember.name }) 
-            ? selectedFamilyMember 
-            : familyMember[0]
-        
         // Format: "baby-boy age (0 to 4)"
-        let familyTypeWithAge = "\(validFamilyMember.name.lowercased()) \(getAgeRangeForAPI(for: validFamilyMember.name))"
+        let familyTypeWithAge = "\(selectedFamilyMember.name.lowercased()) \(getAgeRangeForAPI(for: selectedFamilyMember.name))"
         
         return MemojiSelection(
             familyType: familyTypeWithAge,
@@ -770,10 +775,14 @@ struct GenerateAvatar: View {
 //                                .padding(.horizontal, 20)
                                 // Generate button
                                 Button {
-                                    generatePressed(buildMemojiSelection())
+                                    if let selection = buildMemojiSelection() {
+                                        generatePressed(selection)
+                                    }
                                 } label: {
                                     GreenCapsule(title: "Generate", icon: "stars-generate")
                                 }
+                                .disabled(!hasSelectedFamilyMember)
+                                .opacity(hasSelectedFamilyMember ? 1.0 : 0.6)
                             }.padding(.horizontal, 20)
                         }
                     }
