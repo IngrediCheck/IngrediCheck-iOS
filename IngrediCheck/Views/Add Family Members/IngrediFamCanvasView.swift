@@ -1040,7 +1040,12 @@ struct GenerateAvatar: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .onTapGesture {
                             let temp = selectedFamilyMember
+                            // Update familyIdx before modifying the array
+                            if let idx = familyMember.firstIndex(where: { $0.name == member.name }) {
+                                familyIdx = idx
+                            }
                             selectedFamilyMember = member
+                            hasSelectedFamilyMember = true
                             familyMember.removeAll { $0.name == member.name }
                             familyMember.append(temp)
                             saveState()
