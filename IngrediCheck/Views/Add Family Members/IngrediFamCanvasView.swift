@@ -436,10 +436,10 @@ struct GenerateAvatar: View {
             return nil
         }
         
-        // Ensure the selected family member is valid
-        guard familyMember.contains(where: { $0.name == selectedFamilyMember.name }) else {
-            return nil
-        }
+        // Note: We don't validate against familyMember array here because:
+        // - The array is manipulated for UI display (selected member is removed from list)
+        // - selectedFamilyMember is a valid UserModel object when hasSelectedFamilyMember is true
+        // - The array manipulation in familyMemberListView is just for showing "other" members
         
         let gesture = selectedGestureIcon ?? tools[0].tools.first?.icon ?? "wave"
         let hair = selectedHairStyleIcon ?? tools[1].tools.first?.icon ?? "short-hair"
