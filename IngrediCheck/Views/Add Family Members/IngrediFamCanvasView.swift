@@ -687,55 +687,63 @@ struct GenerateAvatar: View {
                             }
                             
                             HStack(){
-                                HStack(spacing: 8) {
-                                    // Selected icons row - only show if selected
-                                    // Family member (always show)
-                                    if let familyIcon = getSelectedIcon(for: "family-member") {
-                                        Image(familyIcon)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 20, height: 20)
+                                VStack(alignment: .leading){
+                                    Text("Selected")
+                                        .font(ManropeFont.medium.size(12))
+                                        .foregroundStyle(.grayScale70)
+                                    HStack(spacing: 8) {
+                                        // Selected icons row - only show if selected
+                                        // Family member (always show)
+                                        if let familyIcon = getSelectedIcon(for: "family-member") {
+                                            Image(familyIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Gesture (only show if selected)
+                                        if let gestureIcon = getSelectedIcon(for: "gesture") {
+                                            Image(gestureIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Hair style (only show if selected)
+                                        if let hairIcon = getSelectedIcon(for: "hair-style") {
+                                            Image(hairIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Skin tone (only show if selected)
+                                        if let skinToneIcon = getSelectedIcon(for: "skin-tone") {
+                                            Image(skinToneIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Accessories (only show if selected)
+                                        if let accessoriesIcon = getSelectedIcon(for: "accessories") {
+                                            Image(accessoriesIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Color theme (only show if selected)
+                                        if let colorThemeIcon = getSelectedIcon(for: "color-theme") {
+                                            Image(colorThemeIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        Spacer()
                                     }
+                                
                                     
-                                    // Gesture (only show if selected)
-                                    if let gestureIcon = getSelectedIcon(for: "gesture") {
-                                        Image(gestureIcon)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    
-                                    // Hair style (only show if selected)
-                                    if let hairIcon = getSelectedIcon(for: "hair-style") {
-                                        Image(hairIcon)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    
-                                    // Skin tone (only show if selected)
-                                    if let skinToneIcon = getSelectedIcon(for: "skin-tone") {
-                                        Image(skinToneIcon)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    
-                                    // Accessories (only show if selected)
-                                    if let accessoriesIcon = getSelectedIcon(for: "accessories") {
-                                        Image(accessoriesIcon)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    
-                                    // Color theme (only show if selected)
-                                    if let colorThemeIcon = getSelectedIcon(for: "color-theme") {
-                                        Image(colorThemeIcon)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 20, height: 20)
-                                    }
                                     
                                   
                                     
