@@ -11,6 +11,7 @@ struct MemojiRequest: Encodable {
     let model: String
     let subscriptionTier: String
     let colorTheme: String? // Color theme for clothing and background style
+    let mood: String? // Visual description of facial expression and body language
 }
 
 struct MemojiResponse: Decodable {
@@ -79,6 +80,98 @@ struct MemojiSelection {
         }
     }
     
+    // Generate visual description of facial expression and body language
+    private func generateVisualMood() -> String {
+        let familyTypeLower = familyType.lowercased()
+        
+        // Check category: baby, young, adult, or older
+        let isBaby = familyTypeLower.contains("baby")
+        let isYoung = familyTypeLower.contains("young")
+        let isOlder = familyTypeLower.contains("grandfather") || familyTypeLower.contains("grandmother")
+        
+        if isBaby {
+            // Baby (0-4) - very young with one tooth showing
+            let babyVisualMoodStrings = [
+                "smiling widely with one tooth showing in the middle and bright, cheerful eyes",
+                "grinning with open mouth showing one front tooth in the middle and crinkled eyes",
+                "laughing with one tooth visible in the middle, head slightly tilted, and joyful expression",
+                "beaming with wide smile, one tooth showing in the middle, and sparkling eyes",
+                "smiling with one front tooth visible in the middle and bright, friendly eyes",
+                "grinning ear to ear with one tooth showing in the middle and raised eyebrows",
+                "laughing with open mouth, one tooth in the middle, crinkled eyes, and joyful expression",
+                "smiling broadly with one tooth showing in the middle and cheerful, energetic expression",
+                "grinning widely with one front tooth visible in the middle and happy, bright eyes",
+                "beaming with one tooth showing in the middle, radiant smile, and cheerful eyes",
+                "smiling with one tooth in the middle, warm eyes, and genuine, joyful expression",
+                "laughing with head back, one tooth visible in the middle, and very happy expression",
+                "grinning with one tooth showing in the middle, wide smile, raised cheeks, and joyful expression",
+                "smiling widely with one front tooth in the middle and bright, cheerful expression",
+                "laughing with one tooth visible in the middle, open mouth, and joyful, energetic expression"
+            ]
+            return babyVisualMoodStrings.randomElement() ?? "smiling widely with one tooth showing in the middle and bright, cheerful eyes"
+        } else if isYoung {
+            // Young/Teenager (4-25) - cool, energetic, stylish
+            let youngVisualMoodStrings = [
+                "smiling with cool, confident expression and bright, energetic eyes",
+                "grinning with stylish smile, head slightly tilted, and trendy, youthful expression",
+                "laughing with confident, cool expression and bright, playful eyes",
+                "beaming with hip, modern smile and energetic, fashionable expression",
+                "smiling with cool, relaxed expression and bright, confident eyes",
+                "grinning with trendy smile, raised eyebrows, and stylish, youthful expression",
+                "laughing with cool, open smile and bright, energetic, modern expression",
+                "smiling broadly with confident, stylish expression and positive, cool energy",
+                "grinning widely with hip smile and happy, trendy, youthful expression",
+                "beaming with cool, radiant smile and bright, fashionable eyes",
+                "smiling with confident, modern expression and genuine, cool eyes",
+                "laughing with head back, stylish smile, and very happy, energetic expression",
+                "grinning with cool, wide smile, raised cheeks, and trendy, joyful expression",
+                "smiling widely with confident, modern expression and bright, cool eyes",
+                "laughing with open mouth, stylish expression, and joyful, fashionable energy"
+            ]
+            return youngVisualMoodStrings.randomElement() ?? "smiling with cool, confident expression and bright, energetic eyes"
+        } else if isOlder {
+            // Older adult (grandfather/grandmother) - gentle, wise
+            let olderVisualMoodStrings = [
+                "smiling warmly with gentle, wise eyes and kind expression",
+                "grinning with soft smile showing gentle wrinkles around eyes and content expression",
+                "laughing with head slightly tilted, warm eyes, and joyful, peaceful expression",
+                "beaming with gentle smile, bright eyes, and serene, happy expression",
+                "smiling with warm, friendly eyes and relaxed, content expression",
+                "grinning with soft laugh, gentle expression, and kind, cheerful eyes",
+                "smiling with closed mouth, wise eyes, and peaceful, content expression",
+                "laughing with gentle smile, crinkled eyes showing wisdom, and joyful expression",
+                "smiling broadly with warm, kind eyes and positive, serene energy",
+                "grinning widely with gentle smile, bright eyes, and happy, peaceful expression",
+                "smiling with warm, wise eyes and genuine, content expression",
+                "laughing with head back, gentle smile, and very happy, peaceful expression",
+                "beaming with radiant, gentle smile and bright, kind eyes",
+                "smiling with relaxed, wise expression and friendly, content eyes",
+                "grinning with gentle smile, raised cheeks showing wrinkles, and joyful, peaceful expression"
+            ]
+            return olderVisualMoodStrings.randomElement() ?? "smiling warmly with gentle, wise eyes and kind expression"
+        } else {
+            // Adult (father/mother) - standard cheerful
+            let adultVisualMoodStrings = [
+                "smiling widely with bright eyes and cheerful expression",
+                "grinning with open mouth showing teeth and crinkled eyes",
+                "laughing with head slightly tilted back and joyful expression",
+                "beaming with wide smile and sparkling eyes",
+                "smiling warmly with gentle eyes and relaxed expression",
+                "grinning ear to ear with raised eyebrows and happy expression",
+                "smiling with closed mouth and bright, friendly eyes",
+                "laughing with open mouth, crinkled eyes, and joyful expression",
+                "smiling broadly with cheerful face and positive energy",
+                "grinning widely with bright smile and happy, energetic expression",
+                "smiling with warm eyes and genuine, joyful expression",
+                "laughing with head back, open mouth, and very happy expression",
+                "beaming with radiant smile and bright, cheerful eyes",
+                "smiling with relaxed, content expression and friendly eyes",
+                "grinning with wide smile, raised cheeks, and joyful expression"
+            ]
+            return adultVisualMoodStrings.randomElement() ?? "smiling widely with bright eyes and cheerful expression"
+        }
+    }
+    
     func toMemojiRequest() -> MemojiRequest {
         MemojiRequest(
             familyType: familyType,
@@ -90,7 +183,8 @@ struct MemojiSelection {
             size: "1024x1024",
             model: "gpt-image-1",
             subscriptionTier: "monthly_basic",
-            colorTheme: mapColorThemeToAPIFormat(colorThemeIcon)
+            colorTheme: mapColorThemeToAPIFormat(colorThemeIcon),
+            mood: generateVisualMood()
         )
     }
     
