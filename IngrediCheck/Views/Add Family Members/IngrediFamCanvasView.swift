@@ -686,13 +686,70 @@ struct GenerateAvatar: View {
                                 .padding(.horizontal, selectedTool == "family-member" ? 0 : 20)
                             }
                             
-                            
-                            Button {
-                                generatePressed(buildMemojiSelection())
-                            } label: {
-                                GreenCapsule(title: "Generate", icon: "stars-generate")
-                            }
-                            .padding(.horizontal, 20)
+                            HStack(){
+                                HStack(spacing: 8) {
+                                    // Selected icons row - only show if selected
+                                    // Family member (always show)
+                                    if let familyIcon = getSelectedIcon(for: "family-member") {
+                                        Image(familyIcon)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    
+                                    // Gesture (only show if selected)
+                                    if let gestureIcon = getSelectedIcon(for: "gesture") {
+                                        Image(gestureIcon)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    
+                                    // Hair style (only show if selected)
+                                    if let hairIcon = getSelectedIcon(for: "hair-style") {
+                                        Image(hairIcon)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    
+                                    // Skin tone (only show if selected)
+                                    if let skinToneIcon = getSelectedIcon(for: "skin-tone") {
+                                        Image(skinToneIcon)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    
+                                    // Accessories (only show if selected)
+                                    if let accessoriesIcon = getSelectedIcon(for: "accessories") {
+                                        Image(accessoriesIcon)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    
+                                    // Color theme (only show if selected)
+                                    if let colorThemeIcon = getSelectedIcon(for: "color-theme") {
+                                        Image(colorThemeIcon)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    
+                                  
+                                    
+                                   
+                                }
+                                .frame(width: 163)
+//                                .padding(.horizontal, 20)
+                                // Generate button
+                                Button {
+                                    generatePressed(buildMemojiSelection())
+                                } label: {
+                                    GreenCapsule(title: "Generate", icon: "stars-generate")
+                                }
+                            }.padding(.horizontal, 20)
                         }
                     }
 //                }
@@ -772,7 +829,7 @@ struct GenerateAvatar: View {
                                         isSelected ? Color(hex: "#91B640") : .grayScale40,
                                         lineWidth: isSelected ? 1 : 0.5
                                     )
-                                    .frame(width: 52, height: 52)
+                                    .frame(width: 70, height: 70)
                             }
                             
                             // Tool name label
@@ -780,6 +837,7 @@ struct GenerateAvatar: View {
                                 .font(ManropeFont.medium.size(12))
                                 .foregroundStyle(.grayScale110)
                         }
+                        .padding(.top, 22)
                     }
                     .buttonStyle(.plain)
                 }
@@ -862,6 +920,7 @@ struct GenerateAvatar: View {
                                 .font(ManropeFont.medium.size(12))
                                 .foregroundStyle( .grayScale110)
                         }
+                        .padding(.top, 22)
                     }
                     .buttonStyle(.plain)
                 }
