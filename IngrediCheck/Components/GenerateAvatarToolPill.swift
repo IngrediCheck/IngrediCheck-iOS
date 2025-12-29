@@ -20,6 +20,7 @@ struct GenerateAvatarToolPill: View {
             // When not selected, use default icon
             let iconToDisplay = (isSelected == icon && primaryIcon != nil) ? primaryIcon! : icon
             Image(iconToDisplay)
+                .renderingMode(.original)  // Add this line to prevent template rendering
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 28, height: 28)
@@ -29,7 +30,7 @@ struct GenerateAvatarToolPill: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            withAnimation(.smooth) {
+            withAnimation(.easeInOut(duration: 0.4)) {
                 onTap?()
             }
         }

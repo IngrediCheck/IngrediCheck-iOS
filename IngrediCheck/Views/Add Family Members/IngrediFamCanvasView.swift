@@ -164,6 +164,7 @@ struct IngrediFamCanvasView: View {
 
 struct GenerateAvatar: View {
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     @State var toolIcons: [String] = [
         "family-member",
@@ -194,6 +195,7 @@ struct GenerateAvatar: View {
         if !memojiStore.selectedFamilyMemberName.isEmpty,
            let existingMember = familyMember.first(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
             selectedFamilyMember = existingMember
+            hasSelectedFamilyMember = true // User has previously selected this
             if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
                 familyIdx = idx
             } else {
@@ -201,9 +203,10 @@ struct GenerateAvatar: View {
                 selectedFamilyMember = familyMember[0] // Ensure valid selection
             }
         } else {
-            // Fallback: use first family member as default
+            // No previous selection - nothing should appear selected
             selectedFamilyMember = familyMember[0]
             familyIdx = 0
+            hasSelectedFamilyMember = false
         }
         
         // Restore other selections
@@ -278,7 +281,6 @@ struct GenerateAvatar: View {
             title: "Accessories",
             icon: "accessories",
             tools: [
-                ChipsModel(name: "None", icon: "none"),
                 ChipsModel(name: "Glasses", icon: "glasses"),
                 ChipsModel(name: "Hat", icon: "hat"),
                 ChipsModel(name: "Earrings", icon: "earrings"),
@@ -311,6 +313,7 @@ struct GenerateAvatar: View {
     @State var selectedSkinToneIcon: String? = nil
     @State var selectedAccessoriesIcon: String? = nil
     @State var selectedColorThemeIcon: String? = nil
+    @State var hasSelectedFamilyMember: Bool = false // Track if user has actively selected a family member
     
     var randomPressed: (MemojiSelection) -> Void = { _ in }
     var generatePressed: (MemojiSelection) -> Void = { _ in }
@@ -584,18 +587,25 @@ struct GenerateAvatar: View {
                         .padding(.bottom, 20)
                         .matchedGeometryEffect(id: "circle", in: animation)
                     } else {
-                        VStack(spacing: 40) {
+                        VStack(spacing: 22) {
                             VStack(alignment: .leading, spacing: 16) {
-                                HStack {
+                                HStack(spacing: 8) {
+                                    Button {
+                                        coordinator.navigateInBottomSheet(.whatsYourName)
+                                    } label: {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundStyle(.black)
+                                            .frame(width: 24, height: 24)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    
                                     Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
                                     Spacer()
-                                    
-                                    Text("0/2")
-                                        .font(ManropeFont.regular.size(14))
-                                        .foregroundStyle(.grayScale100)
                                 }
                                 .padding(.horizontal, 20)
                                 
@@ -633,11 +643,12 @@ struct GenerateAvatar: View {
                                                 ForEach(toolIcons, id: \.self) { ele in
                                                     Group {
                                                         if ele == selectedTool {
-                                                            Rectangle()
+                                                            RoundedRectangle(cornerRadius: 1)
                                                                 .fill(Color(hex: "#91B640"))
                                                                 .frame(width: 28, height: 2)
+                                                                .matchedGeometryEffect(id: "selectedIndicator", in: animation)
                                                         } else {
-                                                            Rectangle()
+                                                            RoundedRectangle(cornerRadius: 1)
                                                                 .fill(Color.clear)
                                                                 .frame(width: 28, height: 2)
                                                         }
@@ -649,7 +660,7 @@ struct GenerateAvatar: View {
                                         }
                                         .frame(height: 2)
                                         .onChange(of: selectedTool) { _, newValue in
-                                            withAnimation {
+                                            withAnimation(.easeInOut(duration: 0.4)) {
                                                 proxy.scrollTo(newValue, anchor: .center)
                                             }
                                         }
@@ -657,6 +668,7 @@ struct GenerateAvatar: View {
                                     .padding(.top, 9)
                                     
                                     Divider()
+                                       
                                 }
                                 
                                 VStack {
@@ -682,23 +694,32 @@ struct GenerateAvatar: View {
                                     default:
                                         EmptyView()
                                     }
-                                }
-                                .padding(.horizontal, selectedTool == "family-member" ? 0 : 20)
+                                }	
+                                // Removed padding to allow scrolling to phone edges for all selectors
+                                // .padding(.horizontal, selectedTool == "family-member" ? 0 : 20)
                             }
                             
-                            HStack(){
+                            HStack(alignment: .top){
                                 VStack(alignment: .leading){
+                                    // Check if any tool category is selected
+                                    let hasSelections = hasSelectedFamilyMember ||
+                                                       selectedGestureIcon != nil ||
+                                                       selectedHairStyleIcon != nil ||
+                                                       selectedSkinToneIcon != nil ||
+                                                       selectedAccessoriesIcon != nil ||
+                                                       selectedColorThemeIcon != nil
+                                    
                                     Text("Selected")
                                         .font(ManropeFont.medium.size(12))
-                                        .foregroundStyle(.grayScale70)
+                                        .foregroundStyle(hasSelections ? .grayScale130 : .grayScale70)
                                     HStack(spacing: 8) {
-                                        // Selected icons row - only show if selected
-                                        // Family member (always show)
-                                        if let familyIcon = getSelectedIcon(for: "family-member") {
+                                        // Selected icons row - show family member immediately when selected
+                                        // Family member (show if user has actively selected it)
+                                        if hasSelectedFamilyMember, let familyIcon = getSelectedIcon(for: "family-member") {
                                             Image(familyIcon)
                                                 .resizable()
                                                 .scaledToFit()
-                                                .frame(width: 20, height: 20)
+                                               .frame(width: 20, height: 20)
                                         }
                                         
                                         // Gesture (only show if selected)
@@ -740,13 +761,9 @@ struct GenerateAvatar: View {
                                                 .scaledToFit()
                                                 .frame(width: 20, height: 20)
                                         }
+                                        
                                         Spacer()
                                     }
-                                
-                                    
-                                    
-                                  
-                                    
                                    
                                 }
                                 .frame(width: 163)
@@ -762,6 +779,7 @@ struct GenerateAvatar: View {
                     }
 //                }
             }
+            .padding(.top, -20) // Reduce top spacing after drag handle overlay
             .overlay(alignment: .bottom) {
                 if isExpandedMinimal {
                     familyMemberListView()
@@ -782,6 +800,7 @@ struct GenerateAvatar: View {
                 if !familyMember.contains(where: { $0.name == selectedFamilyMember.name }) {
                     selectedFamilyMember = familyMember[0]
                     familyIdx = 0
+                    hasSelectedFamilyMember = false // Fallback, not a user selection
                 }
             }
             .onChange(of: selectedTool) { _, newValue in
@@ -818,9 +837,9 @@ struct GenerateAvatar: View {
                             // Icon with border when selected
                             ZStack {
                                 // Background rectangle with color
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(hex: "#F9F9F9"))
-                                    .frame(width: 52, height: 52)
+//                                RoundedRectangle(cornerRadius: 12)
+//                                    .fill(Color(hex: "#F9F9F9"))
+//                                    .frame(width: 52, height: 52)
                                 
                                 // Icon image
                                 if let icon = tool.icon {
@@ -845,12 +864,13 @@ struct GenerateAvatar: View {
                                 .font(ManropeFont.medium.size(12))
                                 .foregroundStyle(.grayScale110)
                         }
-                        .padding(.top, 22)
+//                        .padding(.top, 22)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+           .padding(.horizontal, 20)
         }
     }
     
@@ -891,13 +911,15 @@ struct GenerateAvatar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
                 ForEach(familyMember) { member in
-                    let isSelected = selectedFamilyMember.name == member.name
+                    let isSelected = hasSelectedFamilyMember && selectedFamilyMember.name == member.name
                     
                     Button {
+                        hasSelectedFamilyMember = true
                         selectedFamilyMember = member
                         if let idx = familyMember.firstIndex(where: { $0.name == member.name }) {
                             familyIdx = idx
                         }
+                        saveState()
                     } label: {
                         VStack(spacing: 8) {
                             // Avatar with green border when selected
@@ -928,11 +950,12 @@ struct GenerateAvatar: View {
                                 .font(ManropeFont.medium.size(12))
                                 .foregroundStyle( .grayScale110)
                         }
-                        .padding(.top, 22)
+//                        .padding(.top, 22)
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.vertical, 8)
             .padding(.horizontal, 20)
         }
     }
@@ -1045,6 +1068,44 @@ struct MeetYourAvatar: View {
     @State var regeneratePressed: () -> Void = { }
     @State var assignedPressed: () -> Void = { }
     @State private var showConfetti = false
+    @Environment(MemojiStore.self) private var memojiStore
+    
+    // Helper function to get the display name with possessive form
+    private var displayText: String {
+        if let typedName = memojiStore.displayName, !typedName.isEmpty {
+            // Use the typed name with possessive form
+            return "Meet \(typedName)'s avatar,\nlooking good!"
+        } else {
+            // Fallback to family member type if no typed name
+            let memberType = memojiStore.selectedFamilyMemberName
+            let possessiveName = getPossessiveName(for: memberType)
+            return "Meet your \(possessiveName) avatar,\nlooking good!"
+        }
+    }
+    
+    // Helper function to convert family member type to possessive form
+    private func getPossessiveName(for memberType: String) -> String {
+        switch memberType.lowercased() {
+        case "father":
+            return "dad's"
+        case "mother":
+            return "mom's"
+        case "grandfather":
+            return "grandfather's"
+        case "grandmother":
+            return "grandmother's"
+        case "baby-boy":
+            return "baby boy's"
+        case "baby-girl":
+            return "baby girl's"
+        case "young-boy":
+            return "young boy's"
+        case "young-girl":
+            return "young girl's"
+        default:
+            return "\(memberType)'s"
+        }
+    }
     
     var body: some View {
         let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
@@ -1065,7 +1126,7 @@ struct MeetYourAvatar: View {
                 }
 
             VStack(spacing: 40) {
-                Text("Meet your dad’s avatar,\nlooking good!")
+                Text(displayText)
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
@@ -2012,6 +2073,7 @@ struct WantToAddPreference: View {
 struct YourCurrentAvatar: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     
     @State var createNewPressed: () -> Void = { }
     
@@ -2050,6 +2112,10 @@ struct YourCurrentAvatar: View {
                 .padding(.bottom, 23)
             
             Button {
+                // Update display name to current member's name before creating new avatar
+                if let member = currentMember {
+                    memojiStore.displayName = member.name
+                }
                 createNewPressed()
             } label: {
                 GreenCapsule(title: "Create New")
@@ -2143,6 +2209,7 @@ struct YourCurrentAvatarView: View {
 struct SetUpAvatarFor: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     
     private var members: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
@@ -2213,9 +2280,12 @@ struct SetUpAvatarFor: View {
                     return
                 }
                 
+                // Update display name for the selected member
+                memojiStore.displayName = selected.name
+                
                 // Remember which member's avatar we are about to generate,
                 // so that MeetYourAvatar can upload the image for this member.
-                print("[SetUpAvatarFor] Next tapped, setting avatarTargetMemberId=\(selected.id)")
+                print("[SetUpAvatarFor] Next tapped, setting avatarTargetMemberId=\(selected.id), displayName=\(selected.name)")
                 familyStore.avatarTargetMemberId = selected.id
                 
                 nextPressed()

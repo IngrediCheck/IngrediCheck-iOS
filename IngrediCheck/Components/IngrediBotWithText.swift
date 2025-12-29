@@ -12,23 +12,38 @@ struct IngrediBotWithText: View {
     let text: String
     var viewDidAppear: (() -> Void)? = nil
     var delay: TimeInterval = 2.0
-    private let player: AVPlayer? = {
-        if let url = Bundle.main.url(forResource: "IngrediBotLoading", withExtension: "mp4") {
-            return AVPlayer(url: url)
+    @State private var playerLooper: AVPlayerLooper?
+    @State private var queuePlayer: AVQueuePlayer?
+    
+    private func setupPlayer() {
+        guard let url = Bundle.main.url(forResource: "IngrediBotLoading", withExtension: "mp4") else {
+            return
         }
-        return nil
-    }()
+        let playerItem = AVPlayerItem(url: url)
+        let newQueuePlayer = AVQueuePlayer(playerItem: playerItem)
+        queuePlayer = newQueuePlayer
+        
+        // Set up looping
+        playerLooper = AVPlayerLooper(player: newQueuePlayer, templateItem: playerItem)
+        newQueuePlayer.play()
+    }
     
     var body: some View {
         VStack(spacing: 32) {
             // Robot image
-            if let player = player {
-                VideoPlayer(player: player)
+            if let queuePlayer = queuePlayer {
+                VideoPlayer(player: queuePlayer)
                     .onAppear {
-                        player.play()
+                        if playerLooper == nil {
+                            setupPlayer()
+                        } else {
+                            queuePlayer.play()
+                        }
                     }
                     .onDisappear {
-                        player.pause()
+                        playerLooper?.disableLooping()
+                        playerLooper = nil
+                        queuePlayer.pause()
                     }
                     .frame(width: 147, height: 147)
                     .clipped()
@@ -38,6 +53,9 @@ struct IngrediBotWithText: View {
                     .scaledToFit()
                     .frame(width: 147, height: 147)
                     .clipped()
+                    .onAppear {
+                        setupPlayer()
+                    }
             }
             
             VStack(spacing: 24) {
