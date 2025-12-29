@@ -444,8 +444,9 @@ struct GenerateAvatar: View {
         let gesture = selectedGestureIcon ?? tools[0].tools.first?.icon ?? "wave"
         let hair = selectedHairStyleIcon ?? tools[1].tools.first?.icon ?? "short-hair"
         let skinTone = selectedSkinToneIcon ?? tools[2].tools.first?.icon ?? "light"
-        let accessory = selectedAccessoriesIcon ?? tools[3].tools.first?.icon
-        let colorTheme = selectedColorThemeIcon ?? tools[4].tools.first?.icon
+        // Don't fallback to default for optional fields - if user doesn't select, send nil to API
+        let accessory = selectedAccessoriesIcon
+        let colorTheme = selectedColorThemeIcon
         
         // Format: "baby-boy age (0 to 4)"
         let familyTypeWithAge = "\(selectedFamilyMember.name.lowercased()) \(getAgeRangeForAPI(for: selectedFamilyMember.name))"
