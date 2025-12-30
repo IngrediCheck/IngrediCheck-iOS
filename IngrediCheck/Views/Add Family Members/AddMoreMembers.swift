@@ -10,6 +10,7 @@ import SwiftUI
 struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(MemojiStore.self) private var memojiStore
     @State var name: String = ""
     @State var showError: Bool = false
     @State var familyMembersList: [UserModel] = [
@@ -89,6 +90,14 @@ struct AddMoreMembers: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
+                                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !trimmed.isEmpty {
+                                    memojiStore.displayName = trimmed
+                                } else {
+                                    // Clear displayName if name field is empty to prevent previous name from showing
+                                    memojiStore.displayName = nil
+                                }
+                                memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
                                 coordinator.navigateInBottomSheet(.generateAvatar)
                             } label: {
                                 ZStack {
@@ -166,5 +175,27 @@ struct AddMoreMembers: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .onAppear {
+            // Reset all selection state when adding a new member
+            resetMemojiSelectionState()
+        }
+    }
+    
+    // Reset all memoji selection state to start fresh for new member
+    private func resetMemojiSelectionState() {
+        // Set to empty string so restoreState() treats it as fresh start
+        memojiStore.selectedFamilyMemberName = ""
+        memojiStore.selectedFamilyMemberImage = ""
+        memojiStore.selectedTool = "family-member"
+        memojiStore.currentToolIndex = 0
+        memojiStore.selectedGestureIcon = nil
+        memojiStore.selectedHairStyleIcon = nil
+        memojiStore.selectedSkinToneIcon = nil
+        memojiStore.selectedAccessoriesIcon = nil
+        memojiStore.selectedColorThemeIcon = nil
+        // Clear displayName to prevent previous member's name from persisting
+        memojiStore.displayName = nil
+        // Clear previous route so back button works correctly for new flow
+        memojiStore.previousRouteForGenerateAvatar = nil
     }
 }

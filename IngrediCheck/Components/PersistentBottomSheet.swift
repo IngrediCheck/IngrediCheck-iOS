@@ -144,7 +144,7 @@ struct PersistentBottomSheet: View {
         case .generateAvatar:
             return 379
         case .bringingYourAvatar:
-            return 282
+            return 316
         case .meetYourAvatar:
             return 391
         case .yourCurrentAvatar:

@@ -164,6 +164,7 @@ struct IngrediFamCanvasView: View {
 
 struct GenerateAvatar: View {
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     @State var toolIcons: [String] = [
         "family-member",
@@ -175,36 +176,49 @@ struct GenerateAvatar: View {
     ]
     
     @State var familyMember: [UserModel] = [
-        UserModel(familyMemberName: "grandfather", familyMemberImage: "image-bg3"),
-        UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2"),
-        UserModel(familyMemberName: "young-daughter", familyMemberImage: "image-bg5"),
-        UserModel(familyMemberName: "father", familyMemberImage: "image-bg4")
+        UserModel(familyMemberName: "baby-boy", familyMemberImage: "baby-boy", backgroundColor: Color(hex: "FFD9B5")), // Baby Boy - Age (0-4)
+        UserModel(familyMemberName: "baby-girl", familyMemberImage: "baby-girl", backgroundColor: Color(hex: "F9C6D0")), // Baby Girl - Age (0-4)
+        UserModel(familyMemberName: "young-girl", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "B8E6FF")), // Young Girl - Age (4-25)
+        UserModel(familyMemberName: "young-boy", familyMemberImage: "Young-Son", backgroundColor: Color(hex: "FFF6B3")), // Young Boy - Age (4-25)
+        UserModel(familyMemberName: "mother", familyMemberImage: "image 2", backgroundColor: Color(hex: "E6D5F5")), // Adult Woman - Age (25-50)
+        UserModel(familyMemberName: "father", familyMemberImage: "adult-man", backgroundColor: Color(hex: "D4E6F1")), // Adult Man - Age (25-50)
+        UserModel(familyMemberName: "grandfather", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
+        UserModel(familyMemberName: "grandmother", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     
-    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "young-son", familyMemberImage: "image-bg1")
+    @State var selectedFamilyMember: UserModel = UserModel(familyMemberName: "baby-boy", familyMemberImage: "baby-boy", backgroundColor: Color(hex: "FFD9B5"))
     @State var familyIdx: Int = 0
     
     // Restore state from memojiStore when view appears
     private func restoreState() {
         // Restore selected family member
-        selectedFamilyMember = UserModel(
-            familyMemberName: memojiStore.selectedFamilyMemberName,
-            familyMemberImage: memojiStore.selectedFamilyMemberImage
-        )
-        if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
-            familyIdx = idx
+        if !memojiStore.selectedFamilyMemberName.isEmpty,
+           let existingMember = familyMember.first(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+            selectedFamilyMember = existingMember
+            hasSelectedFamilyMember = true // User has previously selected this
+            if let idx = familyMember.firstIndex(where: { $0.name == memojiStore.selectedFamilyMemberName }) {
+                familyIdx = idx
+            } else {
+                familyIdx = 0
+                selectedFamilyMember = familyMember[0] // Ensure valid selection
+            }
         } else {
+            // No previous selection - nothing should appear selected
+            selectedFamilyMember = familyMember[0]
             familyIdx = 0
+            hasSelectedFamilyMember = false
         }
         
         // Restore other selections
-        selectedTool = memojiStore.selectedTool
-        idx = memojiStore.currentToolIndex
         selectedGestureIcon = memojiStore.selectedGestureIcon
         selectedHairStyleIcon = memojiStore.selectedHairStyleIcon
         selectedSkinToneIcon = memojiStore.selectedSkinToneIcon
         selectedAccessoriesIcon = memojiStore.selectedAccessoriesIcon
         selectedColorThemeIcon = memojiStore.selectedColorThemeIcon
+        
+        // Restore selected tool and then restore idx based on selected icon
+        selectedTool = memojiStore.selectedTool
+        restoreIdxForTool(selectedTool)
     }
     
     // Save state to memojiStore when selections change
@@ -242,29 +256,31 @@ struct GenerateAvatar: View {
             tools: [
                 ChipsModel(name: "Short hair", icon: "short-hair"),
                 ChipsModel(name: "Long hair", icon: "long-hair"),
-                ChipsModel(name: "straight hair", icon: "straight-hair"),
                 ChipsModel(name: "Ponytail", icon: "ponytail"),
                 ChipsModel(name: "Curly hair", icon: "curly-hair"),
                 ChipsModel(name: "Bun", icon: "bun"),
-                ChipsModel(name: "Bald", icon: "bald")
+                ChipsModel(name: "Bald", icon: "bald"),
+                ChipsModel(name: "Short Spiky", icon: "Short Spiky"),
+                ChipsModel(name: "Braided", icon: "Braided"),
+                ChipsModel(name: "Medium Curly", icon: "medium-curely")
             ]
         ),
         GenerateAvatarTools(
             title: "Skin Tone",
             icon: "skin-tone",
             tools: [
+                ChipsModel(name: "Very Light", icon: "very-light"),
                 ChipsModel(name: "Light", icon: "light"),
+                ChipsModel(name: "Medium Light", icon: "medium-light"),
                 ChipsModel(name: "Medium", icon: "medium"),
-                ChipsModel(name: "Tan", icon: "tan"),
-                ChipsModel(name: "Deep", icon: "deep"),
-                ChipsModel(name: "Freckled", icon: "freckled")
+                ChipsModel(name: "Medium Dark", icon: "Medium-Dark"),
+                ChipsModel(name: "Very Dark", icon: "very-dark")
             ]
         ),
         GenerateAvatarTools(
             title: "Accessories",
             icon: "accessories",
             tools: [
-                ChipsModel(name: "None", icon: "none"),
                 ChipsModel(name: "Glasses", icon: "glasses"),
                 ChipsModel(name: "Hat", icon: "hat"),
                 ChipsModel(name: "Earrings", icon: "earrings"),
@@ -297,6 +313,7 @@ struct GenerateAvatar: View {
     @State var selectedSkinToneIcon: String? = nil
     @State var selectedAccessoriesIcon: String? = nil
     @State var selectedColorThemeIcon: String? = nil
+    @State var hasSelectedFamilyMember: Bool = false // Track if user has actively selected a family member
     
     var randomPressed: (MemojiSelection) -> Void = { _ in }
     var generatePressed: (MemojiSelection) -> Void = { _ in }
@@ -321,34 +338,121 @@ struct GenerateAvatar: View {
         }
     }
     
+    // Helper function to get primary icon name for a tool category (for selected state)
+    func getPrimaryIcon(for toolIcon: String) -> String? {
+        switch toolIcon {
+        case "family-member":
+            return "family-member-Primary"
+        case "gesture":
+            return "gesture-Primary"
+        case "hair-style":
+            return "hair-style-Primary"
+        case "skin-tone":
+            return "skin-tone-Primary"
+        case "accessories":
+            return "accessories-Primary"
+        case "color-theme":
+            return "color-theme-Primary"
+        default:
+            return nil
+        }
+    }
+    
+    // Helper function to restore idx based on selected icon for a tool category
+    private func restoreIdxForTool(_ toolIcon: String) {
+        // Skip family-member as it doesn't use idx
+        guard toolIcon != "family-member" else {
+            return
+        }
+        
+        // Get the tool index (0-based for tools array: gesture=0, hair-style=1, etc.)
+        guard let toolIconIndex = toolIcons.firstIndex(of: toolIcon),
+              toolIconIndex > 0 else {
+            idx = 0
+            return
+        }
+        
+        let toolIdx = toolIconIndex - 1 // Convert to tools array index
+        guard toolIdx < tools.count else {
+            idx = 0
+            return
+        }
+        
+        // Get the selected icon for this tool category
+        let selectedIcon = getSelectedIcon(for: toolIcon)
+        
+        // Find the index of the selected icon in the tools array
+        if let selectedIcon = selectedIcon,
+           let iconIndex = tools[toolIdx].tools.firstIndex(where: { $0.icon == selectedIcon }) {
+            idx = iconIndex
+        } else {
+            // If no selection, default to first item
+            idx = 0
+        }
+    }
+    
     // Helper function to set selected icon for a tool category
     func setSelectedIcon(for toolIcon: String, icon: String?) {
         switch toolIcon {
         case "gesture":
             selectedGestureIcon = icon
+            // Update idx to match the selected icon's position in gesture tools
+            if let icon = icon, let iconIndex = tools[0].tools.firstIndex(where: { $0.icon == icon }) {
+                idx = iconIndex
+            }
         case "hair-style":
             selectedHairStyleIcon = icon
+            // Update idx to match the selected icon's position in hair-style tools
+            if let icon = icon, let iconIndex = tools[1].tools.firstIndex(where: { $0.icon == icon }) {
+                idx = iconIndex
+            }
         case "skin-tone":
             selectedSkinToneIcon = icon
+            // Update idx to match the selected icon's position in skin-tone tools
+            if let icon = icon, let iconIndex = tools[2].tools.firstIndex(where: { $0.icon == icon }) {
+                idx = iconIndex
+            }
         case "accessories":
             selectedAccessoriesIcon = icon
+            // Update idx to match the selected icon's position in accessories tools
+            if let icon = icon, let iconIndex = tools[3].tools.firstIndex(where: { $0.icon == icon }) {
+                idx = iconIndex
+            }
         case "color-theme":
             selectedColorThemeIcon = icon
+            // Update idx to match the selected icon's position in color-theme tools
+            if let icon = icon, let iconIndex = tools[4].tools.firstIndex(where: { $0.icon == icon }) {
+                idx = iconIndex
+            }
         default:
             break
         }
         saveState()
     }
     
-    private func buildMemojiSelection() -> MemojiSelection {
+    private func buildMemojiSelection() -> MemojiSelection? {
+        // Require explicit family member selection - don't fall back to default
+        guard hasSelectedFamilyMember else {
+            return nil
+        }
+        
+        // Note: We don't validate against familyMember array here because:
+        // - The array is manipulated for UI display (selected member is removed from list)
+        // - selectedFamilyMember is a valid UserModel object when hasSelectedFamilyMember is true
+        // - The array manipulation in familyMemberListView is just for showing "other" members
+        
         let gesture = selectedGestureIcon ?? tools[0].tools.first?.icon ?? "wave"
         let hair = selectedHairStyleIcon ?? tools[1].tools.first?.icon ?? "short-hair"
         let skinTone = selectedSkinToneIcon ?? tools[2].tools.first?.icon ?? "light"
-        let accessory = selectedAccessoriesIcon ?? tools[3].tools.first?.icon
-        let colorTheme = selectedColorThemeIcon ?? tools[4].tools.first?.icon
+        // Don't fallback to default for optional fields - if user doesn't select, send nil to API
+        let accessory = selectedAccessoriesIcon
+        let colorTheme = selectedColorThemeIcon
+        
+        // Format: "baby-boy age (0 to 4)"
+        let familyTypeWithAge = "\(selectedFamilyMember.name.lowercased()) \(getAgeRangeForAPI(for: selectedFamilyMember.name))"
         
         return MemojiSelection(
-            familyType: selectedFamilyMember.name.lowercased(),
+            familyType: familyTypeWithAge,
             gesture: gesture,
             hair: hair,
             skinTone: skinTone,
@@ -489,36 +593,90 @@ struct GenerateAvatar: View {
                         .padding(.bottom, 20)
                         .matchedGeometryEffect(id: "circle", in: animation)
                     } else {
-                        VStack(spacing: 40) {
+                        VStack(spacing: 22) {
                             VStack(alignment: .leading, spacing: 16) {
-                                HStack {
+                                HStack(spacing: 8) {
+                                    Button {
+                                        // Navigate back to the previous route, or default to whatsYourName
+                                        let previousRoute = memojiStore.previousRouteForGenerateAvatar ?? .whatsYourName
+                                        coordinator.navigateInBottomSheet(previousRoute)
+                                    } label: {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundStyle(.black)
+                                            .frame(width: 24, height: 24)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    
                                     Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
                                     Spacer()
-                                    
-                                    Text("0/2")
-                                        .font(ManropeFont.regular.size(14))
-                                        .foregroundStyle(.grayScale100)
                                 }
                                 .padding(.horizontal, 20)
                                 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(toolIcons, id: \.self) { ele in
-                                            GenerateAvatarToolPill(
-                                                icon: ele,
-                                                title: ele,
-                                                isSelected: $selectedTool,
-                                                selectedItemIcon: getSelectedIcon(for: ele)
-                                            ) {
-                                                idx = 0
-                                                selectedTool = ele
+                                VStack(spacing: 0) {
+                                    ScrollViewReader { proxy in
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 35) {
+                                                ForEach(toolIcons, id: \.self) { ele in
+                                                    GenerateAvatarToolPill(
+                                                        icon: ele,
+                                                        title: ele,
+                                                        isSelected: $selectedTool,
+                                                        selectedItemIcon: getSelectedIcon(for: ele),
+                                                        primaryIcon: getPrimaryIcon(for: ele)
+                                                    ) {
+                                                        restoreIdxForTool(ele)
+                                                        selectedTool = ele
+                                                    }
+                                                    .id(ele)
+                                                }
+                                            }
+                                            .padding(.horizontal,25)
+                                        }
+                                        .onChange(of: selectedTool) { _, newValue in
+                                            withAnimation {
+                                                proxy.scrollTo(newValue, anchor: .center)
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 20)
+                                    
+                                    // Rectangle indicator above Divider, aligned with selected tool
+                                    ScrollViewReader { proxy in
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 35) {
+                                                ForEach(toolIcons, id: \.self) { ele in
+                                                    Group {
+                                                        if ele == selectedTool {
+                                                            RoundedRectangle(cornerRadius: 1)
+                                                                .fill(Color(hex: "#91B640"))
+                                                                .frame(width: 28, height: 2)
+                                                                .matchedGeometryEffect(id: "selectedIndicator", in: animation)
+                                                        } else {
+                                                            RoundedRectangle(cornerRadius: 1)
+                                                                .fill(Color.clear)
+                                                                .frame(width: 28, height: 2)
+                                                        }
+                                                    }
+                                                    .id(ele)
+                                                }
+                                            }
+                                            .padding(.horizontal,25)
+                                        }
+                                        .frame(height: 2)
+                                        .onChange(of: selectedTool) { _, newValue in
+                                            withAnimation(.easeInOut(duration: 0.4)) {
+                                                proxy.scrollTo(newValue, anchor: .center)
+                                            }
+                                        }
+                                    }
+                                    .padding(.top, 9)
+                                    
+                                    Divider()
+                                       
                                 }
                                 
                                 VStack {
@@ -544,30 +702,96 @@ struct GenerateAvatar: View {
                                     default:
                                         EmptyView()
                                     }
-                                }
-                                .padding(.horizontal, selectedTool == "family-member" ? 0 : 20)
+                                }	
+                                // Removed padding to allow scrolling to phone edges for all selectors
+                                // .padding(.horizontal, selectedTool == "family-member" ? 0 : 20)
                             }
                             
-                            
-                            HStack(spacing: 16) {
-                                Button {
-                                    randomPressed(buildMemojiSelection())
-                                } label: {
-                                    GreenOutlinedCapsule(image: "ai-stick", title: "Random")
+                            HStack(alignment: .top){
+                                VStack(alignment: .leading){
+                                    // Check if any tool category is selected
+                                    let hasSelections = hasSelectedFamilyMember ||
+                                                       selectedGestureIcon != nil ||
+                                                       selectedHairStyleIcon != nil ||
+                                                       selectedSkinToneIcon != nil ||
+                                                       selectedAccessoriesIcon != nil ||
+                                                       selectedColorThemeIcon != nil
+                                    
+                                    Text("Selected")
+                                        .font(ManropeFont.medium.size(12))
+                                        .foregroundStyle(hasSelections ? .grayScale130 : .grayScale70)
+                                    HStack(spacing: 8) {
+                                        // Selected icons row - show family member immediately when selected
+                                        // Family member (show if user has actively selected it)
+                                        if hasSelectedFamilyMember, let familyIcon = getSelectedIcon(for: "family-member") {
+                                            Image(familyIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                               .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Gesture (only show if selected)
+                                        if let gestureIcon = getSelectedIcon(for: "gesture") {
+                                            Image(gestureIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Hair style (only show if selected)
+                                        if let hairIcon = getSelectedIcon(for: "hair-style") {
+                                            Image(hairIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Skin tone (only show if selected)
+                                        if let skinToneIcon = getSelectedIcon(for: "skin-tone") {
+                                            Image(skinToneIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Accessories (only show if selected)
+                                        if let accessoriesIcon = getSelectedIcon(for: "accessories") {
+                                            Image(accessoriesIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        // Color theme (only show if selected)
+                                        if let colorThemeIcon = getSelectedIcon(for: "color-theme") {
+                                            Image(colorThemeIcon)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 20, height: 20)
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                   
                                 }
-
-                                
+                                .frame(width: 163)
+//                                .padding(.horizontal, 20)
+                                // Generate button
                                 Button {
-                                    generatePressed(buildMemojiSelection())
+                                    if let selection = buildMemojiSelection() {
+                                        generatePressed(selection)
+                                    }
                                 } label: {
                                     GreenCapsule(title: "Generate", icon: "stars-generate")
                                 }
-                            }
-                            .padding(.horizontal, 20)
+                                .disabled(!hasSelectedFamilyMember)
+                                .opacity(hasSelectedFamilyMember ? 1.0 : 0.6)
+                            }.padding(.horizontal, 20)
                         }
                     }
 //                }
             }
+            .padding(.top, -20) // Reduce top spacing after drag handle overlay
             .overlay(alignment: .bottom) {
                 if isExpandedMinimal {
                     familyMemberListView()
@@ -584,8 +808,15 @@ struct GenerateAvatar: View {
             .animation(.easeInOut, value: isExpandedMinimal)
             .onAppear {
                 restoreState()
+                // Ensure we always have a valid family member selected
+                if !familyMember.contains(where: { $0.name == selectedFamilyMember.name }) {
+                    selectedFamilyMember = familyMember[0]
+                    familyIdx = 0
+                    hasSelectedFamilyMember = false // Fallback, not a user selection
+                }
             }
-            .onChange(of: selectedTool) { _, _ in
+            .onChange(of: selectedTool) { _, newValue in
+                restoreIdxForTool(newValue)
                 saveState()
             }
             .onChange(of: idx) { _, _ in
@@ -605,123 +836,140 @@ struct GenerateAvatar: View {
         // Map toolIdx to toolIcons: 0->gesture, 1->hair-style, 2->skin-tone, 3->accessories, 4->color-theme
         let toolCategory = toolIcons[toolIdx + 1] // +1 because toolIcons[0] is "family-member"
         let selectedIcon = getSelectedIcon(for: toolCategory)
-        let currentTool = tools[toolIdx].tools[idx]
-        let isCurrentSelected = selectedIcon == currentTool.icon
         
-        HStack {
-            Button {
-                idx = max(0, idx - 1)
-            } label: {
-                Circle()
-                    .fill(.grayScale60)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(.arrowLeft)
-                            .resizable()
-                            .rotationEffect(.degrees(180))
-                            .frame(width: 22, height: 22)
-                    )
-            }
-            .disabled(idx == 0)
-
-            Spacer()
-            
-            Button {
-                // Select the currently highlighted tool
-                setSelectedIcon(for: toolCategory, icon: currentTool.icon)
-            } label: {
-                VStack {
-                    if let icon = currentTool.icon {
-                        Image(icon)
-                            .resizable()
-                            .frame(width: 56, height: 50)
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ForEach(tools[toolIdx].tools) { tool in
+                    let isSelected = selectedIcon == tool.icon
                     
-                    Text(currentTool.name)
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                    Button {
+                        setSelectedIcon(for: toolCategory, icon: tool.icon)
+                    } label: {
+                        VStack(spacing: 8) {
+                            // Icon with border when selected
+                            ZStack {
+                                // Background rectangle with color
+//                                RoundedRectangle(cornerRadius: 12)
+//                                    .fill(Color(hex: "#F9F9F9"))
+//                                    .frame(width: 52, height: 52)
+                                
+                                // Icon image
+                                if let icon = tool.icon {
+                                    Image(icon)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 43.34, height: 43.34)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                
+                                // Border - conditional based on selection
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(
+                                        isSelected ? Color(hex: "#91B640") : .grayScale40,
+                                        lineWidth: isSelected ? 1 : 0.5
+                                    )
+                                    .frame(width: 70, height: 70)
+                            }
+                            
+                            // Tool name label
+                            Text(tool.name)
+                                .font(ManropeFont.medium.size(12))
+                                .foregroundStyle(.grayScale110)
+                        }
+//                        .padding(.top, 22)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 16)
             }
-            .buttonStyle(.plain)
-            
-            Spacer()
-            
-            Button {
-                idx = min(idx + 1, tools[toolIdx].tools.count - 1)
-            } label: {
-                Circle()
-                    .fill(.grayScale60)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(.arrowLeft)
-                            .resizable()
-                            .frame(width: 22, height: 22)
-                    )
-            }
-            .disabled(idx == tools[toolIdx].tools.count - 1)
+            .padding(.vertical, 8)
+           .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
+    }
+    
+    // Helper function to get age range for family member (for UI display)
+    private func getAgeRange(for memberName: String) -> String {
+        switch memberName.lowercased() {
+        case "baby-boy", "baby-girl":
+            return "Age (0-4)"
+        case "young-girl", "young-boy":
+            return "Age (4-25)"
+        case "father", "mother":
+            return "Age (25-50)"
+        case "grandfather", "grandmother":
+            return "Age (50+)"
+        default:
+            return "Age (4-25)"
+        }
+    }
+    
+    // Helper function to get age range for API (format: "age (0 to 4)")
+    private func getAgeRangeForAPI(for memberName: String) -> String {
+        switch memberName.lowercased() {
+        case "baby-boy", "baby-girl":
+            return "age (0 to 4)"
+        case "young-girl", "young-boy":
+            return "age (4 to 25)"
+        case "father", "mother":
+            return "age (25 to 50)"
+        case "grandfather", "grandmother":
+            return "age (50+)"
+        default:
+            return "age (4 to 25)"
+        }
     }
     
     @ViewBuilder
     func minimalFamilySelector() -> some View {
-        let current = familyMember[familyIdx]
-        let isCurrentSelected = selectedFamilyMember.name == current.name
-        
-        HStack {
-            Button {
-                familyIdx = max(0, familyIdx - 1)
-            } label: {
-                Circle()
-                    .fill(.grayScale60)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(.arrowLeft)
-                            .resizable()
-                            .rotationEffect(.degrees(180))
-                            .frame(width: 22, height: 22)
-                    )
-            }
-            .disabled(familyIdx == 0)
-
-            Spacer()
-            
-            Button {
-                selectedFamilyMember = current
-            } label: {
-                VStack {
-                    Image(current.image)
-                        .resizable()
-                        .frame(width: 56, height: 50)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ForEach(familyMember) { member in
+                    let isSelected = hasSelectedFamilyMember && selectedFamilyMember.name == member.name
                     
-                    Text(current.name)
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(isCurrentSelected ? .primary100 : .grayScale140)
+                    Button {
+                        hasSelectedFamilyMember = true
+                        selectedFamilyMember = member
+                        if let idx = familyMember.firstIndex(where: { $0.name == member.name }) {
+                            familyIdx = idx
+                        }
+                        saveState()
+                    } label: {
+                        VStack(spacing: 8) {
+                            // Avatar with green border when selected
+                            ZStack {
+                                // Background circle with color
+                                Circle()
+                                    .fill(Color(hex: "#F9F9F9"))
+                                    .frame(width: 52, height: 52)
+                                
+                                // Avatar image
+                                Image(member.image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 43.34, height: 43.34)
+                                    .clipShape(Circle())
+                                
+                                
+                                RoundedRectangle(cornerRadius: 12)
+                                                                   .stroke(
+                                                                       isSelected ? Color(hex: "#91B640") : .grayScale40,
+                                                                       lineWidth: isSelected ? 1 : 0.5
+                                                                   )
+                                                                   .frame(width: 70, height: 70)
+                            }
+                            
+                            // Age range label
+                            Text(getAgeRange(for: member.name))
+                                .font(ManropeFont.medium.size(12))
+                                .foregroundStyle( .grayScale110)
+                        }
+//                        .padding(.top, 22)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 16)
             }
-            .buttonStyle(.plain)
-            
-            Spacer()
-            
-            Button {
-                familyIdx = min(familyIdx + 1, familyMember.count - 1)
-            } label: {
-                Circle()
-                    .fill(.grayScale60)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(.arrowLeft)
-                            .resizable()
-                            .frame(width: 22, height: 22)
-                    )
-            }
-            .disabled(familyIdx == familyMember.count - 1)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
     }
     
     @ViewBuilder
@@ -795,7 +1043,12 @@ struct GenerateAvatar: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .onTapGesture {
                             let temp = selectedFamilyMember
+                            // Update familyIdx before modifying the array
+                            if let idx = familyMember.firstIndex(where: { $0.name == member.name }) {
+                                familyIdx = idx
+                            }
                             selectedFamilyMember = member
+                            hasSelectedFamilyMember = true
                             familyMember.removeAll { $0.name == member.name }
                             familyMember.append(temp)
                             saveState()
@@ -832,6 +1085,44 @@ struct MeetYourAvatar: View {
     @State var regeneratePressed: () -> Void = { }
     @State var assignedPressed: () -> Void = { }
     @State private var showConfetti = false
+    @Environment(MemojiStore.self) private var memojiStore
+    
+    // Helper function to get the display name with possessive form
+    private var displayText: String {
+        if let typedName = memojiStore.displayName, !typedName.isEmpty {
+            // Use the typed name with possessive form
+            return "Meet \(typedName)'s avatar,\nlooking good!"
+        } else {
+            // Fallback to family member type if no typed name
+            let memberType = memojiStore.selectedFamilyMemberName
+            let possessiveName = getPossessiveName(for: memberType)
+            return "Meet your \(possessiveName) avatar,\nlooking good!"
+        }
+    }
+    
+    // Helper function to convert family member type to possessive form
+    private func getPossessiveName(for memberType: String) -> String {
+        switch memberType.lowercased() {
+        case "father":
+            return "dad's"
+        case "mother":
+            return "mom's"
+        case "grandfather":
+            return "grandfather's"
+        case "grandmother":
+            return "grandmother's"
+        case "baby-boy":
+            return "baby boy's"
+        case "baby-girl":
+            return "baby girl's"
+        case "young-boy":
+            return "young boy's"
+        case "young-girl":
+            return "young girl's"
+        default:
+            return "\(memberType)'s"
+        }
+    }
     
     var body: some View {
         let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
@@ -852,7 +1143,7 @@ struct MeetYourAvatar: View {
                 }
 
             VStack(spacing: 40) {
-                Text("Meet your dad’s avatar,\nlooking good!")
+                Text(displayText)
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
@@ -1799,6 +2090,7 @@ struct WantToAddPreference: View {
 struct YourCurrentAvatar: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     
     @State var createNewPressed: () -> Void = { }
     
@@ -1837,6 +2129,10 @@ struct YourCurrentAvatar: View {
                 .padding(.bottom, 23)
             
             Button {
+                // Update display name to current member's name before creating new avatar
+                if let member = currentMember {
+                    memojiStore.displayName = member.name
+                }
                 createNewPressed()
             } label: {
                 GreenCapsule(title: "Create New")
@@ -1930,6 +2226,7 @@ struct YourCurrentAvatarView: View {
 struct SetUpAvatarFor: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     
     private var members: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
@@ -2000,9 +2297,12 @@ struct SetUpAvatarFor: View {
                     return
                 }
                 
+                // Update display name for the selected member
+                memojiStore.displayName = selected.name
+                
                 // Remember which member's avatar we are about to generate,
                 // so that MeetYourAvatar can upload the image for this member.
-                print("[SetUpAvatarFor] Next tapped, setting avatarTargetMemberId=\(selected.id)")
+                print("[SetUpAvatarFor] Next tapped, setting avatarTargetMemberId=\(selected.id), displayName=\(selected.name)")
                 familyStore.avatarTargetMemberId = selected.id
                 
                 nextPressed()
