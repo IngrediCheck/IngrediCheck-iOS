@@ -65,36 +65,30 @@ struct HomeView: View {
         
         var body: some View {
             Group {
-                // Display the composited image directly (it already has background color baked in)
-                // Or show fallback with background circle if no image
-                if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
-                    // Show composited memoji avatar - fills the entire circle with white stroke
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 36, height: 36)
-                        .mask(Circle()) // Use mask instead of clipShape for cleaner edges
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                } else {
-                    // Fallback: colored circle with initial letter
-                    Circle()
-                        .fill(Color(hex: member.color))
-                        .frame(width: 36, height: 36)
-                        .overlay {
+                // Show avatar with background color circle, or fallback with initial letter
+                Circle()
+                    .fill(Color(hex: member.color))
+                    .frame(width: 36, height: 36)
+                    .overlay {
+                        if let avatarImage = avatarImage {
+                            // Show transparent PNG memoji avatar over colored background
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 36, height: 36)
+                                .clipShape(Circle())
+                        } else {
+                            // Fallback: initial letter
                             Text(String(member.name.prefix(1)))
                                 .font(NunitoFont.semiBold.size(14))
                                 .foregroundStyle(.white)
                         }
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                }
+                    }
+                    .overlay(
+                        Circle()
+                            .stroke(lineWidth: 1)
+                            .foregroundStyle(Color.white)
+                    )
             }
             // Re-evaluate whenever the member's imageFileHash changes.
             .task(id: member.imageFileHash) {

@@ -163,47 +163,30 @@ struct FamilyCarouselMemberAvatarView: View {
                                 .frame(width: 28, height: 28)
                         }
                 } else {
-                    // Individual member - show actual avatar if available
-                    Group {
-                        if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
-                            // Show composited memoji avatar - fills the entire circle with white stroke
-                            Image(uiImage: avatarImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 46, height: 46)
-                                .mask(Circle())
-                                .overlay(
-                                    Circle()
-                                        .stroke(lineWidth: 1)
-                                        .foregroundStyle(Color.white)
-                                )
-                        } else if let member = resolvedMember {
-                            // Fallback: colored circle with initial letter
-                            Circle()
-                                .fill(color)
-                                .frame(width: 46, height: 46)
-                                .overlay {
-                                    Text(String(member.name.prefix(1)))
-                                        .font(NunitoFont.semiBold.size(14))
-                                        .foregroundStyle(.white)
-                                }
-                                .overlay(
-                                    Circle()
-                                        .stroke(lineWidth: 1)
-                                        .foregroundStyle(Color.white)
-                                )
-                        } else {
-                            // Default fallback
-                            Circle()
-                                .fill(color)
-                                .frame(width: 46, height: 46)
-                                .overlay(
-                                    Circle()
-                                        .stroke(lineWidth: 1)
-                                        .foregroundStyle(Color.white)
-                                )
+                    // Individual member - show avatar with background color circle, or fallback with initial letter
+                    Circle()
+                        .fill(color)
+                        .frame(width: 46, height: 46)
+                        .overlay {
+                            if let avatarImage = avatarImage {
+                                // Show transparent PNG memoji avatar over colored background
+                                Image(uiImage: avatarImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 46, height: 46)
+                                    .clipShape(Circle())
+                            } else if let member = resolvedMember {
+                                // Fallback: initial letter
+                                Text(String(member.name.prefix(1)))
+                                    .font(NunitoFont.semiBold.size(14))
+                                    .foregroundStyle(.white)
+                            }
                         }
-                    }
+                        .overlay(
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        )
                 }
             }
             

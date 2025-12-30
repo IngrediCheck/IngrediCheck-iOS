@@ -115,38 +115,26 @@ struct IngredientsChips: View {
                                 .stroke(lineWidth: 1)
                                 .foregroundStyle(Color.white)
                         }
-                } else if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
-                    // Show composited memoji avatar - fills the entire circle with white stroke
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 24, height: 24)
-                        .mask(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                } else if let member = resolvedMember {
-                    // Fallback: colored circle with initial letter
+                } else {
+                    // Show avatar with background color circle, or fallback with initial letter
                     Circle()
                         .fill(circleBackgroundColor)
                         .frame(width: 24, height: 24)
                         .overlay {
-                            Text(String(member.name.prefix(1)))
-                                .font(NunitoFont.semiBold.size(10))
-                                .foregroundStyle(.white)
+                            if let avatarImage = avatarImage {
+                                // Show transparent PNG memoji avatar over colored background
+                                Image(uiImage: avatarImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 24, height: 24)
+                                    .clipShape(Circle())
+                            } else if let member = resolvedMember {
+                                // Fallback: initial letter
+                                Text(String(member.name.prefix(1)))
+                                    .font(NunitoFont.semiBold.size(10))
+                                    .foregroundStyle(.white)
+                            }
                         }
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                } else {
-                    // Default fallback
-                    Circle()
-                        .fill(circleBackgroundColor)
-                        .frame(width: 24, height: 24)
                         .overlay(
                             Circle()
                                 .stroke(lineWidth: 1)

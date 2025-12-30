@@ -847,28 +847,21 @@ struct GenerateAvatar: View {
 }
 
 struct MeetYourAvatar: View {
-    var image: UIImage? = nil
-    var backgroundColorHex: String? = nil
-    @State var regeneratePressed: () -> Void = { }
-    @State var assignedPressed: () -> Void = { }
-    @State private var showConfetti = false
+    let image: UIImage?
+    let backgroundColorHex: String?
+    let regeneratePressed: () -> Void
+    let assignedPressed: () -> Void
+//    @State private var showConfetti = false
+    
+    init(image: UIImage? = nil, backgroundColorHex: String? = nil, regeneratePressed: @escaping () -> Void = {}, assignedPressed: @escaping () -> Void = {}) {
+        self.image = image
+        self.backgroundColorHex = backgroundColorHex
+        self.regeneratePressed = regeneratePressed
+        self.assignedPressed = assignedPressed
+    }
     
     var body: some View {
-        // CRITICAL: Capture and validate image immediately to prevent EXC_BAD_ACCESS
-        // This prevents crashes when the image is deallocated during rendering
-        let safeImage: UIImage? = {
-            guard let img = image,
-                  img.cgImage != nil,
-                  img.size.width > 0 && img.size.height > 0,
-                  img.size.width.isFinite && img.size.height.isFinite else {
-                return nil
-            }
-            return img
-        }()
-        
-        // Safely parse background color with fallback
-        let safeHex = backgroundColorHex?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "F2F2F2"
-        let circleColor = Color(hex: safeHex.isEmpty ? "F2F2F2" : safeHex)
+        let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
         
         VStack(spacing: 20) {
             // Avatar placeholder
@@ -876,8 +869,8 @@ struct MeetYourAvatar: View {
                 .fill(circleColor)
                 .frame(width: 137, height: 137)
                 .overlay {
-                    if let safeImage = safeImage {
-                        Image(uiImage: safeImage)
+                    if let image = image {
+                        Image(uiImage: image)
                             .resizable()
                             .scaledToFill()
                             .frame(width: 137, height: 137)
@@ -886,7 +879,7 @@ struct MeetYourAvatar: View {
                 }
 
             VStack(spacing: 40) {
-                Text("Meet your dad’s avatar,\nlooking good!")
+                Text("Meet your dad's avatar,\nlooking good!")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
@@ -915,18 +908,18 @@ struct MeetYourAvatar: View {
                 .padding(.top, 11)
             , alignment: .top
         )
-        .overlay {
-            if showConfetti {
-                ConfettiView()
-            }
-        }
-        .onAppear {
-            showConfetti = true
-            // Reset confetti after animation completes
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                showConfetti = false
-            }
-        }
+//        .overlay {
+//            if showConfetti {
+//                ConfettiView()
+//            }
+//        }
+//        .onAppear {
+//            showConfetti = true
+//            // Reset confetti after animation completes
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+//                showConfetti = false
+//            }
+//        }
     }
 }
 
@@ -1079,8 +1072,13 @@ struct PreferenceAreReady: View {
 }
 
 struct AlreadyHaveAnAccount: View {
-    @State var yesPressed: () -> Void = { }
-    @State var noPressed: () -> Void = { }
+    let yesPressed: () -> Void
+    let noPressed: () -> Void
+    
+    init(yesPressed: @escaping () -> Void = {}, noPressed: @escaping () -> Void = {}) {
+        self.yesPressed = yesPressed
+        self.noPressed = noPressed
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1145,9 +1143,14 @@ struct AlreadyHaveAnAccount: View {
 }
 
 struct DoYouHaveAnInviteCode: View {
-    @State var yesPressed: (() -> Void)? = nil
-    @State var noPressed: (() -> Void)? = nil
+    let yesPressed: (() -> Void)?
+    let noPressed: (() -> Void)?
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    
+    init(yesPressed: (() -> Void)? = nil, noPressed: (() -> Void)? = nil) {
+        self.yesPressed = yesPressed
+        self.noPressed = noPressed
+    }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1357,9 +1360,14 @@ struct WelcomeBack: View {
 }
 
 struct WhosThisFor: View {
-    @State var justmePressed: (() -> Void)? = nil
-    @State var addFamilyPressed: (() -> Void)? = nil
+    let justmePressed: (() -> Void)?
+    let addFamilyPressed: (() -> Void)?
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    
+    init(justmePressed: (() -> Void)? = nil, addFamilyPressed: (() -> Void)? = nil) {
+        self.justmePressed = justmePressed
+        self.addFamilyPressed = addFamilyPressed
+    }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1425,7 +1433,11 @@ struct WhosThisFor: View {
 }
 
 struct AllSetToJoinYourFamily: View {
-    @State var goToHomePressed: () -> Void = { }
+    let goToHomePressed: () -> Void
+    
+    init(goToHomePressed: @escaping () -> Void = {}) {
+        self.goToHomePressed = goToHomePressed
+    }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1468,8 +1480,13 @@ struct EnterYourInviteCode : View {
     @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
-    @State var yesPressed: (() -> Void)? = nil
-    @State var noPressed: (() -> Void)? = nil
+    let yesPressed: (() -> Void)?
+    let noPressed: (() -> Void)?
+    
+    init(yesPressed: (() -> Void)? = nil, noPressed: (() -> Void)? = nil) {
+        self.yesPressed = yesPressed
+        self.noPressed = noPressed
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1673,8 +1690,13 @@ struct EnterYourInviteCode : View {
 }
 
 struct AddMoreMembersMinimal: View {
-    @State var allSetPressed: () -> Void = { }
-    @State var addMorePressed: () -> Void = { }
+    let allSetPressed: () -> Void
+    let addMorePressed: () -> Void
+    
+    init(allSetPressed: @escaping () -> Void = {}, addMorePressed: @escaping () -> Void = {}) {
+        self.allSetPressed = allSetPressed
+        self.addMorePressed = addMorePressed
+    }
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
@@ -1834,7 +1856,11 @@ struct YourCurrentAvatar: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
     
-    @State var createNewPressed: () -> Void = { }
+    let createNewPressed: () -> Void
+    
+    init(createNewPressed: @escaping () -> Void = {}) {
+        self.createNewPressed = createNewPressed
+    }
     
     private var currentMember: FamilyMember? {
         guard let family = familyStore.family else { return nil }
@@ -1971,7 +1997,11 @@ struct SetUpAvatarFor: View {
     }
     
     @State private var selectedMember: FamilyMember? = nil
-    @State var nextPressed: () -> Void = { }
+    let nextPressed: () -> Void
+    
+    init(nextPressed: @escaping () -> Void = {}) {
+        self.nextPressed = nextPressed
+    }
     
     var body: some View {
         VStack(spacing: 24) {
@@ -2069,31 +2099,26 @@ struct SetUpAvatarMemberView: View {
     @State private var avatarImage: UIImage? = nil
     @State private var loadedHash: String? = nil
     
-    var body: some View {
-        Group {
-            // Display the composited image directly (it already has background color baked in)
-            // Or show fallback with background circle if no image
-            if let avatarImage = avatarImage, avatarImage.size.width > 0 && avatarImage.size.height > 0 {
-                // Show composited memoji avatar - fills the entire circle with white stroke
-                Image(uiImage: avatarImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 46, height: 46)
-                    .mask(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(lineWidth: 1)
-                            .foregroundStyle(Color.white)
-                    )
-            } else {
-                // Fallback: colored circle with initial letter
+        var body: some View {
+            Group {
+                // Show avatar with background color circle, or fallback with initial letter
                 Circle()
                     .fill(Color(hex: member.color))
                     .frame(width: 46, height: 46)
                     .overlay {
-                        Text(String(member.name.prefix(1)))
-                            .font(NunitoFont.semiBold.size(18))
-                            .foregroundStyle(.white)
+                        if let avatarImage = avatarImage {
+                            // Show transparent PNG memoji avatar over colored background
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 46, height: 46)
+                                .clipShape(Circle())
+                        } else {
+                            // Fallback: initial letter
+                            Text(String(member.name.prefix(1)))
+                                .font(NunitoFont.semiBold.size(18))
+                                .foregroundStyle(.white)
+                        }
                     }
                     .overlay(
                         Circle()
@@ -2101,7 +2126,6 @@ struct SetUpAvatarMemberView: View {
                             .foregroundStyle(Color.white)
                     )
             }
-        }
         .task(id: member.imageFileHash) {
             await loadAvatarIfNeeded()
         }

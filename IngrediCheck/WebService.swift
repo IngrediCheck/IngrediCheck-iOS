@@ -100,7 +100,22 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             }
         }
         
-        return UIImage(data: try await imageData)!
+        let data = try await imageData
+        print("[WebService] fetchImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
+        // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
+        let image = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[WebService] fetchImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let img = UIImage(data: data)
+            print("[WebService] fetchImage: UIImage(data:) created - image=\(img != nil ? "✅" : "❌")")
+            return img
+        }
+        print("[WebService] fetchImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
+        guard let image = image else {
+            throw NetworkError.decodingError
+        }
+        
+        return image
     }
 
     func streamUnifiedAnalysis(
@@ -526,8 +541,16 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
 
     func uploadImage(image: UIImage) async throws -> String {
-    
-        let imageData = image.jpegData(compressionQuality: 1.0)!
+        print("[WebService] uploadImage: Before pngData() - Thread.isMainThread=\(Thread.isMainThread)")
+        // CRITICAL: pngData() must be called on main thread - UIImage operations are not thread-safe
+        let imageData = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[WebService] uploadImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let data = image.pngData()!
+            print("[WebService] uploadImage: pngData() completed - data size=\(data.count) bytes")
+            return data
+        }
+        print("[WebService] uploadImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
         let imageFileName = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
         
         print("[WebService] uploadImage: Uploading image to storage with key=\(imageFileName)")
@@ -536,7 +559,7 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             try await supabaseClient.storage.from("productimages").upload(
                 path: imageFileName,
                 file: imageData,
-                options: FileOptions(contentType: "image/jpeg")
+                options: FileOptions(contentType: "image/png")
             )
             print("[WebService] uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
         } catch {

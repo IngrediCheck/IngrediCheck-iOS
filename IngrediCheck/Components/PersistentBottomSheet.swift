@@ -17,6 +17,7 @@ struct PersistentBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
+    @State private var generationTask: Task<Void, Never>?
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -32,6 +33,20 @@ struct PersistentBottomSheet: View {
         )
         .padding(.bottom, keyboardHeight)
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: coordinator.currentBottomSheetRoute) { oldValue, newValue in
+            // Cancel generation task only when leaving avatar-related routes
+            // Don't cancel when transitioning between avatar routes (generateAvatar -> bringingYourAvatar -> meetYourAvatar)
+            let avatarRoutes: Set<BottomSheetRoute> = [.generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor]
+            let wasInAvatarFlow = avatarRoutes.contains(oldValue)
+            let isInAvatarFlow = avatarRoutes.contains(newValue)
+            
+            // Only cancel if we're leaving the avatar flow entirely
+            if wasInAvatarFlow && !isInAvatarFlow {
+                print("[PersistentBottomSheet] Leaving avatar flow, cancelling generation task")
+                generationTask?.cancel()
+                generationTask = nil
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
             guard let userInfo = notification.userInfo,
                   let frameValue = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
@@ -344,12 +359,16 @@ struct PersistentBottomSheet: View {
             GenerateAvatar(
                 isExpandedMinimal: $isExpandedMinimal,
                 randomPressed: { selection in
-                    Task {
+                    // Cancel any existing generation task
+                    generationTask?.cancel()
+                    generationTask = Task {
                         await memojiStore.generate(selection: selection, coordinator: coordinator)
                     }
                 },
                 generatePressed: { selection in
-                    Task {
+                    // Cancel any existing generation task
+                    generationTask?.cancel()
+                    generationTask = Task {
                         await memojiStore.generate(selection: selection, coordinator: coordinator)
                     }
                 }
@@ -499,40 +518,28 @@ private func handleAssignAvatar(
     familyStore: FamilyStore,
     webService: WebService
 ) async {
-    // CRITICAL: Capture image and create a deep copy immediately to prevent accessing deallocated memory
-    // UIImage is a reference type, and its underlying CGImage can be deallocated.
-    // Creating a deep copy ensures we have our own copy of the pixel data.
-    guard let originalImage = memojiStore.image,
-          originalImage.cgImage != nil,
-          originalImage.size.width > 0 && originalImage.size.height > 0,
-          originalImage.size.width.isFinite && originalImage.size.height.isFinite else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No valid memoji image to upload, skipping")
+    // CRITICAL: Capture image and all data immediately to prevent accessing deallocated memory
+    // We're already on the main thread (@MainActor), so UIImage access is safe
+    guard let image = memojiStore.image else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji image to upload, skipping")
         return
     }
     
-    // CRITICAL: Capture ALL data immediately BEFORE creating deep copy
-    // This prevents accessing deallocated objects during async operations
+    // Validate image is valid (all UIImage operations are safe on main thread)
+    let imageSize = image.size
+    guard imageSize.width > 0 && imageSize.height > 0,
+          imageSize.width.isFinite && imageSize.height.isFinite else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Invalid image size, skipping")
+        return
+    }
+    
+    // CRITICAL: Capture ALL data immediately to prevent accessing deallocated objects during async operations
     let backgroundColorHex = memojiStore.backgroundColorHex
     let displayName = memojiStore.displayName
     let currentFamily = familyStore.family
     let currentAvatarTargetMemberId = familyStore.avatarTargetMemberId
     let currentPendingSelfMember = familyStore.pendingSelfMember
     let currentPendingOtherMembers = familyStore.pendingOtherMembers
-    
-    // Create a deep copy of the image to prevent EXC_BAD_ACCESS from deallocated CGImage
-    // This must be done AFTER capturing all other data to ensure we don't access deallocated stores
-    guard let image = originalImage.deepCopy() else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Failed to create deep copy of image, skipping")
-        return
-    }
-    
-    // Validate the deep copy is valid
-    guard image.cgImage != nil,
-          image.size.width > 0 && image.size.height > 0,
-          image.size.width.isFinite && image.size.height.isFinite else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Deep copy is invalid, skipping")
-        return
-    }
     
     // During onboarding, if avatarTargetMemberId is not set but we have displayName,
     // it means the user generated an avatar without adding the member first.
@@ -625,16 +632,13 @@ private func handleAssignAvatar(
             return
         }
         
-        // 2. Composite the image with background color before uploading
+        // 2. Upload transparent PNG image directly (no compositing - background color stored separately in member.color)
         // Use captured background color if available, otherwise use member's existing color
         let bgColor = backgroundColorHex ?? member.color
-        print("[PersistentBottomSheet] handleAssignAvatar: Compositing image with background color: \(bgColor)")
+        print("[PersistentBottomSheet] handleAssignAvatar: Uploading transparent PNG with background color: \(bgColor)")
         
-        // Composite image with background color before uploading
-        let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
-        
-        // 3. Upload the composited avatar image to Supabase and get an imageFileHash
-        let imageFileHash = try await webService.uploadImage(image: compositedImage)
+        // Upload the transparent PNG image to Supabase and get an imageFileHash
+        let imageFileHash = try await webService.uploadImage(image: image)
         print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
         
         var updatedMember = member

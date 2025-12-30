@@ -39,40 +39,30 @@ struct LetsMeetYourIngrediFamView: View {
         
         var body: some View {
             ZStack(alignment: .bottomTrailing) {
-                // Display the composited image directly (it already has background color baked in)
-                // Or show fallback with background circle if no image
-                if let img = avatarImage,
-                   img.cgImage != nil,
-                   img.size.width > 0 && img.size.height > 0,
-                   img.size.width.isFinite && img.size.height.isFinite {
-                    // Show composited memoji avatar - fills the entire circle with white stroke
-                    // Use mask to ensure perfect circular clipping with no artifacts
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 48, height: 48)
-                        .mask(Circle()) // Use mask instead of clipShape for cleaner edges
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                } else {
-                    // Fallback: colored circle with initial letter
-                    Circle()
-                        .fill(Color(hex: member.color))
-                        .frame(width: 48, height: 48)
-                        .overlay {
+                // Show avatar with background color circle, or fallback with initial letter
+                Circle()
+                    .fill(Color(hex: member.color))
+                    .frame(width: 48, height: 48)
+                    .overlay {
+                        if let img = avatarImage {
+                            // Show transparent PNG memoji avatar over colored background
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 48, height: 48)
+                                .clipShape(Circle())
+                        } else {
+                            // Fallback: initial letter
                             Text(initial(member.name))
                                 .font(NunitoFont.semiBold.size(18))
                                 .foregroundStyle(.white)
                         }
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                }
+                    }
+                    .overlay(
+                        Circle()
+                            .stroke(lineWidth: 1)
+                            .foregroundStyle(Color.white)
+                    )
                 
                 // Edit button overlay
                 Circle()
@@ -98,22 +88,42 @@ struct LetsMeetYourIngrediFamView: View {
             }
             
             // Skip if already loaded for this hash
-            if loadedHash == hash, let existingImage = avatarImage, 
-               existingImage.cgImage != nil,
-               existingImage.size.width > 0 && existingImage.size.height > 0 {
-                return
+            if loadedHash == hash, let existingImage = avatarImage {
+                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Before existingImage.size access - Thread.isMainThread=\(Thread.isMainThread)")
+                let isValid = await MainActor.run {
+                    let isMainThread = Thread.isMainThread
+                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Inside MainActor.run (existingImage) - Thread.isMainThread=\(isMainThread)")
+                    let width = existingImage.size.width
+                    let height = existingImage.size.height
+                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: existingImage.size accessed - width=\(width), height=\(height)")
+                    return width > 0 && height > 0
+                }
+                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: After MainActor.run (existingImage) - isValid=\(isValid)")
+                if isValid {
+                    return
+                }
             }
             
             // Check if hash looks like an asset name (short, contains dashes) vs uploaded hash (long hex string)
             // Asset names are typically short like "image-bg1", hashes are 64-char hex strings
             if hash.count < 20 && hash.contains("-") {
                 // Likely an asset name - try loading from assets
-                if let assetImage = UIImage(named: hash),
-                   assetImage.cgImage != nil,
-                   assetImage.size.width > 0 && assetImage.size.height > 0 {
-                    avatarImage = assetImage
-                    loadedHash = hash
-                    return
+                if let assetImage = UIImage(named: hash) {
+                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Before assetImage.size access - Thread.isMainThread=\(Thread.isMainThread)")
+                    let isValid = await MainActor.run {
+                        let isMainThread = Thread.isMainThread
+                        print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Inside MainActor.run (assetImage) - Thread.isMainThread=\(isMainThread)")
+                        let width = assetImage.size.width
+                        let height = assetImage.size.height
+                        print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: assetImage.size accessed - width=\(width), height=\(height)")
+                        return width > 0 && height > 0
+                    }
+                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: After MainActor.run (assetImage) - isValid=\(isValid)")
+                    if isValid {
+                        avatarImage = assetImage
+                        loadedHash = hash
+                        return
+                    }
                 }
             }
             
@@ -124,11 +134,19 @@ struct LetsMeetYourIngrediFamView: View {
                     imageLocation: .imageFileHash(hash),
                     imageSize: .small
                 )
-                // Validate the loaded image before assigning - check CGImage exists and size is valid
-                guard uiImage.cgImage != nil,
-                      uiImage.size.width > 0 && uiImage.size.height > 0,
-                      uiImage.size.width.isFinite && uiImage.size.height.isFinite else {
-                    print("[LetsMeetYourIngrediFamView] ⚠️ Loaded image has invalid size or no CGImage, skipping")
+                // CRITICAL: UIImage.size access must be on main thread
+                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Before uiImage.size access - Thread.isMainThread=\(Thread.isMainThread)")
+                let isValid = await MainActor.run {
+                    let isMainThread = Thread.isMainThread
+                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Inside MainActor.run (uiImage) - Thread.isMainThread=\(isMainThread)")
+                    let width = uiImage.size.width
+                    let height = uiImage.size.height
+                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: uiImage.size accessed - width=\(width), height=\(height)")
+                    return width > 0 && height > 0 && width.isFinite && height.isFinite
+                }
+                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: After MainActor.run (uiImage) - isValid=\(isValid)")
+                guard isValid else {
+                    print("[LetsMeetYourIngrediFamView] ⚠️ Loaded image has invalid size, skipping")
                     avatarImage = nil
                     loadedHash = nil
                     return

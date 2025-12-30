@@ -54,7 +54,17 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> UIImage {
     }
 
     let (pngData, _) = try await URLSession.shared.data(from: url)
-    guard let image = UIImage(data: pngData) else {
+    print("[AIMemojiService] generateMemojiImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
+    // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
+    let image = await MainActor.run {
+        let isMainThread = Thread.isMainThread
+        print("[AIMemojiService] generateMemojiImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+        let img = UIImage(data: pngData)
+        print("[AIMemojiService] generateMemojiImage: UIImage(data:) created - image=\(img != nil ? "✅" : "❌")")
+        return img
+    }
+    print("[AIMemojiService] generateMemojiImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
+    guard let image = image else {
         throw AIMemojiError.missingImage
     }
 

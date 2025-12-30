@@ -105,11 +105,11 @@ final class FamilyStore {
     
     /// Upload and set the avatar image for the pending self member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
-    /// The image is composited with the background color before uploading.
+    /// The image is uploaded as a transparent PNG; background color is stored separately in member.color.
     /// - Parameters:
-    ///   - image: The image to upload
+    ///   - image: The image to upload (transparent PNG)
     ///   - webService: WebService instance for uploading
-    ///   - backgroundColorHex: Optional background color hex. If nil, uses member.color
+    ///   - backgroundColorHex: Optional background color hex. If provided, updates member.color
     func setPendingSelfMemberAvatar(image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         // CRITICAL: Capture member data immediately to prevent accessing deallocated objects
         guard var member = pendingSelfMember else {
@@ -119,25 +119,36 @@ final class FamilyStore {
         
         // Capture member properties immediately
         let memberName = member.name
-        let memberColor = member.color
-        let bgColor = backgroundColorHex ?? memberColor
         
-        // Validate image is still valid before processing
-        guard image.cgImage != nil,
-              image.size.width > 0 && image.size.height > 0,
-              image.size.width.isFinite && image.size.height.isFinite else {
+        // CRITICAL: UIImage.size access must be on main thread - wrap in MainActor.run
+        print("[FamilyStore] setPendingSelfMemberAvatar: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
+        let isValid = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[FamilyStore] setPendingSelfMemberAvatar: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let width = image.size.width
+            let height = image.size.height
+            print("[FamilyStore] setPendingSelfMemberAvatar: image.size accessed - width=\(width), height=\(height)")
+            return width > 0 && height > 0 && width.isFinite && height.isFinite
+        }
+        print("[FamilyStore] setPendingSelfMemberAvatar: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
+        guard isValid else {
             print("[FamilyStore] setPendingSelfMemberAvatar: Image is invalid, skipping upload")
             return
         }
         
         do {
             print("[FamilyStore] setPendingSelfMemberAvatar: Uploading avatar image for \(memberName)")
-            // Composite image with background color before uploading
-            // The image passed here should already be a deep copy from handleAssignAvatar
-            let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
-            let imageFileHash = try await webService.uploadImage(image: compositedImage)
+            // Upload transparent PNG image directly (no compositing needed)
+            let imageFileHash = try await webService.uploadImage(image: image)
             print("[FamilyStore] setPendingSelfMemberAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             member.imageFileHash = imageFileHash
+            
+            // Update member color if provided
+            if let bgHex = backgroundColorHex, !bgHex.isEmpty {
+                let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+                member.color = normalizedColor
+            }
+            
             pendingSelfMember = member
         } catch {
             print("[FamilyStore] setPendingSelfMemberAvatar: ❌ Failed to upload avatar: \(error.localizedDescription)")
@@ -187,11 +198,11 @@ final class FamilyStore {
     
     /// Upload and set the avatar image for the last pending other member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
-    /// The image is composited with the background color before uploading.
+    /// The image is uploaded as a transparent PNG; background color is stored separately in member.color.
     /// - Parameters:
-    ///   - image: The image to upload
+    ///   - image: The image to upload (transparent PNG)
     ///   - webService: WebService instance for uploading
-    ///   - backgroundColorHex: Optional background color hex. If nil, uses member.color
+    ///   - backgroundColorHex: Optional background color hex. If provided, updates member.color
     func setAvatarForLastPendingOtherMember(image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         guard !pendingOtherMembers.isEmpty else {
             print("[FamilyStore] setAvatarForLastPendingOtherMember: No pending other members, skipping upload")
@@ -200,15 +211,36 @@ final class FamilyStore {
         
         var last = pendingOtherMembers.removeLast()
         
+        // CRITICAL: UIImage.size access must be on main thread - wrap in MainActor.run
+        print("[FamilyStore] setAvatarForLastPendingOtherMember: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
+        let isValid = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let width = image.size.width
+            let height = image.size.height
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: image.size accessed - width=\(width), height=\(height)")
+            return width > 0 && height > 0 && width.isFinite && height.isFinite
+        }
+        print("[FamilyStore] setAvatarForLastPendingOtherMember: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
+        guard isValid else {
+            print("[FamilyStore] setAvatarForLastPendingOtherMember: Image is invalid, skipping upload")
+            pendingOtherMembers.append(last)
+            return
+        }
+        
         do {
             print("[FamilyStore] setAvatarForLastPendingOtherMember: Uploading avatar image for \(last.name)")
-            // Use provided background color or fall back to member.color
-            let bgColor = backgroundColorHex ?? last.color
-            // Composite image with background color before uploading
-            let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
-            let imageFileHash = try await webService.uploadImage(image: compositedImage)
+            // Upload transparent PNG image directly (no compositing needed)
+            let imageFileHash = try await webService.uploadImage(image: image)
             print("[FamilyStore] setAvatarForLastPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             last.imageFileHash = imageFileHash
+            
+            // Update member color if provided
+            if let bgHex = backgroundColorHex, !bgHex.isEmpty {
+                let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+                last.color = normalizedColor
+            }
+            
             pendingOtherMembers.append(last)
         } catch {
             print("[FamilyStore] setAvatarForLastPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
@@ -237,12 +269,12 @@ final class FamilyStore {
     
     /// Upload and set the avatar image for a specific pending other member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
-    /// The image is composited with the background color before uploading.
+    /// The image is uploaded as a transparent PNG; background color is stored separately in member.color.
     /// - Parameters:
     ///   - id: Member ID
-    ///   - image: The image to upload
+    ///   - image: The image to upload (transparent PNG)
     ///   - webService: WebService instance for uploading
-    ///   - backgroundColorHex: Optional background color hex. If nil, uses member.color
+    ///   - backgroundColorHex: Optional background color hex. If provided, updates member.color
     func setAvatarForPendingOtherMember(id: UUID, image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         // CRITICAL: Capture member data immediately to prevent accessing deallocated objects
         guard let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) else {
@@ -252,25 +284,35 @@ final class FamilyStore {
         
         // Capture member properties immediately
         let memberName = pendingOtherMembers[idx].name
-        let memberColor = pendingOtherMembers[idx].color
-        let bgColor = backgroundColorHex ?? memberColor
         
-        // Validate image is still valid before processing
-        guard image.cgImage != nil,
-              image.size.width > 0 && image.size.height > 0,
-              image.size.width.isFinite && image.size.height.isFinite else {
+        // CRITICAL: UIImage.size access must be on main thread - wrap in MainActor.run
+        print("[FamilyStore] setAvatarForPendingOtherMember: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
+        let isValid = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[FamilyStore] setAvatarForPendingOtherMember: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let width = image.size.width
+            let height = image.size.height
+            print("[FamilyStore] setAvatarForPendingOtherMember: image.size accessed - width=\(width), height=\(height)")
+            return width > 0 && height > 0 && width.isFinite && height.isFinite
+        }
+        print("[FamilyStore] setAvatarForPendingOtherMember: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
+        guard isValid else {
             print("[FamilyStore] setAvatarForPendingOtherMember: Image is invalid, skipping upload")
             return
         }
         
         do {
             print("[FamilyStore] setAvatarForPendingOtherMember: Uploading avatar image for \(memberName)")
-            // Composite image with background color before uploading
-            // The image passed here should already be a deep copy from handleAssignAvatar
-            let compositedImage = image.compositedWithBackground(backgroundColorHex: bgColor) ?? image
-            let imageFileHash = try await webService.uploadImage(image: compositedImage)
+            // Upload transparent PNG image directly (no compositing needed)
+            let imageFileHash = try await webService.uploadImage(image: image)
             print("[FamilyStore] setAvatarForPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             pendingOtherMembers[idx].imageFileHash = imageFileHash
+            
+            // Update member color if provided
+            if let bgHex = backgroundColorHex, !bgHex.isEmpty {
+                let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+                pendingOtherMembers[idx].color = normalizedColor
+            }
         } catch {
             print("[FamilyStore] setAvatarForPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
             // Don't set imageFileHash if upload fails - user can retry later
