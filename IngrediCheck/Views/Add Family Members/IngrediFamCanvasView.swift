@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import DotLottie
 
 struct GenerateAvatarTools: Identifiable {
     let id = UUID().uuidString
@@ -851,7 +852,7 @@ struct MeetYourAvatar: View {
     let backgroundColorHex: String?
     let regeneratePressed: () -> Void
     let assignedPressed: () -> Void
-//    @State private var showConfetti = false
+    @State private var showConfetti = false
     
     init(image: UIImage? = nil, backgroundColorHex: String? = nil, regeneratePressed: @escaping () -> Void = {}, assignedPressed: @escaping () -> Void = {}) {
         self.image = image
@@ -877,13 +878,13 @@ struct MeetYourAvatar: View {
                             .clipShape(Circle())
                     }
                 }
-
+            
             VStack(spacing: 40) {
                 Text("Meet your dad's avatar,\nlooking good!")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
-
+                
                 HStack(spacing: 12) {
                     Button {
                         regeneratePressed()
@@ -908,18 +909,25 @@ struct MeetYourAvatar: View {
                 .padding(.top, 11)
             , alignment: .top
         )
-//        .overlay {
-//            if showConfetti {
-//                ConfettiView()
-//            }
-//        }
-//        .onAppear {
-//            showConfetti = true
-//            // Reset confetti after animation completes
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-//                showConfetti = false
-//            }
-//        }
+        .overlay {
+            if showConfetti {
+                DotLottieAnimation(
+                    fileName: "Confetti",
+                    config: AnimationConfig(autoplay: true, loop: true)
+                )
+                .view()
+                .ignoresSafeArea()
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                showConfetti = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.4) {
+                showConfetti = false
+            }
+        }
     }
 }
 

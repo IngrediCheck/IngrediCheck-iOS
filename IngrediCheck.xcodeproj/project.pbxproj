@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
+		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
 		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
 		0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */; };
 		0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */; };
@@ -174,12 +175,12 @@
 		D3BECC912ED98EA10088E044 /* CustomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSheet.swift; sourceTree = "<group>"; };
 		D3BECC922ED98EA10088E044 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		D3BECC932ED98EA10088E044 /* HexColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexColorExtension.swift; sourceTree = "<group>"; };
-		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
 		D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManropeFontEnum.swift; sourceTree = "<group>"; };
 		D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NunitoFontEnum.swift; sourceTree = "<group>"; };
 		D3BECC962ED98EA10088E044 /* Temp2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp2.swift; sourceTree = "<group>"; };
 		D3BECC972ED98EA10088E044 /* Temp3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp3.swift; sourceTree = "<group>"; };
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
+		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
@@ -209,6 +210,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */,
 				D35F3C262E2A25FB0002CDE7 /* GoogleSignInSwift in Frameworks */,
 				D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */,
 				D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */,
@@ -454,6 +456,7 @@
 				D35F3C232E2A25FB0002CDE7 /* GoogleSignIn */,
 				D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */,
 				0C51E2F02E335C1E00A3E3A9 /* PostHog */,
+				0CE0D52B2F03A1390050C904 /* DotLottie */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -490,6 +493,7 @@
 				D35BCF242E27D5B600125580 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				D35F3C222E2A25FB0002CDE7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -897,6 +901,14 @@
 				minimumVersion = 3.33.0;
 			};
 		};
+		0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/LottieFiles/dotlottie-ios.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/globulus/swiftui-flow-layout";
@@ -944,6 +956,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
+		};
+		0CE0D52B2F03A1390050C904 /* DotLottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
+			productName = DotLottie;
 		};
 		390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */ = {
 			isa = XCSwiftPackageProductDependency;
