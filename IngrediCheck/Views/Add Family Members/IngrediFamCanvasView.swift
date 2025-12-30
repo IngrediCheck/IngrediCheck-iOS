@@ -1137,19 +1137,23 @@ struct MeetYourAvatar: View {
         let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
         
         VStack(spacing: 20) {
-            // Avatar placeholder
-            Circle()
-                .fill(circleColor)
-                .frame(width: 137, height: 137)
-                .overlay {
-                    if let image = image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 137, height: 137)
-                            .clipShape(Circle())
-                    }
+            // Avatar with background circle
+            ZStack {
+                // Background circle (behind the image)
+                Circle()
+                    .fill(circleColor)
+                    .frame(width: 137, height: 137)
+                
+                // Memoji image on top (transparent PNG should show circle through)
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .renderingMode(.original) // Preserve transparency
+                        .scaledToFit() // Preserve aspect ratio
+                        .frame(width: 137, height: 137)
+                        .clipShape(Circle())
                 }
+            }
             
             VStack(spacing: 40) {
                 Text(displayText)

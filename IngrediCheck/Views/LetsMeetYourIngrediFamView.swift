@@ -45,11 +45,12 @@ struct LetsMeetYourIngrediFamView: View {
                     .frame(width: 48, height: 48)
                     .overlay {
                         if let img = avatarImage {
-                            // Show transparent PNG memoji avatar over colored background
+                            // Show memoji avatar over colored background
                             Image(uiImage: img)
                                 .resizable()
-                                .scaledToFill()
-                                .frame(width: 48, height: 48)
+                                .renderingMode(.original) // Preserve transparency
+                                .scaledToFit() // Preserve aspect ratio
+                                .frame(width: 46, height: 46) // Slightly smaller so thin color ring is visible
                                 .clipShape(Circle())
                         } else {
                             // Fallback: initial letter
