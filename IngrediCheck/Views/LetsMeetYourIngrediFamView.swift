@@ -308,7 +308,7 @@ struct LetsMeetYourIngrediFamView: View {
                         }
                     }
                     .padding(.top, 10)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, UIScreen.main.bounds.height * 0.3)
                 }
             }
             .navigationBarBackButtonHidden(true)
