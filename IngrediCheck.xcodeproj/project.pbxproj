@@ -98,6 +98,7 @@
 		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
 		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
+		FAC2BEC62F039A1D00EC52E7 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC2BEC52F039A1600EC52E7 /* Config.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -187,6 +188,7 @@
 		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
 		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
+		FAC2BEC52F039A1600EC52E7 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -375,6 +377,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				FAC2BEC52F039A1600EC52E7 /* Config.swift */,
 				D3BECC852ED98E380088E044 /* ContentView.swift */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
@@ -526,6 +529,7 @@
 				635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */,
 				D3BECC8E2ED98E860088E044 /* User.swift in Sources */,
 				390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */,
+				FAC2BEC62F039A1D00EC52E7 /* Config.swift in Sources */,
 				D3BECC862ED98E380088E044 /* ContentView.swift in Sources */,
 				D3BECC992ED98EA10088E044 /* NunitoFontEnum.swift in Sources */,
 				D3BECC9A2ED98EA10088E044 /* ManropeFontEnum.swift in Sources */,

@@ -105,6 +105,7 @@ struct DietaryPreferencesSheetContent: View {
                     .foregroundStyle(.grayScale150)
                 
                 Text("Let’s get started with you! We’ll create a profile just for you and guide you through personalized food tips.")
+                    .multilineTextAlignment(.center)
                     .font(ManropeFont.regular.size(14))
                     .foregroundStyle(.grayScale100)
             }

@@ -4,7 +4,9 @@
 //
 //  Created by Gunjan Haldar   on 31/10/25.
 //
+//  TEMPORARILY COMMENTED OUT - UI not needed in current project
 
+/*
 import SwiftUI
 import UIKit
 
@@ -152,7 +154,7 @@ struct DetailedAISummary: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("All set! Here’s Your Personal\nFood Map")
+            Text("All set! Here's Your Personal\nFood Map")
                 .font(NunitoFont.bold.size(22))
                 .foregroundStyle(.grayScale150)
 
@@ -264,7 +266,7 @@ extension AISummarySectionItem {
             ]
         ),
         .init(
-            title: "Other preferences you’ve shared",
+            title: "Other preferences you've shared",
             iconAssetName: "other-preferences",
             bulletPoints: [
                 "Prefer home‑cooked meals and try to avoid overly processed foods",
@@ -412,3 +414,4 @@ private struct BulletedPoints: View {
         }
     }
 }
+*/

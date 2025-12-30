@@ -13,7 +13,6 @@ struct IngrediBotChatView: View {
     @State private var message: String = ""
     var onDismiss: (() -> Void)? = nil
     @State private var isBotThinking: Bool = false
-    @State private var navigateToSummary: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -130,7 +129,14 @@ struct IngrediBotChatView: View {
                     if !trimmed.isEmpty {
                         message = ""
                     }
-                    navigateToSummary = true
+                    // Navigate directly to the next screen (home) instead of DetailedAISummary
+                    if let onDismiss {
+                        onDismiss()
+                    } else {
+                        coordinator.dismissChatBot()
+                    }
+                    coordinator.showCanvas(.home)
+                    coordinator.navigateInBottomSheet(.homeDefault)
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()
@@ -153,16 +159,6 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
-                .background(
-                    NavigationLink(
-                        destination: DetailedAISummary()
-                            .environment(coordinator),
-                        isActive: $navigateToSummary
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
-                )
             }
         }
         .padding(.horizontal, 20)

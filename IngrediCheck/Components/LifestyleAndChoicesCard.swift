@@ -55,6 +55,10 @@ struct LifestyleAndChoicesCard: View {
                 .stroke(lineWidth: 0.25)
                 .foregroundStyle(.grayScale60)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isEditableCanvasPresented = true
+        }
         .sheet(isPresented: $isEditableCanvasPresented) {
             EditableCanvasView()
         }
