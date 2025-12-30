@@ -15,6 +15,9 @@ final class FamilyStore {
     private(set) var isJoining = false
     private(set) var isInviting = false
     private(set) var errorMessage: String?
+    
+    /// Tracks the number of pending avatar uploads
+    private(set) var pendingUploadCount: Int = 0
 
     // Temporary in-memory builder used by the preview onboarding flow
     // before the family is actually created on the backend.
@@ -160,6 +163,9 @@ final class FamilyStore {
             return
         }
         
+        pendingUploadCount += 1
+        defer { pendingUploadCount = max(0, pendingUploadCount - 1) }
+        
         do {
             print("[FamilyStore] setPendingSelfMemberAvatar: Uploading avatar image for \(memberName)")
             // Upload transparent PNG image directly (no compositing needed)
@@ -277,6 +283,9 @@ final class FamilyStore {
             return
         }
         
+        pendingUploadCount += 1
+        defer { pendingUploadCount = max(0, pendingUploadCount - 1) }
+        
         do {
             print("[FamilyStore] setAvatarForLastPendingOtherMember: Uploading avatar image for \(last.name)")
             // Upload transparent PNG image directly (no compositing needed)
@@ -374,6 +383,9 @@ final class FamilyStore {
             return
         }
         
+        pendingUploadCount += 1
+        defer { pendingUploadCount = max(0, pendingUploadCount - 1) }
+        
         do {
             print("[FamilyStore] setAvatarForPendingOtherMember: Uploading avatar image for \(memberName)")
             // Upload transparent PNG image directly (no compositing needed)
@@ -442,6 +454,16 @@ final class FamilyStore {
             pendingSelfMember = nil
             pendingOtherMembers = []
         }
+    }
+    
+    /// Waits for all pending avatar uploads to complete before allowing navigation.
+    /// This prevents users from navigating away while uploads are in progress.
+    func waitForPendingUploads() async {
+        while pendingUploadCount > 0 {
+            // Poll every 100ms to check if uploads are complete
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        }
+        print("[FamilyStore] waitForPendingUploads: All uploads completed")
     }
     
     // MARK: - Loading

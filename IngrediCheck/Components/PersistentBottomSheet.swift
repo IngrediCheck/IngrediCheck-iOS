@@ -75,9 +75,26 @@ struct PersistentBottomSheet: View {
             
             if shouldShowOnboardingNextArrow {
                 Button(action: handleOnboardingNextTapped) {
-                    GreenCircle()
+                    if familyStore.pendingUploadCount > 0 {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 52, height: 52)
+                            .background(
+                                Capsule()
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(hex: "4CAF50"), Color(hex: "8BC34A")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                    } else {
+                        GreenCircle()
+                    }
                 }
                 .buttonStyle(.plain)
+                .disabled(familyStore.pendingUploadCount > 0)
                 .padding(.trailing, 20)
                 .padding(.bottom, 24)
             }
@@ -205,31 +222,38 @@ struct PersistentBottomSheet: View {
     }
     
     private func handleOnboardingNextTapped() {
-        // Get current step ID from route
-        guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
-            return
-        }
-        
-        // Check if current step is "lifeStyle" → show FineTuneYourExperience
-        if currentStepId == "lifeStyle" {
-            coordinator.navigateInBottomSheet(.fineTuneYourExperience)
-            return
-        }
-        
-        // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
-        if store.isLastStep {
-            // Mark the last section as complete to show 100% progress
-            store.next()
-            coordinator.navigateInBottomSheet(.workingOnSummary)
-            return
-        }
-        
-        // Advance logical onboarding progress (for progress bar & tag bar)
-        store.next()
-        
-        // Move the bottom sheet to the next onboarding question using JSON order
-        if let nextStepId = store.nextStepId {
-            coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+        Task {
+            // Wait for all pending uploads to complete before navigating
+            await familyStore.waitForPendingUploads()
+            
+            await MainActor.run {
+                // Get current step ID from route
+                guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
+                    return
+                }
+                
+                // Check if current step is "lifeStyle" → show FineTuneYourExperience
+                if currentStepId == "lifeStyle" {
+                    coordinator.navigateInBottomSheet(.fineTuneYourExperience)
+                    return
+                }
+                
+                // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
+                if store.isLastStep {
+                    // Mark the last section as complete to show 100% progress
+                    store.next()
+                    coordinator.navigateInBottomSheet(.workingOnSummary)
+                    return
+                }
+                
+                // Advance logical onboarding progress (for progress bar & tag bar)
+                store.next()
+                
+                // Move the bottom sheet to the next onboarding question using JSON order
+                if let nextStepId = store.nextStepId {
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                }
+            }
         }
     }
     
