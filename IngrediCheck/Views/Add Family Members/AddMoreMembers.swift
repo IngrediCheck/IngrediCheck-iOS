@@ -12,7 +12,6 @@ struct AddMoreMembers: View {
     @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(MemojiStore.self) private var memojiStore
     @State var name: String = ""
     @State var showError: Bool = false
     @State var familyMembersList: [UserModel] = [

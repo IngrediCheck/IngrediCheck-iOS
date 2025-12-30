@@ -6,7 +6,6 @@ struct EditMember: View {
     @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(MemojiStore.self) private var memojiStore
 
     let memberId: UUID
     let isSelf: Bool
