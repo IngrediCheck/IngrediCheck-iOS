@@ -102,6 +102,30 @@ final class FamilyStore {
         member.imageFileHash = imageName
         pendingSelfMember = member
     }
+
+    /// Set the avatar for the pending self member using a memoji storage path
+    /// from the `memoji-images` bucket, without re-uploading the PNG. Also
+    /// updates the member color to match the memoji background if provided.
+    func setPendingSelfMemberAvatarFromMemoji(storagePath: String, backgroundColorHex: String? = nil) async {
+        guard !storagePath.isEmpty else {
+            print("[FamilyStore] setPendingSelfMemberAvatarFromMemoji: Empty storagePath, skipping")
+            return
+        }
+        guard var member = pendingSelfMember else {
+            print("[FamilyStore] setPendingSelfMemberAvatarFromMemoji: No pending self member, skipping")
+            return
+        }
+
+        member.imageFileHash = storagePath
+
+        if let bgHex = backgroundColorHex, !bgHex.isEmpty {
+            let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+            member.color = normalizedColor
+        }
+
+        pendingSelfMember = member
+        print("[FamilyStore] setPendingSelfMemberAvatarFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending self member \(member.name)")
+    }
     
     /// Upload and set the avatar image for the pending self member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
@@ -195,6 +219,31 @@ final class FamilyStore {
         last.imageFileHash = imageName
         pendingOtherMembers.append(last)
     }
+
+    /// Set the avatar for the last pending other member using a memoji storage path
+    /// from the `memoji-images` bucket, without re-uploading the PNG. Also updates
+    /// the member color to match the memoji background if provided.
+    func setAvatarForLastPendingOtherMemberFromMemoji(storagePath: String, backgroundColorHex: String? = nil) async {
+        guard !pendingOtherMembers.isEmpty else {
+            print("[FamilyStore] setAvatarForLastPendingOtherMemberFromMemoji: No pending other members, skipping")
+            return
+        }
+        guard !storagePath.isEmpty else {
+            print("[FamilyStore] setAvatarForLastPendingOtherMemberFromMemoji: Empty storagePath, skipping")
+            return
+        }
+
+        var last = pendingOtherMembers.removeLast()
+        last.imageFileHash = storagePath
+
+        if let bgHex = backgroundColorHex, !bgHex.isEmpty {
+            let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+            last.color = normalizedColor
+        }
+
+        pendingOtherMembers.append(last)
+        print("[FamilyStore] setAvatarForLastPendingOtherMemberFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending other member \(last.name)")
+    }
     
     /// Upload and set the avatar image for the last pending other member immediately.
     /// This uploads the image to Supabase and sets the imageFileHash to the uploaded hash.
@@ -265,6 +314,30 @@ final class FamilyStore {
         if let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) {
             pendingOtherMembers[idx].imageFileHash = imageName
         }
+    }
+
+    /// Set the avatar for a specific pending other member using a memoji storage
+    /// path from the `memoji-images` bucket, without re-uploading the PNG. Also
+    /// updates the member color to match the memoji background if provided.
+    func setAvatarForPendingOtherMemberFromMemoji(id: UUID, storagePath: String, backgroundColorHex: String? = nil) async {
+        guard !storagePath.isEmpty else {
+            print("[FamilyStore] setAvatarForPendingOtherMemberFromMemoji: Empty storagePath, skipping")
+            return
+        }
+
+        guard let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) else {
+            print("[FamilyStore] setAvatarForPendingOtherMemberFromMemoji: Member not found for id=\(id), skipping")
+            return
+        }
+
+        pendingOtherMembers[idx].imageFileHash = storagePath
+
+        if let bgHex = backgroundColorHex, !bgHex.isEmpty {
+            let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
+            pendingOtherMembers[idx].color = normalizedColor
+        }
+
+        print("[FamilyStore] setAvatarForPendingOtherMemberFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending member \(pendingOtherMembers[idx].name)")
     }
     
     /// Upload and set the avatar image for a specific pending other member immediately.

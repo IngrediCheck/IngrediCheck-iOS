@@ -77,30 +77,51 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
     
     func fetchImage(imageLocation: DTO.ImageLocationInfo, imageSize: ImageSize) async throws -> UIImage {
-
-        var fileLocation: FileLocation {
-            switch imageLocation {
-            case .url(let url):
-                return FileLocation.url(url)
-            case .imageFileHash(let imageFileHash):
-                return FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
-            }
-        }
-        
-        var imageData: Data {
-            get async throws {
-                switch imageSize {
-                case .small:
-                    return try await smallImageStore.fetchFile(fileLocation: fileLocation)
-                case .medium:
-                    return try await mediumImageStore.fetchFile(fileLocation: fileLocation)
-                case .large:
-                    return try await largeImageStore.fetchFile(fileLocation: fileLocation)
+        // Construct FileLocation - handle memoji paths with proper URL encoding
+        let fileLocation: FileLocation
+        switch imageLocation {
+        case .url(let url):
+            fileLocation = FileLocation.url(url)
+        case .imageFileHash(let imageFileHash):
+            // Heuristic: memoji images live in the `memoji-images` bucket and include
+            // a year/month path segment (e.g. "2025/01/<hash>.png"). Product images
+            // are flat hashes without slashes.
+            if imageFileHash.contains("/") {
+                // For memoji images in public bucket, use public URL directly
+                // Format: https://<project>.supabase.co/storage/v1/object/public/memoji-images/<path>
+                // URL-encode each path segment to handle special characters properly
+                let pathComponents = imageFileHash.split(separator: "/")
+                let encodedComponents = pathComponents.map { component in
+                    component.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String(component)
                 }
+                let encodedPath = encodedComponents.joined(separator: "/")
+                let publicUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/memoji-images/\(encodedPath)"
+                
+                guard let publicUrl = URL(string: publicUrlString) else {
+                    print("[WebService] fetchImage: ❌ Failed to construct URL for memoji path: \(imageFileHash)")
+                    print("[WebService] fetchImage: Encoded path: \(encodedPath)")
+                    print("[WebService] fetchImage: Full URL string: \(publicUrlString)")
+                    throw NetworkError.badUrl
+                }
+                print("[WebService] fetchImage: ✅ Constructed memoji URL: \(publicUrlString)")
+                fileLocation = FileLocation.url(publicUrl)
+            } else {
+                // For product images, use Supabase download API
+                fileLocation = FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
             }
         }
         
-        let data = try await imageData
+        // Fetch image data based on size
+        let data: Data
+        switch imageSize {
+        case .small:
+            data = try await smallImageStore.fetchFile(fileLocation: fileLocation)
+        case .medium:
+            data = try await mediumImageStore.fetchFile(fileLocation: fileLocation)
+        case .large:
+            data = try await largeImageStore.fetchFile(fileLocation: fileLocation)
+        }
+        
         print("[WebService] fetchImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
         // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
         let image = await MainActor.run {

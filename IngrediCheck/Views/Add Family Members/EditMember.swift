@@ -185,19 +185,20 @@ struct EditMember: View {
         if isSelf {
             familyStore.updatePendingSelfMemberName(trimmed)
             // Handle avatar assignment - upload in background without blocking UI
-            // Priority: selected predefined avatar > custom avatar from memojiStore
+            // Priority:
+            // 1. Selected predefined avatar (upload to productimages)
+            // 2. Custom memoji (use memoji-images storage path, no re-upload)
             if let selectedImageName = selectedAvatar?.image,
                let assetImage = UIImage(named: selectedImageName) {
                 // Predefined avatar selected - upload it in background
                 Task {
                     await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
                 }
-            } else if let customImage = memojiStore.image {
-                // Custom avatar from memojiStore - upload it in background with memoji background color
+            } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+                // Custom avatar from memojiStore - use memoji storage path directly
                 Task {
-                    await familyStore.setPendingSelfMemberAvatar(
-                        image: customImage,
-                        webService: webService,
+                    await familyStore.setPendingSelfMemberAvatarFromMemoji(
+                        storagePath: storagePath,
                         backgroundColorHex: memojiStore.backgroundColorHex
                     )
                 }
@@ -208,20 +209,21 @@ struct EditMember: View {
         } else {
             familyStore.updatePendingOtherMemberName(id: memberId, name: trimmed)
             // Handle avatar assignment - upload in background without blocking UI
-            // Priority: selected predefined avatar > custom avatar from memojiStore
+            // Priority:
+            // 1. Selected predefined avatar (upload to productimages)
+            // 2. Custom memoji (use memoji-images storage path, no re-upload)
             if let selectedImageName = selectedAvatar?.image,
                let assetImage = UIImage(named: selectedImageName) {
                 // Predefined avatar selected - upload it in background
                 Task {
                     await familyStore.setAvatarForPendingOtherMember(id: memberId, image: assetImage, webService: webService)
                 }
-            } else if let customImage = memojiStore.image {
-                // Custom avatar from memojiStore - upload it in background with memoji background color
+            } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+                // Custom avatar from memojiStore - use memoji storage path directly
                 Task {
-                    await familyStore.setAvatarForPendingOtherMember(
+                    await familyStore.setAvatarForPendingOtherMemberFromMemoji(
                         id: memberId,
-                        image: customImage,
-                        webService: webService,
+                        storagePath: storagePath,
                         backgroundColorHex: memojiStore.backgroundColorHex
                     )
                 }

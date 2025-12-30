@@ -6,6 +6,10 @@ import UIKit
 @MainActor
 final class MemojiStore {
     var image: UIImage?
+    /// Storage path inside the `memoji-images` bucket for the last generated memoji.
+    /// Example: `2025/01/<hash>.png`. Used as `imageFileHash` when assigning avatars
+    /// so we can load directly from Supabase without re-uploading the PNG.
+    var imageStoragePath: String?
     var backgroundColorHex: String?
     var isGenerating = false
     
@@ -35,6 +39,7 @@ final class MemojiStore {
         print("[MemojiStore] generate() called - Thread.isMainThread=\(Thread.isMainThread)")
         isGenerating = true
         image = nil
+        imageStoragePath = nil
         print("[MemojiStore] image set to nil, backgroundColorHex=\(selection.backgroundHex ?? "nil")")
         backgroundColorHex = selection.backgroundHex
         coordinator.navigateInBottomSheet(.bringingYourAvatar)
@@ -60,16 +65,17 @@ final class MemojiStore {
                 return
             }
             
-            // CRITICAL: Assign image first to ensure it's properly stored before any access
-            // Assignment is on main thread since MemojiStore is @MainActor
-            image = generated
+            // CRITICAL: Assign image and storage path first to ensure they're properly stored
+            // before any access. Assignment is on main thread since MemojiStore is @MainActor.
+            image = generated.image
+            imageStoragePath = generated.storagePath
             print("[MemojiStore] ✅ image assigned to memojiStore.image - Thread.isMainThread=\(Thread.isMainThread)")
             
             // Access size for logging only, wrapped in MainActor.run for thread safety
             // This ensures UIImage internal state is accessed on main thread
             let (width, height) = await MainActor.run {
-                let w = generated.size.width
-                let h = generated.size.height
+                let w = generated.image.size.width
+                let h = generated.image.size.height
                 print("[MemojiStore] image.size - width=\(w), height=\(h), Thread.isMainThread=\(Thread.isMainThread)")
                 return (w, h)
             }

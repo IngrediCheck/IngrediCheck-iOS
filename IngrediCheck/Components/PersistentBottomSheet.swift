@@ -396,8 +396,7 @@ struct PersistentBottomSheet: View {
                 Task {
                     await handleAssignAvatar(
                         memojiStore: memojiStore,
-                        familyStore: familyStore,
-                        webService: webService
+                        familyStore: familyStore
                     )
                     
                     // If opened from home screen, dismiss the sheet
@@ -515,21 +514,13 @@ struct PersistentBottomSheet: View {
 @MainActor
 private func handleAssignAvatar(
     memojiStore: MemojiStore,
-    familyStore: FamilyStore,
-    webService: WebService
+    familyStore: FamilyStore
 ) async {
-    // CRITICAL: Capture image and all data immediately to prevent accessing deallocated memory
-    // We're already on the main thread (@MainActor), so UIImage access is safe
-    guard let image = memojiStore.image else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji image to upload, skipping")
-        return
-    }
-    
-    // Validate image is valid (all UIImage operations are safe on main thread)
-    let imageSize = image.size
-    guard imageSize.width > 0 && imageSize.height > 0,
-          imageSize.width.isFinite && imageSize.height.isFinite else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Invalid image size, skipping")
+    // CRITICAL: Capture all data immediately to prevent accessing deallocated memory.
+    // We no longer re-upload the PNG; instead we use the storage path inside the
+    // `memoji-images` bucket returned by the backend.
+    guard let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji storage path available, skipping")
         return
     }
     
@@ -592,9 +583,9 @@ private func handleAssignAvatar(
        pendingSelf.id == targetMemberId {
         // This is the pending self member - use setPendingSelfMemberAvatar
         print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending self member: \(pendingSelf.name)")
-        await familyStore.setPendingSelfMemberAvatar(
-            image: image,
-            webService: webService,
+        // Set the memoji storage path as imageFileHash and update color to match memoji background.
+        await familyStore.setPendingSelfMemberAvatarFromMemoji(
+            storagePath: storagePath,
             backgroundColorHex: backgroundColorHex
         )
         print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending self member")
@@ -608,17 +599,16 @@ private func handleAssignAvatar(
     if let pendingOther = pendingOthersToCheck.first(where: { $0.id == targetMemberId }) {
         // This is a pending other member - use setAvatarForPendingOtherMember
         print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
-        await familyStore.setAvatarForPendingOtherMember(
+        await familyStore.setAvatarForPendingOtherMemberFromMemoji(
             id: targetMemberId,
-            image: image,
-            webService: webService,
+            storagePath: storagePath,
             backgroundColorHex: backgroundColorHex
         )
         print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending other member")
         return
     }
     
-    // 3. Otherwise, this is an existing member (from home view) - use the existing logic
+    // 3. Otherwise, this is an existing member (from home view) - update directly without re-uploading
     do {
         // 1. Get the member first to access their color for compositing - use captured data
         guard let family = currentFamily else {
@@ -635,14 +625,12 @@ private func handleAssignAvatar(
         // 2. Upload transparent PNG image directly (no compositing - background color stored separately in member.color)
         // Use captured background color if available, otherwise use member's existing color
         let bgColor = backgroundColorHex ?? member.color
-        print("[PersistentBottomSheet] handleAssignAvatar: Uploading transparent PNG with background color: \(bgColor)")
-        
-        // Upload the transparent PNG image to Supabase and get an imageFileHash
-        let imageFileHash = try await webService.uploadImage(image: image)
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
-        
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning memoji from storagePath=\(storagePath) with background color: \(bgColor)")
+
         var updatedMember = member
-        updatedMember.imageFileHash = imageFileHash
+        // Use the memoji storage path as imageFileHash so we can load directly from
+        // the `memoji-images` bucket without duplicating the PNG in `productimages`.
+        updatedMember.imageFileHash = storagePath
         
         // Also persist the memoji background color as the member's color so
         // small avatars (e.g. in HomeView) use the same color as the
@@ -655,7 +643,7 @@ private func handleAssignAvatar(
             updatedMember.color = normalizedColor
         }
         
-        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(storagePath) and color=\(updatedMember.color)")
         
         // 4. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)
@@ -668,7 +656,7 @@ private func handleAssignAvatar(
             print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
         }
     } catch {
-        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to upload or assign avatar: \(error.localizedDescription)")
+        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
     }
     
 }
