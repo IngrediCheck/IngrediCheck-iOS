@@ -6,6 +6,7 @@ struct EditMember: View {
     @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(MemojiStore.self) private var memojiStore
 
     let memberId: UUID
     let isSelf: Bool
@@ -83,6 +84,13 @@ struct EditMember: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
+                                // Track that we came from EditMember - need to get the actual route
+                                if case .editMember(let memberId, let isSelf) = coordinator.currentBottomSheetRoute {
+                                    memojiStore.previousRouteForGenerateAvatar = .editMember(memberId: memberId, isSelf: isSelf)
+                                } else {
+                                    // Fallback to addMoreMembersMinimal if we can't determine the route
+                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembersMinimal
+                                }
                                 coordinator.navigateInBottomSheet(.generateAvatar)
                             } label: {
                                 ZStack {

@@ -140,6 +140,10 @@ final class FamilyService {
         
         let family = try decodeFamily(from: result.body)
         print("[FamilyService] fetchFamily decoded family name=\(family.name)")
+        print("[FamilyService] fetchFamily selfMember.imageFileHash=\(family.selfMember.imageFileHash ?? "nil")")
+        for (index, member) in family.otherMembers.enumerated() {
+            print("[FamilyService] fetchFamily otherMembers[\(index)].imageFileHash=\(member.imageFileHash ?? "nil")")
+        }
         return family
     }
     
@@ -258,6 +262,10 @@ final class FamilyService {
         
         let family = try decodeFamily(from: result.body)
         print("[FamilyService] editMember decoded family name=\(family.name)")
+        print("[FamilyService] editMember selfMember.imageFileHash=\(family.selfMember.imageFileHash ?? "nil")")
+        for (index, member) in family.otherMembers.enumerated() {
+            print("[FamilyService] editMember otherMembers[\(index)].name=\(member.name), imageFileHash=\(member.imageFileHash ?? "nil")")
+        }
         return family
     }
     

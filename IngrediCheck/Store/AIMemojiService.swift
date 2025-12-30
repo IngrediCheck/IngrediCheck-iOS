@@ -30,6 +30,18 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> UIImage {
     }
 
     let bodyData = try JSONEncoder().encode(requestBody)
+    
+    // DEBUG: Print the JSON being sent to API
+    if let jsonString = String(data: bodyData, encoding: .utf8) {
+        print("[Memoji API] Request JSON: \(jsonString)")
+        
+        // Also pretty print for better readability
+        if let jsonObject = try? JSONSerialization.jsonObject(with: bodyData, options: []),
+           let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
+           let prettyString = String(data: prettyData, encoding: .utf8) {
+            print("[Memoji API] Request JSON (pretty):\n\(prettyString)")
+        }
+    }
 
     let request = SupabaseRequestBuilder(endpoint: .memoji)
         .setAuthorization(with: token)

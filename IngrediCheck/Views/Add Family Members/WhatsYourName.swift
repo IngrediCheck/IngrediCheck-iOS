@@ -24,7 +24,11 @@ struct WhatsYourName: View {
     ]
     @State var selectedFamilyMember: UserModel? = nil
     
-    @State var continuePressed: () -> Void = { }
+    var continuePressed: () -> Void = { }
+    
+    init(continuePressed: @escaping () -> Void = {}) {
+        self.continuePressed = continuePressed
+    }
     
     var body: some View {
         VStack {
@@ -102,6 +106,7 @@ struct WhatsYourName: View {
                                 } else {
                                     // Proceed to generate avatar
                                     memojiStore.displayName = trimmed
+                                    memojiStore.previousRouteForGenerateAvatar = .whatsYourName
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }
                             } label: {
@@ -175,6 +180,12 @@ struct WhatsYourName: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .onAppear {
+            // Restore the name from memojiStore if available
+            if let displayName = memojiStore.displayName, !displayName.isEmpty {
+                name = displayName
+            }
+        }
     }
     
     private func handleContinue(trimmed: String) {

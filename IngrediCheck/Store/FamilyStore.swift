@@ -454,8 +454,12 @@ final class FamilyStore {
         defer { isLoading = false }
         
         do {
-            family = try await service.editMember(member)
+            let updatedFamily = try await service.editMember(member)
+            family = updatedFamily
             print("[FamilyStore] editMember success for \(member.id)")
+            if let updatedMember = ([updatedFamily.selfMember] + updatedFamily.otherMembers).first(where: { $0.id == member.id }) {
+                print("[FamilyStore] editMember updated member \(updatedMember.name) has imageFileHash=\(updatedMember.imageFileHash ?? "nil")")
+            }
         } catch {
             errorMessage = (error as NSError).localizedDescription
             print("[FamilyStore] editMember error: \(error)")
