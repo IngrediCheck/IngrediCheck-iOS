@@ -57,84 +57,11 @@ struct HomeView: View {
     /// if an imageFileHash is present, otherwise falls back to the first
     /// letter of their name on top of their color.
     struct FamilyMemberAvatarView: View {
-        @Environment(WebService.self) private var webService
         let member: FamilyMember
         
-        @State private var avatarImage: UIImage? = nil
-        @State private var loadedHash: String? = nil
-        
         var body: some View {
-            Group {
-                // Show avatar with background color circle, or fallback with initial letter
-                Circle()
-                    .fill(Color(hex: member.color))
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        if let avatarImage = avatarImage {
-                            // Show transparent PNG memoji avatar over colored background
-                            Image(uiImage: avatarImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 36, height: 36)
-                                .clipShape(Circle())
-                        } else {
-                            // Fallback: initial letter
-                            Text(String(member.name.prefix(1)))
-                                .font(NunitoFont.semiBold.size(14))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .overlay(
-                        Circle()
-                            .stroke(lineWidth: 1)
-                            .foregroundStyle(Color.white)
-                    )
-            }
-            // Re-evaluate whenever the member's imageFileHash changes.
-            .task(id: member.imageFileHash) {
-                await loadAvatarForCurrentHash()
-            }
-        }
-        
-        @MainActor
-        private func loadAvatarForCurrentHash() async {
-            // If there is no hash, clear any cached avatar and fall back to initials.
-            guard let hash = member.imageFileHash, !hash.isEmpty else {
-                if avatarImage != nil {
-                    print("[HomeView.FamilyMemberAvatarView] imageFileHash cleared for \(member.name), resetting avatarImage")
-                }
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-
-            // If we've already loaded this exact hash, skip re-fetching.
-            if loadedHash == hash, avatarImage != nil {
-                print("[HomeView.FamilyMemberAvatarView] Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
-                return
-            }
-            
-            // 1) Try local asset
-            if let local = UIImage(named: hash) {
-                avatarImage = local
-                loadedHash = hash
-                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded local avatar for \(member.name) (hash=\(hash))")
-                return
-            }
-            
-            // 2) Try remote
-            print("[HomeView.FamilyMemberAvatarView] Loading remote avatar for \(member.name), imageFileHash=\(hash)")
-            do {
-                let uiImage = try await webService.fetchImage(
-                    imageLocation: .imageFileHash(hash),
-                    imageSize: .small
-                )
-                avatarImage = uiImage
-                loadedHash = hash
-                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded avatar for \(member.name) (hash=\(hash))")
-            } catch {
-                print("[HomeView.FamilyMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-            }
+            // Use centralized MemberAvatar component
+            MemberAvatar.small(member: member)
         }
     }
 

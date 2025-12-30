@@ -60,18 +60,18 @@ struct IngredientsChips: View {
                     endPoint: .bottom
                 )
                 : isSelected
-                    ? LinearGradient(
-                        colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    : LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .clear, location: 1.0)
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                ? LinearGradient(
+                    colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                : LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 1.0)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
                 , in: .capsule
             )
             .overlay(
@@ -89,12 +89,8 @@ struct IngredientsChips: View {
     /// "Everyone" icon or the first letter of their name.
     struct ChipMemberAvatarView: View {
         @Environment(FamilyStore.self) private var familyStore
-        @Environment(WebService.self) private var webService
         
         let memberIdentifier: String // "Everyone" or member UUID string
-        
-        @State private var avatarImage: UIImage? = nil
-        @State private var loadedHash: String? = nil
         
         var body: some View {
             Group {
@@ -116,34 +112,21 @@ struct IngredientsChips: View {
                                 .foregroundStyle(Color.white)
                         }
                 } else {
-                    // Show avatar with background color circle, or fallback with initial letter
-                    Circle()
-                        .fill(circleBackgroundColor)
-                        .frame(width: 24, height: 24)
-                        .overlay {
-                            if let avatarImage = avatarImage {
-                                // Show transparent PNG memoji avatar over colored background
-                                Image(uiImage: avatarImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 24, height: 24)
-                                    .clipShape(Circle())
-                            } else if let member = resolvedMember {
-                                // Fallback: initial letter
-                                Text(String(member.name.prefix(1)))
-                                    .font(NunitoFont.semiBold.size(10))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
+                    // Use centralized MemberAvatar component for individual members
+                    if let member = resolvedMember {
+                        MemberAvatar.custom(member: member, size: 24, imagePadding: 0)
+                    } else {
+                        // Fallback circle if member not found
+                        Circle()
+                            .fill(circleBackgroundColor)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Circle()
+                                    .stroke(lineWidth: 1)
+                                    .foregroundStyle(Color.white)
+                            )
+                    }
                 }
-            }
-            .task(id: memberIdentifier) {
-                await loadAvatarIfNeeded()
             }
         }
         
@@ -169,68 +152,34 @@ struct IngredientsChips: View {
             }
             return family.otherMembers.first { $0.id == uuid }
         }
-        
-        @MainActor
-        private func loadAvatarIfNeeded() async {
-            guard memberIdentifier != "Everyone",
-                  let member = resolvedMember else {
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-            
-            guard let hash = member.imageFileHash, !hash.isEmpty else {
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-            
-            // Skip if already loaded for this hash
-            if loadedHash == hash, avatarImage != nil {
-                return
-            }
-            
-            print("[IngredientsChips.ChipMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-            do {
-                let uiImage = try await webService.fetchImage(
-                    imageLocation: .imageFileHash(hash),
-                    imageSize: .small
-                )
-                avatarImage = uiImage
-                loadedHash = hash
-                print("[IngredientsChips.ChipMemberAvatarView] ✅ Loaded avatar for \(member.name)")
-            } catch {
-                print("[IngredientsChips.ChipMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-            }
-        }
-    }
-
-}
-
-#Preview {
-    VStack {
-        IngredientsChips(
-            title: "Peanuts",
-            image: "🥜"
-        )
-        IngredientsChips(
-            title: "Sellfish",
-            image: "🦐"
-        )
-        IngredientsChips(
-            title: "Wheat",
-            image: "🌾"
-        )
-        IngredientsChips(
-            title: "Sesame",
-            image: "❤️"
-        )
-        IngredientsChips(title: "India & South Asia")
-        IngredientsChips(
-            title: "Peanuts",
-            image: "🥜",
-            familyList: ["image 1", "image 2", "image 3"]
-        )
     }
     
+    
+//    #Preview {
+//        VStack {
+//            IngredientsChips(
+//                title: "Peanuts",
+//                image: "🥜"
+//            )
+//            IngredientsChips(
+//                title: "Sellfish",
+//                image: "🦐"
+//            )
+//            IngredientsChips(
+//                title: "Wheat",
+//                image: "🌾"
+//            )
+//            IngredientsChips(
+//                title: "Sesame",
+//                image: "❤️"
+//            )
+//            IngredientsChips(title: "India & South Asia")
+//            IngredientsChips(
+//                title: "Peanuts",
+//                image: "🥜",
+//                familyList: ["image 1", "image 2", "image 3"]
+//            )
+//        }
+//        
+//    }
 }

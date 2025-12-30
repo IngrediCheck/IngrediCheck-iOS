@@ -28,42 +28,15 @@ struct LetsMeetYourIngrediFamView: View {
         return String(first).uppercased()
     }
     
-    // Helper view to display member avatar that handles both asset names and Supabase hashes
+    // Helper view to display member avatar with edit button overlay
     struct MemberAvatarView: View {
-        @Environment(WebService.self) private var webService
         let member: FamilyMember
         let initial: (String) -> String
         
-        @State private var avatarImage: UIImage? = nil
-        @State private var loadedHash: String? = nil
-        
         var body: some View {
             ZStack(alignment: .bottomTrailing) {
-                // Show avatar with background color circle, or fallback with initial letter
-                Circle()
-                    .fill(Color(hex: member.color))
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        if let img = avatarImage {
-                            // Show memoji avatar over colored background
-                            Image(uiImage: img)
-                                .resizable()
-                                .renderingMode(.original) // Preserve transparency
-                                .scaledToFit() // Preserve aspect ratio
-                                .frame(width: 46, height: 46) // Slightly smaller so thin color ring is visible
-                                .clipShape(Circle())
-                        } else {
-                            // Fallback: initial letter
-                            Text(initial(member.name))
-                                .font(NunitoFont.semiBold.size(18))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .overlay(
-                        Circle()
-                            .stroke(lineWidth: 1)
-                            .foregroundStyle(Color.white)
-                    )
+                // Use centralized MemberAvatar component
+                MemberAvatar.medium(member: member)
                 
                 // Edit button overlay
                 Circle()
@@ -74,91 +47,6 @@ struct LetsMeetYourIngrediFamView: View {
                             .frame(width: 7.43, height: 7.43)
                     )
                     .offset(x: -4, y: 4)
-            }
-            .task(id: member.imageFileHash) {
-                await loadAvatarIfNeeded()
-            }
-        }
-        
-        @MainActor
-        private func loadAvatarIfNeeded() async {
-            guard let hash = member.imageFileHash, !hash.isEmpty else {
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-            
-            // Skip if already loaded for this hash
-            if loadedHash == hash, let existingImage = avatarImage {
-                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Before existingImage.size access - Thread.isMainThread=\(Thread.isMainThread)")
-                let isValid = await MainActor.run {
-                    let isMainThread = Thread.isMainThread
-                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Inside MainActor.run (existingImage) - Thread.isMainThread=\(isMainThread)")
-                    let width = existingImage.size.width
-                    let height = existingImage.size.height
-                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: existingImage.size accessed - width=\(width), height=\(height)")
-                    return width > 0 && height > 0
-                }
-                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: After MainActor.run (existingImage) - isValid=\(isValid)")
-                if isValid {
-                    return
-                }
-            }
-            
-            // Check if hash looks like an asset name (short, contains dashes) vs uploaded hash (long hex string)
-            // Asset names are typically short like "image-bg1", hashes are 64-char hex strings
-            if hash.count < 20 && hash.contains("-") {
-                // Likely an asset name - try loading from assets
-                if let assetImage = UIImage(named: hash) {
-                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Before assetImage.size access - Thread.isMainThread=\(Thread.isMainThread)")
-                    let isValid = await MainActor.run {
-                        let isMainThread = Thread.isMainThread
-                        print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Inside MainActor.run (assetImage) - Thread.isMainThread=\(isMainThread)")
-                        let width = assetImage.size.width
-                        let height = assetImage.size.height
-                        print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: assetImage.size accessed - width=\(width), height=\(height)")
-                        return width > 0 && height > 0
-                    }
-                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: After MainActor.run (assetImage) - isValid=\(isValid)")
-                    if isValid {
-                        avatarImage = assetImage
-                        loadedHash = hash
-                        return
-                    }
-                }
-            }
-            
-            // Otherwise, fetch from Supabase
-            print("[LetsMeetYourIngrediFamView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-            do {
-                let uiImage = try await webService.fetchImage(
-                    imageLocation: .imageFileHash(hash),
-                    imageSize: .small
-                )
-                // CRITICAL: UIImage.size access must be on main thread
-                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Before uiImage.size access - Thread.isMainThread=\(Thread.isMainThread)")
-                let isValid = await MainActor.run {
-                    let isMainThread = Thread.isMainThread
-                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: Inside MainActor.run (uiImage) - Thread.isMainThread=\(isMainThread)")
-                    let width = uiImage.size.width
-                    let height = uiImage.size.height
-                    print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: uiImage.size accessed - width=\(width), height=\(height)")
-                    return width > 0 && height > 0 && width.isFinite && height.isFinite
-                }
-                print("[LetsMeetYourIngrediFamView] loadAvatarIfNeeded: After MainActor.run (uiImage) - isValid=\(isValid)")
-                guard isValid else {
-                    print("[LetsMeetYourIngrediFamView] ⚠️ Loaded image has invalid size, skipping")
-                    avatarImage = nil
-                    loadedHash = nil
-                    return
-                }
-                avatarImage = uiImage
-                loadedHash = hash
-                print("[LetsMeetYourIngrediFamView] ✅ Loaded avatar for \(member.name)")
-            } catch {
-                print("[LetsMeetYourIngrediFamView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-                avatarImage = nil
-                loadedHash = nil
             }
         }
     }

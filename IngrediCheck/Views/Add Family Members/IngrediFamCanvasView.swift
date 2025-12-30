@@ -2210,69 +2210,11 @@ struct YourCurrentAvatar: View {
 
 /// Large avatar view (120x120) used in YourCurrentAvatar sheet to show the member's current memoji.
 struct YourCurrentAvatarView: View {
-    @Environment(WebService.self) private var webService
     let member: FamilyMember
     
-    @State private var avatarImage: UIImage? = nil
-    @State private var loadedHash: String? = nil
-    
     var body: some View {
-        // Base colored circle - always visible as background
-        Circle()
-            .fill(Color(hex: member.color))
-            .frame(width: 120, height: 120)
-            .overlay {
-                // Content layer overlaid on background
-                if let avatarImage {
-                    // Show loaded memoji avatar - slightly smaller to show background border
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 110, height: 110)
-                        .clipShape(Circle())
-                } else {
-                    // Fallback: first letter of name
-                    Text(String(member.name.prefix(1)))
-                        .font(NunitoFont.semiBold.size(48))
-                        .foregroundStyle(.white)
-                }
-            }
-            .overlay(
-                // White stroke overlay on top
-                Circle()
-                    .stroke(lineWidth: 2)
-                    .foregroundStyle(Color.white)
-            )
-            .task(id: member.imageFileHash) {
-                await loadAvatarIfNeeded()
-            }
-    }
-    
-    @MainActor
-    private func loadAvatarIfNeeded() async {
-        guard let hash = member.imageFileHash, !hash.isEmpty else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        // Skip if already loaded for this hash
-        if loadedHash == hash, avatarImage != nil {
-            return
-        }
-        
-        print("[YourCurrentAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-        do {
-            let uiImage = try await webService.fetchImage(
-                imageLocation: .imageFileHash(hash),
-                imageSize: .small
-            )
-            avatarImage = uiImage
-            loadedHash = hash
-            print("[YourCurrentAvatarView] ✅ Loaded avatar for \(member.name)")
-        } catch {
-            print("[YourCurrentAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-        }
+        // Use centralized MemberAvatar component
+        MemberAvatar.large(member: member)
     }
 }
 
@@ -2386,69 +2328,11 @@ struct SetUpAvatarFor: View {
 
 /// Avatar view used in SetUpAvatarFor sheet to show actual member memoji avatars.
 struct SetUpAvatarMemberView: View {
-    @Environment(WebService.self) private var webService
     let member: FamilyMember
     
-    @State private var avatarImage: UIImage? = nil
-    @State private var loadedHash: String? = nil
-    
-        var body: some View {
-            Group {
-                // Show avatar with background color circle, or fallback with initial letter
-                Circle()
-                    .fill(Color(hex: member.color))
-                    .frame(width: 46, height: 46)
-                    .overlay {
-                        if let avatarImage = avatarImage {
-                            // Show transparent PNG memoji avatar over colored background
-                            Image(uiImage: avatarImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 46, height: 46)
-                                .clipShape(Circle())
-                        } else {
-                            // Fallback: initial letter
-                            Text(String(member.name.prefix(1)))
-                                .font(NunitoFont.semiBold.size(18))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .overlay(
-                        Circle()
-                            .stroke(lineWidth: 1)
-                            .foregroundStyle(Color.white)
-                    )
-            }
-        .task(id: member.imageFileHash) {
-            await loadAvatarIfNeeded()
-        }
-    }
-    
-    @MainActor
-    private func loadAvatarIfNeeded() async {
-        guard let hash = member.imageFileHash, !hash.isEmpty else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        // Skip if already loaded for this hash
-        if loadedHash == hash, avatarImage != nil {
-            return
-        }
-        
-        print("[SetUpAvatarMemberView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-        do {
-            let uiImage = try await webService.fetchImage(
-                imageLocation: .imageFileHash(hash),
-                imageSize: .small
-            )
-            avatarImage = uiImage
-            loadedHash = hash
-            print("[SetUpAvatarMemberView] ✅ Loaded avatar for \(member.name)")
-        } catch {
-            print("[SetUpAvatarMemberView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-        }
+    var body: some View {
+        // Use centralized MemberAvatar component
+        MemberAvatar.custom(member: member, size: 46, imagePadding: 0)
     }
 }
 
