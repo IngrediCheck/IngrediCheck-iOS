@@ -576,5 +576,126 @@ struct DynamicOnboardingStepView: View {
     return DynamicOnboardingStepView(step: step, flowType: .individual, preferences: .constant(Preferences()))
 }
 
+// MARK: - Meet Your Profile View
 
+struct MeetYourProfileView: View {
+    var onContinue: () -> Void
+    @Environment(FamilyStore.self) var familyStore
+    @Environment(MemojiStore.self) var memojiStore
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with Back Button (Visual only, as logic handled by parent if needed)
+            HStack {
+                Button(action: {
+                    // Start over / Back logic if needed
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                }
+                
+                Spacer()
+            }
+            
+                VStack() {
+                    Circle()
+                        .fill(
+                            Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4") // Default or store color
+                        )
+                        .frame(width:80, height: 80)
+                        
+                 
+                    
+                    // Edit Pencil
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 28, height: 28)
+                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
+                        .overlay(
+                            Image(systemName: "pencil")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.grayScale100)
+                        )
+                        .offset(x: 5, y: 0)
+                }
+            }
+         
+            // Greeting Title
+            HStack(spacing: 8) {
+                Text("Hello,")
+                    .font(NunitoFont.bold.size(24))
+                    .foregroundStyle(.grayScale150)
+                
+                HStack(spacing: 6) {
+                    Text(familyStore.family?.name ?? "Bite Buddy")
+                        .font(NunitoFont.bold.size(24))
+                        .foregroundStyle(.grayScale150)
+                    
+                    Image(systemName: "pencil")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.grayScale80)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                
+                Text("!")
+                    .font(NunitoFont.bold.size(24))
+                    .foregroundStyle(.grayScale150)
+            }
+            .padding(.bottom, 16)
+            
+            // Description
+            Text("We’ve created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
+                .font(ManropeFont.regular.size(14))
+                .foregroundStyle(.grayScale100)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
+            
+         
+            
+            // Continue Button
+       GreenCapsule(title: "Continue",width: 159)
+            .frame(width :159)
+    }
+}
+
+#Preview("Meet Your Profile View") {
+    let familyStore = FamilyStore()
+    let memojiStore = MemojiStore()
+    
+    // Set up mock memoji data for preview
+    memojiStore.backgroundColorHex = "#E0BBE4"
+    memojiStore.image = UIImage(systemName: "person.circle.fill")
+    
+    return MeetYourProfileView(onContinue: {})
+        .environment(familyStore)
+        .environment(memojiStore)
+}
+
+// MARK: - Meet Your Profile Intro View
+
+struct MeetYourProfileIntroView: View {
+    @Environment(AppNavigationCoordinator.self) var coordinator
+    
+    var body: some View {
+        VStack {
+            Spacer()
+            
+            Button(action: {
+                coordinator.navigateInBottomSheet(.meetYourProfile)
+            }) {
+                GreenCapsule(title: "Continue", width: 159)
+                    .frame(width: 159)
+            }
+            .padding(.bottom, 40)
+        }
+    }
+}
 
