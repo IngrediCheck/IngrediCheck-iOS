@@ -17,6 +17,7 @@ struct PersistentBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
+    @State private var generationTask: Task<Void, Never>?
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -32,6 +33,20 @@ struct PersistentBottomSheet: View {
         )
         .padding(.bottom, keyboardHeight)
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: coordinator.currentBottomSheetRoute) { oldValue, newValue in
+            // Cancel generation task only when leaving avatar-related routes
+            // Don't cancel when transitioning between avatar routes (generateAvatar -> bringingYourAvatar -> meetYourAvatar)
+            let avatarRoutes: Set<BottomSheetRoute> = [.generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor]
+            let wasInAvatarFlow = avatarRoutes.contains(oldValue)
+            let isInAvatarFlow = avatarRoutes.contains(newValue)
+            
+            // Only cancel if we're leaving the avatar flow entirely
+            if wasInAvatarFlow && !isInAvatarFlow {
+                print("[PersistentBottomSheet] Leaving avatar flow, cancelling generation task")
+                generationTask?.cancel()
+                generationTask = nil
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
             guard let userInfo = notification.userInfo,
                   let frameValue = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
@@ -60,9 +75,26 @@ struct PersistentBottomSheet: View {
             
             if shouldShowOnboardingNextArrow {
                 Button(action: handleOnboardingNextTapped) {
-                    GreenCircle()
+                    if familyStore.pendingUploadCount > 0 {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 52, height: 52)
+                            .background(
+                                Capsule()
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(hex: "4CAF50"), Color(hex: "8BC34A")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                    } else {
+                        GreenCircle()
+                    }
                 }
                 .buttonStyle(.plain)
+                .disabled(familyStore.pendingUploadCount > 0)
                 .padding(.trailing, 20)
                 .padding(.bottom, 24)
             }
@@ -193,31 +225,38 @@ struct PersistentBottomSheet: View {
     }
     
     private func handleOnboardingNextTapped() {
-        // Get current step ID from route
-        guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
-            return
-        }
-        
-        // Check if current step is "lifeStyle" → show FineTuneYourExperience
-        if currentStepId == "lifeStyle" {
-            coordinator.navigateInBottomSheet(.fineTuneYourExperience)
-            return
-        }
-        
-        // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
-        if store.isLastStep {
-            // Mark the last section as complete to show 100% progress
-            store.next()
-            coordinator.navigateInBottomSheet(.workingOnSummary)
-            return
-        }
-        
-        // Advance logical onboarding progress (for progress bar & tag bar)
-        store.next()
-        
-        // Move the bottom sheet to the next onboarding question using JSON order
-        if let nextStepId = store.nextStepId {
-            coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+        Task {
+            // Wait for all pending uploads to complete before navigating
+            await familyStore.waitForPendingUploads()
+            
+            await MainActor.run {
+                // Get current step ID from route
+                guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
+                    return
+                }
+                
+                // Check if current step is "lifeStyle" → show FineTuneYourExperience
+                if currentStepId == "lifeStyle" {
+                    coordinator.navigateInBottomSheet(.fineTuneYourExperience)
+                    return
+                }
+                
+                // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
+                if store.isLastStep {
+                    // Mark the last section as complete to show 100% progress
+                    store.next()
+                    coordinator.navigateInBottomSheet(.workingOnSummary)
+                    return
+                }
+                
+                // Advance logical onboarding progress (for progress bar & tag bar)
+                store.next()
+                
+                // Move the bottom sheet to the next onboarding question using JSON order
+                if let nextStepId = store.nextStepId {
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                }
+            }
         }
     }
     
@@ -347,12 +386,16 @@ struct PersistentBottomSheet: View {
             GenerateAvatar(
                 isExpandedMinimal: $isExpandedMinimal,
                 randomPressed: { selection in
-                    Task {
+                    // Cancel any existing generation task
+                    generationTask?.cancel()
+                    generationTask = Task {
                         await memojiStore.generate(selection: selection, coordinator: coordinator)
                     }
                 },
                 generatePressed: { selection in
-                    Task {
+                    // Cancel any existing generation task
+                    generationTask?.cancel()
+                    generationTask = Task {
                         await memojiStore.generate(selection: selection, coordinator: coordinator)
                     }
                 }
@@ -366,17 +409,21 @@ struct PersistentBottomSheet: View {
             IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             
         case .meetYourAvatar:
+            // CRITICAL: Capture image and background color immediately to prevent EXC_BAD_ACCESS
+            // This ensures the image is not deallocated while the view is being created
+            let capturedImage = memojiStore.image
+            let capturedBackgroundColor = memojiStore.backgroundColorHex
+            
             MeetYourAvatar(
-                image: memojiStore.image,
-                backgroundColorHex: memojiStore.backgroundColorHex
+                image: capturedImage,
+                backgroundColorHex: capturedBackgroundColor
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
                 Task {
                     await handleAssignAvatar(
                         memojiStore: memojiStore,
-                        familyStore: familyStore,
-                        webService: webService
+                        familyStore: familyStore
                     )
                     
                     // Navigate back based on where we came from
@@ -516,28 +563,104 @@ struct PersistentBottomSheet: View {
 @MainActor
 private func handleAssignAvatar(
     memojiStore: MemojiStore,
-    familyStore: FamilyStore,
-    webService: WebService
+    familyStore: FamilyStore
 ) async {
-    guard let image = memojiStore.image else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji image to upload, skipping")
+    // CRITICAL: Capture all data immediately to prevent accessing deallocated memory.
+    // We no longer re-upload the PNG; instead we use the storage path inside the
+    // `memoji-images` bucket returned by the backend.
+    guard let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji storage path available, skipping")
         return
     }
     
-    guard let targetMemberId = familyStore.avatarTargetMemberId else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set, skipping upload")
+    // CRITICAL: Capture ALL data immediately to prevent accessing deallocated objects during async operations
+    let backgroundColorHex = memojiStore.backgroundColorHex
+    let displayName = memojiStore.displayName
+    let currentFamily = familyStore.family
+    let currentAvatarTargetMemberId = familyStore.avatarTargetMemberId
+    let currentPendingSelfMember = familyStore.pendingSelfMember
+    let currentPendingOtherMembers = familyStore.pendingOtherMembers
+    
+    // During onboarding, if avatarTargetMemberId is not set but we have displayName,
+    // it means the user generated an avatar without adding the member first.
+    // We need to add the member to the pending list first.
+    var targetMemberId: UUID? = currentAvatarTargetMemberId
+    
+    // If no targetMemberId is set but we're in onboarding and have a displayName, add the member
+    if targetMemberId == nil,
+        currentFamily == nil, // We're in onboarding (no family exists yet)
+       let name = displayName,
+        !name.isEmpty {
+        
+        // Check if this is for self member or other member
+        // If there's no pending self member, this must be for self
+        // Otherwise, it's for an other member
+        if currentPendingSelfMember == nil {
+            // This is for the self member
+            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+            familyStore.setPendingSelfMember(name: name)
+            // Re-capture after modification
+            if let newSelfMember = familyStore.pendingSelfMember {
+                targetMemberId = newSelfMember.id
+            }
+        } else {
+            // This is for an other member
+            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
+            familyStore.addPendingOtherMember(name: name)
+            // Re-capture after modification
+            let updatedPendingMembers = familyStore.pendingOtherMembers
+            if !updatedPendingMembers.isEmpty, let lastMember = updatedPendingMembers.last {
+                targetMemberId = lastMember.id
+            }
+        }
+    }
+    
+    guard let targetMemberId = targetMemberId else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
         return
     }
     
     print("[PersistentBottomSheet] handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
     
+    // CRITICAL: Re-check pending members AFTER potentially adding a new member
+    // We need to check the current state because we may have just added a member
+    // It's safe to access familyStore properties here since we're in an async function with familyStore as a parameter
+    
+    // 1. Check if this is a pending self member
+    // Check current state first (includes newly added members), fallback to captured state
+    if let pendingSelf = familyStore.pendingSelfMember ?? currentPendingSelfMember,
+       pendingSelf.id == targetMemberId {
+        // This is the pending self member - use setPendingSelfMemberAvatar
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending self member: \(pendingSelf.name)")
+        // Set the memoji storage path as imageFileHash and update color to match memoji background.
+        await familyStore.setPendingSelfMemberAvatarFromMemoji(
+            storagePath: storagePath,
+            backgroundColorHex: backgroundColorHex
+        )
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending self member")
+        return
+    }
+    
+    // 2. Check if this is a pending other member
+    // Check current state first (includes newly added members), fallback to captured state
+    let currentPendingOthers = familyStore.pendingOtherMembers
+    let pendingOthersToCheck = !currentPendingOthers.isEmpty ? currentPendingOthers : currentPendingOtherMembers
+    if let pendingOther = pendingOthersToCheck.first(where: { $0.id == targetMemberId }) {
+        // This is a pending other member - use setAvatarForPendingOtherMember
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
+        await familyStore.setAvatarForPendingOtherMemberFromMemoji(
+            id: targetMemberId,
+            storagePath: storagePath,
+            backgroundColorHex: backgroundColorHex
+        )
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending other member")
+        return
+    }
+    
+    // 3. Otherwise, this is an existing member (from home view) - update directly without re-uploading
     do {
-        // 1. Upload the avatar image to Supabase and get an imageFileHash
-        let imageFileHash = try await webService.uploadImage(image: image)
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
-        
-        // 2. Find the matching FamilyMember and update its imageFileHash
-        guard let family = familyStore.family else {
+        // 1. Get the member first to access their color for compositing - use captured data
+        guard let family = currentFamily else {
             print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No family loaded, cannot update member")
             return
         }
@@ -548,22 +671,30 @@ private func handleAssignAvatar(
             return
         }
         
+        // 2. Upload transparent PNG image directly (no compositing - background color stored separately in member.color)
+        // Use captured background color if available, otherwise use member's existing color
+        let bgColor = backgroundColorHex ?? member.color
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning memoji from storagePath=\(storagePath) with background color: \(bgColor)")
+
         var updatedMember = member
-        updatedMember.imageFileHash = imageFileHash
+        // Use the memoji storage path as imageFileHash so we can load directly from
+        // the `memoji-images` bucket without duplicating the PNG in `productimages`.
+        updatedMember.imageFileHash = storagePath
         
         // Also persist the memoji background color as the member's color so
         // small avatars (e.g. in HomeView) use the same color as the
         // MeetYourAvatar sheet.
-        if let bgHex = memojiStore.backgroundColorHex, !bgHex.isEmpty {
+        // Use captured backgroundColorHex to avoid accessing deallocated object
+        if let bgHex = backgroundColorHex, !bgHex.isEmpty {
             // Ensure color has a # prefix (backend check constraint requires it)
             let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
             print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
             updatedMember.color = normalizedColor
         }
         
-        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(storagePath) and color=\(updatedMember.color)")
         
-        // 3. Persist the updated member via FamilyStore
+        // 4. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)
         
         // Check if editMember succeeded (it doesn't throw, but sets errorMessage on failure)
@@ -574,7 +705,7 @@ private func handleAssignAvatar(
             print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
         }
     } catch {
-        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to upload or assign avatar: \(error.localizedDescription)")
+        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
     }
+    
 }
-
