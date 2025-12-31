@@ -458,11 +458,12 @@ struct HomeView: View {
             .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
             .overlay(
+                // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
                 LinearGradient(
                     colors: [
-                    
                         Color.white.opacity(0),
-                       Color(hex: "#FCFCFE"),
+                        Color.white
+//                        Color(hex: "#FCFCFE"),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -471,13 +472,15 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false),
                 alignment: .bottom
-            ).offset( y: 30)
+                
+            ).ignoresSafeArea(edges: .bottom)
             .overlay(
+                // TabBar in its original position (respects safe area)
                 TabBar(isExpanded: $isTabBarExpanded),
                 alignment: .bottom
             )
             .background(Color.white)
-
+           
             // ------------ HISTORY LOADING ------------
             .task {
                 if appState.listsTabState.historyItems == nil {
