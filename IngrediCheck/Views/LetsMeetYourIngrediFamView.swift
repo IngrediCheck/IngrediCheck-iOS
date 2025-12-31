@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct LetsMeetYourIngrediFamView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     
     private var shouldShowWelcomeFamily: Bool {
         switch coordinator.currentBottomSheetRoute {
@@ -24,6 +26,29 @@ struct LetsMeetYourIngrediFamView: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmed.first else { return "" }
         return String(first).uppercased()
+    }
+    
+    // Helper view to display member avatar with edit button overlay
+    struct MemberAvatarView: View {
+        let member: FamilyMember
+        let initial: (String) -> String
+        
+        var body: some View {
+            ZStack(alignment: .bottomTrailing) {
+                // Use centralized MemberAvatar component
+                MemberAvatar.medium(member: member)
+                
+                // Edit button overlay
+                Circle()
+                    .fill(.grayScale40)
+                    .frame(width: 16, height: 16)
+                    .overlay(
+                        Image("pen-line")
+                            .frame(width: 7.43, height: 7.43)
+                    )
+                    .offset(x: -4, y: 4)
+            }
+        }
     }
     
     var body: some View {
@@ -51,52 +76,28 @@ struct LetsMeetYourIngrediFamView: View {
             }
             .navigationBarBackButtonHidden(true)
         } else if let me = familyStore.pendingSelfMember {
-            VStack(spacing: 12) {
+            VStack(spacing: 0) {
                 Text("Your Family Overview")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
                     .padding(.top, 32)
+                    .padding(.bottom, 12)
 
-                HStack(spacing: 12) {
-                    ZStack(alignment: .bottomTrailing) {
-                        if let imageName = me.imageFileHash {
-                            ZStack{
-                                Circle()
-                                    .stroke(.grayScale40, lineWidth: 2)
-                                    .frame(width: 48, height: 48)
-                                OnboardingSmartAvatarView(imageName: imageName)
-                            }
-                        } else {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(hex: me.color))
-                                    .frame(width: 42, height: 42 )
-                                Text(initial(from: me.name))
+                ScrollView {
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            MemberAvatarView(member: me, initial: initial(from:))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(me.name)
                                     .font(NunitoFont.semiBold.size(18))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.grayScale150)
+                                Text("(You)")
+                                    .font(NunitoFont.regular.size(12))
+                                    .foregroundStyle(.grayScale110)
                             }
-                        }
-                        Circle()
-                            .fill(.grayScale40)
-                            .frame(width: 16, height: 16)
-//                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                            .overlay(
-                                Image( "pen-line")
-                                    .frame(width: 7.43, height:7.43)
-                            )
-                            .offset(x: -4, y: 4)
-                    }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(me.name)
-                            .font(NunitoFont.semiBold.size(18))
-                            .foregroundStyle(.grayScale150)
-                        Text("(You)")
-                            .font(NunitoFont.regular.size(12))
-                            .foregroundStyle(.grayScale110)
-                    }
-
-                    Spacer()
+                            Spacer()
 
 //                    Text("Leave Family")
 //                        .font(NunitoFont.semiBold.size(12))
@@ -104,104 +105,6 @@ struct LetsMeetYourIngrediFamView: View {
 //                        .padding(.vertical, 8)
 //                        .padding(.horizontal, 18)
 //                        .background(.grayScale40, in: .capsule)
-                }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color.white)
-                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(lineWidth: 0.75)
-                                .foregroundStyle(Color(hex: "#EEEEEE"))
-                            
-                            
-                            )
-                )
-                .padding(.horizontal, 20)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    coordinator.navigateInBottomSheet(.editMember(memberId: me.id, isSelf: true))
-                }
-
-                VStack(spacing: 12) {
-                    ForEach(familyStore.pendingOtherMembers) { member in
-                        HStack(spacing: 12) {
-                            ZStack(alignment: .bottomTrailing) {
-                                if let imageName = member.imageFileHash {
-                                    ZStack{
-                                        Circle()
-                                            .stroke(.grayScale40, lineWidth: 2)
-                                            .frame(width: 48, height: 48)
-                                        OnboardingSmartAvatarView(imageName: imageName)
-                                    }
-                                } else {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color(hex: member.color))
-                                            .frame(width: 42, height: 42 )
-                                        Text(initial(from: member.name))
-                                            .font(NunitoFont.semiBold.size(18))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                Circle()
-                                    .fill(.grayScale40)
-                                    .frame(width: 16, height: 16)
-                                    .overlay(
-                                        Image("pen-line")
-                                            .frame(width: 7.43, height:7.43)
-                                    )
-                                    .offset(x: -4, y: 4)
-                            }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(member.name)
-                                    .font(NunitoFont.semiBold.size(18))
-                                    .foregroundStyle(.grayScale150)
-                                if member.invitePending == true {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "exclamationmark.circle.fill")
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundStyle(Color(hex: "F4A100"))
-                                        Text("Pending")
-                                            .font(ManropeFont.semiBold.size(12))
-                                            .foregroundStyle(Color(hex: "F4A100"))
-                                    }
-                                    .padding(.vertical, 4)
-                                    .padding(.horizontal, 10)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color(hex: "FFF7E6"))
-                                    )
-                                }
-                            }
-
-                            Spacer()
-
-                            Button {
-                                coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image( "share")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Color(hex: "91B640"))
-                                    Text("Invite")
-                                        .font(NunitoFont.semiBold.size(12))
-                                        .foregroundStyle(Color(hex: "91B640"))
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 18)
-                                .background(
-                                    Capsule().fill(Color.white)
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(lineWidth: 1.5)
-                                        .foregroundStyle(Color(hex: "91B640"))
-                                )
-                            }
-                            .buttonStyle(.plain)
                         }
                         .padding(16)
                         .background(
@@ -212,17 +115,89 @@ struct LetsMeetYourIngrediFamView: View {
                                     RoundedRectangle(cornerRadius: 24)
                                         .stroke(lineWidth: 0.75)
                                         .foregroundStyle(Color(hex: "#EEEEEE"))
+                                    
+                                    
                                 )
                         )
                         .padding(.horizontal, 20)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: false))
+                            coordinator.navigateInBottomSheet(.editMember(memberId: me.id, isSelf: true))
+                        }
+
+                        ForEach(familyStore.pendingOtherMembers) { member in
+                            HStack(spacing: 12) {
+                                MemberAvatarView(member: member, initial: initial(from:))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(member.name)
+                                        .font(NunitoFont.semiBold.size(18))
+                                        .foregroundStyle(.grayScale150)
+                                    if member.invitePending == true {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "exclamationmark.circle.fill")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(Color(hex: "F4A100"))
+                                            Text("Pending")
+                                                .font(ManropeFont.semiBold.size(12))
+                                                .foregroundStyle(Color(hex: "F4A100"))
+                                        }
+                                        .padding(.vertical, 4)
+                                        .padding(.horizontal, 10)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color(hex: "FFF7E6"))
+                                        )
+                                    }
+                                }
+
+                                Spacer()
+
+                                Button {
+                                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Image( "share")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(Color(hex: "91B640"))
+                                        Text("Invite")
+                                            .font(NunitoFont.semiBold.size(12))
+                                            .foregroundStyle(Color(hex: "91B640"))
+                                    }
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 18)
+                                    .background(
+                                        Capsule().fill(Color.white)
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(lineWidth: 1.5)
+                                            .foregroundStyle(Color(hex: "91B640"))
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .fill(Color.white)
+                                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 24)
+                                            .stroke(lineWidth: 0.75)
+                                            .foregroundStyle(Color(hex: "#EEEEEE"))
+                                    )
+                            )
+                            .padding(.horizontal, 20)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: false))
+                            }
                         }
                     }
+                    .padding(.top, 10)
+                    .padding(.bottom, UIScreen.main.bounds.height * 0.3)
                 }
-
-                Spacer()
             }
             .navigationBarBackButtonHidden(true)
         } else {

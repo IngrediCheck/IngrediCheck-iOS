@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import DotLottie
 
 struct GenerateAvatarTools: Identifiable {
     let id = UUID().uuidString
@@ -165,6 +166,7 @@ struct IngrediFamCanvasView: View {
 struct GenerateAvatar: View {
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
     
     @State var toolIcons: [String] = [
         "family-member",
@@ -1080,10 +1082,10 @@ struct GenerateAvatar: View {
 }
 
 struct MeetYourAvatar: View {
-    var image: UIImage? = nil
-    var backgroundColorHex: String? = nil
-    @State var regeneratePressed: () -> Void = { }
-    @State var assignedPressed: () -> Void = { }
+    let image: UIImage?
+    let backgroundColorHex: String?
+    let regeneratePressed: () -> Void
+    let assignedPressed: () -> Void
     @State private var showConfetti = false
     @Environment(MemojiStore.self) private var memojiStore
     
@@ -1124,30 +1126,41 @@ struct MeetYourAvatar: View {
         }
     }
     
+    init(image: UIImage? = nil, backgroundColorHex: String? = nil, regeneratePressed: @escaping () -> Void = {}, assignedPressed: @escaping () -> Void = {}) {
+        self.image = image
+        self.backgroundColorHex = backgroundColorHex
+        self.regeneratePressed = regeneratePressed
+        self.assignedPressed = assignedPressed
+    }
+    
     var body: some View {
         let circleColor = Color(hex: backgroundColorHex ?? "F2F2F2")
         
         VStack(spacing: 20) {
-            // Avatar placeholder
-            Circle()
-                .fill(circleColor)
-                .frame(width: 137, height: 137)
-                .overlay {
-                    if let image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 137, height: 137)
-                            .clipShape(Circle())
-                    }
+            // Avatar with background circle
+            ZStack {
+                // Background circle (behind the image)
+                Circle()
+                    .fill(circleColor)
+                    .frame(width: 137, height: 137)
+                
+                // Memoji image on top (transparent PNG should show circle through)
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .renderingMode(.original) // Preserve transparency
+                        .scaledToFit() // Preserve aspect ratio
+                        .frame(width: 137, height: 137)
+                        .clipShape(Circle())
                 }
-
+            }
+            
             VStack(spacing: 40) {
                 Text(displayText)
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
-
+                
                 HStack(spacing: 12) {
                     Button {
                         regeneratePressed()
@@ -1174,13 +1187,20 @@ struct MeetYourAvatar: View {
         )
         .overlay {
             if showConfetti {
-                ConfettiView()
+                DotLottieAnimation(
+                    fileName: "Confetti",
+                    config: AnimationConfig(autoplay: true, loop: true)
+                )
+                .view()
+                .ignoresSafeArea()
             }
         }
         .onAppear {
-            showConfetti = true
-            // Reset confetti after animation completes
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                showConfetti = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.4) {
                 showConfetti = false
             }
         }
@@ -1336,8 +1356,13 @@ struct PreferenceAreReady: View {
 }
 
 struct AlreadyHaveAnAccount: View {
-    @State var yesPressed: () -> Void = { }
-    @State var noPressed: () -> Void = { }
+    let yesPressed: () -> Void
+    let noPressed: () -> Void
+    
+    init(yesPressed: @escaping () -> Void = {}, noPressed: @escaping () -> Void = {}) {
+        self.yesPressed = yesPressed
+        self.noPressed = noPressed
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1402,9 +1427,14 @@ struct AlreadyHaveAnAccount: View {
 }
 
 struct DoYouHaveAnInviteCode: View {
-    @State var yesPressed: (() -> Void)? = nil
-    @State var noPressed: (() -> Void)? = nil
+    let yesPressed: (() -> Void)?
+    let noPressed: (() -> Void)?
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    
+    init(yesPressed: (() -> Void)? = nil, noPressed: (() -> Void)? = nil) {
+        self.yesPressed = yesPressed
+        self.noPressed = noPressed
+    }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1614,9 +1644,14 @@ struct WelcomeBack: View {
 }
 
 struct WhosThisFor: View {
-    @State var justmePressed: (() -> Void)? = nil
-    @State var addFamilyPressed: (() -> Void)? = nil
+    let justmePressed: (() -> Void)?
+    let addFamilyPressed: (() -> Void)?
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    
+    init(justmePressed: (() -> Void)? = nil, addFamilyPressed: (() -> Void)? = nil) {
+        self.justmePressed = justmePressed
+        self.addFamilyPressed = addFamilyPressed
+    }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1682,7 +1717,11 @@ struct WhosThisFor: View {
 }
 
 struct AllSetToJoinYourFamily: View {
-    @State var goToHomePressed: () -> Void = { }
+    let goToHomePressed: () -> Void
+    
+    init(goToHomePressed: @escaping () -> Void = {}) {
+        self.goToHomePressed = goToHomePressed
+    }
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -1725,8 +1764,13 @@ struct EnterYourInviteCode : View {
     @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
-    @State var yesPressed: (() -> Void)? = nil
-    @State var noPressed: (() -> Void)? = nil
+    let yesPressed: (() -> Void)?
+    let noPressed: (() -> Void)?
+    
+    init(yesPressed: (() -> Void)? = nil, noPressed: (() -> Void)? = nil) {
+        self.yesPressed = yesPressed
+        self.noPressed = noPressed
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1930,8 +1974,13 @@ struct EnterYourInviteCode : View {
 }
 
 struct AddMoreMembersMinimal: View {
-    @State var allSetPressed: () -> Void = { }
-    @State var addMorePressed: () -> Void = { }
+    let allSetPressed: () -> Void
+    let addMorePressed: () -> Void
+    
+    init(allSetPressed: @escaping () -> Void = {}, addMorePressed: @escaping () -> Void = {}) {
+        self.allSetPressed = allSetPressed
+        self.addMorePressed = addMorePressed
+    }
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
@@ -2092,7 +2141,11 @@ struct YourCurrentAvatar: View {
     @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
     
-    @State var createNewPressed: () -> Void = { }
+    let createNewPressed: () -> Void
+    
+    init(createNewPressed: @escaping () -> Void = {}) {
+        self.createNewPressed = createNewPressed
+    }
     
     private var currentMember: FamilyMember? {
         guard let family = familyStore.family else { return nil }
@@ -2157,69 +2210,11 @@ struct YourCurrentAvatar: View {
 
 /// Large avatar view (120x120) used in YourCurrentAvatar sheet to show the member's current memoji.
 struct YourCurrentAvatarView: View {
-    @Environment(WebService.self) private var webService
     let member: FamilyMember
     
-    @State private var avatarImage: UIImage? = nil
-    @State private var loadedHash: String? = nil
-    
     var body: some View {
-        // Base colored circle - always visible as background
-        Circle()
-            .fill(Color(hex: member.color))
-            .frame(width: 120, height: 120)
-            .overlay {
-                // Content layer overlaid on background
-                if let avatarImage {
-                    // Show loaded memoji avatar - slightly smaller to show background border
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 110, height: 110)
-                        .clipShape(Circle())
-                } else {
-                    // Fallback: first letter of name
-                    Text(String(member.name.prefix(1)))
-                        .font(NunitoFont.semiBold.size(48))
-                        .foregroundStyle(.white)
-                }
-            }
-            .overlay(
-                // White stroke overlay on top
-                Circle()
-                    .stroke(lineWidth: 2)
-                    .foregroundStyle(Color.white)
-            )
-            .task(id: member.imageFileHash) {
-                await loadAvatarIfNeeded()
-            }
-    }
-    
-    @MainActor
-    private func loadAvatarIfNeeded() async {
-        guard let hash = member.imageFileHash, !hash.isEmpty else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        // Skip if already loaded for this hash
-        if loadedHash == hash, avatarImage != nil {
-            return
-        }
-        
-        print("[YourCurrentAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-        do {
-            let uiImage = try await webService.fetchImage(
-                imageLocation: .imageFileHash(hash),
-                imageSize: .small
-            )
-            avatarImage = uiImage
-            loadedHash = hash
-            print("[YourCurrentAvatarView] ✅ Loaded avatar for \(member.name)")
-        } catch {
-            print("[YourCurrentAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-        }
+        // Use centralized MemberAvatar component
+        MemberAvatar.large(member: member)
     }
 }
 
@@ -2234,7 +2229,11 @@ struct SetUpAvatarFor: View {
     }
     
     @State private var selectedMember: FamilyMember? = nil
-    @State var nextPressed: () -> Void = { }
+    let nextPressed: () -> Void
+    
+    init(nextPressed: @escaping () -> Void = {}) {
+        self.nextPressed = nextPressed
+    }
     
     var body: some View {
         VStack(spacing: 24) {
@@ -2329,69 +2328,11 @@ struct SetUpAvatarFor: View {
 
 /// Avatar view used in SetUpAvatarFor sheet to show actual member memoji avatars.
 struct SetUpAvatarMemberView: View {
-    @Environment(WebService.self) private var webService
     let member: FamilyMember
     
-    @State private var avatarImage: UIImage? = nil
-    @State private var loadedHash: String? = nil
-    
     var body: some View {
-        // Base colored circle - always visible as background
-        Circle()
-            .fill(Color(hex: member.color))
-            .frame(width: 46, height: 46)
-            .overlay {
-                // Content layer overlaid on background
-                if let avatarImage {
-                    // Show loaded memoji avatar - slightly smaller to show background border
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 42, height: 42)
-                        .clipShape(Circle())
-                } else {
-                    // Fallback: first letter of name
-                    Text(String(member.name.prefix(1)))
-                        .font(NunitoFont.semiBold.size(18))
-                        .foregroundStyle(.white)
-                }
-            }
-            .overlay(
-                // White stroke overlay on top
-                Circle()
-                    .stroke(lineWidth: 1)
-                    .foregroundStyle(Color.white)
-            )
-            .task(id: member.imageFileHash) {
-                await loadAvatarIfNeeded()
-            }
-    }
-    
-    @MainActor
-    private func loadAvatarIfNeeded() async {
-        guard let hash = member.imageFileHash, !hash.isEmpty else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        // Skip if already loaded for this hash
-        if loadedHash == hash, avatarImage != nil {
-            return
-        }
-        
-        print("[SetUpAvatarMemberView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-        do {
-            let uiImage = try await webService.fetchImage(
-                imageLocation: .imageFileHash(hash),
-                imageSize: .small
-            )
-            avatarImage = uiImage
-            loadedHash = hash
-            print("[SetUpAvatarMemberView] ✅ Loaded avatar for \(member.name)")
-        } catch {
-            print("[SetUpAvatarMemberView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-        }
+        // Use centralized MemberAvatar component
+        MemberAvatar.custom(member: member, size: 46, imagePadding: 0)
     }
 }
 

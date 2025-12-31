@@ -9,8 +9,9 @@ import SwiftUI
 
 struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
     @State var familyMembersList: [UserModel] = [
@@ -73,7 +74,7 @@ struct AddMoreMembers: View {
                         }
                     
                     if showError {
-                        Text("Please enter a name")
+                        Text("Enter a name.")
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -91,14 +92,15 @@ struct AddMoreMembers: View {
                         HStack(spacing: 24) {
                             Button {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if !trimmed.isEmpty {
-                                    memojiStore.displayName = trimmed
+                                if trimmed.isEmpty {
+                                    // Show error if textfield is empty
+                                    showError = true
                                 } else {
-                                    // Clear displayName if name field is empty to prevent previous name from showing
-                                    memojiStore.displayName = nil
+                                    // Set display name before navigating
+                                    memojiStore.displayName = trimmed
+                                    // Proceed to generate avatar
+                                    coordinator.navigateInBottomSheet(.generateAvatar)
                                 }
-                                memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
-                                coordinator.navigateInBottomSheet(.generateAvatar)
                             } label: {
                                 ZStack {
                                     Circle()
@@ -152,13 +154,7 @@ struct AddMoreMembers: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
-                    familyStore.addPendingOtherMember(name: trimmed)
-                    familyStore.setAvatarForLastPendingOtherMember(imageName: selectedFamilyMember?.image)
-                    let memberName = trimmed
-                    name = ""
-                    showError = false
-                    continuePressed(memberName)
+                    handleAddMember(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Add Member")
@@ -197,5 +193,38 @@ struct AddMoreMembers: View {
         memojiStore.displayName = nil
         // Clear previous route so back button works correctly for new flow
         memojiStore.previousRouteForGenerateAvatar = nil
+    }
+    
+    private func handleAddMember(trimmed: String) {
+        print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
+        familyStore.addPendingOtherMember(name: trimmed)
+        
+        // Handle avatar assignment - upload in background without blocking UI
+        // Priority: selected predefined avatar > custom avatar from memojiStore
+        if let selectedImageName = selectedFamilyMember?.image,
+           let assetImage = UIImage(named: selectedImageName) {
+            // Predefined avatar selected - upload it in background
+            Task {
+                await familyStore.setAvatarForLastPendingOtherMember(image: assetImage, webService: webService)
+            }
+        } else if let customImage = memojiStore.image {
+            // Custom avatar from memojiStore - upload it in background with memoji background color
+            Task {
+                await familyStore.setAvatarForLastPendingOtherMember(
+                    image: customImage,
+                    webService: webService,
+                    backgroundColorHex: memojiStore.backgroundColorHex
+                )
+            }
+        } else if let selectedImageName = selectedFamilyMember?.image {
+            // Fallback to old method if image can't be loaded
+            familyStore.setAvatarForLastPendingOtherMember(imageName: selectedImageName)
+        }
+        
+        let memberName = trimmed
+        name = ""
+        showError = false
+        // Call continuePressed immediately so sheet closes
+        continuePressed(memberName)
     }
 }

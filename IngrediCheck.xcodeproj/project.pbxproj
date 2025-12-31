@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
+		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
 		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
 		0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */; };
 		0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */; };
@@ -90,6 +91,7 @@
 		D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC982ED98EA10088E044 /* Temp4.swift */; };
 		D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC912ED98EA10088E044 /* CustomSheet.swift */; };
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
+		D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
@@ -178,6 +180,7 @@
 		D3BECC962ED98EA10088E044 /* Temp2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp2.swift; sourceTree = "<group>"; };
 		D3BECC972ED98EA10088E044 /* Temp3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp3.swift; sourceTree = "<group>"; };
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
+		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
@@ -190,6 +193,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0CBB73342F03B575003ED0F5 /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
@@ -206,6 +210,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */,
 				D35F3C262E2A25FB0002CDE7 /* GoogleSignInSwift in Frameworks */,
 				D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */,
 				D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */,
@@ -239,6 +244,7 @@
 				D3BECC912ED98EA10088E044 /* CustomSheet.swift */,
 				D3BECC922ED98EA10088E044 /* FlowLayout.swift */,
 				D3BECC932ED98EA10088E044 /* HexColorExtension.swift */,
+				D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */,
 				D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */,
 				D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */,
 				D3BECC962ED98EA10088E044 /* Temp2.swift */,
@@ -375,6 +381,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				0CBB73342F03B575003ED0F5 /* Resources */,
 				D3BECC852ED98E380088E044 /* ContentView.swift */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
@@ -427,6 +434,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				0CBB73342F03B575003ED0F5 /* Resources */,
 				D3BECBA72ED9898E0088E044 /* Components */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
@@ -448,6 +456,7 @@
 				D35F3C232E2A25FB0002CDE7 /* GoogleSignIn */,
 				D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */,
 				0C51E2F02E335C1E00A3E3A9 /* PostHog */,
+				0CE0D52B2F03A1390050C904 /* DotLottie */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -484,6 +493,7 @@
 				D35BCF242E27D5B600125580 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				D35F3C222E2A25FB0002CDE7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -543,6 +553,7 @@
 				D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */,
 				D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */,
 				D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */,
+				D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */,
 				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */,
@@ -890,6 +901,14 @@
 				minimumVersion = 3.33.0;
 			};
 		};
+		0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/LottieFiles/dotlottie-ios.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/globulus/swiftui-flow-layout";
@@ -937,6 +956,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
+		};
+		0CE0D52B2F03A1390050C904 /* DotLottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
+			productName = DotLottie;
 		};
 		390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */ = {
 			isa = XCSwiftPackageProductDependency;

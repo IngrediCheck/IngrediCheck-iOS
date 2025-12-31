@@ -11,6 +11,7 @@ struct WhatsYourName: View {
     
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
@@ -81,7 +82,7 @@ struct WhatsYourName: View {
                         }
                     
                     if showError {
-                        Text("Please enter your name")
+                        Text("Enter a name.")
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -99,7 +100,11 @@ struct WhatsYourName: View {
                         HStack(spacing: 24) {
                             Button {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if !trimmed.isEmpty {
+                                if trimmed.isEmpty {
+                                    // Show error if textfield is empty
+                                    showError = true
+                                } else {
+                                    // Proceed to generate avatar
                                     memojiStore.displayName = trimmed
                                     memojiStore.previousRouteForGenerateAvatar = .whatsYourName
                                     coordinator.navigateInBottomSheet(.generateAvatar)
@@ -118,8 +123,6 @@ struct WhatsYourName: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
                             
                             ForEach(familyMembersList, id: \.id) { ele in
                                 ZStack(alignment: .topTrailing) {
@@ -160,10 +163,7 @@ struct WhatsYourName: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    print("[WhatsYourName] Continue tapped with name=\(trimmed)")
-                    familyStore.setPendingSelfMember(name: trimmed)
-                    familyStore.setPendingSelfMemberAvatar(imageName: selectedFamilyMember?.image)
-                    continuePressed()
+                    handleContinue(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Continue")
@@ -186,5 +186,36 @@ struct WhatsYourName: View {
                 name = displayName
             }
         }
+    }
+    
+    private func handleContinue(trimmed: String) {
+        print("[WhatsYourName] Continue tapped with name=\(trimmed)")
+        familyStore.setPendingSelfMember(name: trimmed)
+        
+        // Handle avatar assignment - upload in background without blocking UI
+        // Priority:
+        // 1. Selected predefined avatar (upload to productimages)
+        // 2. Custom memoji (use memoji-images storage path, no re-upload)
+        if let selectedImageName = selectedFamilyMember?.image,
+           let assetImage = UIImage(named: selectedImageName) {
+            // Predefined avatar selected - upload it in background
+            Task {
+                await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
+            }
+        } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+            // Custom avatar from memojiStore - use memoji storage path directly
+            Task {
+                await familyStore.setPendingSelfMemberAvatarFromMemoji(
+                    storagePath: storagePath,
+                    backgroundColorHex: memojiStore.backgroundColorHex
+                )
+            }
+        } else if let selectedImageName = selectedFamilyMember?.image {
+            // Fallback to old method if image can't be loaded
+            familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
+        }
+        
+        // Call continuePressed immediately so sheet closes
+        continuePressed()
     }
 }

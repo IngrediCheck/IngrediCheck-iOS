@@ -1,9 +1,11 @@
 import SwiftUI
+import UIKit
 
 struct EditMember: View {
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(AppNavigationCoordinator.self) private var coordinator
 
     let memberId: UUID
     let isSelf: Bool
@@ -142,14 +144,7 @@ struct EditMember: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    if isSelf {
-                        familyStore.updatePendingSelfMemberName(trimmed)
-                        if let img = selectedAvatar?.image { familyStore.setPendingSelfMemberAvatar(imageName: img) }
-                    } else {
-                        familyStore.updatePendingOtherMemberName(id: memberId, name: trimmed)
-                        if let img = selectedAvatar?.image { familyStore.setAvatarForPendingOtherMember(id: memberId, imageName: img) }
-                    }
-                    onSave()
+                    handleSave(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Save")
@@ -184,5 +179,60 @@ struct EditMember: View {
                 }
             }
         }
+    }
+    
+    private func handleSave(trimmed: String) {
+        if isSelf {
+            familyStore.updatePendingSelfMemberName(trimmed)
+            // Handle avatar assignment - upload in background without blocking UI
+            // Priority:
+            // 1. Selected predefined avatar (upload to productimages)
+            // 2. Custom memoji (use memoji-images storage path, no re-upload)
+            if let selectedImageName = selectedAvatar?.image,
+               let assetImage = UIImage(named: selectedImageName) {
+                // Predefined avatar selected - upload it in background
+                Task {
+                    await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
+                }
+            } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+                // Custom avatar from memojiStore - use memoji storage path directly
+                Task {
+                    await familyStore.setPendingSelfMemberAvatarFromMemoji(
+                        storagePath: storagePath,
+                        backgroundColorHex: memojiStore.backgroundColorHex
+                    )
+                }
+            } else if let selectedImageName = selectedAvatar?.image {
+                // Fallback to old method if image can't be loaded
+                familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
+            }
+        } else {
+            familyStore.updatePendingOtherMemberName(id: memberId, name: trimmed)
+            // Handle avatar assignment - upload in background without blocking UI
+            // Priority:
+            // 1. Selected predefined avatar (upload to productimages)
+            // 2. Custom memoji (use memoji-images storage path, no re-upload)
+            if let selectedImageName = selectedAvatar?.image,
+               let assetImage = UIImage(named: selectedImageName) {
+                // Predefined avatar selected - upload it in background
+                Task {
+                    await familyStore.setAvatarForPendingOtherMember(id: memberId, image: assetImage, webService: webService)
+                }
+            } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+                // Custom avatar from memojiStore - use memoji storage path directly
+                Task {
+                    await familyStore.setAvatarForPendingOtherMemberFromMemoji(
+                        id: memberId,
+                        storagePath: storagePath,
+                        backgroundColorHex: memojiStore.backgroundColorHex
+                    )
+                }
+            } else if let selectedImageName = selectedAvatar?.image {
+                // Fallback to old method if image can't be loaded
+                familyStore.setAvatarForPendingOtherMember(id: memberId, imageName: selectedImageName)
+            }
+        }
+        // Call onSave immediately so sheet closes
+        onSave()
     }
 }

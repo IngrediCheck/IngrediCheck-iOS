@@ -60,18 +60,18 @@ struct IngredientsChips: View {
                     endPoint: .bottom
                 )
                 : isSelected
-                    ? LinearGradient(
-                        colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    : LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .clear, location: 1.0)
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                ? LinearGradient(
+                    colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                : LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 1.0)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
                 , in: .capsule
             )
             .overlay(
@@ -89,51 +89,45 @@ struct IngredientsChips: View {
     /// "Everyone" icon or the first letter of their name.
     struct ChipMemberAvatarView: View {
         @Environment(FamilyStore.self) private var familyStore
-        @Environment(WebService.self) private var webService
         
         let memberIdentifier: String // "Everyone" or member UUID string
         
-        @State private var avatarImage: UIImage? = nil
-        @State private var loadedHash: String? = nil
-        
         var body: some View {
-            // Base colored circle - always visible as background
-            Circle()
-                .fill(circleBackgroundColor)
-                .frame(width: 24, height: 24)
-                .overlay {
-                    // Content layer overlaid on background
-                    if memberIdentifier == "Everyone" {
-                        // Show "Everyone" icon
-                        Image("Everyone")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 22, height: 22)
-                            .clipShape(Circle())
-                    } else if let avatarImage {
-                        // Show loaded memoji avatar - slightly smaller to show background border
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 22, height: 22)
-                            .clipShape(Circle())
-                    } else if let member = resolvedMember {
-                        // Fallback: first letter of name
-                        Text(String(member.name.prefix(1)))
-                            .font(NunitoFont.semiBold.size(10))
-                            .foregroundStyle(.white)
+            Group {
+                if memberIdentifier == "Everyone" {
+                    // Show "Everyone" icon with background circle
+                    Circle()
+                        .fill(circleBackgroundColor)
+                        .frame(width: 24, height: 24)
+                        .overlay {
+                            Image("Everyone")
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 22, height: 22)
+                                .clipShape(Circle())
+                        }
+                        .overlay {
+                            Circle()
+                                .stroke(lineWidth: 1)
+                                .foregroundStyle(Color.white)
+                        }
+                } else {
+                    // Use centralized MemberAvatar component for individual members
+                    if let member = resolvedMember {
+                        MemberAvatar.custom(member: member, size: 24, imagePadding: 0)
+                    } else {
+                        // Fallback circle if member not found
+                        Circle()
+                            .fill(circleBackgroundColor)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Circle()
+                                    .stroke(lineWidth: 1)
+                                    .foregroundStyle(Color.white)
+                            )
                     }
                 }
-                .overlay {
-                    // White stroke overlay on top
-                    Circle()
-                        .stroke(lineWidth: 1)
-                        .frame(width: 24, height: 24)
-                        .foregroundStyle(Color.white)
-                }
-                .task(id: memberIdentifier) {
-                    await loadAvatarIfNeeded()
-                }
+            }
         }
         
         private var circleBackgroundColor: Color {
@@ -158,68 +152,34 @@ struct IngredientsChips: View {
             }
             return family.otherMembers.first { $0.id == uuid }
         }
-        
-        @MainActor
-        private func loadAvatarIfNeeded() async {
-            guard memberIdentifier != "Everyone",
-                  let member = resolvedMember else {
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-            
-            guard let hash = member.imageFileHash, !hash.isEmpty else {
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-            
-            // Skip if already loaded for this hash
-            if loadedHash == hash, avatarImage != nil {
-                return
-            }
-            
-            print("[IngredientsChips.ChipMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-            do {
-                let uiImage = try await webService.fetchImage(
-                    imageLocation: .imageFileHash(hash),
-                    imageSize: .small
-                )
-                avatarImage = uiImage
-                loadedHash = hash
-                print("[IngredientsChips.ChipMemberAvatarView] ✅ Loaded avatar for \(member.name)")
-            } catch {
-                print("[IngredientsChips.ChipMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-            }
-        }
-    }
-
-}
-
-#Preview {
-    VStack {
-        IngredientsChips(
-            title: "Peanuts",
-            image: "🥜"
-        )
-        IngredientsChips(
-            title: "Sellfish",
-            image: "🦐"
-        )
-        IngredientsChips(
-            title: "Wheat",
-            image: "🌾"
-        )
-        IngredientsChips(
-            title: "Sesame",
-            image: "❤️"
-        )
-        IngredientsChips(title: "India & South Asia")
-        IngredientsChips(
-            title: "Peanuts",
-            image: "🥜",
-            familyList: ["image 1", "image 2", "image 3"]
-        )
     }
     
+    
+//    #Preview {
+//        VStack {
+//            IngredientsChips(
+//                title: "Peanuts",
+//                image: "🥜"
+//            )
+//            IngredientsChips(
+//                title: "Sellfish",
+//                image: "🦐"
+//            )
+//            IngredientsChips(
+//                title: "Wheat",
+//                image: "🌾"
+//            )
+//            IngredientsChips(
+//                title: "Sesame",
+//                image: "❤️"
+//            )
+//            IngredientsChips(title: "India & South Asia")
+//            IngredientsChips(
+//                title: "Peanuts",
+//                image: "🥜",
+//                familyList: ["image 1", "image 2", "image 3"]
+//            )
+//        }
+//        
+//    }
 }

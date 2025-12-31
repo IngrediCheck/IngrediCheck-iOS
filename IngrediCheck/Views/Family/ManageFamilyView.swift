@@ -426,74 +426,16 @@ struct ManageFamilyView: View {
 
     private struct SmartMemberAvatar: View {
         let member: FamilyMember
-        @Environment(WebService.self) private var webService
-        @State private var remoteImage: UIImage? = nil
-        @State private var searchFailed: Bool = false
         
         var body: some View {
+            // Use centralized MemberAvatar component with stroke overlay
             ZStack {
-                // Background circle
+                MemberAvatar.medium(member: member)
+                
+                // Additional stroke overlay for this specific view
                 Circle()
                     .stroke(Color.grayScale40, lineWidth: 2)
                     .frame(width: 48, height: 48)
-                
-                // Image content
-                if let imageName = member.imageFileHash, !imageName.isEmpty, !searchFailed {
-                    // Try to load as a local asset named 'imageName' (for pre-defined avatars)
-                    // If it is a generated hash, UIImage(named:) returns nil.
-                    if let localImage = UIImage(named: imageName) {
-                        Image(uiImage: localImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 42, height: 42)
-                            .clipShape(Circle())
-                    } else if let remote = remoteImage {
-                        // Remote image loaded
-                        Image(uiImage: remote)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 42, height: 42)
-                            .clipShape(Circle())
-                    } else {
-                        // Placeholder / Loading for remote
-                        Circle()
-                            .fill(Color(hex: member.color))
-                            .frame(width: 42, height: 42)
-                            .overlay(
-                                ProgressView()
-                                    .scaleEffect(0.5)
-                            )
-                            .task {
-                                await loadRemoteAvatar(hash: imageName)
-                            }
-                    }
-                } else {
-                    // Default generic avatar (initials) - Fallback if no hash OR if load failed
-                    Circle()
-                        .fill(Color(hex: member.color))
-                        .frame(width: 42, height: 42)
-                        .overlay(
-                            Text(String(member.name.prefix(1)))
-                                .font(NunitoFont.semiBold.size(18))
-                                .foregroundStyle(.white)
-                        )
-                }
-            }
-        }
-        
-        @MainActor
-        private func loadRemoteAvatar(hash: String) async {
-            do {
-                // Attempt to fetch from Supabase
-                let uiImage = try await webService.fetchImage(
-                    imageLocation: .imageFileHash(hash),
-                    imageSize: .small
-                )
-                self.remoteImage = uiImage
-                self.searchFailed = false
-            } catch {
-                print("Failed to load remote avatar for \(member.name): \(error.localizedDescription)")
-                self.searchFailed = true
             }
         }
     }

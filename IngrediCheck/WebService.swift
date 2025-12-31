@@ -77,30 +77,66 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
     
     func fetchImage(imageLocation: DTO.ImageLocationInfo, imageSize: ImageSize) async throws -> UIImage {
-
-        var fileLocation: FileLocation {
-            switch imageLocation {
-            case .url(let url):
-                return FileLocation.url(url)
-            case .imageFileHash(let imageFileHash):
-                return FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
-            }
-        }
-        
-        var imageData: Data {
-            get async throws {
-                switch imageSize {
-                case .small:
-                    return try await smallImageStore.fetchFile(fileLocation: fileLocation)
-                case .medium:
-                    return try await mediumImageStore.fetchFile(fileLocation: fileLocation)
-                case .large:
-                    return try await largeImageStore.fetchFile(fileLocation: fileLocation)
+        // Construct FileLocation - handle memoji paths with proper URL encoding
+        let fileLocation: FileLocation
+        switch imageLocation {
+        case .url(let url):
+            fileLocation = FileLocation.url(url)
+        case .imageFileHash(let imageFileHash):
+            // Heuristic: memoji images live in the `memoji-images` bucket and include
+            // a year/month path segment (e.g. "2025/01/<hash>.png"). Product images
+            // are flat hashes without slashes.
+            if imageFileHash.contains("/") {
+                // For memoji images in public bucket, use public URL directly
+                // Format: https://<project>.supabase.co/storage/v1/object/public/memoji-images/<path>
+                // URL-encode each path segment to handle special characters properly
+                let pathComponents = imageFileHash.split(separator: "/")
+                let encodedComponents = pathComponents.map { component in
+                    component.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String(component)
                 }
+                let encodedPath = encodedComponents.joined(separator: "/")
+                let publicUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/memoji-images/\(encodedPath)"
+                
+                guard let publicUrl = URL(string: publicUrlString) else {
+                    print("[WebService] fetchImage: ❌ Failed to construct URL for memoji path: \(imageFileHash)")
+                    print("[WebService] fetchImage: Encoded path: \(encodedPath)")
+                    print("[WebService] fetchImage: Full URL string: \(publicUrlString)")
+                    throw NetworkError.badUrl
+                }
+                print("[WebService] fetchImage: ✅ Constructed memoji URL: \(publicUrlString)")
+                fileLocation = FileLocation.url(publicUrl)
+            } else {
+                // For product images, use Supabase download API
+                fileLocation = FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
             }
         }
         
-        return UIImage(data: try await imageData)!
+        // Fetch image data based on size
+        let data: Data
+        switch imageSize {
+        case .small:
+            data = try await smallImageStore.fetchFile(fileLocation: fileLocation)
+        case .medium:
+            data = try await mediumImageStore.fetchFile(fileLocation: fileLocation)
+        case .large:
+            data = try await largeImageStore.fetchFile(fileLocation: fileLocation)
+        }
+        
+        print("[WebService] fetchImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
+        // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
+        let image = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[WebService] fetchImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let img = UIImage(data: data)
+            print("[WebService] fetchImage: UIImage(data:) created - image=\(img != nil ? "✅" : "❌")")
+            return img
+        }
+        print("[WebService] fetchImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
+        guard let image = image else {
+            throw NetworkError.decodingError
+        }
+        
+        return image
     }
 
     func streamUnifiedAnalysis(
@@ -526,8 +562,16 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
 
     func uploadImage(image: UIImage) async throws -> String {
-    
-        let imageData = image.jpegData(compressionQuality: 1.0)!
+        print("[WebService] uploadImage: Before pngData() - Thread.isMainThread=\(Thread.isMainThread)")
+        // CRITICAL: pngData() must be called on main thread - UIImage operations are not thread-safe
+        let imageData = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[WebService] uploadImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let data = image.pngData()!
+            print("[WebService] uploadImage: pngData() completed - data size=\(data.count) bytes")
+            return data
+        }
+        print("[WebService] uploadImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
         let imageFileName = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
         
         print("[WebService] uploadImage: Uploading image to storage with key=\(imageFileName)")
@@ -536,7 +580,7 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             try await supabaseClient.storage.from("productimages").upload(
                 path: imageFileName,
                 file: imageData,
-                options: FileOptions(contentType: "image/jpeg")
+                options: FileOptions(contentType: "image/png")
             )
             print("[WebService] uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
         } catch {

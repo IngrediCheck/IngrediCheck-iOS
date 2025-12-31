@@ -8,15 +8,37 @@
 import SwiftUI
 
 struct GreenCapsule: View {
-    @State var title: String
-    @State var icon: String?
-    var iconWidth: CGFloat? = 20
-    var iconHeight: CGFloat? = 20
-    var width: CGFloat? = 152
-    var height: CGFloat? = 52
+    let title: String
+    let icon: String?
+    var iconWidth: CGFloat = 20
+    var iconHeight: CGFloat = 20
+    var width: CGFloat = 152
+    var height: CGFloat = 52
     var takeFullWidth: Bool = true
     var isLoading: Bool = false
     var labelFont: Font = NunitoFont.semiBold.size(16)
+    
+    init(
+        title: String,
+        icon: String? = nil,
+        iconWidth: CGFloat = 20,
+        iconHeight: CGFloat = 20,
+        width: CGFloat = 152,
+        height: CGFloat = 52,
+        takeFullWidth: Bool = true,
+        isLoading: Bool = false,
+        labelFont: Font = NunitoFont.semiBold.size(16)
+    ) {
+        self.title = title
+        self.icon = icon
+        self.iconWidth = iconWidth
+        self.iconHeight = iconHeight
+        self.width = width
+        self.height = height
+        self.takeFullWidth = takeFullWidth
+        self.isLoading = isLoading
+        self.labelFont = labelFont
+    }
     
     var body: some View {
         HStack(spacing: 8) {
@@ -25,8 +47,8 @@ struct GreenCapsule: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .grayScale10))
                     .scaleEffect(0.8)
             } else {
-                if icon != nil {
-                    Image(icon ?? "")
+                if let icon {
+                    Image(icon)
                         .renderingMode(.template)
                         .resizable()
                         .foregroundStyle(.white)
