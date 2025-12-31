@@ -18,6 +18,8 @@ struct HomeView: View {
     @State private var prevValue: CGFloat = 0
     @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
+    @State private var showEditableCanvas: Bool = false
+    @State private var editTargetSectionName: String? = nil
 
     // ---------------------------
     // MERGED FROM YOUR BRANCH
@@ -35,6 +37,7 @@ struct HomeView: View {
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AuthController.self) private var authController
+    @EnvironmentObject private var onboarding: Onboarding
 
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
@@ -203,14 +206,21 @@ struct HomeView: View {
 
                         Spacer()
 
-                        AllergySummaryCard()
+                        AllergySummaryCard(onTap: {
+                            editTargetSectionName = nil
+                            showEditableCanvas = true
+                        })
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
 
                     // Lifestyle + Family + Average scans
                     HStack {
-                        LifestyleAndChoicesCard()
+                        LifestyleAndChoicesCard(onTap: {
+                            // Request centering of Lifestyle/Nutrition when opening editor
+                            editTargetSectionName = "Lifestyle"
+                            showEditableCanvas = true
+                        })
                     
                         Spacer()
                     
@@ -494,6 +504,12 @@ struct HomeView: View {
                     .environment(userPreferences)
                     .environment(coordinator)
             }
+            
+            // ------------ EDITABLE CANVAS ------------
+            .navigationDestination(isPresented: $showEditableCanvas) {
+                EditableCanvasView(targetSectionName: editTargetSectionName)
+                    .environmentObject(onboarding)
+            }
 
             // ------------ CHAT SHEET ------------
             .sheet(isPresented: $isChatSheetPresented) {
@@ -533,4 +549,11 @@ struct HomeView: View {
 
 #Preview {
     HomeView()
+        .environmentObject(Onboarding(onboardingFlowtype: .individual))
+        .environment(AppState())
+        .environment(WebService())
+        .environment(UserPreferences())
+        .environment(AuthController())
+        .environment(FamilyStore())
+        .environment(AppNavigationCoordinator(initialRoute: .home))
 }

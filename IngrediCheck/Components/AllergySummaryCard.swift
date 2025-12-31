@@ -30,7 +30,7 @@ struct MyIcon: Shape {
 }
 
 struct AllergySummaryCard: View {
-    @State private var isEditableCanvasPresented: Bool = false
+    var onTap: (() -> Void)? = nil
     
     var body: some View {
         ZStack {
@@ -45,7 +45,7 @@ struct AllergySummaryCard: View {
                 .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                 .contentShape(MyIcon())
                 .onTapGesture {
-                    isEditableCanvasPresented = true
+                    onTap?()
                 }
             
             // Content
@@ -78,7 +78,7 @@ struct AllergySummaryCard: View {
                 HStack {
                     Spacer()
                     Button(action: {
-                        isEditableCanvasPresented = true
+                        onTap?()
                     }) {
                         GreenCircle(iconName: "arrow-up-right", iconSize: 20, circleSize: 37)
                             .padding(3)
@@ -88,9 +88,6 @@ struct AllergySummaryCard: View {
             }
             .padding(.bottom, 3)
             .padding(.trailing, 3)
-        }
-        .sheet(isPresented: $isEditableCanvasPresented) {
-            EditableCanvasView()
         }
     }
 }

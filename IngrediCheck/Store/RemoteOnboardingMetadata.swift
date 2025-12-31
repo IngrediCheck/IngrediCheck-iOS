@@ -45,6 +45,8 @@ enum BottomSheetRouteIdentifier: String, Codable {
     case chatConversation
     case workingOnSummary
     case editMember
+    case meetYourProfileIntro
+    case meetYourProfile
 }
 
 /// Full snapshot of onboarding position stored in raw_user_meta_data

@@ -129,14 +129,14 @@ struct IngrediBotChatView: View {
                     if !trimmed.isEmpty {
                         message = ""
                     }
-                    // Navigate directly to the next screen (home) instead of DetailedAISummary
+                    // Navigate to Meet Your Profile screen
                     if let onDismiss {
                         onDismiss()
                     } else {
                         coordinator.dismissChatBot()
                     }
                     coordinator.showCanvas(.home)
-                    coordinator.navigateInBottomSheet(.homeDefault)
+                    coordinator.navigateInBottomSheet(.meetYourProfile)
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()

@@ -13,7 +13,11 @@ struct EditableCanvasView: View {
     @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
     
+    // Optional: center a specific section when arriving here (e.g., Lifestyle/Nutrition)
+    let targetSectionName: String?
+    
     @State private var foodNotesStore: FoodNotesStore?
+    @State private var didFinishInitialLoad: Bool = false
     
     @State private var editingStepId: String? = nil
     @State private var isEditSheetPresented: Bool = false
@@ -21,117 +25,35 @@ struct EditableCanvasView: View {
     @State private var currentEditingSectionIndex: Int = 0
     @State private var isProgrammaticChange: Bool = false
     @State private var isLoadingMemberPreferences: Bool = false
+    @State private var isTabBarExpanded: Bool = true
+    @State private var scrollY: CGFloat = 0
+    @State private var prevValue: CGFloat = 0
+    @State private var maxScrollOffset: CGFloat = 0
+    @State private var hasScrolledToTarget: Bool = false
+    @State private var headroomCollapsed: Bool = false
+    
+    init(targetSectionName: String? = nil) {
+        self.targetSectionName = targetSectionName
+    }
+    
+    private var shouldCenterLifestyleNutrition: Bool {
+        guard let targetSectionName, targetSectionName.isEmpty == false else { return false }
+        let t = targetSectionName.lowercased().replacingOccurrences(of: " ", with: "")
+        return t.contains("lifestyle") || t.contains("nutrition")
+    }
     
     var body: some View {
-        let cards = selectedCards()
-        
-        NavigationView {
-            ZStack(alignment: .bottom) {
-                VStack(spacing: 0) {
-                    // CanvasTagBar
-                    CanvasTagBar(
-                        store: store,
-                        onTapCurrentSection: {
-                            // Open edit sheet for current section when tapped
-                            openEditSheetForCurrentSection()
-                        },
-                        scrollTarget: $tagBarScrollTarget,
-                        currentBottomSheetRoute: nil,
-                        allowTappingIncompleteSections: true, // Allow tapping any section in edit mode
-                        forceDarkGreen: true
-                    )
-                    .onChange(of: store.currentSectionIndex) { newIndex in
-                        // When section changes via tag bar tap, update/edit sheet for that section
-                        if !isProgrammaticChange {
-                            // Always update the sheet to show the tapped section's content
-                            openEditSheetForSection(at: newIndex)
-                        }
-                        isProgrammaticChange = false
-                    }
-                    .padding(.top, 32)
-                    .padding(.bottom, 16)
-                    
-                    // Selected items scroll view
-                    if foodNotesStore?.isLoadingFoodNotes == true {
-                        // Loading state
-                        VStack(spacing: 16) {
-                            Spacer()
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                                .scaleEffect(1.2)
-                            Text("Loading your preferences...")
-                                .font(ManropeFont.medium.size(16))
-                                .foregroundStyle(.grayScale100)
-                                .padding(.top, 8)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let cards = cards, !cards.isEmpty {
-                        ScrollView(.vertical, showsIndicators: false) {
-                            VStack(spacing: 16) {
-                                ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                    EditableCanvasCard(
-                        chips: card.chips,
-                        sectionedChips: card.sectionedChips,
-                        title: card.title,
-                        iconName: card.icon,
-                        onEdit: {
-                            // Find the section index for this card
-                            if let sectionIndex = store.sections.firstIndex(where: { section in
-                                section.screens.first?.stepId == card.stepId
-                            }) {
-                                currentEditingSectionIndex = sectionIndex
-                                store.currentSectionIndex = sectionIndex
-                            }
-                            editingStepId = card.stepId
-                            isEditSheetPresented = true
-                        },
-                        itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
-                        showFamilyIcons: familyStore.family?.otherMembers.isEmpty == false
-                    )
-                                    .padding(.top, index == 0 ? 16 : 0)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, isEditSheetPresented ? UIScreen.main.bounds.height * 0.5 : 80)
-                        }
-                    } else {
-                        // Empty state
-                        VStack(spacing: 16) {
-                            Spacer()
-                            Text("No selections yet")
-                                .font(ManropeFont.regular.size(16))
-                                .foregroundStyle(.grayScale100)
-                            Text("Complete onboarding to see your preferences here")
-                                .font(ManropeFont.regular.size(14))
-                                .foregroundStyle(.grayScale130)
-                            Spacer()
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                
-                // Custom bottom sheet overlay (similar to PersistentBottomSheet)
-                if isEditSheetPresented, let stepId = editingStepId {
-                    EditSectionBottomSheet(
-                        isPresented: $isEditSheetPresented,
-                        stepId: stepId,
-                        currentSectionIndex: currentEditingSectionIndex,
-                        foodNotesStore: foodNotesStore
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .edgesIgnoringSafeArea(.bottom)
-            .navigationBarTitleDisplayMode(.inline)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(.neutral500)
-                    .frame(width: 60, height: 4)
-                    .padding(.top, 12)
-                , alignment: .top
-            )
+        ZStack(alignment: .bottom) {
+            mainContent
+            editSheetOverlay
         }
+        .overlay(customNavigationBar, alignment: .top)
+        .overlay(bottomGradientOverlay, alignment: .bottom)
+        .ignoresSafeArea(edges: .bottom)
+        .overlay(tabBarOverlay, alignment: .bottom)
+        .background(Color.white)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             // Initialize FoodNotesStore with environment values
             if foodNotesStore == nil {
@@ -147,6 +69,7 @@ struct EditableCanvasView: View {
                 
                 // Prepare preferences for the current selection locally from the loaded data
                 foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+                didFinishInitialLoad = true
             }
         }
         .onChange(of: store.preferences) { _ in
@@ -298,29 +221,30 @@ struct EditableCanvasView: View {
         return sections.isEmpty ? nil : sections
     }
     
-    private func selectedCards() -> [EditableCanvasCardModel]? {
+    private func selectedCards() -> [EditableCanvasCardModel] {
         var cards: [EditableCanvasCardModel] = []
         
         for section in store.sections {
             guard let stepId = section.screens.first?.stepId else { continue }
-            let chips = chips(for: stepId)
-            let groupedChips = sectionedChips(for: stepId)
+            let rawChips = chips(for: stepId)
+            let rawGroupedChips = sectionedChips(for: stepId)
             
-            if chips != nil || groupedChips != nil {
-                cards.append(
-                    EditableCanvasCardModel(
-                        id: section.id,
-                        title: section.name,
-                        icon: icon(for: stepId),
-                        stepId: stepId,
-                        chips: chips,
-                        sectionedChips: groupedChips
-                    )
+            let chips = (rawChips?.isEmpty == false) ? rawChips : nil
+            let groupedChips = (rawGroupedChips?.isEmpty == false) ? rawGroupedChips : nil
+            
+            cards.append(
+                EditableCanvasCardModel(
+                    id: section.id,
+                    title: section.name,
+                    icon: icon(for: stepId),
+                    stepId: stepId,
+                    chips: chips,
+                    sectionedChips: groupedChips
                 )
-            }
+            )
         }
         
-        return cards.isEmpty ? nil : cards
+        return cards
     }
     
     private func openEditSheetForCurrentSection() {
@@ -368,6 +292,12 @@ struct EditableCanvasCard: View {
     var itemMemberAssociations: [String: [String: [String]]] = [:]
     var showFamilyIcons: Bool = true
     
+    private var isEmptyState: Bool {
+        let hasSectioned = (sectionedChips?.isEmpty == false)
+        let hasChips = (chips?.isEmpty == false)
+        return !hasSectioned && !hasChips
+    }
+    
     // Helper function to get member identifiers for an item
     // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
     private func getMemberIdentifiers(for sectionName: String, itemName: String) -> [String] {
@@ -404,11 +334,13 @@ struct EditableCanvasCard: View {
                         HStack(spacing: 4) {
                             Image("pen-line")
                                 .resizable()
+                                .renderingMode(.template)   // 👈 important
+                                .foregroundStyle(.grayScale110)
                                 .frame(width: 14, height: 14)
-                                
+
                             Text("Edit")
                                 .font(NunitoFont.medium.size(14))
-                                .foregroundStyle(.grayScale130)
+                                .foregroundStyle(Color(.grayScale110))
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
@@ -421,7 +353,30 @@ struct EditableCanvasCard: View {
             }
             
             VStack(alignment: .leading) {
-                if let sectionedChips = sectionedChips {
+                if isEmptyState {
+                    VStack(spacing:4) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.grayScale30.opacity(0.5))
+                                .frame(width: 40, height:40)
+                            Image("edit-pen")
+                                .frame(width: 24, height:24)
+                                .foregroundStyle(.grayScale80)
+                        }
+                        .padding(.top, 8)
+                        
+                        Text("Nothing added yet")
+                            .font(NunitoFont.semiBold.size(14))
+                            .foregroundStyle(.grayScale100)
+                        
+                        Text("You can add details anytime by tapping Edit.")
+                            .font(NunitoFont.regular.size(10))
+                            .foregroundStyle(.grayScale100)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, )
+                    .frame(height : 100)
+                } else if let sectionedChips = sectionedChips {
                     ForEach(sectionedChips) { section in
                         VStack(alignment: .leading, spacing: 8) {
                             Text(section.title)
@@ -457,7 +412,7 @@ struct EditableCanvasCard: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 16)
+        .padding(.vertical, isEmptyState ? 8 : 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .foregroundStyle(.white)
@@ -538,6 +493,263 @@ struct EditSectionBottomSheet: View {
             if !newValue {
                 store.updateSectionCompletionStatus()
             }
+        }
+    }
+}
+
+// MARK: - Extracted subviews (compiler perf)
+
+private extension EditableCanvasView {
+    @ViewBuilder
+    var mainContent: some View {
+        VStack(spacing: 0) {
+            // Selected items scroll view
+            if foodNotesStore?.isLoadingFoodNotes == true {
+                loadingView
+            } else {
+                // Always show all sections (even empty) so users can add later.
+                let cards = selectedCards()
+                cardsScrollView(cards: cards)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+    
+    @ViewBuilder
+    var customNavigationBar: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        
+                }
+                
+                Text("Food Notes")
+                    .font(NunitoFont.bold.size(18))
+                    .foregroundStyle(.grayScale150)
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+            .background(Color.white)
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+    
+    @ViewBuilder
+    var editSheetOverlay: some View {
+        if isEditSheetPresented, let stepId = editingStepId {
+            EditSectionBottomSheet(
+                isPresented: $isEditSheetPresented,
+                stepId: stepId,
+                currentSectionIndex: currentEditingSectionIndex,
+                foodNotesStore: foodNotesStore
+            )
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+    
+    var loadingView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading your preferences...")
+                .font(ManropeFont.medium.size(16))
+                .foregroundStyle(.grayScale100)
+                .padding(.top, 8)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Text("No selections yet")
+                .font(ManropeFont.regular.size(16))
+                .foregroundStyle(.grayScale100)
+            Text("Complete onboarding to see your preferences here")
+                .font(ManropeFont.regular.size(14))
+                .foregroundStyle(.grayScale130)
+            Spacer()
+        }
+    }
+    
+    func cardsScrollView(cards: [EditableCanvasCardModel]) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
+                    // Add headroom so target cards can be centered nicely
+                    if shouldCenterLifestyleNutrition && !headroomCollapsed {
+                        Color.clear
+                            .frame(height: UIScreen.main.bounds.height * 0.55)
+                    }
+                    
+                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                        EditableCanvasCard(
+                            chips: card.chips,
+                            sectionedChips: card.sectionedChips,
+                            title: card.title,
+                            iconName: card.icon,
+                            onEdit: { openEdit(for: card) },
+                            itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                            showFamilyIcons: familyStore.family?.otherMembers.isEmpty == false
+                        )
+                        .padding(.top, index == 0 ? 16 : 0)
+                        .id(card.id)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 60) // Space for custom navigation bar
+                .padding(.bottom, isEditSheetPresented ? UIScreen.main.bounds.height * 0.5 : 80)
+                .background(scrollTrackingBackground)
+            }
+            .coordinateSpace(name: "editableCanvasScroll")
+            .onAppear {
+                scrollToTargetSectionIfNeeded(cards: cards, proxy: proxy)
+            }
+            .onChange(of: didFinishInitialLoad) { _ in
+                scrollToTargetSectionIfNeeded(cards: cards, proxy: proxy)
+            }
+        }
+    }
+    
+    private func scrollToTargetSectionIfNeeded(cards: [EditableCanvasCardModel], proxy: ScrollViewProxy) {
+        guard hasScrolledToTarget == false else { return }
+        guard let targetSectionName, targetSectionName.isEmpty == false else { return }
+        guard didFinishInitialLoad else { return }
+        guard let targetCard = findTargetCard(cards: cards, targetSectionName: targetSectionName) else { return }
+        
+        // Ensure layout is complete before scrolling.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+            withAnimation(.easeInOut(duration: 0.45)) {
+                let anchorPoint: UnitPoint = shouldCenterLifestyleNutrition
+                    ? UnitPoint(x: 0.5, y: 0.65) // place target a bit lower than center
+                    : .center
+                proxy.scrollTo(targetCard.id, anchor: anchorPoint)
+            }
+            hasScrolledToTarget = true
+        }
+    }
+    
+    private func findTargetCard(
+        cards: [EditableCanvasCardModel],
+        targetSectionName: String
+    ) -> EditableCanvasCardModel? {
+        func norm(_ s: String) -> String {
+            s.lowercased()
+                .replacingOccurrences(of: " ", with: "")
+                .replacingOccurrences(of: "-", with: "")
+                .replacingOccurrences(of: "_", with: "")
+        }
+        
+        let target = norm(targetSectionName)
+        
+        // Special-case: from Lifestyle entry point we want both Life Style + Nutrition visible,
+        // so center Nutrition (and keep Life Style above it).
+        if target.contains("lifestyle") || target.contains("lifestyleandchoices") || target.contains("lifestyle&choices") {
+            if let nutrition = cards.first(where: { norm($0.title).contains("nutrition") }) {
+                return nutrition
+            }
+        }
+        
+        // Primary attempt: exact normalized match
+        if let match = cards.first(where: { norm($0.title) == target }) {
+            return match
+        }
+        
+        // Secondary fallback: Nutrition
+        if let nutrition = cards.first(where: { norm($0.title).contains("nutrition") }) {
+            return nutrition
+        }
+        
+        return nil
+    }
+    
+    private func openEdit(for card: EditableCanvasCardModel) {
+        if let sectionIndex = store.sections.firstIndex(where: { section in
+            section.screens.first?.stepId == card.stepId
+        }) {
+            currentEditingSectionIndex = sectionIndex
+            store.currentSectionIndex = sectionIndex
+        }
+        editingStepId = card.stepId
+        isEditSheetPresented = true
+    }
+    
+    var scrollTrackingBackground: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear {
+                    scrollY = geo.frame(in: .named("editableCanvasScroll")).minY
+                    prevValue = scrollY
+                    maxScrollOffset = scrollY < 0 ? scrollY : 0
+                }
+                .onChange(of: geo.frame(in: .named("editableCanvasScroll")).minY) { newValue in
+                    scrollY = newValue
+                    
+                    if scrollY < 0 {
+                        maxScrollOffset = min(maxScrollOffset, newValue)
+                        
+                        let scrollDelta = newValue - prevValue
+                        let minScrollDelta: CGFloat = 5
+                        
+                        // Collapse temporary headroom the first time the user scrolls upward,
+                        // so there isn't a large blank space at the top afterwards.
+                        if shouldCenterLifestyleNutrition && !headroomCollapsed && scrollDelta > minScrollDelta {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                headroomCollapsed = true
+                            }
+                        }
+                        
+                        if scrollDelta < -minScrollDelta {
+                            isTabBarExpanded = false
+                        } else if scrollDelta > minScrollDelta {
+                            let bottomThreshold: CGFloat = 100
+                            if newValue > (maxScrollOffset + bottomThreshold) {
+                                isTabBarExpanded = true
+                            }
+                        }
+                    } else {
+                        maxScrollOffset = 0
+                    }
+                    
+                    prevValue = newValue
+                }
+        }
+    }
+    
+    @ViewBuilder
+    var bottomGradientOverlay: some View {
+        if !isEditSheetPresented {
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0),
+                    Color.white,
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 132)
+            .frame(maxWidth: .infinity)
+            .allowsHitTesting(false)
+        }
+    }
+    
+    @ViewBuilder
+    var tabBarOverlay: some View {
+        if !isEditSheetPresented {
+            TabBar(isExpanded: $isTabBarExpanded)
         }
     }
 }

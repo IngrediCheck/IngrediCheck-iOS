@@ -169,7 +169,10 @@ struct PersistentBottomSheet: View {
             return UIScreen.main.bounds.height * 0.75
         case .workingOnSummary:
             return 250
-
+        case .meetYourProfileIntro:
+            return 200
+        case .meetYourProfile:
+            return 389
         }
     }
     
@@ -376,9 +379,17 @@ struct PersistentBottomSheet: View {
                         webService: webService
                     )
                     
-                    // If opened from home screen, dismiss the sheet
-                    // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
-                    if case .home = coordinator.currentCanvasRoute {
+                    // Navigate back based on where we came from
+                    if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
+                        // If we came from meetYourProfile, go back there
+                        if case .meetYourProfile = previousRoute {
+                            coordinator.navigateInBottomSheet(.meetYourProfile)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        } else {
+                            coordinator.navigateInBottomSheet(previousRoute)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        }
+                    } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
                         coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
@@ -417,7 +428,13 @@ struct PersistentBottomSheet: View {
         case .fineTuneYourExperience:
             FineTuneExperience(
                 allSetPressed: {
-                    coordinator.showCanvas(.home)
+                    // Only show meetYourProfile flow for individual (Just Me) users
+                    let flowType = getOnboardingFlowType()
+                    if flowType == .individual {
+                        coordinator.navigateInBottomSheet(.meetYourProfileIntro)
+                    } else {
+                        coordinator.navigateInBottomSheet(.workingOnSummary)
+                    }
                 },
                 addPreferencesPressed: {
                     // Check if there's a next step available before advancing
@@ -467,6 +484,14 @@ struct PersistentBottomSheet: View {
             
         case .homeDefault:
             EmptyView()
+            
+        case .meetYourProfileIntro:
+            MeetYourProfileIntroView()
+            
+        case .meetYourProfile:
+            MeetYourProfileView {
+            	    coordinator.showCanvas(.home)
+            }
         }
     }
     

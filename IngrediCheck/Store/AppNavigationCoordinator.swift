@@ -281,6 +281,10 @@ class AppNavigationCoordinator {
             return (.chatConversation, nil)
         case .workingOnSummary:
             return (.workingOnSummary, nil)
+        case .meetYourProfileIntro:
+            return (.meetYourProfileIntro, nil)
+        case .meetYourProfile:
+            return (.meetYourProfile, nil)
         }
     }
     
@@ -359,6 +363,10 @@ class AppNavigationCoordinator {
             return .chatConversation
         case .workingOnSummary:
             return .workingOnSummary
+        case .meetYourProfileIntro:
+            return .meetYourProfileIntro
+        case .meetYourProfile:
+            return .meetYourProfile
         }
     }
     static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
@@ -407,6 +415,8 @@ class AppNavigationCoordinator {
              // If we are restoring fresh, we might not know background. 
              // Defaulting to home or based on stage is safe.
              break 
+        case .meetYourProfile:
+             canvas = .home
         default:
              break
         }
