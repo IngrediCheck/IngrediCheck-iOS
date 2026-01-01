@@ -110,12 +110,16 @@ struct DynamicSubStepsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
+    @Environment(UserPreferences.self) var userPreferences
+    
+    @State private var showTutorial: Bool = false
+    @State private var cardFrame: CGRect = .zero
+    @State private var isAnimatingHand: Bool = false
     
     var body: some View {
         let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
         let subSteps = step.content.subSteps ?? []
         
-        // Map dynamic sub-steps into existing `Card` model used by `StackedCards`
         let cards: [Card] = subSteps.map { subStep in
             let chipModels = (subStep.options ?? []).map { ChipsModel(name: $0.name, icon: $0.icon) }
             let color: Color
@@ -132,36 +136,71 @@ struct DynamicSubStepsQuestionView: View {
             )
         }
         
-        VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                onboardingSheetTitle(title: headerVariant.question)
-                if let description = headerVariant.description {
-                    onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
+        ZStack {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    onboardingSheetTitle(title: headerVariant.question)
+                    if let description = headerVariant.description {
+                        onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
+                    }
                 }
+                .padding(.horizontal, 20)
+                
+                if flowType == .family {
+                    VStack(alignment: .leading, spacing: 8) {
+                        FamilyCarouselView()
+                        onboardingSheetFamilyMemberSelectNote()
+                    }
+                    .padding(.leading, 20)
+                }
+                
+                StackedCards(
+                    cards: cards,
+                    isChipSelected: { card, chip in
+                        selections(for: card.title).contains(chip.name)
+                    },
+                    onChipTap: { card, chip in
+                        toggleSelection(cardTitle: card.title, chipName: chip.name)
+                    },
+                    onSwipe: {
+                        if showTutorial {
+                            withAnimation {
+                                showTutorial = false
+                                userPreferences.cardsSwipeTutorialShown = true
+                            }
+                        }
+                    }
+                )
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear {
+                                cardFrame = geo.frame(in: .global)
+                            }
+                            .onChange(of: geo.frame(in: .global)) {
+                                cardFrame = $0
+                            }
+                    }
+                )
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
-            
-            if flowType == .family {
-                VStack(alignment: .leading, spacing: 8) {
-                    FamilyCarouselView()
-                    onboardingSheetFamilyMemberSelectNote()
-                }
-                .padding(.leading, 20)
-            }
-            // Don't show carousel for singleMember flow (adding specific member from home)
-            
-            StackedCards(
-                cards: cards,
-                isChipSelected: { card, chip in
-                    selections(for: card.title).contains(chip.name)
-                },
-                onChipTap: { card, chip in
-                    toggleSelection(cardTitle: card.title, chipName: chip.name)
-                }
+            .preference(
+                key: TutorialOverlayPreferenceKey.self,
+                value: TutorialData(show: showTutorial, cardFrame: cardFrame)
             )
-            .padding(.horizontal, 20)
         }
         .id(step.id)
+        .onAppear {
+            if step.id == "avoid" && !userPreferences.cardsSwipeTutorialShown {
+                // Determine if we should show tutorial
+                // Wait slightly for layout to settle
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        showTutorial = true
+                    }
+                }
+            }
+        }
     }
     
     private func selections(for cardTitle: String) -> Set<String> {
@@ -180,21 +219,17 @@ struct DynamicSubStepsQuestionView: View {
         let isExclusive = (lowerName == "other" || lowerName == "none of these apply")
         
         if isExclusive {
-            // If Exclusive option is selected, clear everything else in this card and select only it
             if set.contains(chipName) {
                 set.remove(chipName)
             } else {
                 set = [chipName]
             }
         } else {
-            // Normal option selected
-            // 1. Remove exclusive options if present
             let exclusives = set.filter { $0.lowercased() == "other" || $0.lowercased() == "none of these apply" }
             for exclusive in exclusives {
                 set.remove(exclusive)
             }
             
-            // 2. Toggle the selected option
             if set.contains(chipName) {
                 set.remove(chipName)
             } else {
@@ -209,7 +244,6 @@ struct DynamicSubStepsQuestionView: View {
         let sectionName = step.header.name
         var nestedDict: [String: [String]]
         
-        // Get existing nested dict or create new one
         if let existingValue = preferences.sections[sectionName],
            case .nested(let existingDict) = existingValue {
             nestedDict = existingDict
@@ -217,11 +251,26 @@ struct DynamicSubStepsQuestionView: View {
             nestedDict = [:]
         }
         
-        // Update the specific card's selections
         nestedDict[cardTitle] = Array(set)
-        
-        // Save back to preferences
         preferences.sections[sectionName] = .nested(nestedDict)
+    }
+}
+
+// MARK: - Tutorial Data Structures
+
+struct TutorialData: Equatable {
+    var show: Bool
+    var cardFrame: CGRect
+}
+
+struct TutorialOverlayPreferenceKey: PreferenceKey {
+    static var defaultValue: TutorialData = TutorialData(show: false, cardFrame: .zero)
+    
+    static func reduce(value: inout TutorialData, nextValue: () -> TutorialData) {
+        let next = nextValue()
+        if next.show {
+            value = next
+        }
     }
 }
 
