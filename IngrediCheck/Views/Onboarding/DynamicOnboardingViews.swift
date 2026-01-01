@@ -689,7 +689,8 @@ struct MeetYourProfileIntroView: View {
             Spacer()
             
             Button(action: {
-                coordinator.navigateInBottomSheet(.meetYourProfile)
+                coordinator.showCanvas(.home)
+                coordinator.navigateInBottomSheet(.homeDefault)
             }) {
                 GreenCapsule(title: "Continue", width: 159)
                     .frame(width: 159)
