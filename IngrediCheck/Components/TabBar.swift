@@ -13,16 +13,22 @@ struct TabBar: View {
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
     @State private var isCameraPresented = false
+    var onRecentScansTap: (() -> Void)? = nil
     
     var body: some View {
 //        ZStack {
             ZStack(alignment: .bottom) {
                 HStack(alignment: .center) {
-                    Image("tabBar-heart")
-                        .renderingMode(.template)
-                        .resizable()
-                        .foregroundColor(Color(hex: "676A64"))
-                        .frame(width: 26, height: 26)
+                    Button {
+                        onRecentScansTap?()
+                    } label: {
+                        Image("tabBar-history")
+                            .renderingMode(.template)
+                            .resizable()
+                            .foregroundColor(Color(hex: "676A64"))
+                            .frame(width: 26, height: 26)
+                    }
+                   
                     
                     Spacer()
                     

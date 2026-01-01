@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var isRefreshingHistory: Bool = false
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
+    @State private var showRecentScansPage: Bool = false
 
     // ---------------------------
     // MERGED FROM YOUR BRANCH
@@ -413,7 +414,9 @@ struct HomeView: View {
             ).ignoresSafeArea(edges: .bottom)
             .overlay(
                 // TabBar in its original position (respects safe area)
-                TabBar(isExpanded: $isTabBarExpanded),
+                TabBar(isExpanded: $isTabBarExpanded, onRecentScansTap: {
+                    showRecentScansPage = true
+                }),
                 alignment: .bottom
             )
             .background(Color.white)
@@ -436,6 +439,11 @@ struct HomeView: View {
             .navigationDestination(isPresented: $showEditableCanvas) {
                 EditableCanvasView(targetSectionName: editTargetSectionName)
                     .environmentObject(onboarding)
+            }
+            
+            // ------------ RECENT SCANS PAGE ------------
+            .navigationDestination(isPresented: $showRecentScansPage) {
+                RecentScansPageView()
             }
 
             // ------------ CHAT SHEET ------------
