@@ -485,6 +485,9 @@ struct EditSectionBottomSheet: View {
     let currentSectionIndex: Int
     let foodNotesStore: FoodNotesStore?
     
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging: Bool = false
+    
     // Determine flow type: use .family if user has a family, otherwise use store's flow type
     private var effectiveFlowType: OnboardingFlowType {
         // If there are other members in the family, show the family selection carousel
@@ -497,21 +500,54 @@ struct EditSectionBottomSheet: View {
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            if let step = store.step(for: stepId) {
-                DynamicOnboardingStepView(
-                    step: step,
-                    flowType: effectiveFlowType,
-                    preferences: $store.preferences
-                )
-                .frame(maxWidth: .infinity, alignment: .top)
-                .padding(.top, 24)
-                .padding(.bottom, 100) // Increased padding to accommodate Done button
-                .transition(.opacity)
+            VStack(spacing: 0) {
+                // Drag indicator
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale60)
+                    .frame(width: 60, height: 4)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                // Only allow downward drag
+                                if value.translation.height > 0 {
+                                    isDragging = true
+                                    dragOffset = value.translation.height
+                                }
+                            }
+                            .onEnded { value in
+                                isDragging = false
+                                // If dragged down more than 100 points, dismiss
+                                if value.translation.height > 100 || value.predictedEndTranslation.height > 200 {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                        isPresented = false
+                                    }
+                                } else {
+                                    // Spring back to original position
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                            }
+                    )
+                
+                if let step = store.step(for: stepId) {
+                    DynamicOnboardingStepView(
+                        step: step,
+                        flowType: effectiveFlowType,
+                        preferences: $store.preferences
+                    )
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100) // Increased padding to accommodate Done button
+                    .transition(.opacity)
+                }
             }
             
             // Done button (GreenCapsule) - closes the sheet
             Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                     isPresented = false
                 }
             }) {
@@ -531,7 +567,9 @@ struct EditSectionBottomSheet: View {
         .cornerRadius(36, corners: [.topLeft, .topRight])
         .shadow(radius: 27.5)
         .ignoresSafeArea(edges: .bottom)
-        .animation(.easeInOut(duration: 0.2), value: stepId)
+        .offset(y: dragOffset)
+        .animation(isDragging ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: dragOffset)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: stepId)
         .onChange(of: stepId) { _ in
             // Update completion status when switching sections
             store.updateSectionCompletionStatus()
@@ -539,6 +577,7 @@ struct EditSectionBottomSheet: View {
         .onChange(of: isPresented) { newValue in
             // Update completion status when sheet is dismissed
             if !newValue {
+                dragOffset = 0
                 store.updateSectionCompletionStatus()
             }
         }
@@ -611,7 +650,10 @@ private extension EditableCanvasView {
                 currentSectionIndex: currentEditingSectionIndex,
                 foodNotesStore: foodNotesStore
             )
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .transition(.asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity),
+                removal: .move(edge: .bottom).combined(with: .opacity)
+            ))
         }
     }
     
@@ -647,12 +689,6 @@ private extension EditableCanvasView {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
-                    // Add headroom so target cards can be centered nicely
-                    if shouldCenterLifestyleNutrition && !headroomCollapsed {
-                        Color.clear
-                            .frame(height: UIScreen.main.bounds.height * 0.55)
-                    }
-                    
                     ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                         EditableCanvasCard(
                             chips: card.chips,
@@ -724,11 +760,9 @@ private extension EditableCanvasView {
         guard let targetCard = findTargetCard(cards: cards, targetSectionName: targetSectionName) else { return }
         
         // Ensure layout is complete before scrolling.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation(.easeInOut(duration: 0.45)) {
-                let anchorPoint: UnitPoint = shouldCenterLifestyleNutrition
-                    ? UnitPoint(x: 0.5, y: 0.65) // place target a bit lower than center
-                    : .center
+                let anchorPoint: UnitPoint = shouldCenterLifestyleNutrition ? .top : .center
                 proxy.scrollTo(targetCard.id, anchor: anchorPoint)
             }
             hasScrolledToTarget = true
@@ -747,14 +781,6 @@ private extension EditableCanvasView {
         }
         
         let target = norm(targetSectionName)
-        
-        // Special-case: from Lifestyle entry point we want both Life Style + Nutrition visible,
-        // so center Nutrition (and keep Life Style above it).
-        if target.contains("lifestyle") || target.contains("lifestyleandchoices") || target.contains("lifestyle&choices") {
-            if let nutrition = cards.first(where: { norm($0.title).contains("nutrition") }) {
-                return nutrition
-            }
-        }
         
         // Primary attempt: exact normalized match
         if let match = cards.first(where: { norm($0.title) == target }) {
@@ -777,7 +803,9 @@ private extension EditableCanvasView {
             store.currentSectionIndex = sectionIndex
         }
         editingStepId = card.stepId
-        isEditSheetPresented = true
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            isEditSheetPresented = true
+        }
     }
     
     var scrollTrackingBackground: some View {
@@ -797,13 +825,7 @@ private extension EditableCanvasView {
                         let scrollDelta = newValue - prevValue
                         let minScrollDelta: CGFloat = 5
                         
-                        // Collapse temporary headroom the first time the user scrolls upward,
-                        // so there isn't a large blank space at the top afterwards.
-                        if shouldCenterLifestyleNutrition && !headroomCollapsed && scrollDelta > minScrollDelta {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                headroomCollapsed = true
-                            }
-                        }
+                        // Removed headroom collapsing logic to prevent scroll jumps
                         
                         if scrollDelta < -minScrollDelta {
                             isTabBarExpanded = false
