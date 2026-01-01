@@ -31,6 +31,7 @@ struct EditableCanvasView: View {
     @State private var maxScrollOffset: CGFloat = 0
     @State private var hasScrolledToTarget: Bool = false
     @State private var headroomCollapsed: Bool = false
+    @State private var selectedMemberId: UUID? = nil // Track selected family member for filtering
     
     init(targetSectionName: String? = nil) {
         self.targetSectionName = targetSectionName
@@ -47,7 +48,6 @@ struct EditableCanvasView: View {
             mainContent
             editSheetOverlay
         }
-        .overlay(customNavigationBar, alignment: .top)
         .overlay(bottomGradientOverlay, alignment: .bottom)
         .ignoresSafeArea(edges: .bottom)
         .overlay(tabBarOverlay, alignment: .bottom)
@@ -129,7 +129,7 @@ struct EditableCanvasView: View {
         return memberIds
     }
     
-    private func chips(for stepId: String) -> [ChipsModel]? {
+    private func chips(for stepId: String, sectionKey: String) -> [ChipsModel]? {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
         
@@ -141,9 +141,29 @@ struct EditableCanvasView: View {
             return nil
         }
         
+        // Filter items by selected member if one is selected
+        let filteredItems: [String]
+        if let selectedMemberId = selectedMemberId {
+            // FoodNotesStore stores member keys lowercased.
+            let memberIdString = selectedMemberId.uuidString.lowercased()
+            filteredItems = items.filter { itemName in
+                // IMPORTANT: itemMemberAssociations is keyed by the *card/section name* shown in UI,
+                // not necessarily step.header.name. Use sectionKey to match what's used in cards.
+                if let memberIds = foodNotesStore.itemMemberAssociations[sectionKey]?[itemName] {
+                    // Only show items explicitly associated with this member.
+                    // Exclude any items that are also tagged for "Everyone".
+                    return memberIds.contains(memberIdString) && !memberIds.contains("Everyone")
+                }
+                return false
+            }
+        } else {
+            // No member selected, show all items (union view)
+            filteredItems = items
+        }
+        
         // Get icons from step options
         let options = step.content.options ?? []
-        return items.compactMap { itemName -> ChipsModel? in
+        return filteredItems.compactMap { itemName -> ChipsModel? in
             if let option = options.first(where: { $0.name == itemName }) {
                 return ChipsModel(name: option.name, icon: option.icon)
             }
@@ -151,7 +171,7 @@ struct EditableCanvasView: View {
         }
     }
     
-    private func sectionedChips(for stepId: String) -> [SectionedChipModel]? {
+    private func sectionedChips(for stepId: String, sectionKey: String) -> [SectionedChipModel]? {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
         
@@ -165,6 +185,20 @@ struct EditableCanvasView: View {
         // Type-2 steps use subSteps, type-3 steps use regions. Handle both.
         var sections: [SectionedChipModel] = []
         
+        // Helper to filter items by selected member
+        let filterItems: ([String]) -> [String] = { items in
+            guard let selectedMemberId = selectedMemberId else { return items }
+            // FoodNotesStore stores member keys lowercased.
+            let memberIdString = selectedMemberId.uuidString.lowercased()
+            return items.filter { itemName in
+                // IMPORTANT: itemMemberAssociations is keyed by the *card/section name* shown in UI.
+                if let memberIds = foodNotesStore.itemMemberAssociations[sectionKey]?[itemName] {
+                    return memberIds.contains(memberIdString) && !memberIds.contains("Everyone")
+                }
+                return false
+            }
+        }
+        
         if let subSteps = step.content.subSteps {
             // MARK: Type-2 (Avoid / Lifestyle / Nutrition-style)
             for subStep in subSteps {
@@ -173,8 +207,12 @@ struct EditableCanvasView: View {
                     continue
                 }
                 
+                // Filter items by selected member
+                let filteredItems = filterItems(selectedItems)
+                guard !filteredItems.isEmpty else { continue }
+                
                 // Map selected items to ChipsModel with icons
-                let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
+                let selectedChips: [ChipsModel] = filteredItems.compactMap { itemName in
                     if let option = subStep.options?.first(where: { $0.name == itemName }) {
                         return ChipsModel(name: option.name, icon: option.icon)
                     }
@@ -199,7 +237,11 @@ struct EditableCanvasView: View {
                     continue
                 }
                 
-                let selectedChips: [ChipsModel] = selectedItems.compactMap { itemName in
+                // Filter items by selected member
+                let filteredItems = filterItems(selectedItems)
+                guard !filteredItems.isEmpty else { continue }
+                
+                let selectedChips: [ChipsModel] = filteredItems.compactMap { itemName in
                     if let option = region.subRegions.first(where: { $0.name == itemName }) {
                         return ChipsModel(name: option.name, icon: option.icon)
                     }
@@ -226,8 +268,8 @@ struct EditableCanvasView: View {
         
         for section in store.sections {
             guard let stepId = section.screens.first?.stepId else { continue }
-            let rawChips = chips(for: stepId)
-            let rawGroupedChips = sectionedChips(for: stepId)
+            let rawChips = chips(for: stepId, sectionKey: section.name)
+            let rawGroupedChips = sectionedChips(for: stepId, sectionKey: section.name)
             
             let chips = (rawChips?.isEmpty == false) ? rawChips : nil
             let groupedChips = (rawGroupedChips?.isEmpty == false) ? rawGroupedChips : nil
@@ -291,6 +333,7 @@ struct EditableCanvasCard: View {
     var onEdit: (() -> Void)? = nil
     var itemMemberAssociations: [String: [String: [String]]] = [:]
     var showFamilyIcons: Bool = true
+    var activeMemberId: UUID? = nil
     
     private var isEmptyState: Bool {
         let hasSectioned = (sectionedChips?.isEmpty == false)
@@ -304,9 +347,14 @@ struct EditableCanvasCard: View {
         guard let memberIds = itemMemberAssociations[sectionName]?[itemName] else {
             return []
         }
+        // When a specific member is selected in the capsules row, only show THAT member’s avatar
+        // (avoid showing other members who share the same preference).
+        if let activeMemberId {
+            // Force display to only the selected member (even if multiple members share the item).
+            return [activeMemberId.uuidString]
+        }
         
-        // Return member IDs directly (already UUID strings or "Everyone")
-        // ChipMemberAvatarView will resolve these to FamilyMember objects
+        // Otherwise, show all associated members ("Everyone" or member UUID strings).
         return memberIds
     }
     
@@ -416,7 +464,7 @@ struct EditableCanvasCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .foregroundStyle(.white)
-                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                .shadow(color: Color(hex: "EEEEEE"), radius: 5, x: 0, y: 0)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -503,6 +551,16 @@ private extension EditableCanvasView {
     @ViewBuilder
     var mainContent: some View {
         VStack(spacing: 0) {
+            customNavigationBar
+            
+            // Family member selector capsules (only if user has a family)
+            if let family = familyStore.family, !family.otherMembers.isEmpty {
+                familyCapsulesRow(members: [family.selfMember] + family.otherMembers)
+                    .padding(.top, 22)
+                    .padding(.bottom, 16)
+                    .padding(.horizontal, 16)
+            }
+            
             // Selected items scroll view
             if foodNotesStore?.isLoadingFoodNotes == true {
                 loadingView
@@ -588,7 +646,7 @@ private extension EditableCanvasView {
     func cardsScrollView(cards: [EditableCanvasCardModel]) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     // Add headroom so target cards can be centered nicely
                     if shouldCenterLifestyleNutrition && !headroomCollapsed {
                         Color.clear
@@ -603,14 +661,14 @@ private extension EditableCanvasView {
                             iconName: card.icon,
                             onEdit: { openEdit(for: card) },
                             itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
-                            showFamilyIcons: familyStore.family?.otherMembers.isEmpty == false
+                        showFamilyIcons: familyStore.family?.otherMembers.isEmpty == false,
+                        activeMemberId: selectedMemberId
                         )
                         .padding(.top, index == 0 ? 16 : 0)
                         .id(card.id)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 60) // Space for custom navigation bar
                 .padding(.bottom, isEditSheetPresented ? UIScreen.main.bounds.height * 0.5 : 80)
                 .background(scrollTrackingBackground)
             }
@@ -620,6 +678,41 @@ private extension EditableCanvasView {
             }
             .onChange(of: didFinishInitialLoad) { _ in
                 scrollToTargetSectionIfNeeded(cards: cards, proxy: proxy)
+            }
+        }
+    }
+    
+    // MARK: - Family Capsules Row
+    @ViewBuilder
+    private func familyCapsulesRow(members: [FamilyMember]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(members, id: \.id) { member in
+                    let isSelected = selectedMemberId == member.id
+                    
+                    HStack(spacing: 8) {
+                        MemberAvatar.custom(member: member, size: 24, imagePadding: 0)
+                        
+                        Text(member.name)
+                            .font(ManropeFont.medium.size(14))
+                            .foregroundStyle(isSelected ? .white : .grayScale150)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(height: 36, alignment: .leading)
+                    .background(
+                        Capsule()
+                            .fill(isSelected ? Color(hex: "#91B640") : Color(hex: "#F8F8F8"))
+                    )
+                    .onTapGesture {
+                        // Toggle selection: tap again to deselect and show all
+                        if selectedMemberId == member.id {
+                            selectedMemberId = nil
+                        } else {
+                            selectedMemberId = member.id
+                        }
+                    }
+                }
             }
         }
     }
