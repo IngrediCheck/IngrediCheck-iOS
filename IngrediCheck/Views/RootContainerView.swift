@@ -170,7 +170,7 @@ struct RootContainerView: View {
             }
         case .summaryAddFamily:
             NavigationStack {
-                EditableCanvasView(titleOverride: "Your IngrideFam Food Notes", showBackButton: false)
+                EditableCanvasView(titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
             }
         }
     }
