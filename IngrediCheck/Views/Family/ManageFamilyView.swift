@@ -98,6 +98,9 @@ struct ManageFamilyView: View {
                 }
             }
             .listStyle(.plain)
+            .refreshable {
+                await familyStore.loadCurrentFamily()
+            }
             .scrollIndicators(.hidden)
             .scrollContentBackground(.hidden)
             .background(Color(hex: "#F7F7F7"))
@@ -330,10 +333,10 @@ struct ManageFamilyView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(Color(hex: "#2C9C3D"))
+                        .foregroundStyle(Color(hex: "#4CAF50"))
                     Text("Joined")
                         .font(ManropeFont.semiBold.size(10))
-                        .foregroundStyle(Color(hex: "#2C9C3D"))
+                        .foregroundStyle(Color(hex: "#4CAF50"))
                 }
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)
@@ -379,28 +382,28 @@ struct ManageFamilyView: View {
                     Text("Are you sure you want to leave?")
                 }
             } else {
-                HStack(spacing: 6) {
-                    Image("share")
-                        .resizable()
-                        .frame(width: 14, height: 14)
-                        .foregroundStyle(Color(hex: "#91B640"))
-                    Text(member.joined ? "Re-invite" : "Invite")
-                        .font(NunitoFont.semiBold.size(12))
-                        .foregroundStyle(Color(hex: "#91B640"))
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 16)
-                .background(Color.white)
-                .clipShape(Capsule())
-                .overlay {
-                    Capsule()
-                        .stroke(Color(hex: "#91B640"), lineWidth: 1)
-                }
-                .contentShape(Capsule())
-                .onTapGesture {
+                Button {
                     print("[ManageFamilyView] Invite button tapped for \(member.name)")
                     coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                } label: {
+                    HStack(spacing: 6) {
+                        Image("share")
+                            .resizable()
+                            .frame(width: 14, height: 14)
+                        Text(member.joined ? "Re-invite" : "Invite")
+                            .font(NunitoFont.semiBold.size(12))
+                    }
+                    .foregroundStyle(Color(hex: "#91B640"))
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(Color(hex: "#91B640"), lineWidth: 1)
+                    }
                 }
+                .buttonStyle(.plain)
             }
         }
     }

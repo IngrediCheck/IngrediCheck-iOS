@@ -93,8 +93,8 @@ struct EnterYourInviteCode : View {
                             isError = false
                         }
                         
-                        print("[EnterYourInviteCode] Calling familyStore.join with code=\(entered.uppercased())")
-                        await familyStore.join(inviteCode: entered.uppercased())
+                        print("[EnterYourInviteCode] Calling familyStore.join with code=\(entered.lowercased())")
+                        await familyStore.join(inviteCode: entered.lowercased())
                         
                         await MainActor.run {
                             isVerifying = false

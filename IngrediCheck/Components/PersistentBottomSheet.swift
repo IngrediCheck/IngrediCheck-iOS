@@ -423,7 +423,11 @@ struct PersistentBottomSheet: View {
                 // If this is a real family (not just pending onboarding members), call the invite API
                 if familyStore.family != nil {
                     Task {
-                        _ = await familyStore.invite(memberId: memberId)
+                        if let code = await familyStore.invite(memberId: memberId) {
+                            print("--------------------------------------------------")
+                            print("[INVITE CODE] Successfully generated: \(code.lowercased())")
+                            print("--------------------------------------------------")
+                        }
                     }
                 }
                 
