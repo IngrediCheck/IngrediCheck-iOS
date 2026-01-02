@@ -210,40 +210,15 @@ struct ManageFamilyView: View {
 
             HStack(spacing: -8) {
                 ForEach(Array(members.prefix(6)), id: \.id) { member in
-                    if let imageName = member.imageFileHash, !imageName.isEmpty {
-                        Image(imageName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 32, height:32)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(lineWidth: 1)
-                                    .foregroundStyle(Color.white)
-                            )
-                    } else {
-                        Circle()
-                            .fill(Color(hex: member.color))
-                            .frame(width: 23, height: 23)
-                            .overlay(
-                                Text(String(member.name.prefix(1)))
-                                    .font(NunitoFont.semiBold.size(12))
-                                    .foregroundStyle(.white)
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(lineWidth: 1)
-                                    .foregroundStyle(Color.white)
-                            )
-                    }
+                    MemberAvatar.custom(member: member, size: 32, imagePadding: 0)
                 }
                 if extraMemberCount > 0 {
                     Circle()
                         .fill(Color(hex: "#F2F2F2"))
-                        .frame(width: 23, height: 23)
+                        .frame(width: 32, height: 32)
                         .overlay(
                             Text("+\(extraMemberCount)")
-                                .font(NunitoFont.semiBold.size(10))
+                                .font(NunitoFont.semiBold.size(12))
                                 .foregroundStyle(.grayScale130)
                         )
                         .overlay(
