@@ -97,7 +97,13 @@ struct IngredientsChips: View {
                 if memberIdentifier == "Everyone" {
                     // Show "Everyone" icon with background circle
                     Circle()
-                        .fill(circleBackgroundColor)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FFC552"), Color(hex: "#FFAA28")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                         .frame(width: 24, height: 24)
                         .overlay {
                             Image("Everyone")

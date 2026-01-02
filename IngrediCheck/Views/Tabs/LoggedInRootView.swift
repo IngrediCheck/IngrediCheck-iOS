@@ -53,24 +53,49 @@ struct ListsTabState {
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
+    @Environment(AppNavigationCoordinator.self) var coordinator
     @State private var lastPresentedSheet: Sheets? = nil
+    
+    // Provide Onboarding state object for PersistentBottomSheet and other consumers
+    @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
 
     var body: some View {
         @Bindable var appState = appState
-        VStack {
-            switch (appState.activeTab) {
-            case .home:
-                HomeTab()
-            case .lists:
-                ListsTab()
+        @Bindable var coordinator = coordinator
+
+        ZStack(alignment: .bottom) {
+            VStack {
+                switch (appState.activeTab) {
+                case .home:
+                    HomeTab()
+                case .lists:
+                    ListsTab()
+                }
             }
-        }
-        .tabViewStyle(PageTabViewStyle())
-        .toolbar {
-            ToolbarItemGroup(placement: .bottomBar) {
-                tabButtons
+            .tabViewStyle(PageTabViewStyle())
+            .toolbar {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    tabButtons
+                }
             }
+
+            // Dim background when certain sheets are presented (e.g., Invite)
+            Group {
+                switch coordinator.currentBottomSheetRoute {
+                case .wouldYouLikeToInvite(_, _):
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                default:
+                    EmptyView()
+                }
+            }
+
+            PersistentBottomSheet()
         }
+        .environment(coordinator)
+        .environmentObject(onboarding)
         .onAppear {
             if userPreferences.startScanningOnAppStart
                &&

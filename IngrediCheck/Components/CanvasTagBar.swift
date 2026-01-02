@@ -80,23 +80,21 @@ struct CanvasTagBar: View {
             }
         }
         .onAppear() {
-            // Initialize visited based on completed sections and current
-            let completed = store.sections.filter { $0.isComplete }.map { $0.name }
-            let current = store.sections[store.currentSectionIndex].name
-            let initial = Array(Set(completed + [current]))
-            visited = initial
+            // Initialize visited with sections up to and including current
+            if store.sections.indices.contains(store.currentSectionIndex) {
+                let currentIndex = store.currentSectionIndex
+                let initial = store.sections.prefix(currentIndex + 1).map { $0.name }
+                visited = Array(initial)
+            }
         }
-        .onReceive(store.$sections) { _ in
-            // Refresh visited whenever completion state changes, but keep existing visited history
-            let completed = store.sections.filter { $0.isComplete }.map { $0.name }
-            let current = store.sections[store.currentSectionIndex].name
-            let updated = Array(Set(visited + completed + [current]))
-            visited = updated
-        }
-        .onChange(of: store.currentSectionIndex) { _ in
-            let current = store.sections[store.currentSectionIndex].name
-            if visited.contains(current) == false {
-                visited.append(current)
+        .onChange(of: store.currentSectionIndex) { _, newIndex in
+            // When user goes to a next section (or any section), mark it as visited
+            // so it turns dark green immediately.
+            if store.sections.indices.contains(newIndex) {
+                let currentName = store.sections[newIndex].name
+                if !visited.contains(currentName) {
+                    visited.append(currentName)
+                }
             }
         }
     }
