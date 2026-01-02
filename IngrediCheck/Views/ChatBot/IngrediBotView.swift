@@ -37,7 +37,7 @@ struct IngrediBotView: View {
                 .foregroundStyle(.grayScale150)
                 .padding(.top, 12)
 
-            Spacer(minLength: 40)
+            Spacer()
             
             Text("Shall we get started?")
                 .font(NunitoFont.medium.size(20))
@@ -102,9 +102,10 @@ struct IngrediBotView: View {
                 .padding(.top, 13)
                 .padding(.horizontal, -2)
                 .padding(.horizontal, 1)
+                .padding(.bottom, 32	)
                 
 
-            Spacer(minLength: 20)
+            
         }
         .padding(.horizontal, 20)
         

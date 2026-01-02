@@ -11,7 +11,6 @@
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
 		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
 		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
-		0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */; };
 		0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */; };
 		110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */; };
 		1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987792E30C51E00381E32 /* TipJarView.swift */; };
@@ -99,12 +98,12 @@
 		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
 		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
+		FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
-		0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
 		0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicSteps.swift; sourceTree = "<group>"; };
 		1F5987792E30C51E00381E32 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
@@ -188,6 +187,7 @@
 		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
 		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
+		FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -286,7 +286,7 @@
 				3976C4222BC32ED50026991A /* DietaryPreferences.swift */,
 				39705AE92BD47DEB000E487D /* OnboardingState.swift */,
 				39705AF22BD49794000E487D /* NetworkState.swift */,
-				0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */,
+				FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */,
 				0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */,
 				D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */,
 				D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */,
@@ -511,7 +511,7 @@
 			files = (
 				39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */,
 				1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */,
-				0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */,
+				FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -18,6 +18,9 @@ struct HomeView: View {
     @State private var prevValue: CGFloat = 0
     @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
+    @State private var showEditableCanvas: Bool = false
+    @State private var editTargetSectionName: String? = nil
+    @State private var showRecentScansPage: Bool = false
 
     // ---------------------------
     // MERGED FROM YOUR BRANCH
@@ -35,6 +38,7 @@ struct HomeView: View {
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AuthController.self) private var authController
+    @EnvironmentObject private var onboarding: Onboarding
 
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
@@ -130,14 +134,21 @@ struct HomeView: View {
 
                         Spacer()
 
-                        AllergySummaryCard()
+                        AllergySummaryCard(onTap: {
+                            editTargetSectionName = nil
+                            showEditableCanvas = true
+                        })
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
 
                     // Lifestyle + Family + Average scans
                     HStack {
-                        LifestyleAndChoicesCard()
+                        LifestyleAndChoicesCard(onTap: {
+                            // Request centering of Lifestyle/Nutrition when opening editor
+                            editTargetSectionName = "Lifestyle"
+                            showEditableCanvas = true
+                        })
                     
                         Spacer()
                     
@@ -385,11 +396,12 @@ struct HomeView: View {
             .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
             .overlay(
+                // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
                 LinearGradient(
                     colors: [
-                    
                         Color.white.opacity(0),
-                       Color(hex: "#FCFCFE"),
+                        Color.white
+//                        Color(hex: "#FCFCFE"),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -398,13 +410,17 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false),
                 alignment: .bottom
-            ).offset( y: 30)
+                
+            ).ignoresSafeArea(edges: .bottom)
             .overlay(
-                TabBar(isExpanded: $isTabBarExpanded),
+                // TabBar in its original position (respects safe area)
+                TabBar(isExpanded: $isTabBarExpanded, onRecentScansTap: {
+                    showRecentScansPage = true
+                }),
                 alignment: .bottom
             )
             .background(Color.white)
-
+           
             // ------------ HISTORY LOADING ------------
             .task {
                 if appState.listsTabState.historyItems == nil {
@@ -417,6 +433,17 @@ struct HomeView: View {
                 SettingsSheet()
                     .environment(userPreferences)
                     .environment(coordinator)
+            }
+            
+            // ------------ EDITABLE CANVAS ------------
+            .navigationDestination(isPresented: $showEditableCanvas) {
+                EditableCanvasView(targetSectionName: editTargetSectionName)
+                    .environmentObject(onboarding)
+            }
+            
+            // ------------ RECENT SCANS PAGE ------------
+            .navigationDestination(isPresented: $showRecentScansPage) {
+                RecentScansPageView()
             }
 
             // ------------ CHAT SHEET ------------
@@ -457,4 +484,11 @@ struct HomeView: View {
 
 #Preview {
     HomeView()
+        .environmentObject(Onboarding(onboardingFlowtype: .individual))
+        .environment(AppState())
+        .environment(WebService())
+        .environment(UserPreferences())
+        .environment(AuthController())
+        .environment(FamilyStore())
+        .environment(AppNavigationCoordinator(initialRoute: .home))
 }

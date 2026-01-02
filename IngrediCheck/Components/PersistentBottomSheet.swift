@@ -18,6 +18,8 @@ struct PersistentBottomSheet: View {
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
     @State private var generationTask: Task<Void, Never>?
+    @State private var tutorialData: TutorialData? 
+    @State private var isAnimatingHand: Bool = false
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -64,6 +66,68 @@ struct PersistentBottomSheet: View {
                 keyboardHeight = 0
             }
         }
+        .onPreferenceChange(TutorialOverlayPreferenceKey.self) { value in
+            // Only update if value changed to avoid loops, though Equatable handles it
+            self.tutorialData = value
+        }
+        .overlay(
+            Group {
+                if let data = tutorialData, data.show {
+                    GeometryReader { proxy in
+                        // We are already at the screen coordinate space in PersistentBottomSheet (mostly)
+                        // But let's use global origin to be safe
+                        let globalOrigin = proxy.frame(in: .global).origin
+                        
+                        ZStack {
+                            // Dimmed background with hole
+                            Color.black.opacity(0.63)
+                                .mask(
+                                    ZStack {
+                                        Rectangle().fill(Color.black)
+                                        
+                                        // cutout
+                                        RoundedRectangle(cornerRadius: 24)
+                                            .frame(width: data.cardFrame.width, height: data.cardFrame.height)
+                                            .position(x: data.cardFrame.midX, y: data.cardFrame.midY)
+                                            .blendMode(.destinationOut)
+                                    }
+                                    .compositingGroup()
+                                )
+                            
+                            // Hand icon and text
+                            VStack(spacing: -1) {
+                                Image("swipe-hand")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height : 80)
+                                    .foregroundStyle(.white)
+                                    .rotationEffect(.degrees(isAnimatingHand ? 10 : -20))
+                                    .offset(x: isAnimatingHand ? 30 : -30, y: 0)
+                                    .animation(
+                                        .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
+                                        value: isAnimatingHand
+                                    )
+                                    .onAppear {
+                                        isAnimatingHand = true
+                                    }
+                                
+                                Text("Swipe cards to review each category")
+                                    .font(NunitoFont.bold.size(16))
+                                    .foregroundStyle(.white)
+                            }
+                            .offset(x: 0, y: -40)
+                            .position(x: data.cardFrame.midX, y: data.cardFrame.maxY + 60)
+                        }
+                        .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                        .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
+                        .ignoresSafeArea()
+                        .offset(x: -globalOrigin.x, y: -globalOrigin.y)
+                    }
+                    .zIndex(9999) // Ensure it's on top of everything
+                    .allowsHitTesting(false) // Let touches pass through
+                }
+            }
+        )
     }
     
     @ViewBuilder
@@ -196,12 +260,17 @@ struct PersistentBottomSheet: View {
         case .homeDefault:
             return 0
         case .chatIntro:
-            return 540
+            return 738
         case .chatConversation:
-            return UIScreen.main.bounds.height * 0.75
+            return 738
         case .workingOnSummary:
             return 250
-
+        case .meetYourProfileIntro:
+            return 200
+        case .meetYourProfile:
+            return 389
+        case .preferencesAddedSuccess:
+            return 285
         }
     }
     
@@ -423,9 +492,17 @@ struct PersistentBottomSheet: View {
                         familyStore: familyStore
                     )
                     
-                    // If opened from home screen, dismiss the sheet
-                    // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
-                    if case .home = coordinator.currentCanvasRoute {
+                    // Navigate back based on where we came from
+                    if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
+                        // If we came from meetYourProfile, go back there
+                        if case .meetYourProfile = previousRoute {
+                            coordinator.navigateInBottomSheet(.meetYourProfile)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        } else {
+                            coordinator.navigateInBottomSheet(previousRoute)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        }
+                    } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
                         coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
@@ -464,7 +541,13 @@ struct PersistentBottomSheet: View {
         case .fineTuneYourExperience:
             FineTuneExperience(
                 allSetPressed: {
-                    coordinator.showCanvas(.home)
+                    // Only show meetYourProfile flow for individual (Just Me) users
+                    let flowType = getOnboardingFlowType()
+                    if flowType == .individual {
+                        coordinator.navigateInBottomSheet(.meetYourProfileIntro)
+                    } else {
+                        coordinator.navigateInBottomSheet(.workingOnSummary)
+                    }
                 },
                 addPreferencesPressed: {
                     // Check if there's a next step available before advancing
@@ -514,6 +597,20 @@ struct PersistentBottomSheet: View {
             
         case .homeDefault:
             EmptyView()
+            
+        case .meetYourProfileIntro:
+            MeetYourProfileIntroView()
+            
+        case .meetYourProfile:
+            MeetYourProfileView {
+                coordinator.showCanvas(.home)
+            }
+            
+        case .preferencesAddedSuccess:
+            PreferencesAddedSuccessSheet {
+                coordinator.showCanvas(.home)
+                coordinator.navigateInBottomSheet(.homeDefault)
+            }
         }
     }
     

@@ -54,7 +54,9 @@ enum BottomSheetRoute: Hashable {
     
     // Onboarding completion flow
     case workingOnSummary
-
+    case meetYourProfileIntro
+    case meetYourProfile
+    case preferencesAddedSuccess
 }
 
 

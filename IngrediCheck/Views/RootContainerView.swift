@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Observation
 
 struct RootContainerView: View {
     @State private var coordinator: AppNavigationCoordinator
@@ -45,8 +46,34 @@ struct RootContainerView: View {
         @Bindable var coordinator = coordinator
 
         ZStack(alignment: .bottom) {
-            canvasContent(for: coordinator.currentCanvasRoute)
+            // Show custom background when meetYourProfileIntro bottom sheet is active
+            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro {
+                VStack {
+                    Text("Meet your profile")
+                        .font(ManropeFont.bold.size(16))
+                        .padding(.top, 32)
+                        .padding(.bottom, 4)
+                    Text("This helps us tailor food checks and tips just for you.")
+                        .font(ManropeFont.regular.size(13))
+                        .foregroundColor(Color(hex: "#BDBDBD"))
+                        .lineLimit(2)
+                        .frame(width: 247)
+                        .multilineTextAlignment(.center)
+                    
+                    Image("addfamilyimg")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 369)
+                        .frame(maxWidth: .infinity)
+                        .offset(y: -50)
+                    
+                    Spacer()
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                canvasContent(for: coordinator.currentCanvasRoute)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             // Dim background when certain sheets are presented (e.g., Invite)
             Group {
@@ -62,6 +89,9 @@ struct RootContainerView: View {
             }
 
             PersistentBottomSheet()
+            
+            // Secondary edit sheet overlay on top of everything
+            editSheetOverlay
         }
         .environment(coordinator)
         .environmentObject(onboarding)
@@ -134,6 +164,33 @@ struct RootContainerView: View {
             MainCanvasView(flow: flow)
         case .home:
             HomeView()
+        case .summaryJustMe:
+            NavigationStack {
+                EditableCanvasView(titleOverride: "Your Food Notes", showBackButton: false)
+            }
+        case .summaryAddFamily:
+            NavigationStack {
+                EditableCanvasView(titleOverride: "Your IngrideFam Food Notes", showBackButton: false)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editSheetOverlay: some View {
+        @Bindable var coordinator = coordinator
+        if coordinator.isEditSheetPresented, let stepId = coordinator.editingStepId {
+            EditSectionBottomSheet(
+                isPresented: $coordinator.isEditSheetPresented,
+                stepId: stepId,
+                currentSectionIndex: coordinator.currentEditingSectionIndex
+            )
+            .transition(AnyTransition.asymmetric(
+                insertion: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity),
+                removal: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity)
+            ))
+            .zIndex(100)
+            .frame(maxWidth: CGFloat.infinity, maxHeight: CGFloat.infinity, alignment: Alignment.bottom)
+            .ignoresSafeArea()
         }
     }
 }
