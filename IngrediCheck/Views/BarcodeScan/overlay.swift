@@ -110,7 +110,7 @@
 
 
 
-enum ToastScanState {
+enum ToastScanState: Equatable {
     case scanning               // user is scanning / live camera
     case extractionSuccess      // barcode extracted successfully
     case notIdentified          // product could not be identified
@@ -120,6 +120,7 @@ enum ToastScanState {
     case uncertain              // some ingredients are unclear
     case retry                  // retry / retake photo
     case photoGuide             // camera/photo mode guidance
+    case dynamicGuidance(String) // dynamic guidance from API (photo mode)
 }
 
 struct tostmsg: View {
@@ -153,23 +154,24 @@ struct tostmsg: View {
         case .match:
             return "Good news! This product matches your preferences."
         case .notMatch:
-            return "This product contains ingredients you avoid."
+            return "This product might not align with your choices."
         case .uncertain:
-            return "Some ingredients are unclear."
+            return "Some ingredients need verification."
         case .retry:
-            return "Retake the photo for a clearer scan."
+            return "Let's try again for a clearer scan."
         case .photoGuide:
-            return "Capture clear photos of the product and ingredients."
+            return "Capture clear photos of the product label"
+        case .dynamicGuidance(let guidance):
+            return guidance  // Use dynamic message from API
         }
     }
     
     var body: some View {
         labelContent
-            .padding(.horizontal, 12)
             .frame(height: 36)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(.thinMaterial)
+                    .fill(.bar)
                     .opacity(0.4)
             )
             .overlay(
@@ -197,7 +199,6 @@ struct tostmsg: View {
                 }
                 .mask(
                     labelContent
-                        .padding(.horizontal, 12)
                         .frame(height: 36)
                 )
             )
@@ -222,7 +223,10 @@ struct tostmsg: View {
             Text(message)
                 .font(ManropeFont.medium.size(12))
                 .foregroundColor(.white.opacity(0.6))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
         }
+        .padding(.horizontal, 16)  // Max 16px horizontal padding
     }
     
     private func startShimmer() {
@@ -259,13 +263,13 @@ struct Flashcapsul: View {
                 }
                 .frame(width: 33, height: 33)
                 .background(
-                    .thinMaterial.opacity(0.4), in: .capsule
+                    .bar.opacity(0.4), in: .capsule
                 )
             } else {
                 // Photo mode: show custom flash asset
                 ZStack {
                     Circle()
-                        .fill(.thinMaterial.opacity(0.4))
+                        .fill(.bar.opacity(0.4))
                         .frame(width: 48, height: 48)
                     Image(isFlashon ? "flashon" : "flashoff")
                         .resizable()
@@ -312,7 +316,7 @@ struct BackButton: View {
             .frame(width: 33, height: 33)
 //            .padding(7.5)
             .background(
-                .thinMaterial.opacity(0.4), in: .capsule
+                .bar.opacity(0.4), in: .capsule
             )
         }
         .buttonStyle(.plain)
@@ -345,7 +349,7 @@ struct BarcodeDataCard: View {
             // Left-side visual changes based on whether we have a barcode yet.
             ZStack (){
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(.thinMaterial)
+                    .fill(.bar)
                     .frame(width: 68, height: 92)
                     .opacity(0.4)
                 if code.isEmpty {
@@ -422,17 +426,17 @@ struct BarcodeDataCard: View {
             VStack(alignment: .leading) {
                 if code.isEmpty {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(.thinMaterial)
+                        .fill(.bar)
                         .opacity(0.4)
                         .frame(width: 185, height: 25)
                         .padding(.bottom, 4)
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(.thinMaterial)
+                        .fill(.bar)
                         .opacity(0.4)
                         .frame(width: 132, height: 20)
                         .padding(.bottom, 6)
                     RoundedRectangle(cornerRadius: 52)
-                        .fill(.thinMaterial)
+                        .fill(.bar)
                         .opacity(0.4)
                         .frame(width: 79, height: 24)
                 } else if isLoading && product == nil {
@@ -640,7 +644,7 @@ struct BarcodeDataCard: View {
         .background(
             // Background Card
             RoundedRectangle(cornerRadius: 24)
-                .fill(.ultraThinMaterial)
+                .fill(.bar)
                 .opacity(0.4)
         )
         .clipped()
@@ -679,16 +683,34 @@ struct BarcodeDataCard: View {
             // Run the streaming analysis on a detached background task so
             // camera preview + scan-line animation stay responsive.
             Task.detached {
+                print("[BARCODE_SCAN] 🔵 Overlay: Starting barcode scan - barcode: \(codeToAnalyze)")
+                var currentScanId: String?
                 do {
-                    try await service.streamUnifiedAnalysis(
-                        input: .barcode(codeToAnalyze),
-                        clientActivityId: clientActivityId,
-                        userPreferenceText: preferenceText,
-                        onProduct: { value in
-                            // onProduct/onAnalysis/onError are already
-                            // dispatched to the MainActor inside
-                            // WebService.streamUnifiedAnalysis.
-                            product = value
+                    try await service.streamBarcodeScan(
+                        barcode: codeToAnalyze,
+                        onProductInfo: { productInfo, scanId, productInfoSource, images in
+                            currentScanId = scanId
+                            
+                            // Convert ScanProductInfo to Product
+                            let imageLocations: [DTO.ImageLocationInfo] = productInfo.images?.compactMap { scanImageInfo in
+                                guard let urlString = scanImageInfo.url,
+                                      let url = URL(string: urlString) else {
+                                    return nil
+                                }
+                                return .url(url)
+                            } ?? []
+                            
+                            let productValue = DTO.Product(
+                                barcode: codeToAnalyze,
+                                brand: productInfo.brand,
+                                name: productInfo.name,
+                                ingredients: productInfo.ingredients,
+                                images: imageLocations,
+                                claims: productInfo.claims
+                            )
+                            
+                            // onProductInfo callback is already dispatched to MainActor
+                            product = productValue
                             isAnalyzing = true
                             
                             // Cache an intermediate result so UI like the toast
@@ -708,7 +730,8 @@ struct BarcodeDataCard: View {
                                 onResultUpdated?()
                             }
                         },
-                        onAnalysis: { recs in
+                        onAnalysis: { analysisResult in
+                            let recs = analysisResult.toIngredientRecommendations()
                             ingredientRecommendations = recs
                             if let p = product {
                                 matchStatus = p.calculateMatch(ingredientRecommendations: recs)
@@ -737,16 +760,17 @@ struct BarcodeDataCard: View {
                                 // After a successful analysis, refresh history so Home/Lists
                                 // Recent Scans reflect this scan immediately.
                                 Task {
-                                    if let history = try? await service.fetchHistory() {
+                                    if let historyResponse = try? await service.fetchScanHistory(limit: 20, offset: 0) {
                                         await MainActor.run {
-                                            appState.listsTabState.historyItems = history
+                                            appState.listsTabState.scans = historyResponse.scans
                                         }
                                     }
                                 }
                             }
                         },
-                        onError: { streamError in
-                            if streamError.statusCode == 404 {
+                        onError: { streamError, scanId in
+                            currentScanId = scanId
+                            if streamError.message.lowercased().contains("not found") {
                                 // Cache a not-found result so revisiting this
                                 // barcode shows the not-found message instead
                                 // of re-fetching every time.
@@ -850,16 +874,36 @@ struct BarcodeDataCard: View {
         
         // Re-run the streaming analysis
         Task.detached {
+            var currentScanId: String?
             do {
-                try await service.streamUnifiedAnalysis(
-                    input: .barcode(codeToAnalyze),
-                    clientActivityId: clientActivityId,
-                    userPreferenceText: preferenceText,
-                    onProduct: { value in
-                        product = value
+                try await service.streamBarcodeScan(
+                    barcode: codeToAnalyze,
+                    onProductInfo: { productInfo, scanId, productInfoSource, images in
+                        currentScanId = scanId
+                        
+                        // Convert ScanProductInfo to Product
+                        let imageLocations: [DTO.ImageLocationInfo] = productInfo.images?.compactMap { scanImageInfo in
+                            guard let urlString = scanImageInfo.url,
+                                  let url = URL(string: urlString) else {
+                                return nil
+                            }
+                            return .url(url)
+                        } ?? []
+                        
+                        let productValue = DTO.Product(
+                            barcode: codeToAnalyze,
+                            brand: productInfo.brand,
+                            name: productInfo.name,
+                            ingredients: productInfo.ingredients,
+                            images: imageLocations,
+                            claims: productInfo.claims
+                        )
+                        
+                        product = productValue
                         isAnalyzing = true
                     },
-                    onAnalysis: { recs in
+                    onAnalysis: { analysisResult in
+                        let recs = analysisResult.toIngredientRecommendations()
                         ingredientRecommendations = recs
                         if let p = product {
                             matchStatus = p.calculateMatch(ingredientRecommendations: recs)
@@ -885,8 +929,9 @@ struct BarcodeDataCard: View {
                             onResultUpdated?()
                         }
                     },
-                    onError: { streamError in
-                        if streamError.statusCode == 404 {
+                    onError: { streamError, scanId in
+                        currentScanId = scanId
+                        if streamError.message.lowercased().contains("not found") {
                             let result = BarcodeScanAnalysisResult(
                                 product: nil,
                                 ingredientRecommendations: nil,
@@ -986,7 +1031,7 @@ private struct ProductImageThumbnail: View {
                 // the default "imagenotfound1" asset.
                 ZStack {
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(.thinMaterial.opacity(0.4))
+                        .fill(.bar.opacity(0.4))
                         .frame(width: 68, height: 92)
                     Image("imagenotfound1")
                         .resizable()
@@ -1023,7 +1068,7 @@ private struct ProductImageThumbnail: View {
     }
 }
 
-private extension DTO.ProductRecommendation {
+extension DTO.ProductRecommendation {
     var displayText: String {
         switch self {
         case .match:
@@ -1032,6 +1077,8 @@ private extension DTO.ProductRecommendation {
             return "Uncertain"
         case .notMatch:
             return "Unmatched"
+        case .unknown:
+            return "Unknown"
         }
     }
 
@@ -1044,6 +1091,8 @@ private extension DTO.ProductRecommendation {
             return Color.warning100
         case .notMatch:
             return Color.fail100
+        case .unknown:
+            return Color.grayScale100
         }
     }
 
@@ -1055,6 +1104,8 @@ private extension DTO.ProductRecommendation {
             return Color.warning25
         case .notMatch:
             return Color.fail25
+        case .unknown:
+            return Color.grayScale40
         }
     }
 
@@ -1067,6 +1118,8 @@ private extension DTO.ProductRecommendation {
             return [Color(hex: "#FAB222"), Color(hex: "#E8AF3E")]
         case .notMatch:
             return [Color(hex: "#FF3225"), Color(hex: "#FF3C2F")]
+        case .unknown:
+            return [Color(hex: "#A6A6A6"), Color(hex: "#B5B5B5")]
         }
     }
 
@@ -1082,6 +1135,8 @@ private extension DTO.ProductRecommendation {
             return "famicons_warning-outline"
         case .notMatch:
             return "maki_cross"
+        case .unknown:
+            return "analysisicon"  // Using analysis icon as a placeholder for unknown
         }
     }
 }

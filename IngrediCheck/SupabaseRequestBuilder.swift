@@ -19,6 +19,12 @@ enum SafeEatsEndpoint: String {
     case family_food_notes = "family/food-notes"
     case family_food_notes_all = "family/food-notes/all"
     case family_member_food_notes = "family/members/%@/food-notes"
+    
+    // Scan API endpoints
+    case scan_barcode = "scan/barcode"
+    case scan_image = "scan/%@/image"
+    case scan_get = "scan/%@"
+    case scan_history = "scan/history"
 }
 
 class SupabaseRequestBuilder {
@@ -30,16 +36,29 @@ class SupabaseRequestBuilder {
     private let endpoint: SafeEatsEndpoint
     private let url: URL
 
+    private static func baseURL(for endpoint: SafeEatsEndpoint) -> String {
+        switch endpoint {
+        case .scan_barcode, .scan_image, .scan_get:
+            return Config.scanAPIBaseURL
+        case .scan_history:
+            return Config.supabaseFunctionsURLBase
+        default:
+            return Config.supabaseFunctionsURLBase
+        }
+    }
+
     init(endpoint: SafeEatsEndpoint) {
         self.endpoint = endpoint
-        self.url = URL(string: (Config.supabaseFunctionsURLBase + endpoint.rawValue))!
+        let baseURL = Self.baseURL(for: endpoint)
+        self.url = URL(string: (baseURL + endpoint.rawValue))!
         self.request = URLRequest(url: self.url)
     }
     
     init(endpoint: SafeEatsEndpoint, itemId: String, subItemId: String? = nil) {
 
         func formattedUrlString() -> String {
-            let urlFormat = Config.supabaseFunctionsURLBase + endpoint.rawValue
+            let baseURL = Self.baseURL(for: endpoint)
+            let urlFormat = baseURL + endpoint.rawValue
             if let subItemId = subItemId {
                 return String(format: urlFormat, itemId, subItemId)
             } else {
@@ -102,7 +121,12 @@ class SupabaseRequestBuilder {
     }
 
     private func setAPIKey() {
-        request.setValue(Config.supabaseKey, forHTTPHeaderField: "apikey")
+        // Only set API key for Supabase endpoints, not for scan API endpoints
+        // Scan API uses Bearer token authentication only
+        let scanEndpoints: [SafeEatsEndpoint] = [.scan_barcode, .scan_image, .scan_get]
+        if !scanEndpoints.contains(endpoint) {
+            request.setValue(Config.supabaseKey, forHTTPHeaderField: "apikey")
+        }
     }
     
     private func finishMultipartFormDataIfNeeded() {

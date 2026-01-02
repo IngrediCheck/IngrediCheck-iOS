@@ -350,32 +350,27 @@ struct HomeView: View {
                     .padding(.bottom, 20)
 
                     // Recent Scans list / empty state
-                    if let historyItems = appState.listsTabState.historyItems,
-                       !historyItems.isEmpty {
-                        let items = Array(historyItems.prefix(5))
+                    if let scans = appState.listsTabState.scans,
+                       !scans.isEmpty {
+                        let items = Array(scans.prefix(5))
 
                         VStack(spacing: 0) {
-                            ForEach(Array(items.enumerated()), id: \.element.client_activity_id) { index, item in
+                            ForEach(Array(items.enumerated()), id: \.element.id) { index, scan in
 
                                 Button {
-                                    let product = DTO.Product(
-                                        barcode: item.barcode,
-                                        brand: item.brand,
-                                        name: item.name,
-                                        ingredients: item.ingredients,
-                                        images: item.images
-                                    )
-
+                                    let product = scan.toProduct()
+                                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
+                                    
                                     let payload = ProductDetailPayload(
                                         product: product,
-                                        matchStatus: item.calculateMatch(),
-                                        ingredientRecommendations: item.ingredient_recommendations
+                                        matchStatus: scan.toProductRecommendation(),
+                                        ingredientRecommendations: recommendations
                                     )
 
                                     activeProductDetail = payload
 
                                 } label: {
-                                    HomeRecentScanRow(item: item)
+                                    ScanRow(scan: scan)
                                 }
                                 .buttonStyle(.plain)
 
@@ -470,7 +465,7 @@ struct HomeView: View {
 
             // ------------ HISTORY LOADING ------------
             .task {
-                if appState.listsTabState.historyItems == nil {
+                if appState.listsTabState.scans == nil {
                     await refreshRecentScans()
                 }
             }
@@ -510,9 +505,9 @@ struct HomeView: View {
         isRefreshingHistory = true
         defer { isRefreshingHistory = false }
 
-        if let history = try? await webService.fetchHistory() {
+        if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
             await MainActor.run {
-                appState.listsTabState.historyItems = history
+                appState.listsTabState.scans = historyResponse.scans
             }
         }
     }

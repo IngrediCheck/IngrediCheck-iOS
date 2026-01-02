@@ -36,6 +36,15 @@ class DTO {
             case vegan
             case vegetarian
             case ingredients
+            case contains  // API may use "contains" instead of "ingredients"
+        }
+        
+        // Convenience initializer for creating from string (for Scan API)
+        init(name: String, vegan: Bool?, vegetarian: Bool?, ingredients: [Ingredient]) {
+            self.name = name
+            self.vegan = vegan
+            self.vegetarian = vegetarian
+            self.ingredients = ingredients
         }
         
         init(from decoder: Decoder) throws {
@@ -43,7 +52,35 @@ class DTO {
             name = try container.decode(String.self, forKey: .name)
             vegan = try Ingredient.decodeYesNoMaybe(from: container, forKey: .vegan)
             vegetarian = try Ingredient.decodeYesNoMaybe(from: container, forKey: .vegetarian)
-            ingredients = try container.decodeIfPresent([Ingredient].self, forKey: .ingredients) ?? []
+            
+            // Handle both "ingredients" and "contains" fields
+            // API may use "contains" (array of strings) or "ingredients" (array of Ingredient objects)
+            if let ingredientsArray = try? container.decode([Ingredient].self, forKey: .ingredients) {
+                ingredients = ingredientsArray
+            } else if let containsArray = try? container.decode([String].self, forKey: .contains) {
+                // Convert "contains" array of strings to Ingredient array
+                ingredients = containsArray.map { Ingredient(name: $0, vegan: nil, vegetarian: nil, ingredients: []) }
+            } else {
+                ingredients = []
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+            
+            // Encode vegan/vegetarian as "yes"/"no" strings if present
+            if let vegan = vegan {
+                try container.encode(vegan ? "yes" : "no", forKey: .vegan)
+            }
+            if let vegetarian = vegetarian {
+                try container.encode(vegetarian ? "yes" : "no", forKey: .vegetarian)
+            }
+            
+            // Encode ingredients (not contains) - use standard format
+            if !ingredients.isEmpty {
+                try container.encode(ingredients, forKey: .ingredients)
+            }
         }
         
         private static func decodeYesNoMaybe(from container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) throws -> Bool? {
@@ -114,6 +151,8 @@ class DTO {
                 Color.fail100
             case .needsReview:
                 Color.warning100
+            case .unknown:
+                Color.gray
             }
         }
         
@@ -198,6 +237,7 @@ class DTO {
         let name: String?
         let ingredients: [Ingredient]
         let images: [ImageLocationInfo]
+        let claims: [String]?  // Dietary claims/tags from product (e.g., "Gluten Free", "High in Protein")
 
         private func productHasIngredient(ingredientName: String) -> Bool {
             func inner(ingredients: [Ingredient]) -> Bool {
@@ -268,12 +308,14 @@ class DTO {
         let safetyRecommendation: SafetyRecommendation
         let reasoning: String
         let preference: String
+        let memberIdentifiers: [String]?  // Array of member IDs from members_affected
     }
     
     enum ProductRecommendation {
         case match
         case needsReview
         case notMatch
+        case unknown
     }
 
     struct ImageInfo: Codable {
@@ -434,5 +476,383 @@ class DTO {
         let annotatedIngredients = annotatedIngredients(ingredients: ingredients)
         let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
         return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
+    }
+    
+    // MARK: - Scan API Models
+    
+    struct ScanProductInfo: Codable, Hashable {
+        let name: String?
+        let brand: String?
+        let ingredients: [Ingredient]
+        let images: [ScanImageInfo]?
+        let claims: [String]?  // Dietary claims/tags from product
+
+        // Convenience initializer for creating empty ScanProductInfo
+        init(name: String?, brand: String?, ingredients: [Ingredient], images: [ScanImageInfo]?, claims: [String]? = nil) {
+            self.name = name
+            self.brand = brand
+            self.ingredients = ingredients
+            self.images = images
+            self.claims = claims
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            name = try container.decodeIfPresent(String.self, forKey: .name)
+            brand = try container.decodeIfPresent(String.self, forKey: .brand)
+            images = try container.decodeIfPresent([ScanImageInfo].self, forKey: .images)
+            claims = try container.decodeIfPresent([String].self, forKey: .claims)
+
+            // Handle ingredients - API returns string array, convert to Ingredient objects
+            if container.contains(.ingredients) {
+                // Backend now only returns string arrays for ingredients
+                if let stringArray = try? container.decode([String].self, forKey: .ingredients) {
+                    ingredients = stringArray.map { Ingredient(name: $0, vegan: nil, vegetarian: nil, ingredients: []) }
+                } else {
+                    // Fallback: try decoding as Ingredient objects (for backward compatibility)
+                    ingredients = try container.decodeIfPresent([Ingredient].self, forKey: .ingredients) ?? []
+                }
+            } else {
+                ingredients = []
+            }
+        }
+        
+        enum CodingKeys: String, CodingKey {
+            case name, brand, ingredients, images, claims
+        }
+    }
+    
+    struct ScanImageInfo: Codable, Hashable {
+        let url: String?
+    }
+    
+    struct ScanAnalysisResult: Codable, Hashable {
+        let overall_analysis: String?
+        let overall_match: String?  // "matched", "uncertain", "unmatched" - optional as it may be missing in some responses
+        let ingredient_analysis: [ScanIngredientAnalysis]
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            // Try both camelCase (overallAnalysis) and snake_case (overall_analysis)
+            overall_analysis = try container.decodeIfPresent(String.self, forKey: .overall_analysis)
+                ?? container.decodeIfPresent(String.self, forKey: .overallAnalysis)
+            
+            // Try both camelCase (overallMatch) and snake_case (overall_match) for backend compatibility
+            overall_match = try container.decodeIfPresent(String.self, forKey: .overall_match)
+                ?? container.decodeIfPresent(String.self, forKey: .overallMatch)
+            
+            // Try both camelCase (flaggedIngredients) and snake_case (ingredient_analysis)
+            ingredient_analysis = try container.decodeIfPresent([ScanIngredientAnalysis].self, forKey: .ingredient_analysis)
+                ?? container.decodeIfPresent([ScanIngredientAnalysis].self, forKey: .flaggedIngredients)
+                ?? []
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(overall_analysis, forKey: .overall_analysis)
+            try container.encodeIfPresent(overall_match, forKey: .overall_match)
+            try container.encode(ingredient_analysis, forKey: .ingredient_analysis)
+        }
+        
+        enum CodingKeys: String, CodingKey {
+            case overall_analysis
+            case overallAnalysis  // Support camelCase from API
+            case overall_match
+            case overallMatch  // Support camelCase from API
+            case ingredient_analysis
+            case flaggedIngredients  // Support camelCase from API
+        }
+    }
+    
+    struct ScanIngredientAnalysis: Codable, Hashable {
+        let ingredient: String
+        let match: String  // "unmatched", "uncertain"
+        let reasoning: String
+        let members_affected: [String]
+        
+        // Note: API uses snake_case (members_affected), so we use default CodingKeys
+    }
+    
+    // SSE Event payloads
+    struct ScanProductInfoEvent: Codable {
+        let scan_id: String
+        let product_info: ScanProductInfo
+        let product_info_source: String
+        let images: [ScanImage]
+    }
+    
+    struct ScanAnalysisEvent: Codable {
+        let analysis_status: String
+        let analysis_result: ScanAnalysisResult?
+        
+        // Note: API uses snake_case throughout (analysis_status, analysis_result, overall_match, overall_analysis, ingredient_analysis)
+    }
+    
+    // Image types in scan response
+    enum ScanImage: Codable, Hashable {
+        case inventory(InventoryScanImage)
+        case user(UserScanImage)
+        
+        struct InventoryScanImage: Codable, Hashable {
+            let type: String  // "inventory"
+            let url: String
+        }
+        
+        struct UserScanImage: Codable, Hashable {
+            let type: String  // "user"
+            let content_hash: String
+            let storage_path: String?
+            let status: String  // "pending", "processing", "processed", "failed"
+            let extraction_error: String?
+        }
+        
+        private enum CodingKeys: String, CodingKey {
+            case type
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let type = try container.decode(String.self, forKey: .type)
+            
+            switch type {
+            case "inventory":
+                self = .inventory(try InventoryScanImage(from: decoder))
+            case "user":
+                self = .user(try UserScanImage(from: decoder))
+            default:
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Unknown image type: \(type)"
+                )
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            switch self {
+            case .inventory(let img):
+                try img.encode(to: encoder)
+            case .user(let img):
+                try img.encode(to: encoder)
+            }
+        }
+    }
+    
+    // Full Scan object
+    struct Scan: Codable, Hashable {
+        let id: String
+        let scan_type: String  // "barcode", "photo", or "barcode_plus_photo"
+        let barcode: String?
+        let state: String  // "processing_images", "analyzing", or "done"
+        let product_info: ScanProductInfo
+        let product_info_source: String?  // "openfoodfacts", "extraction", "enriched"
+        let analysis_result: ScanAnalysisResult?
+        let images: [ScanImage]
+        let latest_guidance: String?
+        let created_at: String
+        let last_activity_at: String
+
+        // Additional fields that may be present in API response but not always used
+        let is_favorited: Bool?
+        let analysis_id: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case scan_type
+            case barcode
+            case state
+            case product_info
+            case product_info_source
+            case analysis_result
+            case images
+            case latest_guidance
+            case created_at
+            case last_activity_at
+            case is_favorited
+            case analysis_id
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            scan_type = try container.decode(String.self, forKey: .scan_type)
+            barcode = try container.decodeIfPresent(String.self, forKey: .barcode)
+            state = try container.decode(String.self, forKey: .state)
+            
+            // Handle product_info - may be empty object {}
+            // Try to decode product_info, if it fails (e.g., empty object), create empty ScanProductInfo
+            do {
+                let productInfoDecoder = try container.superDecoder(forKey: .product_info)
+                product_info = try ScanProductInfo(from: productInfoDecoder)
+            } catch let error {
+                // If decoding fails (empty object or malformed), create empty ScanProductInfo
+                print("[SCAN_DECODE] ⚠️ Failed to decode product_info, using empty: \(error)")
+                // Create empty ScanProductInfo using the convenience initializer
+                product_info = ScanProductInfo(
+                    name: nil,
+                    brand: nil,
+                    ingredients: [],
+                    images: nil
+                )
+            }
+            
+            product_info_source = try container.decodeIfPresent(String.self, forKey: .product_info_source)
+            analysis_result = try container.decodeIfPresent(ScanAnalysisResult.self, forKey: .analysis_result)
+            images = try container.decodeIfPresent([ScanImage].self, forKey: .images) ?? []
+            latest_guidance = try container.decodeIfPresent(String.self, forKey: .latest_guidance)
+            created_at = try container.decode(String.self, forKey: .created_at)
+            last_activity_at = try container.decode(String.self, forKey: .last_activity_at)
+            is_favorited = try container.decodeIfPresent(Bool.self, forKey: .is_favorited)
+            analysis_id = try container.decodeIfPresent(String.self, forKey: .analysis_id)
+        }
+        
+        // Convenience initializer for constructing from SSE events
+        init(
+            id: String,
+            scan_type: String,
+            barcode: String?,
+            state: String,
+            product_info: ScanProductInfo,
+            product_info_source: String?,
+            analysis_result: ScanAnalysisResult?,
+            images: [ScanImage],
+            latest_guidance: String?,
+            created_at: String,
+            last_activity_at: String,
+            is_favorited: Bool? = nil,
+            analysis_id: String? = nil
+        ) {
+            self.id = id
+            self.scan_type = scan_type
+            self.barcode = barcode
+            self.state = state
+            self.product_info = product_info
+            self.product_info_source = product_info_source
+            self.analysis_result = analysis_result
+            self.images = images
+            self.latest_guidance = latest_guidance
+            self.created_at = created_at
+            self.last_activity_at = last_activity_at
+            self.is_favorited = is_favorited
+            self.analysis_id = analysis_id
+        }
+        
+    }
+    
+    // Submit image response
+    struct SubmitImageResponse: Codable {
+        let queued: Bool
+        let queue_position: Int
+        let content_hash: String
+    }
+    
+    // Scan history response
+    struct ScanHistoryResponse: Codable {
+        let scans: [Scan]
+        let total: Int
+        let has_more: Bool
+    }
+}
+
+// MARK: - Scan API Extension Helpers
+
+extension DTO.ScanAnalysisResult {
+    func toIngredientRecommendations() -> [DTO.IngredientRecommendation] {
+        return ingredient_analysis.map { analysis in
+            let safetyRecommendation: DTO.SafetyRecommendation
+            switch analysis.match {
+            case "unmatched":
+                safetyRecommendation = .definitelyUnsafe
+            case "uncertain":
+                safetyRecommendation = .maybeUnsafe
+            default:
+                safetyRecommendation = .safe
+            }
+            
+            // Log raw members_affected data for debugging
+            print("[INGREDIENT_ANALYSIS] ingredient: \(analysis.ingredient), match: \(analysis.match), members_affected: \(analysis.members_affected)")
+            
+            return DTO.IngredientRecommendation(
+                ingredientName: analysis.ingredient,
+                safetyRecommendation: safetyRecommendation,
+                reasoning: analysis.reasoning,
+                preference: analysis.members_affected.joined(separator: ", "),  // Keep for backward compatibility
+                memberIdentifiers: analysis.members_affected  // Preserve array of member IDs
+            )
+        }
+    }
+}
+
+extension String {
+    func toProductRecommendation() -> DTO.ProductRecommendation? {
+        switch self.lowercased() {
+        case "matched":
+            return .match
+        case "uncertain":
+            return .needsReview
+        case "unmatched":
+            return .notMatch
+        default:
+            return nil
+        }
+    }
+}
+
+extension DTO.Scan {
+    func toProductRecommendation() -> DTO.ProductRecommendation {
+        guard let overallMatch = analysis_result?.overall_match else {
+            return .unknown  // Default to unknown if no analysis data
+        }
+        return overallMatch.toProductRecommendation() ?? .unknown
+    }
+    
+    func relativeTimeDescription(now: Date = Date()) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        guard let date = isoFormatter.date(from: created_at) else {
+            return ""
+        }
+        
+        let interval = now.timeIntervalSince(date)
+        let seconds = Int(interval)
+        
+        if seconds < 60 {
+            return "Just now"
+        }
+        
+        let minutes = seconds / 60
+        if minutes < 60 {
+            return "\(minutes) min ago"
+        }
+        
+        let hours = minutes / 60
+        if hours < 24 {
+            return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
+        }
+        
+        let days = hours / 24
+        return days == 1 ? "1 day ago" : "\(days) days ago"
+    }
+    
+    func toProduct() -> DTO.Product {
+        // Convert ScanImageInfo to ImageLocationInfo
+        let imageLocations: [DTO.ImageLocationInfo] = product_info.images?.compactMap { scanImageInfo in
+            guard let urlString = scanImageInfo.url,
+                  let url = URL(string: urlString) else {
+                return nil
+            }
+            return .url(url)
+        } ?? []
+        
+        return DTO.Product(
+            barcode: barcode,
+            brand: product_info.brand,
+            name: product_info.name,
+            ingredients: product_info.ingredients,
+            images: imageLocations,
+            claims: product_info.claims
+        )
     }
 }

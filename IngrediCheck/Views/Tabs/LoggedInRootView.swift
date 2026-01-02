@@ -24,11 +24,12 @@ enum Sheets: Identifiable, Equatable {
 @Observable class CheckTabState {
     var routes: [CapturedItem] = []
     var capturedImages: [ProductImage] = []
+    var scanId: String?  // For photo scans - generated when first image is captured
     var feedbackConfig: FeedbackConfig?
 }
 
 enum HistoryRouteItem: Hashable {
-    case historyItem(DTO.HistoryItem)
+    case scan(DTO.Scan)
     case listItem(DTO.ListItem)
     case favoritesAll
     case recentScansAll
@@ -36,7 +37,7 @@ enum HistoryRouteItem: Hashable {
 
 struct ListsTabState {
     var routes: [HistoryRouteItem] = []
-    var historyItems: [DTO.HistoryItem]? = nil
+    var scans: [DTO.Scan]? = nil
     var listItems: [DTO.ListItem]? = nil
 }
 
@@ -167,9 +168,9 @@ struct ListsTabState {
 
     private func refreshHistory() {
         Task {
-            if let history = try? await webService.fetchHistory() {
+            if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
                 await MainActor.run {
-                    appState.listsTabState.historyItems = history
+                    appState.listsTabState.scans = historyResponse.scans
                 }
             }
             if let listItems = try? await webService.getFavorites() {

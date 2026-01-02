@@ -97,7 +97,7 @@
 		D3F0E0032F0A1B2C3D4E5F60 /* MemojiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */; };
 		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
-		D3FFA0B02F0B12340088E044 /* ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* ManageFamilyView.swift */; };
+		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -185,11 +185,8 @@
 		D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiModels.swift; sourceTree = "<group>"; };
 		D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiStore.swift; sourceTree = "<group>"; };
 		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
-
-		D3FFA0AF2F0B12340088E044 /* ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Family/ManageFamilyView.swift"; sourceTree = "<group>"; };
-
+		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
-
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -202,6 +199,7 @@
 		D3BECC372ED98A3E0088E044 /* ProductDetails */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ProductDetails; sourceTree = "<group>"; };
 		D3BECC732ED98CFF0088E044 /* Splash Screen */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Splash Screen"; sourceTree = "<group>"; };
 		D3BECC742ED98CFF0088E044 /* Add Family Members */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Add Family Members"; sourceTree = "<group>"; };
+		D3F6A49D2F06D5720019F5C4 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		FAA88CBC2EF6B62300449EDF /* Resource */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resource; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -325,6 +323,7 @@
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				D3F6A49D2F06D5720019F5C4 /* Components */,
 				D3BED0612ED997490088E044 /* HomeView.swift */,
 				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
 				D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */,
@@ -353,7 +352,7 @@
 				3946B4462B6F423B00D8B7C9 /* LabelAnalysisView.swift */,
 				392D9C0D2B755AE900166CF1 /* AnalysisResultView.swift */,
 				390F0CAE2BACC50D009081AD /* ProductImagesView.swift */,
-				D3FFA0AF2F0B12340088E044 /* ManageFamilyView.swift */,
+				D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -441,6 +440,7 @@
 				D3BECC372ED98A3E0088E044 /* ProductDetails */,
 				D3BECC732ED98CFF0088E044 /* Splash Screen */,
 				D3BECC742ED98CFF0088E044 /* Add Family Members */,
+				D3F6A49D2F06D5720019F5C4 /* Components */,
 				FAA88CBC2EF6B62300449EDF /* Resource */,
 			);
 			name = IngrediCheck;
@@ -595,7 +595,7 @@
 				3946B4472B6F423B00D8B7C9 /* LabelAnalysisView.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
 				39705AEF2BD490D0000E487D /* DisclaimerView.swift in Sources */,
-				D3FFA0B02F0B12340088E044 /* ManageFamilyView.swift in Sources */,
+				D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

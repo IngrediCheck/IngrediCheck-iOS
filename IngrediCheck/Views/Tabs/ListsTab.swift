@@ -21,8 +21,8 @@ import SimpleToast
             }
             .navigationDestination(for: HistoryRouteItem.self) { item in
                 switch item {
-                case .historyItem(let item):
-                    HistoryItemDetailView(item: item)
+                case .scan(let scan):
+                    ScanDetailView(scan: scan)
                 case .listItem(let item):
                     FavoriteItemDetailView(item: item)
                 case .favoritesAll:
@@ -48,8 +48,8 @@ import SimpleToast
         .navigationBarTitle("Lists")
         .toolbar {
             Group {
-                if let historyItems = appState.listsTabState.historyItems,
-                   historyItems.count > 4 {
+                if let scans = appState.listsTabState.scans,
+                   scans.count > 4 {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(action: {
                             isSearching = true
@@ -194,11 +194,11 @@ import SimpleToast
     
     var defaultView: some View {
         Group {
-            if let historyItems = appState.listsTabState.historyItems {
-                RecentScansListView(historyItems: historyItems)
+            if let scans = appState.listsTabState.scans {
+                RecentScansListView(scans: scans)
                     .refreshable {
-                        if let history = try? await webService.fetchHistory() {
-                            appState.listsTabState.historyItems = history
+                        if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
+                            appState.listsTabState.scans = historyResponse.scans
                         }
                     }
                     .padding(.top)
@@ -238,8 +238,8 @@ import SimpleToast
     @Environment(WebService.self) var webService
     
     var showViewAll: Bool {
-        if let historyItems = appState.listsTabState.historyItems {
-            return historyItems.count > 4
+        if let scans = appState.listsTabState.scans {
+            return scans.count > 4
         }
         return false
     }
@@ -258,16 +258,16 @@ import SimpleToast
             }
             .padding(.bottom)
             
-            if let historyItems = appState.listsTabState.historyItems {
-                RecentScansListView(historyItems: historyItems)
+            if let scans = appState.listsTabState.scans {
+                RecentScansListView(scans: scans)
                 .frame(maxWidth: .infinity)
                 .refreshable {
-                    if let history = try? await webService.fetchHistory() {
-                        appState.listsTabState.historyItems = history
+                    if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
+                        appState.listsTabState.scans = historyResponse.scans
                     }
                 }
                 .overlay {
-                    if historyItems.isEmpty {
+                    if scans.isEmpty {
                         VStack {
                             Spacer()
                             Image("EmptyRecentScans")
@@ -297,32 +297,18 @@ import SimpleToast
 
 @MainActor struct RecentScansListView: View {
     
-    var historyItems: [DTO.HistoryItem]
+    var scans: [DTO.Scan]
     
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                ForEach(Array(historyItems.enumerated()), id: \.element.client_activity_id) { index, item in
-                    NavigationLink {
-                        let product = DTO.Product(
-                            barcode: item.barcode,
-                            brand: item.brand,
-                            name: item.name,
-                            ingredients: item.ingredients,
-                            images: item.images
-                        )
-                        ProductDetailView(
-                            product: product,
-                            matchStatus: item.calculateMatch(),
-                            ingredientRecommendations: item.ingredient_recommendations,
-                            isPlaceholderMode: false
-                        )
-                    } label: {
-                        HomeRecentScanRow(item: item)
+                ForEach(Array(scans.enumerated()), id: \.element.id) { index, scan in
+                    NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                        ScanRow(scan: scan)
                     }
                     .foregroundStyle(.primary)
 
-                    if index != historyItems.count - 1 {
+                    if index != scans.count - 1 {
                         Divider()
                             .padding(.vertical, 14)
                     }
@@ -343,7 +329,7 @@ import SimpleToast
         }
     }
 
-    var searchResults: [DTO.HistoryItem] = []
+    var searchResults: [DTO.Scan] = []
 
     private var searchTextSubject = PassthroughSubject<String, Never>()
     private var cancellables = Set<AnyCancellable>()
@@ -368,9 +354,18 @@ import SimpleToast
 
         Task {
             print("Searching for \(searchText)")
-            let newSearchResults = try await webService.fetchHistory(searchText: searchText)
-            await MainActor.run {
-                self.searchResults = newSearchResults
+            // Note: Search functionality needs to be implemented in fetchScanHistory
+            // For now, fetch all and filter client-side
+            if let historyResponse = try? await webService.fetchScanHistory(limit: 100, offset: 0) {
+                let filtered = historyResponse.scans.filter { scan in
+                    let name = scan.product_info.name?.lowercased() ?? ""
+                    let brand = scan.product_info.brand?.lowercased() ?? ""
+                    let query = searchText.lowercased()
+                    return name.contains(query) || brand.contains(query)
+                }
+                await MainActor.run {
+                    self.searchResults = filtered
+                }
             }
         }
     }
@@ -399,23 +394,9 @@ import SimpleToast
                 .padding(.bottom)
             ScrollView {
                 VStack(spacing: 10) {
-                    ForEach(Array(vm.searchResults.enumerated()), id: \.element.client_activity_id) { index, item in
-                        NavigationLink {
-                            let product = DTO.Product(
-                                barcode: item.barcode,
-                                brand: item.brand,
-                                name: item.name,
-                                ingredients: item.ingredients,
-                                images: item.images
-                            )
-                            ProductDetailView(
-                                product: product,
-                                matchStatus: item.calculateMatch(),
-                                ingredientRecommendations: item.ingredient_recommendations,
-                                isPlaceholderMode: false
-                            )
-                        } label: {
-                            HomeRecentScanRow(item: item)
+                    ForEach(Array(vm.searchResults.enumerated()), id: \.element.id) { index, scan in
+                        NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                            ScanRow(scan: scan)
                         }
                         .foregroundStyle(.primary)
 
@@ -572,7 +553,8 @@ struct HistoryItemDetailView: View {
                         brand: item.brand,
                         name: item.name,
                         ingredients: item.ingredients,
-                        images: item.images
+                        images: item.images,
+                        claims: nil
                     )
                     AnalysisResultView(product: product, ingredientRecommendations: item.ingredient_recommendations)
                     
@@ -609,6 +591,129 @@ struct HistoryItemDetailView: View {
                     })
                 }
                 StarButton(clientActivityId: item.client_activity_id, favorited: item.favorited)
+                Button(action: {
+                    appState.feedbackConfig = FeedbackConfig(
+                        feedbackData: $feedbackData,
+                        feedbackCaptureOptions: .feedbackAndImages,
+                        onSubmit: {
+                            showToast.toggle()
+                            submitFeedback()
+                        }
+                    )
+                }, label: {
+                    Image(systemName: "flag")
+                        .font(.subheadline)
+                })
+            }
+        }
+    }
+}
+
+struct ScanDetailView: View {
+    let scan: DTO.Scan
+    
+    @State private var feedbackData = FeedbackData()
+    @State private var showToast: Bool = false
+
+    @Environment(WebService.self) var webService
+    @Environment(AppState.self) var appState
+    @Environment(UserPreferences.self) var userPreferences
+    
+    private func submitFeedback() {
+        Task {
+            // Note: clientActivityId is not available in Scan, so feedback submission would need scan.id
+            // For now, leaving as placeholder
+            print("Feedback submission not yet implemented for Scan")
+        }
+    }
+    
+    var body: some View {
+        @Bindable var userPreferencesBindable = userPreferences
+        let product = scan.toProduct()
+        let imageLocations: [DTO.ImageLocationInfo] = scan.product_info.images?.compactMap { scanImageInfo in
+            guard let urlString = scanImageInfo.url,
+                  let url = URL(string: urlString) else {
+                return nil
+            }
+            return .url(url)
+        } ?? []
+        
+        ScrollView {
+            VStack(spacing: 15) {
+                if let name = scan.product_info.name {
+                    Text(name)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                if let brand = scan.product_info.brand {
+                    Text(brand)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                ProductImagesView(images: imageLocations) {
+                    appState.feedbackConfig = FeedbackConfig(
+                        feedbackData: $feedbackData,
+                        feedbackCaptureOptions: .imagesOnly,
+                        onSubmit: {
+                            showToast.toggle()
+                            submitFeedback()
+                        }
+                    )
+                }
+                if scan.product_info.ingredients.isEmpty {
+                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                        .font(.subheadline)
+                        .padding()
+                        .multilineTextAlignment(.center)
+                    Button(action: {
+                        userPreferencesBindable.captureType = .ingredients
+                        appState.activeSheet = .scan
+                    }, label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.largeTitle)
+                    })
+                    Text("Product will be analyzed instantly!")
+                        .font(.subheadline)
+                } else {
+                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
+                    AnalysisResultView(product: product, ingredientRecommendations: recommendations)
+                    
+                    HStack {
+                        Text("Ingredients").font(.headline)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+
+                    IngredientsText(ingredients: scan.product_info.ingredients, ingredientRecommendations: recommendations)
+                        .padding(.horizontal)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+        .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
+            FeedbackSuccessToastView()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !imageLocations.isEmpty && !scan.product_info.ingredients.isEmpty {
+                    Button(action: {
+                        appState.feedbackConfig = FeedbackConfig(
+                            feedbackData: $feedbackData,
+                            feedbackCaptureOptions: .imagesOnly,
+                            onSubmit: {
+                                showToast.toggle()
+                                submitFeedback()
+                            }
+                        )
+                    }, label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.subheadline)
+                    })
+                }
+                // Note: StarButton needs clientActivityId which is not in Scan - would need to be handled differently
                 Button(action: {
                     appState.feedbackConfig = FeedbackConfig(
                         feedbackData: $feedbackData,
@@ -753,7 +858,8 @@ struct FavoriteItemDetailView: View {
                     brand: item.brand,
                     name: item.name,
                     ingredients: item.ingredients,
-                    images: item.images
+                    images: item.images,
+                    claims: nil
                 )
                 
                 HStack {

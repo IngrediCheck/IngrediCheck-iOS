@@ -5,25 +5,28 @@ import PostHog
 
 @MainActor @Observable class LabelAnalysisViewModel {
     
-    let productImages: [ProductImage]
+    let scanId: String
     let webService: WebService
     let dietaryPreferences: DietaryPreferences
     let userPreferences: UserPreferences
 
     private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+    private var pollingTask: Task<Void, Never>?
 
-    init(_ productImages: [ProductImage], _ webService: WebService, _ dietaryPreferences: DietaryPreferences, _ userPreferences: UserPreferences) {
-        self.productImages = productImages
+    init(_ scanId: String, _ webService: WebService, _ dietaryPreferences: DietaryPreferences, _ userPreferences: UserPreferences) {
+        self.scanId = scanId
         self.webService = webService
         self.dietaryPreferences = dietaryPreferences
         self.userPreferences = userPreferences
         impactFeedback.prepare()
     }
     
+    @MainActor var scan: DTO.Scan? = nil
     @MainActor var product: DTO.Product? = nil
     @MainActor var error: Error? = nil
     @MainActor var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
     @MainActor var feedbackData = FeedbackData()
+    @MainActor var latestGuidance: String? = nil
     let clientActivityId = UUID().uuidString
 
     func impactOccurred() {
@@ -31,85 +34,111 @@ import PostHog
     }
 
     func analyze() async {
-        let userPreferenceText = dietaryPreferences.asString
-        var streamErrorHandled = false
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
-        let imageCount = productImages.count
         self.error = nil
 
-        PostHogSDK.shared.capture("Label Analysis Started", properties: [
+        print("[PHOTO_SCAN] 🔵 Starting photo scan analysis - scan_id: \(scanId), request_id: \(requestId)")
+        print("[PHOTO_SCAN] ⏳ Polling: YES (polling GET /scan/{scan_id} every 2 seconds)")
+
+        PostHogSDK.shared.capture("Photo Scan Analysis Started", properties: [
             "request_id": requestId,
             "client_activity_id": clientActivityId,
-            "image_count": imageCount,
-            "has_preferences": !userPreferenceText.isEmpty && userPreferenceText.lowercased() != "none"
+            "scan_id": scanId
         ])
 
-        do {
-            try await webService.streamUnifiedAnalysis(
-                input: .productImages(productImages),
-                clientActivityId: clientActivityId,
-                userPreferenceText: userPreferenceText,
-                onProduct: { product in
-                    withAnimation {
-                        self.product = product
+        // Poll for scan status
+        pollingTask = Task {
+            var isComplete = false
+            var pollCount = 0
+            
+            while !isComplete && !Task.isCancelled {
+                pollCount += 1
+                do {
+                    print("[PHOTO_SCAN] 🔄 Poll #\(pollCount) - Getting scan status for scan_id: \(scanId)")
+                    let currentScan = try await webService.getScan(scanId: scanId)
+                    
+                    await MainActor.run {
+                        self.scan = currentScan
+                        self.latestGuidance = currentScan.latest_guidance
+                        
+                        // Update product from scan
+                        let productInfo = currentScan.product_info
+                        let imageLocations: [DTO.ImageLocationInfo] = productInfo.images?.compactMap { scanImageInfo in
+                            guard let urlString = scanImageInfo.url,
+                                  let url = URL(string: urlString) else {
+                                return nil
+                            }
+                            return .url(url)
+                        } ?? []
+                        
+                        self.product = DTO.Product(
+                            barcode: currentScan.barcode,
+                            brand: productInfo.brand,
+                            name: productInfo.name,
+                            ingredients: productInfo.ingredients,
+                            images: imageLocations,
+                            claims: nil
+                        )
+                        
+                        // Update recommendations when analysis is complete
+                        if currentScan.state == "done",
+                           let analysisResult = currentScan.analysis_result {
+                            let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
+                            print("[PHOTO_SCAN] ✅ Analysis complete - scan_id: \(self.scanId), poll_count: \(pollCount), total_latency: \(Int(totalLatency))ms")
+                            print("[PHOTO_SCAN] 🎯 Stopping polls - state: done")
+                            
+                            withAnimation {
+                                self.ingredientRecommendations = analysisResult.toIngredientRecommendations()
+                            }
+                            self.impactOccurred()
+                            self.userPreferences.incrementScanCount()
+                            
+                            PostHogSDK.shared.capture("Photo Scan Analysis Completed", properties: [
+                                "request_id": requestId,
+                                "client_activity_id": self.clientActivityId,
+                                "scan_id": self.scanId,
+                                "recommendations_count": self.ingredientRecommendations?.count ?? 0,
+                                "total_latency_ms": totalLatency
+                            ])
+                            
+                            isComplete = true
+                        } else {
+                            print("[PHOTO_SCAN] ⏳ Still processing - scan_id: \(self.scanId), state: \(currentScan.state), continuing to poll...")
+                        }
                     }
-                    self.impactOccurred()
-
-                    PostHogSDK.shared.capture("Label Analysis Product Received", properties: [
-                        "request_id": requestId,
-                        "client_activity_id": self.clientActivityId,
-                        "image_count": imageCount,
-                        "product_name": product.name ?? "Unknown",
-                        "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-                    ])
-                },
-                onAnalysis: { recommendations in
-                    withAnimation {
-                        self.ingredientRecommendations = recommendations
+                    
+                    if !isComplete {
+                        print("[PHOTO_SCAN] ⏸️ Waiting 2 seconds before next poll...")
+                        try await Task.sleep(nanoseconds: 2_000_000_000)  // 2 seconds
                     }
-                    self.impactOccurred()
-
-                    PostHogSDK.shared.capture("Label Analysis Completed", properties: [
-                        "request_id": requestId,
-                        "client_activity_id": self.clientActivityId,
-                        "image_count": imageCount,
-                        "recommendations_count": recommendations.count,
-                        "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-                    ])
-
-                    self.userPreferences.incrementScanCount()
-                },
-                onError: { streamError in
-                    streamErrorHandled = true
-                    self.error = streamError
-
-                    PostHogSDK.shared.capture("Label Analysis Failed", properties: [
-                        "request_id": requestId,
-                        "client_activity_id": self.clientActivityId,
-                        "image_count": imageCount,
-                        "status_code": streamError.statusCode ?? -1,
-                        "error": streamError.message,
-                        "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-                    ])
+                } catch {
+                    await MainActor.run {
+                        if !Task.isCancelled {
+                            let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
+                            print("[PHOTO_SCAN] ❌ Poll error - scan_id: \(self.scanId), poll_count: \(pollCount), error: \(error.localizedDescription)")
+                            self.error = error
+                            
+                            PostHogSDK.shared.capture("Photo Scan Polling Failed", properties: [
+                                "request_id": requestId,
+                                "client_activity_id": self.clientActivityId,
+                                "scan_id": self.scanId,
+                                "error": error.localizedDescription,
+                                "total_latency_ms": totalLatency
+                            ])
+                        }
+                        isComplete = true
+                    }
                 }
-            )
-        } catch {
-            if !streamErrorHandled {
-                self.error = error
-
-                PostHogSDK.shared.capture("Label Analysis Failed", properties: [
-                    "request_id": requestId,
-                    "client_activity_id": clientActivityId,
-                    "image_count": imageCount,
-                    "status_code": -1,
-                    "error": error.localizedDescription,
-                    "total_latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-                ])
             }
         }
-
+        
+        await pollingTask?.value
         impactOccurred()
+    }
+    
+    func cancel() {
+        pollingTask?.cancel()
     }
 
     func submitFeedback() {
@@ -121,7 +150,7 @@ import PostHog
 
 struct LabelAnalysisView: View {
     
-    let productImages: [ProductImage]
+    let scanId: String
 
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
@@ -152,9 +181,16 @@ struct LabelAnalysisView: View {
 
                             ProductImagesView(images: product.images) {
                                 Task { @MainActor in
-                                    checkTabState.capturedImages = productImages
                                     _ = checkTabState.routes.popLast()
                                 }
+                            }
+                            
+                            // Display latest guidance if available
+                            if let guidance = viewModel.latestGuidance, !guidance.isEmpty {
+                                Text(guidance)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal)
                             }
 
                             if let brand = product.brand {
@@ -183,13 +219,6 @@ struct LabelAnalysisView: View {
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             if viewModel.ingredientRecommendations != nil {
-                                Button(action: {
-                                    checkTabState.capturedImages = productImages
-                                    _ = checkTabState.routes.popLast()
-                                }, label: {
-                                    Image(systemName: "`ViewAll`.badge.plus")
-                                        .font(.subheadline)
-                                })
                                 StarButton(clientActivityId: viewModel.clientActivityId, favorited: false)
                                 Button(action: {
                                     checkTabState.feedbackConfig = FeedbackConfig(
@@ -217,12 +246,28 @@ struct LabelAnalysisView: View {
                     }
                 }
             } else {
-                ProgressView()
-                    .task {
-                        let newViewModel = LabelAnalysisViewModel(productImages, webService, dietaryPreferences, userPreferences)
-                        Task { await newViewModel.analyze() }
-                        DispatchQueue.main.async { self.viewModel = newViewModel }
+                VStack {
+                    Spacer()
+                    if let guidance = viewModel?.latestGuidance, !guidance.isEmpty {
+                        Text(guidance)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding()
+                    } else {
+                        Text("Analyzing Image...")
                     }
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+                .task {
+                    let newViewModel = LabelAnalysisViewModel(scanId, webService, dietaryPreferences, userPreferences)
+                    DispatchQueue.main.async { self.viewModel = newViewModel }
+                    Task { await newViewModel.analyze() }
+                }
+                .onDisappear {
+                    viewModel?.cancel()
+                }
             }
         }
     }
