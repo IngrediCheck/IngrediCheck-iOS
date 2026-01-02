@@ -159,7 +159,12 @@ struct RootContainerView: View {
         case .dietaryPreferencesAndRestrictions(let isFamilyFlow):
             DietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow)
         case .welcomeToYourFamily:
-            WelcomeToYourFamilyView()
+            NavigationStack {
+                EditableCanvasView(
+                    titleOverride: "Welcome to \(familyStore.family?.name ?? "your")'s family",
+                    showBackButton: false
+                )
+            }
         case .mainCanvas(let flow):
             MainCanvasView(flow: flow)
         case .home:
