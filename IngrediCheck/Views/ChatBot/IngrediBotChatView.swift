@@ -13,7 +13,6 @@ struct IngrediBotChatView: View {
     @State private var message: String = ""
     var onDismiss: (() -> Void)? = nil
     @State private var isBotThinking: Bool = false
-    @State private var navigateToSummary: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -37,10 +36,22 @@ struct IngrediBotChatView: View {
             .padding(.top, 16)
             .overlay(alignment: .topTrailing) {
                 Button("Skip") {
+                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
+                    
                     if let onDismiss {
                         onDismiss()
                     } else {
                         coordinator.dismissChatBot()
+                    }
+                    
+                    if isOnboarding {
+                        if coordinator.onboardingFlow == .individual {
+                            coordinator.showCanvas(.summaryJustMe)
+                        } else {
+                            coordinator.showCanvas(.summaryAddFamily)
+                        }
+                    } else {
+                        coordinator.showCanvas(.home)
                     }
                 }
                 .font(NunitoFont.semiBold.size(14))
@@ -130,7 +141,25 @@ struct IngrediBotChatView: View {
                     if !trimmed.isEmpty {
                         message = ""
                     }
-                    navigateToSummary = true
+                    // Navigate to Home screen directly
+                    // Determine if we are in the initial onboarding flow
+                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
+                    
+                    if let onDismiss {
+                        onDismiss()
+                    } else {
+                        coordinator.dismissChatBot()
+                    }
+                    
+                    if isOnboarding {
+                        if coordinator.onboardingFlow == .individual {
+                            coordinator.showCanvas(.summaryJustMe)
+                        } else {
+                            coordinator.showCanvas(.summaryAddFamily)
+                        }
+                    } else {
+                        coordinator.showCanvas(.home)
+                    }
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()
@@ -153,16 +182,6 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
-                .background(
-                    NavigationLink(
-                        destination: DetailedAISummary()
-                            .environment(coordinator),
-                        isActive: $navigateToSummary
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
-                )
             }
         }
         .padding(.horizontal, 20)

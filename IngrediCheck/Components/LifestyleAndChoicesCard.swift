@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LifestyleAndChoicesCard: View {
-    @State private var isEditableCanvasPresented: Bool = false
+    var onTap: (() -> Void)? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -35,7 +35,7 @@ struct LifestyleAndChoicesCard: View {
             HStack {
                 Spacer()
                 Button(action: {
-                    isEditableCanvasPresented = true
+                    onTap?()
                 }) {
                     Image("leaf")
                 }
@@ -55,8 +55,9 @@ struct LifestyleAndChoicesCard: View {
                 .stroke(lineWidth: 0.25)
                 .foregroundStyle(.grayScale60)
         )
-        .sheet(isPresented: $isEditableCanvasPresented) {
-            EditableCanvasView()
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?()
         }
     }
 }

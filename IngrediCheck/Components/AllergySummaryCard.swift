@@ -30,55 +30,64 @@ struct MyIcon: Shape {
 }
 
 struct AllergySummaryCard: View {
-    @State private var isEditableCanvasPresented: Bool = false
+    var onTap: (() -> Void)? = nil
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            
-            Text("25% Allergies")
-                .font(ManropeFont.regular.size(8))
-                .foregroundStyle(.grayScale130)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .background(.grayScale30, in: .capsule)
-                .overlay(
-                    Capsule()
-                        .stroke(lineWidth: 0.5)
-                        .foregroundStyle(.grayScale70)
-                )
-            
-            Text("\"Your family avoids 🥜, dairy, 🦀, eggs, gluten, red meat 🥩, alcohol, making meal choices \nsimpler and \nsafer for \neveryone.\"")
-                .font(ManropeFont.bold.size(14))
-                .foregroundStyle(.grayScale140)
-        }
-        .padding(.horizontal, 10)
-        .padding(.top, 12)
-        .padding(.bottom, 17)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(
+        ZStack {
+            // Tappable background
             MyIcon()
                 .fill(.grayScale10)
-                
                 .overlay(
                     MyIcon()
                         .stroke(lineWidth: 0.25)
                         .foregroundStyle(.grayScale60)
-                        
                 )
                 .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-        )
-        .overlay(
-            Button(action: {
-                isEditableCanvasPresented = true
-            }) {
-                GreenCircle(iconName: "arrow-up-right",iconSize: 20, circleSize: 37)
-                    .padding(3)
+                .contentShape(MyIcon())
+                .onTapGesture {
+                    onTap?()
+                }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 8) {
+                Text("25% Allergies")
+                    .font(ManropeFont.regular.size(8))
+                    .foregroundStyle(.grayScale130)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(.grayScale30, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(lineWidth: 0.5)
+                            .foregroundStyle(.grayScale70)
+                    )
+                
+                Text("\"Your family avoids 🥜, dairy, 🦀, eggs, gluten, red meat 🥩, alcohol, making meal choices \nsimpler and \nsafer for \neveryone.\"")
+                    .font(ManropeFont.bold.size(14))
+                    .foregroundStyle(.grayScale140)
             }
-            .buttonStyle(.plain)
-            , alignment: .bottomTrailing
-        )
-        .sheet(isPresented: $isEditableCanvasPresented) {
-            EditableCanvasView()
+            .padding(.horizontal, 10)
+            .padding(.top, 12)
+            .padding(.bottom, 17)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .allowsHitTesting(false)
+            
+            // Button overlay - takes priority
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        onTap?()
+                    }) {
+                        GreenCircle(iconName: "arrow-up-right", iconSize: 20, circleSize: 37)
+                            .padding(3)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.bottom, 3)
+            .padding(.trailing, 3)
         }
     }
 }

@@ -19,6 +19,7 @@ struct StackedCards: View {
     
     var isChipSelected: (Card, ChipsModel) -> Bool
     var onChipTap: (Card, ChipsModel) -> Void
+    var onSwipe: (() -> Void)? = nil
     
     @State private var cards: [Card]
     @State var dragOffset: CGSize = .zero
@@ -28,11 +29,13 @@ struct StackedCards: View {
     init(
         cards: [Card],
         isChipSelected: @escaping (Card, ChipsModel) -> Bool = { _, _ in false },
-        onChipTap: @escaping (Card, ChipsModel) -> Void = { _, _ in }
+        onChipTap: @escaping (Card, ChipsModel) -> Void = { _, _ in },
+        onSwipe: (() -> Void)? = nil
     ) {
         self._cards = State(initialValue: cards)
         self.isChipSelected = isChipSelected
         self.onChipTap = onChipTap
+        self.onSwipe = onSwipe
     }
     
     var body: some View {
@@ -113,10 +116,12 @@ struct StackedCards: View {
                                 
                                 if dragValue > 80 {
                                     right()
+                                    onSwipe?()
                                 }
                                 
                                 if dragValue < -80 {
                                     left()
+                                    onSwipe?()
                                 }
                                 
                                 dragValue = 0
