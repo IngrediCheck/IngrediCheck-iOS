@@ -415,6 +415,7 @@ struct PersistentBottomSheet: View {
             }
             
         case .wouldYouLikeToInvite(let memberId, let name):
+            let _ = print("[PersistentBottomSheet] Rendering .wouldYouLikeToInvite for \(name) (id: \(memberId))")
             WouldYouLikeToInvite(name: name) {
                 // Invite button pressed - mark member as pending so the UI reflects it
                 familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)

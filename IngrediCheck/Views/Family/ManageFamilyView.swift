@@ -256,10 +256,11 @@ struct ManageFamilyView: View {
         
     }
 
-    private struct MemberRow: View {
+    struct MemberRow: View {
         let member: FamilyMember
         @Environment(FamilyStore.self) private var familyStore
         @Environment(AppNavigationCoordinator.self) private var coordinator
+        @State private var showLeaveConfirm = false
 
         private var isSelf: Bool {
             if let family = familyStore.family {
@@ -270,41 +271,40 @@ struct ManageFamilyView: View {
 
         var body: some View {
             HStack(spacing: 12) {
-                // Avatar with Pencil Overlay
-                ZStack(alignment: .bottomTrailing) {
-                    SmartMemberAvatar(member: member)
-                        .frame(width: 48, height: 48)
+                // Info Section: Avatar + Name + Status (Tapping this triggers Edit)
+                HStack(spacing: 12) {
+                    ZStack(alignment: .bottomTrailing) {
+                        SmartMemberAvatar(member: member)
+                            .frame(width: 48, height: 48)
+                        
+                        Circle()
+                            .fill(.grayScale40)
+                            .frame(width: 16, height: 16)
+                            .overlay(
+                                Image("pen-line")
+                                    .resizable()
+                                    .frame(width: 7.43, height: 7.43)
+                            )
+                            .offset(x: -4, y: 4)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(member.name)
+                            .font(NunitoFont.semiBold.size(18))
+                            .foregroundStyle(.grayScale150)
+                        
+                        statusView
+                    }
                     
-                    // Small Pencil Icon
-                    Circle()
-                        .fill(.grayScale40) // Using grayScale40 to match onboarding or a light bg? Onboarding card uses `Stroke(.grayScale40)` for avatar ring?
-                        // Actually in LetsMeetYourIngrediFamView, the PENCIL is NOT there for other members, only for self maybe?
-                        // But previous request asked for pencil. I will keep pencil but make sure the main avatar matches.
-                        // LetsMeetYourIngrediFamView uses a Stroke(.grayScale40) around the avatar.
-                        // SmartMemberAvatar now has that stroke.
-                        // I will attach the pencil overlay here.
-                        .frame(width: 16, height: 16)
-                        .overlay(
-                            Image("pen-line")
-                                .resizable()
-                                .frame(width: 7.43, height: 7.43)
-                        )
-                        .offset(x: -4, y: 4)
+                    Spacer()
                 }
+                .contentShape(Rectangle())
                 .onTapGesture {
+                    print("[ManageFamilyView] Info area tapped for \(member.name), navigating to edit")
                     coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: isSelf))
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(member.name)
-                        .font(NunitoFont.semiBold.size(18))
-                        .foregroundStyle(.grayScale150)
-                    
-                    statusView
-                }
-
-                Spacer()
-
+                // Action Area: Invite or Leave (Independent tap target)
                 actionButton
             }
             .padding(16)
@@ -318,7 +318,6 @@ struct ManageFamilyView: View {
                     .stroke(lineWidth: 0.75)
                     .foregroundStyle(Color(hex: "#EEEEEE"))
             )
-            .contentShape(Rectangle())
         }
 
         @ViewBuilder
@@ -362,7 +361,7 @@ struct ManageFamilyView: View {
         private var actionButton: some View {
             if isSelf {
                 Button {
-                    Task { await familyStore.leave() }
+                    showLeaveConfirm = true
                 } label: {
                     Text("Leave Family")
                         .font(NunitoFont.semiBold.size(12))
@@ -372,29 +371,36 @@ struct ManageFamilyView: View {
                         .background(Color(hex: "#F2F2F2"), in: Capsule())
                 }
                 .buttonStyle(.plain)
-            } else {
-                Button {
-                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
-                } label: {
-                    HStack(spacing: 6) {
-                        Image("share")
-                            .resizable()
-                            .frame(width: 14, height: 14)
-                            .foregroundStyle(Color(hex: "#91B640"))
-                        Text(member.joined ? "Re-invite" : "Invite")
-                            .font(NunitoFont.semiBold.size(12))
-                            .foregroundStyle(Color(hex: "#91B640"))
+                .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {
+                    Button("Leave Family", role: .destructive) {
+                        Task { await familyStore.leave() }
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(Color.white)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color(hex: "#91B640"), lineWidth: 1)
-                    )
+                } message: {
+                    Text("Are you sure you want to leave?")
                 }
-                .buttonStyle(.plain)
+            } else {
+                HStack(spacing: 6) {
+                    Image("share")
+                        .resizable()
+                        .frame(width: 14, height: 14)
+                        .foregroundStyle(Color(hex: "#91B640"))
+                    Text(member.joined ? "Re-invite" : "Invite")
+                        .font(NunitoFont.semiBold.size(12))
+                        .foregroundStyle(Color(hex: "#91B640"))
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .background(Color.white)
+                .clipShape(Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(Color(hex: "#91B640"), lineWidth: 1)
+                }
+                .contentShape(Capsule())
+                .onTapGesture {
+                    print("[ManageFamilyView] Invite button tapped for \(member.name)")
+                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                }
             }
         }
     }
