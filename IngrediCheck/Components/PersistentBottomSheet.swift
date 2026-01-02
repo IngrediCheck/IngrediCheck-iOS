@@ -505,7 +505,7 @@ struct PersistentBottomSheet: View {
                     } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                        coordinator.navigateInBottomSheet(.addMoreMembers)
                     }
                 }
             }
