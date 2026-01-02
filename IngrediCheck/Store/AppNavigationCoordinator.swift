@@ -60,6 +60,11 @@ class AppNavigationCoordinator {
     private(set) var onboardingFlow: OnboardingFlowType = .individual
     private var previousBottomSheetRoute: BottomSheetRoute?
     
+    // Global state for secondary edit sheet
+    var editingStepId: String? = nil
+    var isEditSheetPresented: Bool = false
+    var currentEditingSectionIndex: Int = 0
+    
     /// Optional callback invoked after navigation changes to sync state to Supabase
     var onNavigationChange: (() async -> Void)?
 
@@ -179,6 +184,10 @@ class AppNavigationCoordinator {
             return .homeDefault
         case .home:
             return .homeDefault
+        case .summaryJustMe:
+            return .preferencesAddedSuccess
+        case .summaryAddFamily:
+            return .allSetToJoinYourFamily
         }
     }
     
@@ -215,7 +224,7 @@ class AppNavigationCoordinator {
             }
             return .dynamicOnboarding
             
-        case .home:
+        case .home, .summaryJustMe, .summaryAddFamily:
             return .completed
         }
     }
@@ -285,6 +294,8 @@ class AppNavigationCoordinator {
             return (.meetYourProfileIntro, nil)
         case .meetYourProfile:
             return (.meetYourProfile, nil)
+        case .preferencesAddedSuccess:
+            return (.preferencesAddedSuccess, nil)
         }
     }
     
@@ -367,6 +378,8 @@ class AppNavigationCoordinator {
             return .meetYourProfileIntro
         case .meetYourProfile:
             return .meetYourProfile
+        case .preferencesAddedSuccess:
+            return .preferencesAddedSuccess
         }
     }
     static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
@@ -390,6 +403,7 @@ class AppNavigationCoordinator {
         case .fineTune:
             canvas = .mainCanvas(flow: flow)
         case .completed:
+            // summaryJustMe uses .completed stage too, but we distinguish by sheet
             canvas = .home
         }
 
@@ -405,7 +419,7 @@ class AppNavigationCoordinator {
              // handled by stage .dietaryIntro usually, but enforce correct canvas
              canvas = .dietaryPreferencesAndRestrictions(isFamilyFlow: flow == .family)
         case .allSetToJoinYourFamily:
-             canvas = .welcomeToYourFamily
+             canvas = .summaryAddFamily
         case .onboardingStep:
              canvas = .mainCanvas(flow: flow)
         case .fineTuneYourExperience:
@@ -417,6 +431,8 @@ class AppNavigationCoordinator {
              break 
         case .meetYourProfile:
              canvas = .home
+        case .preferencesAddedSuccess:
+             canvas = .summaryJustMe
         default:
              break
         }

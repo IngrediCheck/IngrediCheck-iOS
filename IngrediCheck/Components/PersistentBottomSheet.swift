@@ -260,15 +260,17 @@ struct PersistentBottomSheet: View {
         case .homeDefault:
             return 0
         case .chatIntro:
-            return 540
+            return 738
         case .chatConversation:
-            return UIScreen.main.bounds.height * 0.75
+            return 738
         case .workingOnSummary:
             return 250
         case .meetYourProfileIntro:
             return 200
         case .meetYourProfile:
             return 389
+        case .preferencesAddedSuccess:
+            return 285
         }
     }
     
@@ -601,7 +603,13 @@ struct PersistentBottomSheet: View {
             
         case .meetYourProfile:
             MeetYourProfileView {
-            	    coordinator.showCanvas(.home)
+                coordinator.showCanvas(.home)
+            }
+            
+        case .preferencesAddedSuccess:
+            PreferencesAddedSuccessSheet {
+                coordinator.showCanvas(.home)
+                coordinator.navigateInBottomSheet(.homeDefault)
             }
         }
     }

@@ -749,3 +749,131 @@ struct MeetYourProfileIntroView: View {
     }
 }
 
+// MARK: - Preferences Added Success Sheet
+
+struct PreferencesAddedSuccessSheet: View {
+    var onContinue: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Preferences added successfully!")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 32)
+                
+                Text("Your food preferences are saved. You can review them anytime, or edit a specific preference section by tapping Edit.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+                  
+                    .padding(.horizontal, 24)
+            }
+            
+            Spacer()
+            
+            Button(action: onContinue) {
+                GreenCapsule(title: "Continue")
+                    .frame(width : 152 , height : 52)
+            }
+            .buttonStyle(.plain)
+         
+           
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 21)
+        .padding(.top , 28)
+        .padding(.bottom, 24)
+    }
+}
+struct EditSectionBottomSheet: View {
+    @EnvironmentObject private var store: Onboarding
+    @Environment(FamilyStore.self) private var familyStore
+    @Binding var isPresented: Bool
+    
+    let stepId: String
+    let currentSectionIndex: Int
+    let foodNotesStore: FoodNotesStore? = nil
+    
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging: Bool = false
+    
+    // Determine flow type: use .family if user has a family, otherwise use store's flow type
+    private var effectiveFlowType: OnboardingFlowType {
+        if let family = familyStore.family, !family.otherMembers.isEmpty {
+            return .family
+        }
+        return .individual
+    }
+    
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                // Drag indicator
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale60)
+                    .frame(width: 60, height: 4)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                if value.translation.height > 0 {
+                                    isDragging = true
+                                    dragOffset = value.translation.height
+                                }
+                            }
+                            .onEnded { value in
+                                isDragging = false
+                                if value.translation.height > 100 || value.predictedEndTranslation.height > 200 {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                        isPresented = false
+                                    }
+                                } else {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                            }
+                    )
+                
+                if let step = store.step(for: stepId) {
+                    DynamicOnboardingStepView(
+                        step: step,
+                        flowType: effectiveFlowType,
+                        preferences: $store.preferences
+                    )
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
+                    .transition(.opacity)
+                }
+            }
+            
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    isPresented = false
+                }
+            }) {
+                GreenCapsule(
+                    title: "Done",
+                    takeFullWidth: false,
+                    isLoading: false // Simplified for now to avoid dependency issues in preview/root
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
+            .padding(.bottom, 24)
+        }
+        .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+        .cornerRadius(36, corners: [.topLeft, .topRight])
+        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: -5)
+        .ignoresSafeArea(edges: .bottom)
+        .offset(y: dragOffset)
+        .animation(isDragging ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: dragOffset)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: stepId)
+    }
+}

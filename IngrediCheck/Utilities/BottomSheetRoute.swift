@@ -56,6 +56,7 @@ enum BottomSheetRoute: Hashable {
     case workingOnSummary
     case meetYourProfileIntro
     case meetYourProfile
+    case preferencesAddedSuccess
 }
 
 

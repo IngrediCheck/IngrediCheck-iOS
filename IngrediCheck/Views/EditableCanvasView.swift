@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import Observation
 
 struct EditableCanvasView: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(\.dismiss) private var dismiss
     @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(AppNavigationCoordinator.self) private var navCoordinator
     
     // Optional: center a specific section when arriving here (e.g., Lifestyle/Nutrition)
     let targetSectionName: String?
@@ -19,10 +21,10 @@ struct EditableCanvasView: View {
     @State private var foodNotesStore: FoodNotesStore?
     @State private var didFinishInitialLoad: Bool = false
     
-    @State private var editingStepId: String? = nil
-    @State private var isEditSheetPresented: Bool = false
+    let titleOverride: String?
+    let showBackButton: Bool
+    
     @State private var tagBarScrollTarget: UUID? = nil
-    @State private var currentEditingSectionIndex: Int = 0
     @State private var isProgrammaticChange: Bool = false
     @State private var isLoadingMemberPreferences: Bool = false
     @State private var isTabBarExpanded: Bool = true
@@ -33,8 +35,10 @@ struct EditableCanvasView: View {
     @State private var headroomCollapsed: Bool = false
     @State private var selectedMemberId: UUID? = nil // Track selected family member for filtering
     
-    init(targetSectionName: String? = nil) {
+    init(targetSectionName: String? = nil, titleOverride: String? = nil, showBackButton: Bool = true) {
         self.targetSectionName = targetSectionName
+        self.titleOverride = titleOverride
+        self.showBackButton = showBackButton
     }
     
     private var shouldCenterLifestyleNutrition: Bool {
@@ -46,7 +50,6 @@ struct EditableCanvasView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             mainContent
-            editSheetOverlay
         }
         .overlay(bottomGradientOverlay, alignment: .bottom)
         .ignoresSafeArea(edges: .bottom)
@@ -292,9 +295,9 @@ struct EditableCanvasView: View {
     private func openEditSheetForCurrentSection() {
         if let stepId = store.currentSection.screens.first?.stepId {
             withAnimation(.easeInOut(duration: 0.2)) {
-                currentEditingSectionIndex = store.currentSectionIndex
-                editingStepId = stepId
-                isEditSheetPresented = true
+                navCoordinator.currentEditingSectionIndex = store.currentSectionIndex
+                navCoordinator.editingStepId = stepId
+                navCoordinator.isEditSheetPresented = true
             }
         }
     }
@@ -304,9 +307,9 @@ struct EditableCanvasView: View {
               let stepId = store.sections[index].screens.first?.stepId else { return }
         
         withAnimation(.easeInOut(duration: 0.2)) {
-            currentEditingSectionIndex = index
-            editingStepId = stepId
-            isEditSheetPresented = true
+            navCoordinator.currentEditingSectionIndex = index
+            navCoordinator.editingStepId = stepId
+            navCoordinator.isEditSheetPresented = true
         }
     }
     
@@ -476,113 +479,6 @@ struct EditableCanvasCard: View {
 
 // MARK: - Edit Section Bottom Sheet
 
-struct EditSectionBottomSheet: View {
-    @EnvironmentObject private var store: Onboarding
-    @Environment(FamilyStore.self) private var familyStore
-    @Binding var isPresented: Bool
-    
-    let stepId: String
-    let currentSectionIndex: Int
-    let foodNotesStore: FoodNotesStore?
-    
-    @State private var dragOffset: CGFloat = 0
-    @State private var isDragging: Bool = false
-    
-    // Determine flow type: use .family if user has a family, otherwise use store's flow type
-    private var effectiveFlowType: OnboardingFlowType {
-        // If there are other members in the family, show the family selection carousel
-        if let family = familyStore.family, !family.otherMembers.isEmpty {
-            return .family
-        }
-        // Otherwise treat as an individual flow (hides carousel)
-        return .individual
-    }
-    
-    var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            VStack(spacing: 0) {
-                // Drag indicator
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.grayScale60)
-                    .frame(width: 60, height: 4)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                // Only allow downward drag
-                                if value.translation.height > 0 {
-                                    isDragging = true
-                                    dragOffset = value.translation.height
-                                }
-                            }
-                            .onEnded { value in
-                                isDragging = false
-                                // If dragged down more than 100 points, dismiss
-                                if value.translation.height > 100 || value.predictedEndTranslation.height > 200 {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                                        isPresented = false
-                                    }
-                                } else {
-                                    // Spring back to original position
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                        dragOffset = 0
-                                    }
-                                }
-                            }
-                    )
-                
-                if let step = store.step(for: stepId) {
-                    DynamicOnboardingStepView(
-                        step: step,
-                        flowType: effectiveFlowType,
-                        preferences: $store.preferences
-                    )
-                    .frame(maxWidth: .infinity, alignment: .top)
-                    .padding(.top, 8)
-                    .padding(.bottom, 100) // Increased padding to accommodate Done button
-                    .transition(.opacity)
-                }
-            }
-            
-            // Done button (GreenCapsule) - closes the sheet
-            Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                    isPresented = false
-                }
-            }) {
-                GreenCapsule(
-                    title: "Done",
-                    takeFullWidth: false,
-                    isLoading: foodNotesStore?.isLoadingFoodNotes ?? false
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(foodNotesStore?.isLoadingFoodNotes ?? false)
-            .padding(.trailing, 20)
-            .padding(.bottom, 24)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.white)
-        .cornerRadius(36, corners: [.topLeft, .topRight])
-        .shadow(radius: 27.5)
-        .ignoresSafeArea(edges: .bottom)
-        .offset(y: dragOffset)
-        .animation(isDragging ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: dragOffset)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: stepId)
-        .onChange(of: stepId) { _ in
-            // Update completion status when switching sections
-            store.updateSectionCompletionStatus()
-        }
-        .onChange(of: isPresented) { newValue in
-            // Update completion status when sheet is dismissed
-            if !newValue {
-                dragOffset = 0
-                store.updateSectionCompletionStatus()
-            }
-        }
-    }
-}
 
 // MARK: - Extracted subviews (compiler perf)
 
@@ -615,23 +511,25 @@ private extension EditableCanvasView {
     @ViewBuilder
     var customNavigationBar: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.black)
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                        
+            ZStack {
+                HStack {
+                    if showBackButton {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.black)
+                                .frame(width: 24, height: 24)
+                                .contentShape(Rectangle())
+                        }
+                    }
+                    Spacer()
                 }
                 
-                Text("Food Notes")
+                Text(titleOverride ?? "Food Notes")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
-                
-                Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -641,21 +539,7 @@ private extension EditableCanvasView {
         .frame(maxWidth: .infinity, alignment: .top)
     }
     
-    @ViewBuilder
-    var editSheetOverlay: some View {
-        if isEditSheetPresented, let stepId = editingStepId {
-            EditSectionBottomSheet(
-                isPresented: $isEditSheetPresented,
-                stepId: stepId,
-                currentSectionIndex: currentEditingSectionIndex,
-                foodNotesStore: foodNotesStore
-            )
-            .transition(.asymmetric(
-                insertion: .move(edge: .bottom).combined(with: .opacity),
-                removal: .move(edge: .bottom).combined(with: .opacity)
-            ))
-        }
-    }
+
     
     var loadingView: some View {
         VStack(spacing: 16) {
@@ -705,7 +589,7 @@ private extension EditableCanvasView {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, isEditSheetPresented ? UIScreen.main.bounds.height * 0.5 : 80)
+                .padding(.bottom, navCoordinator.isEditSheetPresented ? UIScreen.main.bounds.height * 0.5 : 80)
                 .background(scrollTrackingBackground)
             }
             .coordinateSpace(name: "editableCanvasScroll")
@@ -799,12 +683,12 @@ private extension EditableCanvasView {
         if let sectionIndex = store.sections.firstIndex(where: { section in
             section.screens.first?.stepId == card.stepId
         }) {
-            currentEditingSectionIndex = sectionIndex
+            navCoordinator.currentEditingSectionIndex = sectionIndex
             store.currentSectionIndex = sectionIndex
         }
-        editingStepId = card.stepId
+        navCoordinator.editingStepId = card.stepId
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-            isEditSheetPresented = true
+            navCoordinator.isEditSheetPresented = true
         }
     }
     
@@ -846,7 +730,7 @@ private extension EditableCanvasView {
     
     @ViewBuilder
     var bottomGradientOverlay: some View {
-        if !isEditSheetPresented {
+        if !navCoordinator.isEditSheetPresented {
             LinearGradient(
                 colors: [
                     Color.white.opacity(0),
@@ -863,7 +747,7 @@ private extension EditableCanvasView {
     
     @ViewBuilder
     var tabBarOverlay: some View {
-        if !isEditSheetPresented {
+        if !navCoordinator.isEditSheetPresented {
             TabBar(isExpanded: $isTabBarExpanded)
         }
     }

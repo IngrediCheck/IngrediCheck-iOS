@@ -36,10 +36,22 @@ struct IngrediBotChatView: View {
             .padding(.top, 16)
             .overlay(alignment: .topTrailing) {
                 Button("Skip") {
+                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
+                    
                     if let onDismiss {
                         onDismiss()
                     } else {
                         coordinator.dismissChatBot()
+                    }
+                    
+                    if isOnboarding {
+                        if coordinator.onboardingFlow == .individual {
+                            coordinator.showCanvas(.summaryJustMe)
+                        } else {
+                            coordinator.showCanvas(.summaryAddFamily)
+                        }
+                    } else {
+                        coordinator.showCanvas(.home)
                     }
                 }
                 .font(NunitoFont.semiBold.size(14))
@@ -130,12 +142,24 @@ struct IngrediBotChatView: View {
                         message = ""
                     }
                     // Navigate to Home screen directly
+                    // Determine if we are in the initial onboarding flow
+                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
+                    
                     if let onDismiss {
                         onDismiss()
                     } else {
                         coordinator.dismissChatBot()
                     }
-                    coordinator.showCanvas(.home)
+                    
+                    if isOnboarding {
+                        if coordinator.onboardingFlow == .individual {
+                            coordinator.showCanvas(.summaryJustMe)
+                        } else {
+                            coordinator.showCanvas(.summaryAddFamily)
+                        }
+                    } else {
+                        coordinator.showCanvas(.home)
+                    }
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()

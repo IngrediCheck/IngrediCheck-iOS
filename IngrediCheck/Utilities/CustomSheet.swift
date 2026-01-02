@@ -6,6 +6,14 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
     let cornerRadius: CGFloat
     let content: (Item) -> Content
 
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(MemojiStore.self) private var memojiStore
+    @Environment(WebService.self) private var webService
+    @Environment(AuthController.self) private var authController
+    @Environment(AppState.self) private var appState
+    @Environment(UserPreferences.self) private var userPreferences
+
     init(
         item: Binding<Item?>,
         cornerRadius: CGFloat = 16,
@@ -42,6 +50,13 @@ struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresent
                     ZStack {
                         Color.white.ignoresSafeArea()
                         content(newItem)
+                            .environment(coordinator)
+                            .environment(familyStore)
+                            .environment(memojiStore)
+                            .environment(webService)
+                            .environment(authController)
+                            .environment(appState)
+                            .environment(userPreferences)
                     }
                 )
             )
@@ -126,6 +141,14 @@ struct CustomBoolSheet<Content: View>: UIViewControllerRepresentable {
     let heightsProvider: () -> (min: CGFloat, max: CGFloat)
     let content: () -> Content
 
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(MemojiStore.self) private var memojiStore
+    @Environment(WebService.self) private var webService
+    @Environment(AuthController.self) private var authController
+    @Environment(AppState.self) private var appState
+    @Environment(UserPreferences.self) private var userPreferences
+
     init(
         isPresented: Binding<Bool>,
         cornerRadius: CGFloat = 16,
@@ -172,10 +195,19 @@ struct CustomBoolSheet<Content: View>: UIViewControllerRepresentable {
 
         let presentSheet = {
             let hosting = UIHostingController(rootView:
-                ZStack {
-                    Color.white.ignoresSafeArea()
-                    content()
-                }
+                AnyView(
+                    ZStack {
+                        Color.white.ignoresSafeArea()
+                        content()
+                            .environment(coordinator)
+                            .environment(familyStore)
+                            .environment(memojiStore)
+                            .environment(webService)
+                            .environment(authController)
+                            .environment(appState)
+                            .environment(userPreferences)
+                    }
+                )
             )
             hosting.view.backgroundColor = .white
             hosting.modalPresentationStyle = .pageSheet
