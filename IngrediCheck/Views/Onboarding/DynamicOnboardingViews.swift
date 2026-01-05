@@ -637,20 +637,6 @@ struct MeetYourProfileView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with Back Button
-            HStack {
-                Button(action: {
-                    coordinator.navigateInBottomSheet(.preferencesAddedSuccess)
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.black)
-                }
-                .padding(.leading, 16)
-                Spacer()
-            }
-            .padding(.top, 24)
-
             // Avatar Section
             VStack(spacing: 8) {
                 ZStack(alignment: .bottomTrailing) {

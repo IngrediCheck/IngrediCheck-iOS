@@ -9,6 +9,7 @@ import SwiftUI
 
 struct IngrediBotWithText: View {
     let text: String
+    var showBackgroundImage: Bool = true
     var viewDidAppear: (() -> Void)? = nil
     var delay: TimeInterval = 2.0
     @State private var backgroundOpacity: Double = 0.3
@@ -19,13 +20,14 @@ struct IngrediBotWithText: View {
     var body: some View {
         VStack( ) {
             ZStack{
-                Image("backgroundimage")
-                    .resizable()
-//
-                    .scaledToFit()
-                    .clipped()
-                    .frame(width: 335, height: 199)
-                    .opacity(backgroundOpacity)
+                if showBackgroundImage {
+                    Image("backgroundimage")
+                        .resizable()
+                        .scaledToFit()
+                        .clipped()
+                        .frame(width: 335, height: 199)
+                        .opacity(backgroundOpacity)
+                }
                 Image("ingrediBot")
                     .resizable()
                     .scaledToFit()
@@ -71,8 +73,10 @@ struct IngrediBotWithText: View {
         )
         .onAppear() {
             // Start the fade animation
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                backgroundOpacity = 1.0
+            if showBackgroundImage {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    backgroundOpacity = 1.0
+                }
             }
             
             // Start the shimmer animation - continuously loop from left to right

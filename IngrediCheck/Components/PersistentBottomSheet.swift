@@ -264,7 +264,7 @@ struct PersistentBottomSheet: View {
         case .chatConversation:
             return 738
         case .workingOnSummary:
-            return 250
+            return 281
         case .meetYourProfileIntro:
             return 200
         case .meetYourProfile:
@@ -541,13 +541,7 @@ struct PersistentBottomSheet: View {
         case .fineTuneYourExperience:
             FineTuneExperience(
                 allSetPressed: {
-                    // Only show meetYourProfile flow for individual (Just Me) users
-                    let flowType = getOnboardingFlowType()
-                    if flowType == .individual {
-                        coordinator.navigateInBottomSheet(.meetYourProfile)
-                    } else {
-                        coordinator.navigateInBottomSheet(.workingOnSummary)
-                    }
+                    coordinator.navigateInBottomSheet(.workingOnSummary)
                 },
                 addPreferencesPressed: {
                     // Check if there's a next step available before advancing
@@ -588,8 +582,9 @@ struct PersistentBottomSheet: View {
         case .workingOnSummary:
             IngrediBotWithText(
                 text: "Working on your personalized summary…",
+                showBackgroundImage: false,
                 viewDidAppear: {
-                    // After 2 seconds, navigate to IngrediBotView
+                    // After 2 seconds, navigate to chat intro
                     coordinator.navigateInBottomSheet(.chatIntro)
                 },
                 delay: 2.0
