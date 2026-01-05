@@ -45,6 +45,7 @@ struct HomeView: View {
     // ---------------------------
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(MemojiStore.self) private var memojiStore
 
     private var familyMembers: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
@@ -433,6 +434,7 @@ struct HomeView: View {
                 SettingsSheet()
                     .environment(userPreferences)
                     .environment(coordinator)
+                    .environment(memojiStore)
             }
             
             // ------------ EDITABLE CANVAS ------------

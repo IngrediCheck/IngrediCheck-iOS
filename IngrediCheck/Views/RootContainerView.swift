@@ -46,8 +46,8 @@ struct RootContainerView: View {
         @Bindable var coordinator = coordinator
 
         ZStack(alignment: .bottom) {
-            // Show custom background when meetYourProfileIntro bottom sheet is active
-            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro {
+            // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
+            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || coordinator.currentBottomSheetRoute == .meetYourProfile {
                 VStack {
                     Text("Meet your profile")
                         .font(ManropeFont.bold.size(16))

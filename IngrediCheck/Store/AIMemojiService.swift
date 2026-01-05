@@ -80,20 +80,38 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     let (data, response) = try await URLSession.shared.data(for: request)
 
     guard let httpResponse = response as? HTTPURLResponse else {
+        print("[AIMemojiService] ❌ No HTTP Response received")
         throw AIMemojiError.invalidResponse("No HTTP response.")
     }
 
+    print("[AIMemojiService] ℹ️ Response Status Code: \(httpResponse.statusCode)")
+
     guard httpResponse.statusCode == 200 else {
         let message = String(data: data, encoding: .utf8) ?? "status \(httpResponse.statusCode)"
+        print("[AIMemojiService] ❌ Request failed with message: \(message)")
         throw AIMemojiError.invalidResponse(message)
     }
 
-    let decoded = try JSONDecoder().decode(MemojiResponse.self, from: data)
+    let decoded: MemojiResponse
+    do {
+        decoded = try JSONDecoder().decode(MemojiResponse.self, from: data)
+        print("[AIMemojiService] ✅ Successfully decoded MemojiResponse")
+    } catch {
+        let rawDataString = String(data: data, encoding: .utf8) ?? "Unable to convert data to string"
+        print("[AIMemojiService] ❌ Decoding failed: \(error.localizedDescription)")
+        print("[AIMemojiService] ❌ Raw Data that failed to decode: \(rawDataString)")
+        throw error
+    }
+
     guard let urlString = decoded.imageUrl, let url = URL(string: urlString) else {
+        print("[AIMemojiService] ❌ decoded.imageUrl is NIL or invalid")
         throw AIMemojiError.missingImage
     }
 
+    print("[AIMemojiService] ℹ️ Image URL: \(urlString)")
+
     let (pngData, _) = try await URLSession.shared.data(from: url)
+    print("[AIMemojiService] ℹ️ Downloaded PNG Data size: \(pngData.count) bytes")
     print("[AIMemojiService] generateMemojiImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
     // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
     let image = await MainActor.run {

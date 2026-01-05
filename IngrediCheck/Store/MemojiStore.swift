@@ -103,6 +103,7 @@ final class MemojiStore {
         } catch {
             // Log error so we can debug why memoji generation failed
             print("[MemojiStore] ❌ Memoji generation failed: \(error.localizedDescription)")
+            print("[MemojiStore] ❌ Error debugging info: \(error)")
             
             // Check for cancellation before updating state
             guard !Task.isCancelled else {

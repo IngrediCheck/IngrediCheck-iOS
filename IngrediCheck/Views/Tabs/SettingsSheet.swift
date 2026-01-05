@@ -11,6 +11,7 @@ struct SettingsSheet: View {
     @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(\.openURL) var openURL
     @Environment(AppNavigationCoordinator.self) var coordinator
+    @Environment(MemojiStore.self) var memojiStore
     
     @State private var showInternalModeToast = false
     @State private var internalModeToastMessage = "Internal Mode Unlocked"
@@ -92,6 +93,14 @@ struct SettingsSheet: View {
                                 .offset(x: -6, y: -6)
                         }
                     nameEditField()
+                }
+                .onTapGesture {
+                    if let me = familyStore.family?.selfMember {
+                        familyStore.avatarTargetMemberId = me.id
+                        memojiStore.displayName = me.name
+                    }
+                    memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
+                    coordinator.navigateInBottomSheet(.yourCurrentAvatar)
                 }
             }
             .padding(.horizontal, 20)
@@ -289,14 +298,24 @@ struct SettingsSheet: View {
                 // 1) Prefill immediately from whatever is already in memory to avoid flicker/lag
                 primaryMemberName = familyStore.family?.selfMember.name
                 ?? familyStore.pendingSelfMember?.name
-                ?? "Ritika Raj"
+                ?? "Bite Buddy"
                 
                 // 2) Load family fresh in the background and update if it changes
                 Task {
                     await familyStore.loadCurrentFamily()
                     await MainActor.run {
-                        if let updated = familyStore.family?.selfMember.name ?? familyStore.pendingSelfMember?.name {
-                            primaryMemberName = updated
+                        if let family = familyStore.family {
+                            // If it's the "Just Me" flow, backend defaults the member name to "Me"
+                            // but the family name to "Bite Buddy". We should show "Bite Buddy" here.
+                            if family.selfMember.name == "Me" && !family.name.isEmpty {
+                                primaryMemberName = family.name
+                            } else {
+                                primaryMemberName = family.selfMember.name
+                            }
+                        } else if let pending = familyStore.pendingSelfMember {
+                            primaryMemberName = pending.name
+                        } else if primaryMemberName.isEmpty {
+                            primaryMemberName = "Bite Buddy"
                         }
                     }
                 }
@@ -460,9 +479,9 @@ struct SettingsSheet: View {
                             .background(Color.grayScale10)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
-                    }
                 }
             }
+        }
     }
         
     
@@ -514,10 +533,12 @@ struct SettingsSheet: View {
                     guard me.name != trimmed else { return }
                     me.name = trimmed
                     await familyStore.editMember(me)
-                } else if familyStore.pendingSelfMember != nil {
-                    if familyStore.pendingSelfMember?.name != trimmed {
+                } else if let pending = familyStore.pendingSelfMember {
+                    if pending.name != trimmed {
                         familyStore.updatePendingSelfMemberName(trimmed)
                     }
+                } else {
+                    familyStore.setPendingSelfMember(name: trimmed)
                 }
             }
         }
@@ -772,7 +793,6 @@ struct SettingsSheet: View {
             }
             return buildNumber
         }
-    }
     
     struct DeleteAccountView: View {
         
@@ -921,6 +941,7 @@ struct SettingsSheet: View {
             
         }
     }
+}
 
 
 @MainActor struct SettingsTabContainer: View {

@@ -544,7 +544,7 @@ struct PersistentBottomSheet: View {
                     // Only show meetYourProfile flow for individual (Just Me) users
                     let flowType = getOnboardingFlowType()
                     if flowType == .individual {
-                        coordinator.navigateInBottomSheet(.meetYourProfileIntro)
+                        coordinator.navigateInBottomSheet(.meetYourProfile)
                     } else {
                         coordinator.navigateInBottomSheet(.workingOnSummary)
                     }
@@ -608,8 +608,7 @@ struct PersistentBottomSheet: View {
             
         case .preferencesAddedSuccess:
             PreferencesAddedSuccessSheet {
-                coordinator.showCanvas(.home)
-                coordinator.navigateInBottomSheet(.homeDefault)
+                coordinator.navigateInBottomSheet(.meetYourProfile)
             }
         }
     }
@@ -739,12 +738,14 @@ private func handleAssignAvatar(
         
         let allMembers = [family.selfMember] + family.otherMembers
         guard let member = allMembers.first(where: { $0.id == targetMemberId }) else {
-            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member not found in current family for id=\(targetMemberId)")
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member \(targetMemberId) not found in family")
             return
         }
+
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating existing member \(member.name) with new avatar...")
         
         // 2. Upload transparent PNG image directly (no compositing - background color stored separately in member.color)
-        // Use captured background color if available, otherwise use member's existing color
+        // Use captured background color if available, otherwise member's existing color
         let bgColor = backgroundColorHex ?? member.color
         print("[PersistentBottomSheet] handleAssignAvatar: Assigning memoji from storagePath=\(storagePath) with background color: \(bgColor)")
 
