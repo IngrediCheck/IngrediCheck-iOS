@@ -415,6 +415,7 @@ struct PersistentBottomSheet: View {
             }
             
         case .wouldYouLikeToInvite(let memberId, let name):
+            let _ = print("[PersistentBottomSheet] Rendering .wouldYouLikeToInvite for \(name) (id: \(memberId))")
             WouldYouLikeToInvite(name: name) {
                 // Invite button pressed - mark member as pending so the UI reflects it
                 familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
@@ -422,7 +423,11 @@ struct PersistentBottomSheet: View {
                 // If this is a real family (not just pending onboarding members), call the invite API
                 if familyStore.family != nil {
                     Task {
-                        _ = await familyStore.invite(memberId: memberId)
+                        if let code = await familyStore.invite(memberId: memberId) {
+                            print("--------------------------------------------------")
+                            print("[INVITE CODE] Successfully generated: \(code.lowercased())")
+                            print("--------------------------------------------------")
+                        }
                     }
                 }
                 
@@ -505,7 +510,7 @@ struct PersistentBottomSheet: View {
                     } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                        coordinator.navigateInBottomSheet(.addMoreMembers)
                     }
                 }
             }
