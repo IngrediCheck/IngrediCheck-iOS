@@ -656,21 +656,51 @@ struct MeetYourProfileView: View {
                 ZStack(alignment: .bottomTrailing) {
                     Group {
                         if let image = memojiStore.image {
+                            // 1. Show the image that was JUST generated
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 80, height: 80)
                                 .background(Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4"))
                                 .clipShape(Circle())
+                        } else if let me = (familyStore.family?.selfMember ?? familyStore.pendingSelfMember),
+                                  let hash = me.imageFileHash, !hash.isEmpty {
+                            // 2. Show the avatar from the member's data (saved or pending)
+                            MemberAvatar.custom(member: me, size: 80, imagePadding: 0)
                         } else {
-                            Circle()
-                                .fill(Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4"))
-                                .frame(width: 80, height: 80)
+                            // 3. Default placeholder with curly-lady
+                            ZStack {
+                                Circle()
+                                    .fill(Color(hex: (familyStore.family?.selfMember.color ?? familyStore.pendingSelfMember?.color) ?? memojiStore.backgroundColorHex ?? "#E0BBE4"))
+                                    .frame(width: 80, height: 80)
+                                
+                                Image("curly-lady")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            }
                         }
                     }
                     
                     Button {
+                         // Sync current name to store before generating
+                         commitPrimaryName()
+                         
                          // Navigation to avatar generation
+                         memojiStore.displayName = primaryMemberName
+                         
+                         // Set the target member ID so handleAssignAvatar knows who to update
+                         if let me = familyStore.family?.selfMember {
+                             familyStore.avatarTargetMemberId = me.id
+                         } else if let me = familyStore.pendingSelfMember {
+                             familyStore.avatarTargetMemberId = me.id
+                         } else {
+                             // Create pending self member if none exists
+                             familyStore.setPendingSelfMember(name: primaryMemberName)
+                             familyStore.avatarTargetMemberId = familyStore.pendingSelfMember?.id
+                         }
+                         
                          memojiStore.previousRouteForGenerateAvatar = .meetYourProfile
                          coordinator.navigateInBottomSheet(.generateAvatar)
                     } label: {
@@ -693,19 +723,20 @@ struct MeetYourProfileView: View {
             // Greeting Title
             HStack(spacing: 8) {
                 Text("Hello,")
-                    .font(NunitoFont.bold.size(24))
+                    .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     TextField("", text: $primaryMemberName)
-                        .font(NunitoFont.semiBold.size(22))
+                        .font(NunitoFont.bold.size(22))
                         .foregroundStyle(Color(hex: "#303030"))
-                        .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
                         .focused($isEditingPrimaryName)
                         .submitLabel(.done)
                         .onSubmit { commitPrimaryName() }
-                        .fixedSize(horizontal: true, vertical: false)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Image("pen-line")
                         .resizable()
@@ -713,13 +744,14 @@ struct MeetYourProfileView: View {
                         .foregroundStyle(.grayScale100)
                         .onTapGesture { isEditingPrimaryName = true }
                 }
-                .padding(.horizontal, 20)
-                .frame(minWidth: 144)
-                .frame(maxWidth: 335)
-                .frame(height: 38)
+                .padding(.leading, 8)
+                .padding(.trailing, 5)
+                .frame(height: 35)
+                .frame(maxWidth: 250)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(isEditingPrimaryName ? Color(hex: "#EEF5E3") : .white))
+                        .fill(isEditingPrimaryName ? Color(hex: "#EEF5E3") : .white)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
@@ -729,7 +761,7 @@ struct MeetYourProfileView: View {
                 .onTapGesture { isEditingPrimaryName = true }
                 
                 Text("!")
-                    .font(NunitoFont.bold.size(24))
+                    .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
             }
             .padding(.top, 24)
@@ -737,7 +769,7 @@ struct MeetYourProfileView: View {
             
             // Description
             Text("We’ve created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
-                .font(ManropeFont.regular.size(14))
+                .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale100)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
@@ -754,6 +786,7 @@ struct MeetYourProfileView: View {
             }
             .padding(.bottom, 24)
         }
+        .frame(maxWidth: .infinity)
         .onAppear {
             if let family = familyStore.family {
                 // If it's the "Just Me" flow, backend defaults the member name to "Me"
@@ -772,6 +805,26 @@ struct MeetYourProfileView: View {
         .onChange(of: isEditingPrimaryName) { _, editing in
             if !editing {
                 commitPrimaryName()
+            }
+        }
+        .onChange(of: primaryMemberName) { oldValue, newValue in
+            // Filter to letters and spaces only
+            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+            var finalized = filtered
+            
+            // Limit to 25 characters
+            if finalized.count > 25 {
+                finalized = String(finalized.prefix(25))
+            }
+            
+            // Limit to max 3 words (max 2 spaces)
+            let components = finalized.components(separatedBy: .whitespaces)
+            if components.count > 3 {
+                finalized = components.prefix(3).joined(separator: " ")
+            }
+            
+            if finalized != newValue {
+                primaryMemberName = finalized
             }
         }
     }

@@ -342,6 +342,26 @@ struct SettingsSheet: View {
                     appState.activeSheet = .scan
                 }
             }
+            .onChange(of: primaryMemberName) { oldValue, newValue in
+                // Filter to letters and spaces only
+                let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+                var finalized = filtered
+                
+                // Limit to 25 characters
+                if finalized.count > 25 {
+                    finalized = String(finalized.prefix(25))
+                }
+                
+                // Limit to max 3 words (max 2 spaces)
+                let components = finalized.components(separatedBy: .whitespaces)
+                if components.count > 3 {
+                    finalized = components.prefix(3).joined(separator: " ")
+                }
+                
+                if finalized != newValue {
+                    primaryMemberName = finalized
+                }
+            }
             .simpleToast(
                 isPresented: $showInternalModeToast,
                 options: SimpleToastOptions(alignment: .top, hideAfter: 2)

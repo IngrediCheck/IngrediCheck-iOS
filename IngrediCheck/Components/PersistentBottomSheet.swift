@@ -663,13 +663,15 @@ private func handleAssignAvatar(
        let name = displayName,
         !name.isEmpty {
         
-        // Check if this is for self member or other member
-        // If there's no pending self member, this must be for self
-        // Otherwise, it's for an other member
-        if currentPendingSelfMember == nil {
+        // If we came from MeetYourProfile, this is ALWAYS for the self member
+        let isFromProfile = memojiStore.previousRouteForGenerateAvatar == .meetYourProfile
+        
+        if isFromProfile || currentPendingSelfMember == nil {
             // This is for the self member
-            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
-            familyStore.setPendingSelfMember(name: name)
+            if familyStore.pendingSelfMember == nil {
+                print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+                familyStore.setPendingSelfMember(name: name)
+            }
             // Re-capture after modification
             if let newSelfMember = familyStore.pendingSelfMember {
                 targetMemberId = newSelfMember.id

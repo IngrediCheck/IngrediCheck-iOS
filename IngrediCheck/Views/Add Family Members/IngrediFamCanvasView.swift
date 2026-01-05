@@ -611,11 +611,15 @@ struct GenerateAvatar: View {
                                     }
                                     .buttonStyle(.plain)
                                     
-                                    Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
+                                    Text("Generate Avatar for @" + (memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
                                     Spacer()
+                                    
+                                    Text("0/2")
+                                        .font(ManropeFont.medium.size(12))
+                                        .foregroundStyle(.grayScale100)
                                 }
                                 .padding(.horizontal, 20)
                                 

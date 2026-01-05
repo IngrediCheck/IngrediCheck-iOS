@@ -47,7 +47,13 @@ struct RootContainerView: View {
 
         ZStack(alignment: .bottom) {
             // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
-            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || coordinator.currentBottomSheetRoute == .meetYourProfile {
+            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
+               coordinator.currentBottomSheetRoute == .meetYourProfile ||
+               ((coordinator.currentBottomSheetRoute == .generateAvatar || 
+                 coordinator.currentBottomSheetRoute == .yourCurrentAvatar ||
+                 coordinator.currentBottomSheetRoute == .bringingYourAvatar ||
+                 coordinator.currentBottomSheetRoute == .meetYourAvatar) && 
+                (memojiStore.previousRouteForGenerateAvatar == .meetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro)) {
                 VStack {
                     Text("Meet your profile")
                         .font(ManropeFont.bold.size(16))
