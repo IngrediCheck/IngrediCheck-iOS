@@ -179,7 +179,12 @@ struct RootContainerView: View {
         case .dietaryPreferencesAndRestrictions(let isFamilyFlow):
             DietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow)
         case .welcomeToYourFamily:
-            WelcomeToYourFamilyView()
+            NavigationStack {
+                EditableCanvasView(
+                    titleOverride: "Welcome to \(familyStore.family?.name ?? "your")'s family",
+                    showBackButton: false
+                )
+            }
         case .mainCanvas(let flow):
             MainCanvasView(flow: flow)
         case .home:
@@ -190,7 +195,7 @@ struct RootContainerView: View {
             }
         case .summaryAddFamily:
             NavigationStack {
-                EditableCanvasView(titleOverride: "Your IngrideFam Food Notes", showBackButton: false)
+                EditableCanvasView(titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
             }
         }
     }

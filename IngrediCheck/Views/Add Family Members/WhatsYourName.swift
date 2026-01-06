@@ -125,7 +125,6 @@ struct WhatsYourName: View {
                                 } else {
                                     // Proceed to generate avatar
                                     memojiStore.displayName = trimmed
-                                    memojiStore.previousRouteForGenerateAvatar = .whatsYourName
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }
                             } label: {
