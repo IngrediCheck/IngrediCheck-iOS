@@ -94,3 +94,6 @@ DerivedData/
 .env
 *.p8
 private_keys/
+# JetBrains IDE project files
+.idea/*
+!.idea/.gitignore
