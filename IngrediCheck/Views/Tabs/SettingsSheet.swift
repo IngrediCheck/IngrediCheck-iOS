@@ -145,17 +145,37 @@ struct SettingsSheet: View {
                         
                         sectionCard {
                             VStack(spacing: 0) {
-                                NavigationLink {
-                                    ManageFamilyView()
-                                        .environment(coordinator)
-                                } label: {
-                                    rowContent(
-                                        image: Image("create-family-icon"),
-                                        title: (familyStore.family != nil ? "Manage Family" : "Create Family"),
-                                        iconColor: Color(hex: "#75990E")
-                                    )
+                                // Conditional navigation based on family existence AND other members
+                                // Show "Manage Family" only if family exists AND has other members
+                                // Show "Create Family" if no family OR family is just "Just Me" (no other members)
+                                if let family = familyStore.family, !family.otherMembers.isEmpty {
+                                    // Family exists with other members -> Navigate to ManageFamilyView
+                                    NavigationLink {
+                                        ManageFamilyView()
+                                            .environment(coordinator)
+                                    } label: {
+                                        rowContent(
+                                            image: Image("create-family-icon"),
+                                            title: "Manage Family",
+                                            iconColor: Color(hex: "#75990E")
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    // No family OR "Just Me" family -> Start family creation flow
+                                    Button {
+                                        coordinator.isCreatingFamilyFromSettings = true
+                                        coordinator.showCanvas(.letsMeetYourIngrediFam)
+                                        dismiss()
+                                    } label: {
+                                        rowContent(
+                                            image: Image("create-family-icon"),
+                                            title: "Create Family",
+                                            iconColor: Color(hex: "#75990E")
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                                 Divider()
                                     .padding(.horizontal, 16)
                                 settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {

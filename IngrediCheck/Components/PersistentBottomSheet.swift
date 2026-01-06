@@ -14,6 +14,7 @@ struct PersistentBottomSheet: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(WebService.self) private var webService
+    @Environment(AppState.self) private var appState
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
@@ -376,7 +377,17 @@ struct PersistentBottomSheet: View {
             
         case .letsMeetYourIngrediFam:
             MeetYourIngrediFam {
-                coordinator.navigateInBottomSheet(.whatsYourName)
+                // If coming from Settings, user already exists - skip to adding members
+                // Otherwise, go to whatsYourName for new family creation
+                if coordinator.isCreatingFamilyFromSettings {
+                    // User already exists, create pending self member from existing family
+                    if let family = familyStore.family {
+                        familyStore.setPendingSelfMemberFromExisting(family.selfMember)
+                    }
+                    coordinator.navigateInBottomSheet(.addMoreMembers)
+                } else {
+                    coordinator.navigateInBottomSheet(.whatsYourName)
+                }
             }
             
         case .whatsYourName:
@@ -402,7 +413,13 @@ struct PersistentBottomSheet: View {
         case .addMoreMembersMinimal:
             AddMoreMembersMinimal {
                 Task {
-                    await familyStore.createFamilyFromPendingIfNeeded()
+                    // If creating family from Settings, add members to existing family
+                    // Otherwise, create a new family
+                    if coordinator.isCreatingFamilyFromSettings {
+                        await familyStore.addPendingMembersToExistingFamily()
+                    } else {
+                        await familyStore.createFamilyFromPendingIfNeeded()
+                    }
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
                 }
             } addMorePressed: {
@@ -534,8 +551,22 @@ struct PersistentBottomSheet: View {
             }
             
         case .allSetToJoinYourFamily:
-            AllSetToJoinYourFamily {
-                coordinator.showCanvas(.home)
+            PreferencesAddedSuccessSheet {
+                // Check if family creation was initiated from Settings
+                if coordinator.isCreatingFamilyFromSettings {
+                    // Reset the flag
+                    coordinator.isCreatingFamilyFromSettings = false
+                    // Navigate to home first
+                    coordinator.showCanvas(.home)
+                    // Then reopen Settings sheet after a brief delay
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        appState.activeSheet = .settings
+                    }
+                } else {
+                    // Normal flow - go to meet your profile
+                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                }
             }
             
         case .fineTuneYourExperience:
@@ -598,7 +629,21 @@ struct PersistentBottomSheet: View {
             
         case .meetYourProfile:
             MeetYourProfileView {
-                coordinator.showCanvas(.home)
+                // Check if family creation was initiated from Settings
+                if coordinator.isCreatingFamilyFromSettings {
+                    // Reset the flag
+                    coordinator.isCreatingFamilyFromSettings = false
+                    // Navigate to home first
+                    coordinator.showCanvas(.home)
+                    // Then reopen Settings sheet after a brief delay to allow home to load
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        appState.activeSheet = .settings
+                    }
+                } else {
+                    // Normal flow - navigate to home
+                    coordinator.showCanvas(.home)
+                }
             }
             
         case .preferencesAddedSuccess:

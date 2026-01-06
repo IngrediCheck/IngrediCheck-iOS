@@ -1745,7 +1745,7 @@ struct AllSetToJoinYourFamily: View {
             Button {
                 goToHomePressed()
             } label: {
-                GreenCapsule(title: "Go to Home")
+                GreenCapsule(title: "Continue ")
                     .frame(width: 156)
             }
             
