@@ -92,15 +92,16 @@ struct SettingsSheet: View {
                                 .overlay(Image("pen-line").resizable().frame(width: 14, height: 14))
                                 .offset(x: -6, y: -6)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let me = familyStore.family?.selfMember {
+                                familyStore.avatarTargetMemberId = me.id
+                                memojiStore.displayName = me.name
+                            }
+                            memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
+                            coordinator.navigateInBottomSheet(.yourCurrentAvatar)
+                        }
                     nameEditField()
-                }
-                .onTapGesture {
-                    if let me = familyStore.family?.selfMember {
-                        familyStore.avatarTargetMemberId = me.id
-                        memojiStore.displayName = me.name
-                    }
-                    memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
-                    coordinator.navigateInBottomSheet(.yourCurrentAvatar)
                 }
             }
             .padding(.horizontal, 20)

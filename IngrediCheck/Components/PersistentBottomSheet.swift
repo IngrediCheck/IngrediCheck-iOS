@@ -665,8 +665,8 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    // Normal flow - go to meet your profile
-                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                    // Normal flow - go to Home
+                    coordinator.showCanvas(.home)
                 }
             }
             
