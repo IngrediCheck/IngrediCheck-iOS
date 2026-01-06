@@ -37,7 +37,12 @@ struct AddMoreMembers: View {
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
                         Button {
-                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            // Context-aware back: if opened from Home canvas, dismiss to home; else go to minimal list (onboarding)
+                            if case .home = coordinator.currentCanvasRoute {
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            }
                         } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))
@@ -117,6 +122,8 @@ struct AddMoreMembers: View {
                                 } else {
                                     // Set display name before navigating
                                     memojiStore.displayName = trimmed
+                                    // Ensure GenerateAvatar back button returns to AddMoreMembers, not onboarding
+                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
                                     // Proceed to generate avatar
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }

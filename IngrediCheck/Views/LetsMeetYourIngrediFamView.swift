@@ -13,6 +13,8 @@ struct LetsMeetYourIngrediFamView: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
     
+    @State private var showLeaveConfirm = false
+    
     private var shouldShowWelcomeFamily: Bool {
         switch coordinator.currentBottomSheetRoute {
         case .whosThisFor:
@@ -99,12 +101,38 @@ struct LetsMeetYourIngrediFamView: View {
 
                             Spacer()
 
-//                    Text("Leave Family")
-//                        .font(NunitoFont.semiBold.size(12))
-//                        .foregroundStyle(.grayScale110)
-//                        .padding(.vertical, 8)
-//                        .padding(.horizontal, 18)
-//                        .background(.grayScale40, in: .capsule)
+                            Button {
+                                showLeaveConfirm = true
+                            } label: {
+                                Text("Leave Family")
+                                    .font(NunitoFont.semiBold.size(12))
+                                    .foregroundStyle(.grayScale110)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 18)
+                                    .background(Color(hex: "#F2F2F2"), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {
+                                Button("Leave Family", role: .destructive) {
+                                    print("[LetsMeetYourIngrediFamView] Leave Family confirmed")
+                                    Task {
+                                        print("[LetsMeetYourIngrediFamView] Calling familyStore.leave()")
+                                        await familyStore.leave()
+                                        let error = familyStore.errorMessage ?? "nil"
+                                        print("[LetsMeetYourIngrediFamView] familyStore.leave() finished. errorMessage=\(error)")
+
+                                        if familyStore.errorMessage == nil {
+                                            print("[LetsMeetYourIngrediFamView] Leave success -> resetting local state and returning to start")
+                                            familyStore.resetLocalState()
+                                            coordinator.showCanvas(.heyThere)
+                                        } else {
+                                            print("[LetsMeetYourIngrediFamView] Leave failed -> staying on overview")
+                                        }
+                                    }
+                                }
+                            } message: {
+                                Text("Are you sure you want to leave?")
+                            }
                         }
                         .padding(16)
                         .background(

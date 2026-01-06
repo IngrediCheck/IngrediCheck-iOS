@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct TabBar: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
@@ -32,11 +33,16 @@ struct TabBar: View {
                     
                     Spacer()
                     
-                    Image("tabBar-ingredibot")
-                        .renderingMode(.template)
-                        .resizable()
-                        .foregroundColor(Color(hex: "676A64"))
-                        .frame(width: 26, height: 26)
+                    Button {
+                        coordinator.presentChatBot(startAtConversation: true)
+                    } label: {
+                        Image("tabBar-ingredibot")
+                            .renderingMode(.template)
+                            .resizable()
+                            .foregroundColor(Color(hex: "676A64"))
+                            .frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12.5)

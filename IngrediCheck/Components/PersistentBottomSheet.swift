@@ -21,15 +21,41 @@ struct PersistentBottomSheet: View {
     @State private var generationTask: Task<Void, Never>?
     @State private var tutorialData: TutorialData? 
     @State private var isAnimatingHand: Bool = false
+    @State private var dragOffsetY: CGFloat = 0
     
     var body: some View {
         @Bindable var coordinator = coordinator
         @Bindable var memojiStore = memojiStore
+
+        let canTapOutsideToDismiss: Bool = {
+            guard case .home = coordinator.currentCanvasRoute else { return false }
+
+            switch coordinator.currentBottomSheetRoute {
+            case .homeDefault:
+                return false
+            case .yourCurrentAvatar, .setUpAvatarFor, .generateAvatar, .bringingYourAvatar, .meetYourAvatar, .meetYourProfile, .meetYourProfileIntro:
+                return true
+            default:
+                return false
+            }
+        }()
         
-        VStack {
-            Spacer()
-            
-            bottomSheetContainer()
+        ZStack(alignment: .bottom) {
+            if canTapOutsideToDismiss {
+                Color.black
+                    .opacity(0.0)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
+            }
+
+            VStack {
+                Spacer()
+                
+                bottomSheetContainer()
+            }
         }
         .background(
             .clear
@@ -48,6 +74,18 @@ struct PersistentBottomSheet: View {
                 print("[PersistentBottomSheet] Leaving avatar flow, cancelling generation task")
                 generationTask?.cancel()
                 generationTask = nil
+            }
+
+            // Animate sheet presentation (swipe-up feel) for avatar sheets opened from Home/Settings
+            if (newValue == .yourCurrentAvatar || newValue == .setUpAvatarFor),
+               !(oldValue == .yourCurrentAvatar || oldValue == .setUpAvatarFor),
+               case .home = coordinator.currentCanvasRoute {
+                dragOffsetY = 700
+                withAnimation(.easeOut(duration: 0.28)) {
+                    dragOffsetY = 0
+                }
+            } else {
+                dragOffsetY = 0
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
@@ -133,6 +171,37 @@ struct PersistentBottomSheet: View {
     
     @ViewBuilder
     private func bottomSheetContainer() -> some View {
+        let canSwipeToDismiss = coordinator.currentBottomSheetRoute == .yourCurrentAvatar || coordinator.currentBottomSheetRoute == .setUpAvatarFor
+        let dismissThreshold: CGFloat = 120
+        let dismissAnimationDistance: CGFloat = 700
+
+        let dragGesture = DragGesture()
+            .onChanged { value in
+                guard canSwipeToDismiss else { return }
+                let t = value.translation.height
+                withAnimation(.interactiveSpring(response: 0.25, dampingFraction: 0.9, blendDuration: 0.1)) {
+                    dragOffsetY = max(0, t)
+                }
+            }
+            .onEnded { value in
+                guard canSwipeToDismiss else { return }
+                let t = value.translation.height
+                if t > dismissThreshold {
+                    withAnimation(.easeOut(duration: 0.22)) {
+                        dragOffsetY = dismissAnimationDistance
+                    }
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                        dragOffsetY = 0
+                    }
+                } else {
+                    withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.85, blendDuration: 0.1)) {
+                        dragOffsetY = 0
+                    }
+                }
+            }
+
         let sheet = ZStack(alignment: .bottomTrailing) {
             let _ = print("[PersistentBottomSheet] currentCanvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
             bottomSheetContent(for: coordinator.currentBottomSheetRoute)
@@ -173,6 +242,8 @@ struct PersistentBottomSheet: View {
                 .cornerRadius(36, corners: [.topLeft, .topRight])
                 
                 .shadow(color :.grayScale70, radius: 27.5)
+                .offset(y: dragOffsetY)
+                .gesture(dragGesture)
                 
 //                .overlay(
 //                    LinearGradient(
@@ -195,6 +266,8 @@ struct PersistentBottomSheet: View {
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
                 .shadow(color :.grayScale70, radius: 27.5)
+                .offset(y: dragOffsetY)
+                .gesture(dragGesture)
 //                .shadow(radius: 27.5)
 //                .overlay(
 //                    LinearGradient(
@@ -457,7 +530,13 @@ struct PersistentBottomSheet: View {
             } continuePressed: {
                 // Maybe later -> mark member as pending and go back to minimal add members screen
                 familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                // If this flow was started from Home/Manage Family, dismiss the sheet.
+                // Otherwise, keep onboarding behavior.
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             }
             
         case .wantToAddPreference(let name):
@@ -534,6 +613,8 @@ struct PersistentBottomSheet: View {
             
         case .yourCurrentAvatar:
             YourCurrentAvatar {
+                // Ensure GenerateAvatar knows to go back to YourCurrentAvatar when launched from Home/Settings flows
+                memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
                 coordinator.navigateInBottomSheet(.generateAvatar)
             }
             
