@@ -44,6 +44,7 @@ struct RootContainerView: View {
 
     var body: some View {
         @Bindable var coordinator = coordinator
+        @Bindable var appState = appState
 
         ZStack(alignment: .bottom) {
             // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
@@ -106,6 +107,19 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        // Allow presenting SettingsSheet from anywhere in this container
+        .sheet(item: $appState.activeSheet) { sheet in
+            switch sheet {
+            case .settings:
+                SettingsSheet()
+                    .environment(userPreferences)
+                    .environment(memojiStore)
+                    .environment(coordinator)
+            case .scan:
+                // Not used here; keep empty or route to a scan view if needed later
+                EmptyView()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)

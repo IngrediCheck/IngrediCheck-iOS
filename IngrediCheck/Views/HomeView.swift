@@ -428,6 +428,13 @@ struct HomeView: View {
                     await refreshRecentScans()
                 }
             }
+            // Trigger a push navigation to Settings when requested by app state
+            .onChange(of: appState.navigateToSettings) { _, newValue in
+                if newValue {
+                    isSettingsPresented = true
+                    appState.navigateToSettings = false
+                }
+            }
 
             // ------------ SETTINGS SCREEN ------------
             .navigationDestination(isPresented: $isSettingsPresented) {

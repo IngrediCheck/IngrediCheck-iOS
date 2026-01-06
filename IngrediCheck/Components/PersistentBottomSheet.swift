@@ -549,6 +549,22 @@ struct PersistentBottomSheet: View {
                 }
                 coordinator.showCanvas(.mainCanvas(flow: isFamilyFlow ? .family : .individual))
             }
+            .onAppear {
+                // If the user initiated family creation from Settings, skip the
+                // "Personalize your Choices" sheet and auto-advance directly
+                // into the first dynamic onboarding step.
+                if coordinator.isCreatingFamilyFromSettings {
+                    // Stop haptics immediately to avoid lingering feedback
+                    NotificationCenter.default.post(name: PhysicsController.stopHapticsNotification, object: nil)
+
+                    // Navigate to the first dynamic step and switch canvas
+                    let steps = DynamicStepsProvider.loadSteps()
+                    if let firstStepId = steps.first?.id {
+                        coordinator.navigateInBottomSheet(.onboardingStep(stepId: firstStepId))
+                    }
+                    coordinator.showCanvas(.mainCanvas(flow: isFamilyFlow ? .family : .individual))
+                }
+            }
             
         case .allSetToJoinYourFamily:
             PreferencesAddedSuccessSheet {
@@ -556,12 +572,11 @@ struct PersistentBottomSheet: View {
                 if coordinator.isCreatingFamilyFromSettings {
                     // Reset the flag
                     coordinator.isCreatingFamilyFromSettings = false
-                    // Navigate to home first
+                    // Navigate back to Home and request a push to Settings
                     coordinator.showCanvas(.home)
-                    // Then reopen Settings sheet after a brief delay
                     Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-                        appState.activeSheet = .settings
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        appState.navigateToSettings = true
                     }
                 } else {
                     // Normal flow - go to meet your profile
@@ -648,7 +663,18 @@ struct PersistentBottomSheet: View {
             
         case .preferencesAddedSuccess:
             PreferencesAddedSuccessSheet {
-                coordinator.navigateInBottomSheet(.meetYourProfile)
+                // If this success sheet was reached while creating family from Settings,
+                // return back to Settings instead of proceeding to Meet Your Profile/Home.
+                if coordinator.isCreatingFamilyFromSettings {
+                    coordinator.isCreatingFamilyFromSettings = false
+                    coordinator.showCanvas(.home)
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        appState.navigateToSettings = true
+                    }
+                } else {
+                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                }
             }
         }
     }
