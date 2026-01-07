@@ -13,6 +13,7 @@ struct TabBar: View {
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
     @State private var isCameraPresented = false
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     
     var body: some View {
 //        ZStack {
@@ -83,8 +84,12 @@ struct TabBar: View {
             .onChange(of: isExpanded) { oldValue, newValue in
                 something()
             }
-            .fullScreenCover(isPresented: $isCameraPresented) {
-                CameraScreen()
+            .fullScreenCover(isPresented: $isCameraPresented, onDismiss: {
+                Task {
+                    await scanHistoryStore.loadHistory(forceRefresh: true)
+                }
+            }) {
+                ScanCameraView()
             }
             
 //            VStack {

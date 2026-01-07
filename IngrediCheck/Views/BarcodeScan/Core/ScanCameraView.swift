@@ -5,41 +5,13 @@ import Combine
 import PhotosUI
 import CryptoKit
 
-struct BarcodeCameraPreview: UIViewRepresentable {
+struct ScanCameraView: View {
 
-    @ObservedObject var cameraManager: BarcodeCameraManager
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.backgroundColor = .black
-
-        if let previewLayer = cameraManager.previewLayer {
-            previewLayer.frame = UIScreen.main.bounds
-            view.layer.addSublayer(previewLayer)
-        }
-
-        return view
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {
-        if let previewLayer = cameraManager.previewLayer {
-            if previewLayer.superlayer !== uiView.layer {
-                uiView.layer.addSublayer(previewLayer)
-            }
-            if let connection = previewLayer.connection, connection.isVideoOrientationSupported {
-                connection.videoOrientation = .portrait
-            }
-            previewLayer.frame = uiView.bounds
-        }
-    }
-}
-
-struct CameraScreen: View {
-    
     @StateObject var camera = BarcodeCameraManager()
     @State private var cameraStatus: AVAuthorizationStatus = .notDetermined
     @Environment(\.scenePhase) var scenePhase
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     @State private var isCaptured: Bool = false
     @State private var overlayRect: CGRect = .zero
     @State private var overlayContainerSize: CGSize = .zero
@@ -106,15 +78,65 @@ struct CameraScreen: View {
             toastState = .scanning
             return
         }
-        
+
         // No scanIds yet: user is aligning/scanning
         guard let activeScanId = currentCenteredScanId, !activeScanId.isEmpty else {
             toastState = .scanning
             return
         }
-        
-        // TODO: For unified approach, we should fetch scan data and derive toast state from it
-        // For now, keep basic scanning state since we're transitioning to scanIds
+
+        // Check for pending placeholder (fetching details)
+        if activeScanId.hasPrefix("pending_") {
+            toastState = .extractionSuccess
+            return
+        }
+
+        // Check for skeleton card
+        if activeScanId == skeletonCardId {
+            toastState = .scanning
+            return
+        }
+
+        // Fetch scan data from cache and derive toast state
+        guard let scan = scanDataCache[activeScanId] else {
+            // No scan data available yet
+            toastState = .scanning
+            return
+        }
+
+        // Check scan state
+        if scan.state == "analyzing" || scan.state == "processing_images" {
+            toastState = .analyzing
+            return
+        }
+
+        // Check if analysis is complete
+        if scan.state == "done", let analysisResult = scan.analysis_result {
+            // Check overall match status
+            switch analysisResult.overall_match {
+            case "match":
+                toastState = .match
+            case "not_match":
+                toastState = .notMatch
+            case "uncertain":
+                toastState = .uncertain
+            default:
+                toastState = .uncertain
+            }
+            return
+        }
+
+        // Check if scan has error (empty product info and no analysis)
+        // Error state: product_info has no name/brand/ingredients and no analysis result
+        if scan.product_info.name == nil &&
+           scan.product_info.brand == nil &&
+           scan.product_info.ingredients.isEmpty &&
+           scan.analysis_result == nil {
+            toastState = .notIdentified
+            return
+        }
+
+        // Default to scanning
         toastState = .scanning
     }
     
@@ -173,9 +195,10 @@ struct CameraScreen: View {
                             analysis_id: nil
                         )
                         
-                        // Store in cache
+                        // Store in cache AND store
                         scanDataCache[scanId] = partialScan
-                        print("[BARCODE_SCAN] 💾 CameraScreen: Stored partial scan in cache - scanId: \(scanId), product_name: \(productInfo.name ?? "nil")")
+                        scanHistoryStore.upsertScan(partialScan)
+                        print("[BARCODE_SCAN] 💾 CameraScreen: Stored partial scan in cache and store - scanId: \(scanId), product_name: \(productInfo.name ?? "nil")")
                         
                         // Add real scanId at the beginning (newest first)
                         if !scanIds.contains(scanId) {
@@ -212,9 +235,10 @@ struct CameraScreen: View {
                                 analysis_id: existingScan.analysis_id
                             )
                             
-                            // Update cache
+                            // Update cache AND store
                             scanDataCache[scanId] = updatedScan
-                            print("[BARCODE_SCAN] 💾 CameraScreen: Updated scan in cache with analysis - scanId: \(scanId), overall_match: \(analysisResult.overall_match ?? "nil")")
+                            scanHistoryStore.upsertScan(updatedScan)
+                            print("[BARCODE_SCAN] 💾 CameraScreen: Updated scan in cache and store with analysis - scanId: \(scanId), overall_match: \(analysisResult.overall_match ?? "nil")")
                             
                             // Trigger UI update (ScanDataCard will refresh via scanDataCache)
                             updateToastState()
@@ -226,29 +250,66 @@ struct CameraScreen: View {
                 onError: { error, scanId in
                     // Remove placeholder on error
                     Task { @MainActor in
+                        print("[BARCODE_SCAN] ❌ CameraScreen: Barcode scan error - barcode: \(barcode), error: \(error.localizedDescription), scanId: \(scanId ?? "nil")")
+
                         if let placeholderIndex = scanIds.firstIndex(of: placeholderScanId) {
                             scanIds.remove(at: placeholderIndex)
                         }
-                        // Keep skeleton card if no active scans remain
-                        if scanIds.isEmpty {
-                            scanIds.append(skeletonCardId)
-                        }
                         pendingBarcodes.remove(barcode)
-                        
-                        // If scanId is available from error, add it to array
+
+                        // If scanId is available from error, store error state in cache and add to array
                         if let scanId = scanId {
+                            // Create empty product info for error state
+                            let emptyProductInfo = DTO.ScanProductInfo(
+                                name: nil,
+                                brand: nil,
+                                ingredients: [],
+                                images: nil
+                            )
+
+                            // Create error scan with minimal data to show error state
+                            let errorScan = DTO.Scan(
+                                id: scanId,
+                                scan_type: "barcode",
+                                barcode: barcode,
+                                state: "done",  // Mark as done but with no results (indicates error)
+                                product_info: emptyProductInfo,  // Empty product info = error state
+                                product_info_source: nil,
+                                analysis_result: nil,  // No analysis = error state
+                                images: [],  // Empty images array
+                                latest_guidance: nil,
+                                created_at: getCurrentTimestamp(),
+                                last_activity_at: getCurrentTimestamp(),
+                                is_favorited: nil,
+                                analysis_id: nil
+                            )
+
+                            // Store error scan in cache AND store
+                            scanDataCache[scanId] = errorScan
+                            scanHistoryStore.upsertScan(errorScan)
+                            print("[BARCODE_SCAN] 💾 CameraScreen: Stored error scan in cache and store - scanId: \(scanId)")
+
                             // Remove skeleton if adding error scan
                             if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
                                 scanIds.remove(at: skeletonIndex)
                             }
+
+                            // Add error scanId to array
                             if !scanIds.contains(scanId) {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                     scanIds.insert(scanId, at: 0)
                                     scrollTargetScanId = scanId
                                 }
                                 barcodeToScanIdMap[barcode] = scanId
+                                print("[BARCODE_SCAN] ✅ CameraScreen: Added error scanId to scanIds - scanId: \(scanId)")
+                            }
+                        } else {
+                            // No scanId from error - keep skeleton card if no active scans remain
+                            if scanIds.isEmpty {
+                                scanIds.append(skeletonCardId)
                             }
                         }
+
                         updateToastState()
                     }
                 }
@@ -274,37 +335,49 @@ struct CameraScreen: View {
     
     // MARK: - Scan History
     private func loadScanHistory() async {
-        print("[SCAN_HISTORY] 🔵 CameraScreen: Loading scan history")
-        do {
-            let historyResponse = try await webService.fetchScanHistory(limit: 20, offset: 0)
-            await MainActor.run {
-                // Store history scans in cache to avoid API calls and prime barcode-to-scanId map
-                for scan in historyResponse.scans {
-                    scanDataCache[scan.id] = scan
-                    
-                    // If the history scan has a barcode, remember the mapping so we can reuse the card
-                    if let barcode = scan.barcode, !barcode.isEmpty {
-                        // Don't overwrite an active mapping – prefer the most recent active scan
-                        if barcodeToScanIdMap[barcode] == nil {
-                            barcodeToScanIdMap[barcode] = scan.id
-                        }
-                    }
-                }
-                print("[SCAN_HISTORY] 💾 CameraScreen: Stored \(historyResponse.scans.count) history scans in cache and updated barcodeToScanIdMap (\(barcodeToScanIdMap.count) entries)")
-                
-                // Extract scan IDs from history (excluding any that are already in active scans)
-                let activeScanIdsSet = Set(scanIds.filter { !$0.hasPrefix("pending_") && $0 != skeletonCardId })
-                let historyIds = historyResponse.scans
-                    .map { $0.id }
-                    .filter { !activeScanIdsSet.contains($0) }  // Don't duplicate active scans
-                
-                historyScanIds = historyIds
-                print("[SCAN_HISTORY] ✅ CameraScreen: Loaded \(historyIds.count) history scan IDs")
+        print("[SCAN_HISTORY] 🔵 CameraScreen: Loading scan history from store")
+
+        // If store is currently loading, wait for it to complete
+        // If store already has data (loaded by HomeView), skip the API call
+        if scanHistoryStore.isLoading {
+            print("[SCAN_HISTORY] ⏳ CameraScreen: Store is loading, waiting...")
+            // Wait for loading to complete (poll with short delay)
+            while scanHistoryStore.isLoading {
+                try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
             }
-        } catch {
-            print("[SCAN_HISTORY] ❌ CameraScreen: Failed to load scan history - error: \(error.localizedDescription)")
+            print("[SCAN_HISTORY] ✅ CameraScreen: Store finished loading")
+        } else if scanHistoryStore.scans.isEmpty {
+            // Only load from API if store has no data
+            await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+        } else {
+            print("[SCAN_HISTORY] 📦 CameraScreen: Using existing store data (\(scanHistoryStore.scans.count) scans)")
+        }
+
+        await syncHistoryFromStore()
+    }
+    
+    /// Syncs local state with data from ScanHistoryStore
+    private func syncHistoryFromStore() async {
+        await MainActor.run {
+            // Sync store data to local cache for immediate access
+            for scan in scanHistoryStore.scans {
+                scanDataCache[scan.id] = scan
+            }
+
+            // Use store's barcode mapping
+            barcodeToScanIdMap = scanHistoryStore.barcodeToScanIdMap
+
+            // Extract scan IDs from store history (excluding any that are already in active scans)
+            let activeScanIdsSet = Set(scanIds.filter { !$0.hasPrefix("pending_") && $0 != skeletonCardId })
+            let historyIds = scanHistoryStore.scans
+                .map { $0.id }
+                .filter { !activeScanIdsSet.contains($0) }  // Don't duplicate active scans
+
+            historyScanIds = historyIds
+            print("[SCAN_HISTORY] ✅ CameraScreen: Synced \(historyIds.count) history scan IDs from store")
         }
     }
+
     
     // Computed property to combine active scans and history
     private var allCarouselItems: [String] {
@@ -560,7 +633,7 @@ struct CameraScreen: View {
                 }
             
             if mode == .scanner {
-                ScannerOverlay(onRectChange: { rect, size in
+                BarcodeScannerOverlay(onRectChange: { rect, size in
                     overlayRect = rect
                     overlayContainerSize = size
                     camera.updateRectOfInterest(overlayRect: rect, containerSize: size)
@@ -584,23 +657,23 @@ struct CameraScreen: View {
             
             VStack {
                 HStack {
-                    BackButton()
+                    ScanBackButton()
                     Spacer()
                     if mode == .scanner {
-                        Flashcapsul(isScannerMode: true)
+                        FlashToggleButton(isScannerMode: true)
                     }
                 }
                 .padding(.horizontal,20)
                 .padding(.bottom, 23)
                 
-                tostmsg(state: toastState)
+                ScanStatusToast(state: toastState)
                     .onAppear {
                         updateToastState()
                     }
                 Spacer()
                 if mode == .photo {
                     HStack {
-                        Flashcapsul(
+                        FlashToggleButton(
                             isScannerMode: false,
                             onTogglePhotoFlash: { enabled in
                                 photoFlashEnabled = enabled
@@ -775,6 +848,7 @@ struct CameraScreen: View {
                                 initialScan: scanDataCache[itemId],  // nil for skeleton/pending/photo scans
                                 isSubmitting: isSubmitting,  // Track if image is currently being submitted
                                 localImages: localImagesArray,  // Pass locally captured images
+                                cameraModeType: mode == .photo ? "photo" : "barcode",  // Pass current camera mode for skeleton/pending states
                                 onRetryShown: {
                                     showRetryCallout = true
                                 },
@@ -791,6 +865,44 @@ struct CameraScreen: View {
                                     scanDataCache[itemId] = updatedScan
                                     updateToastState()
                                 },
+                                onFavoriteToggle: { scanId, isFavorited in
+                                    // Toggle favorite status via API
+                                    Task {
+                                        do {
+                                            // Use new toggleFavorite API which returns actual state
+                                            let newFavoriteState = try await webService.toggleFavorite(scanId: scanId)
+                                            print("[FAVORITE] ✅ Toggled favorite - scanId: \(scanId), is_favorited: \(newFavoriteState)")
+
+                                            // Update cache with new favorite status from API response
+                                            if let cachedScan = scanDataCache[scanId] {
+                                                // Create updated scan with new favorite status
+                                                let updatedScan = DTO.Scan(
+                                                    id: cachedScan.id,
+                                                    scan_type: cachedScan.scan_type,
+                                                    barcode: cachedScan.barcode,
+                                                    state: cachedScan.state,
+                                                    product_info: cachedScan.product_info,
+                                                    product_info_source: cachedScan.product_info_source,
+                                                    analysis_result: cachedScan.analysis_result,
+                                                    images: cachedScan.images,
+                                                    latest_guidance: cachedScan.latest_guidance,
+                                                    created_at: cachedScan.created_at,
+                                                    last_activity_at: cachedScan.last_activity_at,
+                                                    is_favorited: newFavoriteState,
+                                                    analysis_id: cachedScan.analysis_id
+                                                )
+
+                                                // Update cache AND store
+                                                await MainActor.run {
+                                                    scanDataCache[scanId] = updatedScan
+                                                    scanHistoryStore.updateFavoriteStatus(scanId: scanId, isFavorited: newFavoriteState)
+                                                }
+                                            }
+                                        } catch {
+                                            print("[FAVORITE] ❌ Failed to toggle favorite - scanId: \(scanId), error: \(error.localizedDescription)")
+                                        }
+                                    }
+                                },
                                 onTap: { product, matchStatus, ingredientRecommendations, overallAnalysis, tappedScanId in
                                         selectedProduct = product
                                         selectedMatchStatus = matchStatus
@@ -805,6 +917,19 @@ struct CameraScreen: View {
                         onCardCenterChanged: { nearestScanId in
                             currentCenteredScanId = nearestScanId
                             updateToastState()
+                            
+                            // Check for pagination trigger
+                            if let nearestScanId,
+                               let index = allCarouselItems.firstIndex(of: nearestScanId),
+                               index >= allCarouselItems.count - 3 {
+                                Task {
+                                    if scanHistoryStore.hasMore && !scanHistoryStore.isLoading {
+                                        print("[SCAN_HISTORY] 🔄 CameraScreen: Reached end of carousel, loading more history...")
+                                        await scanHistoryStore.loadMore()
+                                        await syncHistoryFromStore()
+                                    }
+                                }
+                            }
                         },
                         cardCenterData: $cardCenterData
                     )
@@ -952,7 +1077,14 @@ struct CameraScreen: View {
                     scanId: selectedScanId,  // NEW: Pass scanId for real-time updates
                     initialScan: initialScan,  // NEW: Pass initial scan data
                     localImages: localImagesForScan,  // Pass local images for photo mode
-                    isPlaceholderMode: false
+                    isPlaceholderMode: false,
+                    presentationSource: .cameraView,
+                    onRequestCameraWithScan: { requestedScanId in
+                        // Handle camera request from ProductDetail
+                        // Switch to photo mode and scroll to the requested scan
+                        mode = .photo
+                        scrollTargetScanId = requestedScanId
+                    }
                 )
             } else {
                 ProductDetailView(isPlaceholderMode: true)
@@ -964,8 +1096,53 @@ struct CameraScreen: View {
                         maxTotalCount: 10)
         }
     }
-    
-    
+}
+
+// MARK: - ScanCameraView with Initial State
+
+/// Wrapper for ScanCameraView that accepts initial mode and scanId
+struct ScanCameraViewWithInitialState: View {
+    let initialScanId: String?
+    let initialMode: CameraMode
+
+    var body: some View {
+        ScanCameraViewInternal(
+            initialScanId: initialScanId,
+            initialMode: initialMode
+        )
+    }
+}
+
+/// Internal view that accepts initial state parameters
+private struct ScanCameraViewInternal: View {
+    let initialScanId: String?
+    let initialMode: CameraMode
+
+    var body: some View {
+        ScanCameraView(
+            initialMode: initialMode,
+            initialScrollTarget: initialScanId
+        )
+    }
+}
+
+extension ScanCameraView {
+
+    // MARK: - Initializer with initial state
+
+    init(initialMode: CameraMode? = nil, initialScrollTarget: String? = nil) {
+        // Set initial mode if provided
+        if let initialMode = initialMode {
+            self._mode = State(initialValue: initialMode)
+        }
+
+        // Set initial scroll target if provided
+        if let initialScrollTarget = initialScrollTarget {
+            self._scrollTargetScanId = State(initialValue: initialScrollTarget)
+        }
+    }
+
+
     // MARK: - Photo Picker for gallery selection
     
     struct PhotoPicker: UIViewControllerRepresentable {

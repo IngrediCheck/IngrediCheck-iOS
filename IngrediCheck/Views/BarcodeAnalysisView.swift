@@ -22,10 +22,15 @@ struct HeaderImage: View {
         .task(id: imageLocation) {
             // Reset before loading a new image when imageLocation changes
             image = nil
-            if let loaded = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
+            do {
+                print("[HeaderImage] Fetching image for location: \(imageLocation)")
+                let loaded = try await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium)
                 await MainActor.run {
                     self.image = loaded
+                    print("[HeaderImage] ✅ Image loaded successfully")
                 }
+            } catch {
+                print("[HeaderImage] ❌ Failed to fetch image: \(error)")
             }
         }
     }

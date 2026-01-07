@@ -3,13 +3,20 @@ import SwiftUI
 
 class DTO {
 
+    struct Vote: Codable, Hashable {
+        let id: String
+        let value: String // "up" or "down"
+    }
+
     enum ImageLocationInfo: Codable, Equatable, Hashable {
         case url(URL)
-        case imageFileHash(String)
+        case imageFileHash(String)  // For productimages bucket
+        case scanImagePath(String)  // For scans bucket (user-uploaded scan images)
         
         enum CodingKeys: String, CodingKey {
             case url
             case imageFileHash
+            case scanImagePath
         }
         
         init(from decoder: Decoder) throws {
@@ -17,6 +24,8 @@ class DTO {
             if let urlString = try container.decodeIfPresent(String.self, forKey: .url),
                let url = URL(string: urlString) {
                 self = .url(url)
+            } else if let scanImagePath = try container.decodeIfPresent(String.self, forKey: .scanImagePath) {
+                self = .scanImagePath(scanImagePath)
             } else if let imageFileHash = try container.decodeIfPresent(String.self, forKey: .imageFileHash) {
                 self = .imageFileHash(imageFileHash)
             } else {
@@ -530,6 +539,8 @@ class DTO {
         let overall_analysis: String?
         let overall_match: String?  // "matched", "uncertain", "unmatched" - optional as it may be missing in some responses
         let ingredient_analysis: [ScanIngredientAnalysis]
+        let is_stale: Bool?
+        let vote: Vote?
         
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -546,6 +557,12 @@ class DTO {
             ingredient_analysis = try container.decodeIfPresent([ScanIngredientAnalysis].self, forKey: .ingredient_analysis)
                 ?? container.decodeIfPresent([ScanIngredientAnalysis].self, forKey: .flaggedIngredients)
                 ?? []
+            
+            // Decode is_stale (snake_case from API)
+            is_stale = try container.decodeIfPresent(Bool.self, forKey: .is_stale)
+            
+            // Decode vote
+            vote = try container.decodeIfPresent(Vote.self, forKey: .vote)
         }
         
         func encode(to encoder: Encoder) throws {
@@ -553,6 +570,8 @@ class DTO {
             try container.encodeIfPresent(overall_analysis, forKey: .overall_analysis)
             try container.encodeIfPresent(overall_match, forKey: .overall_match)
             try container.encode(ingredient_analysis, forKey: .ingredient_analysis)
+            try container.encodeIfPresent(is_stale, forKey: .is_stale)
+            try container.encodeIfPresent(vote, forKey: .vote)
         }
         
         enum CodingKeys: String, CodingKey {
@@ -562,6 +581,8 @@ class DTO {
             case overallMatch  // Support camelCase from API
             case ingredient_analysis
             case flaggedIngredients  // Support camelCase from API
+            case is_stale
+            case vote
         }
     }
     
@@ -570,6 +591,7 @@ class DTO {
         let match: String  // "unmatched", "uncertain"
         let reasoning: String
         let members_affected: [String]
+        let vote: Vote?
         
         // Note: API uses snake_case (members_affected), so we use default CodingKeys
     }
@@ -597,6 +619,7 @@ class DTO {
         struct InventoryScanImage: Codable, Hashable {
             let type: String  // "inventory"
             let url: String
+            let vote: Vote?
         }
         
         struct UserScanImage: Codable, Hashable {
@@ -647,6 +670,7 @@ class DTO {
         let state: String  // "processing_images", "analyzing", or "done"
         let product_info: ScanProductInfo
         let product_info_source: String?  // "openfoodfacts", "extraction", "enriched"
+        let product_info_vote: Vote?
         let analysis_result: ScanAnalysisResult?
         let images: [ScanImage]
         let latest_guidance: String?
@@ -664,6 +688,7 @@ class DTO {
             case state
             case product_info
             case product_info_source
+            case product_info_vote
             case analysis_result
             case images
             case latest_guidance
@@ -698,6 +723,7 @@ class DTO {
             }
             
             product_info_source = try container.decodeIfPresent(String.self, forKey: .product_info_source)
+            product_info_vote = try container.decodeIfPresent(Vote.self, forKey: .product_info_vote)
             analysis_result = try container.decodeIfPresent(ScanAnalysisResult.self, forKey: .analysis_result)
             images = try container.decodeIfPresent([ScanImage].self, forKey: .images) ?? []
             latest_guidance = try container.decodeIfPresent(String.self, forKey: .latest_guidance)
@@ -715,6 +741,7 @@ class DTO {
             state: String,
             product_info: ScanProductInfo,
             product_info_source: String?,
+            product_info_vote: Vote? = nil,
             analysis_result: ScanAnalysisResult?,
             images: [ScanImage],
             latest_guidance: String?,
@@ -729,6 +756,7 @@ class DTO {
             self.state = state
             self.product_info = product_info
             self.product_info_source = product_info_source
+            self.product_info_vote = product_info_vote
             self.analysis_result = analysis_result
             self.images = images
             self.latest_guidance = latest_guidance
@@ -752,6 +780,21 @@ class DTO {
         let scans: [Scan]
         let total: Int
         let has_more: Bool
+    }
+    
+    // Feedback Request
+    struct FeedbackRequest: Codable {
+        let target: String? // "product_info", "analysis_result", "ingredient_analysis", "image"
+        let vote: String // "up", "down", "none"
+        let scan_id: String
+        let analysis_id: String?
+        let image_url: String?
+        let ingredient_name: String?
+        let comment: String?
+    }
+    
+    struct FeedbackUpdateRequest: Codable {
+        let vote: String // "up", "down", "none"
     }
 }
 
@@ -837,14 +880,39 @@ extension DTO.Scan {
     }
     
     func toProduct() -> DTO.Product {
-        // Convert ScanImageInfo to ImageLocationInfo
-        let imageLocations: [DTO.ImageLocationInfo] = product_info.images?.compactMap { scanImageInfo in
-            guard let urlString = scanImageInfo.url,
-                  let url = URL(string: urlString) else {
-                return nil
+        // Priority: Use top-level images array if available (supports both inventory and user images)
+        var imageLocations: [DTO.ImageLocationInfo] = []
+        
+        if !images.isEmpty {
+            // Convert ScanImage to ImageLocationInfo
+            for scanImage in images {
+                switch scanImage {
+                case .inventory(let img):
+                    // Inventory images use URL
+                    if let url = URL(string: img.url) {
+                        imageLocations.append(.url(url))
+                    }
+                case .user(let img):
+                    // User-uploaded images use storage_path (fetched from "scan-images" bucket)
+                    // storage_path format: "SCAN_ID/content_hash.jpg"
+                    // Only include processed images with valid storage_path
+                    if img.status == "processed", let storagePath = img.storage_path, !storagePath.isEmpty {
+                        imageLocations.append(.scanImagePath(storagePath))
+                    }
+                }
             }
-            return .url(url)
-        } ?? []
+        }
+        
+        // Fallback: Use product_info.images if no top-level images
+        if imageLocations.isEmpty {
+            imageLocations = product_info.images?.compactMap { scanImageInfo in
+                guard let urlString = scanImageInfo.url,
+                      let url = URL(string: urlString) else {
+                    return nil
+                }
+                return .url(url)
+            } ?? []
+        }
         
         return DTO.Product(
             barcode: barcode,
@@ -854,5 +922,47 @@ extension DTO.Scan {
             images: imageLocations,
             claims: product_info.claims
         )
+    }
+}
+
+// MARK: - ProductRecommendation Display Properties
+extension DTO.ProductRecommendation {
+    var displayText: String {
+        switch self {
+        case .match:
+            return "Matched"
+        case .needsReview:
+            return "Uncertain"
+        case .notMatch:
+            return "Unmatched"
+        case .unknown:
+            return "Unknown"
+        }
+    }
+    
+    var iconAssetName: String {
+        switch self {
+        case .match:
+            return "safecircletick"
+        case .needsReview:
+            return "caution"
+        case .notMatch:
+            return "unsafe"
+        case .unknown:
+            return "questionmark.circle"
+        }
+    }
+    
+    var gradientColors: [Color] {
+        switch self {
+        case .match:
+            return [Color(hex: "#9DCF10"), Color(hex: "#6B8E06")]
+        case .needsReview:
+            return [Color(hex: "#FFC107"), Color(hex: "#FFA000")]
+        case .notMatch:
+            return [Color(hex: "#FF5252"), Color(hex: "#D32F2F")]
+        case .unknown:
+            return [Color(hex: "#9E9E9E"), Color(hex: "#757575")]
+        }
     }
 }

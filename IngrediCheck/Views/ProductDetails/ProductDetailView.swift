@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+enum ProductDetailPresentationSource {
+    case homeView
+    case cameraView
+}
+
 struct ProductDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(WebService.self) private var webService
@@ -17,8 +22,9 @@ struct ProductDetailView: View {
     @State private var isIngredientsAlertExpanded = false
     @State private var selectedImageIndex = 0
     @State private var activeIngredientHighlight: IngredientHighlight?
-    @State private var thumbSelection: ThumbSelection? = nil
     @State private var isCameraPresentedFromDetail = false
+    @State private var isImageViewerPresented = false
+    @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
 
     // Real-time scan observation (new approach)
     var scanId: String? = nil  // If provided, view will fetch/poll for scan updates
@@ -33,6 +39,12 @@ struct ProductDetailView: View {
     var overallAnalysis: String? = nil
     var localImages: [UIImage]? = nil  // Local images captured in photo mode
     var isPlaceholderMode: Bool = false
+
+    // Presentation source tracking
+    var presentationSource: ProductDetailPresentationSource = .homeView
+
+    // Bindings for camera control (when presented from CameraView)
+    var onRequestCameraWithScan: ((String) -> Void)? = nil
 
     private let fallbackProductStatus: ProductMatchStatus = .unknown
 
@@ -68,14 +80,20 @@ struct ProductDetailView: View {
         return overallAnalysis
     }
 
+    private var resolvedIsStale: Bool {
+        return scan?.analysis_result?.is_stale ?? false
+    }
+
     // Check if analysis is in progress
+
+
     private var isAnalyzing: Bool {
-        scan?.state == "analyzing" || scan?.state == "processing_images"
+        isReanalyzingLocally || scan?.state == "analyzing" || scan?.state == "processing_images" || scan?.state == "fetching_product_info"
     }
 
     // Combined images: local images (if available) take priority over API images
     // This ensures photo mode shows the user's captured images
-    private enum ProductImage: Identifiable {
+    enum ProductImage: Identifiable {
         case local(UIImage)
         case api(DTO.ImageLocationInfo)
 
@@ -89,6 +107,8 @@ struct ProductDetailView: View {
                     return "api_\(url.absoluteString)"
                 case .imageFileHash(let hash):
                     return "api_\(hash)"
+                case .scanImagePath(let path):
+                    return "api_\(path)"
                 }
             }
         }
@@ -114,16 +134,23 @@ struct ProductDetailView: View {
         return images
     }
 
-    // Dietary tags from product claims
+    // Dietary tags from product claims (API now includes emojis in claim text)
     private var dietaryTags: [DietaryTag] {
         guard let claims = resolvedProduct?.claims, !claims.isEmpty else {
             return []
         }
 
-        // Convert claims to DietaryTag objects
-        return claims.map { claim in
-            DietaryTag(name: claim, icon: "white-rounded-checkmark")
-        }
+        // Directly map claims to DietaryTag (emojis already included from API)
+        return claims.map { DietaryTag(claim: $0) }
+    }
+    
+    // Check if product has images/name but missing ingredients
+    private var hasMissingIngredients: Bool {
+        guard let product = resolvedProduct else { return false }
+        // Has product info (name or brand or images) but no ingredients
+        let hasProductInfo = product.name != nil || product.brand != nil || !product.images.isEmpty || !allImages.isEmpty
+        let hasNoIngredients = product.ingredients.isEmpty
+        return hasProductInfo && hasNoIngredients && !isPlaceholderMode && !isAnalyzing
     }
     // Removed hardcoded descriptionText - now using resolvedDescriptionText computed property
     
@@ -184,11 +211,16 @@ struct ProductDetailView: View {
             .map { recommendation in
                 let status: IngredientAlertStatus = recommendation.safetyRecommendation == .definitelyUnsafe ? .unmatched : .uncertain
                 
+                // Find analysis matching this ingredient to get vote status
+                let analysis = scan?.analysis_result?.ingredient_analysis.first { $0.ingredient == recommendation.ingredientName }
+                
                 return IngredientAlertItem(
                     name: recommendation.ingredientName,
                     detail: recommendation.reasoning,
                     status: status,
-                    memberIdentifiers: recommendation.memberIdentifiers  // Use memberIdentifiers array
+                    memberIdentifiers: recommendation.memberIdentifiers,  // Use memberIdentifiers array
+                    vote: analysis?.vote,
+                    rawIngredientName: analysis?.ingredient
                 )
             }
     }
@@ -236,57 +268,80 @@ struct ProductDetailView: View {
     }
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                header
-                productGallery
-                productInformation
-                dietaryTagsRow
-                
-                if !resolvedIngredientAlertItems.isEmpty {
-                    IngredientsAlertCard(
-                        isExpanded: $isIngredientsAlertExpanded,
-                        items: resolvedIngredientAlertItems,
-                        status: resolvedStatus,
-                        overallAnalysis: resolvedOverallAnalysis,
-                        ingredientRecommendations: resolvedIngredientRecommendations
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                }
-                
+        VStack(spacing: 0) {
+            header
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // Gallery section - never redacted, shows placeholder images
+                    productGallery
+                        .unredacted()
+                    
+                    // Content sections - redacted in placeholder mode
+                    Group {
+                        productInformation
+                        dietaryTagsRow
+                        
+                        // Show Missing Ingredients UI or regular content
+                        if hasMissingIngredients {
+                            missingIngredientsView
+                        } else {
+                            if !resolvedIngredientAlertItems.isEmpty || resolvedStatus == .matched {
+                                IngredientsAlertCard(
+                                    isExpanded: $isIngredientsAlertExpanded,
+                                    items: resolvedIngredientAlertItems,
+                                    status: resolvedStatus,
+                                    overallAnalysis: resolvedOverallAnalysis,
+                                    ingredientRecommendations: resolvedIngredientRecommendations,
+                                    onFeedback: { item, voteType in
+                                        handleIngredientFeedback(item: item, voteType: voteType)
+                                    }
+                                )
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 20)
+                            }
+                            
 
-                CollapsibleSection(
-                    title: "Ingredients",
-                    isExpanded: $isIngredientsExpanded
-                ) {
-                    if resolvedIngredientParagraphs.isEmpty {
-                        Text("No ingredients available")
-                            .font(ManropeFont.regular.size(14))
-                            .foregroundStyle(.grayScale100)
-                            .lineSpacing(4)
-                    } else {
-                        IngredientDetailsView(
-                            paragraphs: resolvedIngredientParagraphs,
-                            activeHighlight: $activeIngredientHighlight,
-                            highlightColor: resolvedStatus.color
-                        )
+                            CollapsibleSection(
+                                title: "Ingredients",
+                                isExpanded: $isIngredientsExpanded
+                            ) {
+                                if resolvedIngredientParagraphs.isEmpty {
+                                    Text("No ingredients available")
+                                        .font(ManropeFont.regular.size(14))
+                                        .foregroundStyle(.grayScale100)
+                                        .lineSpacing(4)
+                                } else {
+                                    IngredientDetailsView(
+                                        paragraphs: resolvedIngredientParagraphs,
+                                        activeHighlight: $activeIngredientHighlight,
+                                        highlightColor: resolvedStatus.color
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 40)
+                        }
                     }
+                    .redacted(reason: isPlaceholderMode ? .placeholder : [])
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
             }
         }
         .background(Color(hex: "FFFFFF"))
         .navigationBarBackButtonHidden(true)
-        .redacted(reason: isPlaceholderMode ? .placeholder : [])
         .onChange(of: isIngredientsExpanded) { _, expanded in
             if !expanded {
                 activeIngredientHighlight = nil
             }
         }
         .fullScreenCover(isPresented: $isCameraPresentedFromDetail) {
-            CameraScreen()
+            ScanCameraViewWrapper(initialScanId: scanId, initialMode: .photo)
+        }
+        .fullScreenCover(isPresented: $isImageViewerPresented) {
+            FullScreenImageViewer(
+                images: allImages,
+                selectedIndex: $selectedImageIndex
+            )
         }
         .task(id: scanId) {
             // If scanId is provided, fetch and poll for scan updates
@@ -312,7 +367,17 @@ struct ProductDetailView: View {
             if let initialScan = initialScan, let scanId = scanId, initialScan.id == scanId {
                 await MainActor.run {
                     self.scan = initialScan
+                    // Update favorite state from scan
+                    self.isFavorite = initialScan.is_favorited ?? false
                     print("[ProductDetailView] 🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
+                }
+            }
+        }
+        .task(id: scan?.is_favorited) {
+            // Update favorite state whenever scan favorite status changes
+            if let isFavorited = scan?.is_favorited {
+                await MainActor.run {
+                    self.isFavorite = isFavorited
                 }
             }
         }
@@ -320,6 +385,95 @@ struct ProductDetailView: View {
             // Cancel polling when view disappears
             pollingTask?.cancel()
             pollingTask = nil
+        }
+    }
+
+    // MARK: - Favorite Toggle
+
+    private func toggleFavorite() {
+        // Determine which ID to use for favoriting
+        // Priority: scanId > product data (shouldn't happen without scanId in new flow)
+        guard let favoriteId = scanId else {
+            print("[FAVORITE] ⚠️ Cannot favorite - no scanId available")
+            return
+        }
+
+        // Optimistically update UI
+        let previousState = isFavorite
+        isFavorite = !previousState
+
+        // Call API - toggleFavorite returns the actual new state
+        Task {
+            do {
+                let newFavoriteState = try await webService.toggleFavorite(scanId: favoriteId)
+                
+                // Update with server's response (in case of race conditions)
+                await MainActor.run {
+                    self.isFavorite = newFavoriteState
+                }
+
+                // Update scan object with new favorite status
+                if let currentScan = scan {
+                    let updatedScan = DTO.Scan(
+                        id: currentScan.id,
+                        scan_type: currentScan.scan_type,
+                        barcode: currentScan.barcode,
+                        state: currentScan.state,
+                        product_info: currentScan.product_info,
+                        product_info_source: currentScan.product_info_source,
+                        analysis_result: currentScan.analysis_result,
+                        images: currentScan.images,
+                        latest_guidance: currentScan.latest_guidance,
+                        created_at: currentScan.created_at,
+                        last_activity_at: currentScan.last_activity_at,
+                        is_favorited: newFavoriteState,
+                        analysis_id: currentScan.analysis_id
+                    )
+
+                    await MainActor.run {
+                        self.scan = updatedScan
+                    }
+                }
+            } catch {
+                print("[FAVORITE] ❌ Failed to toggle favorite - scanId: \(favoriteId), error: \(error.localizedDescription)")
+
+                // Revert UI on error
+                await MainActor.run {
+                    self.isFavorite = previousState
+                }
+            }
+        }
+    }
+
+    private func performReanalysis() {
+        guard let scanId = scanId else { return }
+        
+        Task {
+            do {
+                print("[ProductDetailView] 🔄 Triggering re-analysis - scan_id: \(scanId)")
+                
+                // Show analyzing state immediately
+                await MainActor.run {
+                    self.isReanalyzingLocally = true
+                }
+                
+                let updatedScan = try await webService.reanalyzeScan(scanId: scanId)
+                
+                await MainActor.run {
+                    self.scan = updatedScan
+                    self.isReanalyzingLocally = false // Reset local state as scan state takes over
+                    
+                    // If state became one that requires polling, restart polling
+                    if updatedScan.state != "done" {
+                        startPolling(scanId: scanId)
+                    }
+                }
+            } catch {
+                print("[ProductDetailView] ❌ Re-analysis failed: \(error)")
+                await MainActor.run {
+                    self.isReanalyzingLocally = false
+                }
+            }
         }
     }
 
@@ -333,7 +487,9 @@ struct ProductDetailView: View {
 
             await MainActor.run {
                 self.scan = fetchedScan
-                print("[ProductDetailView] ✅ Scan fetched - scan_id: \(scanId), state: \(fetchedScan.state)")
+                // Update favorite state from fetched scan
+                self.isFavorite = fetchedScan.is_favorited ?? false
+                print("[ProductDetailView] ✅ Scan fetched - scan_id: \(scanId), state: \(fetchedScan.state), is_favorited: \(fetchedScan.is_favorited ?? false)")
             }
 
             // Start polling if scan is still processing or analyzing
@@ -396,6 +552,80 @@ struct ProductDetailView: View {
             }
         }
     }
+    
+    // MARK: - Feedback Handling
+    
+    private func handleProductFeedback(voteType: String) {
+        guard let scan = scan else { return }
+        
+        Task {
+            do {
+                let updatedScan: DTO.Scan
+                
+                // Check if user already voted with same value -> Toggle off (Update to "none")
+                if let currentVote = scan.product_info_vote, currentVote.value == voteType {
+                   updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
+                }
+                // Check if user already voted but different value -> Update to new value
+                else if let currentVote = scan.product_info_vote {
+                    updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
+                }
+                // No existing vote -> Create new feedback
+                else {
+                    let request = DTO.FeedbackRequest(
+                        target: "product_info",
+                        vote: voteType,
+                        scan_id: scan.id,
+                        analysis_id: scan.analysis_id,
+                        image_url: nil,
+                        ingredient_name: nil,
+                        comment: nil
+                    )
+                    updatedScan = try await webService.submitFeedback(request: request)
+                }
+                
+                await MainActor.run {
+                    self.scan = updatedScan
+                }
+            } catch {
+                print("Error submitting feedback: \(error)")
+            }
+        }
+    }
+    
+    private func handleIngredientFeedback(item: IngredientAlertItem, voteType: String) {
+        guard let scan = scan, let rawName = item.rawIngredientName else { return }
+        
+        Task {
+            do {
+                let updatedScan: DTO.Scan
+                
+                // Check existing vote
+                if let currentVote = item.vote, currentVote.value == voteType {
+                     updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
+                } else if let currentVote = item.vote {
+                     updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
+                } else {
+                    let request = DTO.FeedbackRequest(
+                        target: "ingredient_analysis",
+                        vote: voteType,
+                        scan_id: scan.id,
+                        analysis_id: scan.analysis_id,
+                        image_url: nil,
+                        ingredient_name: rawName,
+                        comment: nil
+                    )
+                    updatedScan = try await webService.submitFeedback(request: request)
+                }
+                
+                await MainActor.run {
+                    self.scan = updatedScan
+                }
+            } catch {
+                print("Error submitting ingredient feedback: \(error)")
+            }
+        }
+    }
 
     private var header: some View {
         HStack {
@@ -405,6 +635,8 @@ struct ProductDetailView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.black)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             
             Spacer()
@@ -416,11 +648,24 @@ struct ProductDetailView: View {
             Spacer()
             
             Button {
-                isFavorite.toggle()
+                toggleFavorite()
             } label: {
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
                     .font(.system(size: 20))
                     .foregroundStyle(isFavorite ? Color(hex: "#FF1100") : .grayScale150)
+            }
+            .disabled(scanId == nil && product == nil)  // Disable if no scan or product data
+            
+            // Re-analysis button (nearby heart icon)
+            if resolvedIsStale {
+                Button {
+                    performReanalysis()
+                } label: {
+                    Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color(hex: "#FF8A00")) // Orange to indicate action needed/stale
+                }
+                .padding(.leading, 8)
             }
         }
         .padding(.horizontal, 20)
@@ -428,172 +673,215 @@ struct ProductDetailView: View {
         .padding(.bottom, 20)
     }
     
-    private var productGallery: some View {
-        HStack(spacing: 12) {
-            if !allImages.isEmpty {
-                // Display selected image (local or API)
-                Group {
-                    switch allImages[selectedImageIndex] {
-                    case .local(let image):
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .api(let location):
-                        HeaderImage(imageLocation: location)
-                    }
-                }
+    // MARK: - Missing Ingredients View
+    
+    /// Shows when product has images/name but no ingredients
+    private var missingIngredientsView: some View {
+        VStack(spacing: 12) {
+            Spacer()
+                .frame(height: 20)
+            
+            // Bot Logo (black and white)
+            Image("ingrediBot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 117, height: 106)
+                .saturation(0) // Grayscale effect
+            
+            // Title
+            Text("Missing Ingredients")
+                .font(NunitoFont.bold.size(20))
+                .foregroundStyle(Color(hex: "#303030"))
+                .multilineTextAlignment(.center)
+            
+            // Description
+            Text("Add photos to help us analyze it.")
+                .font(ManropeFont.medium.size(14))
+                .foregroundStyle(Color(hex: "#949494"))
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+            
+            // Upload photos button
+            Button {
+                handleCameraButtonTap()
+            } label: {
+                GreenCapsule(title: "Upload photos", takeFullWidth: false)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 40)
+            
+            Spacer()
+                .frame(height: 40)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Gallery Helper Components
+    
+    /// Resolves ProductImage enum to actual SwiftUI Image view
+    @ViewBuilder
+    private func imageContent(for productImage: ProductImage) -> some View {
+        switch productImage {
+        case .local(let image):
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        case .api(let location):
+            HeaderImage(imageLocation: location)
+        }
+    }
+    
+    /// Thumbnail view for a product image with selection styling
+    @ViewBuilder
+    private func thumbnailView(at index: Int) -> some View {
+        let isSelected = selectedImageIndex == index
+
+        Button {
+            if !isPlaceholderMode {
+                selectedImageIndex = index
+            }
+        } label: {
+            imageContent(for: allImages[index])
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 11))
+                .opacity(isSelected ? 0.5 : 1.0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 11)
+                        .strokeBorder(
+                            isSelected ? Color.primary600 : Color(hex: "#E3E3E3"),
+                            lineWidth: 0.75
+                        )
+                )
+        }
+        .disabled(isPlaceholderMode)
+    }
+    
+    /// Placeholder thumbnail for empty image slots
+    private var placeholderThumbnail: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 11)
+                .fill(Color(hex: "#F7F7F7"))
+            Image("addimageiconsmall")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 30, height: 30)
+        }
+        .frame(width: 50, height: 50)
+    }
+    
+    /// Green add camera button
+    private var addCameraButton: some View {
+        Button {
+            handleCameraButtonTap()
+        } label: {
+            Image("addimageiconingreen")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 30, height: 30)
+                .frame(width: 50, height: 50)
+                .background(Color(hex: "#F6FCED"))
+                .cornerRadius(8)
+        }
+        .disabled(isPlaceholderMode)
+    }
+
+    private func handleCameraButtonTap() {
+        switch presentationSource {
+        case .homeView:
+            // Open camera full screen on top of ProductDetails
+            isCameraPresentedFromDetail = true
+        case .cameraView:
+            // Dismiss ProductDetails and return to camera with this scanId
+            if let scanId = scanId {
+                onRequestCameraWithScan?(scanId)
+            }
+            dismiss()
+        }
+    }
+    
+    /// Main gallery image display (large preview)
+    private var mainGalleryImage: some View {
+        Button {
+            if !isPlaceholderMode {
+                isImageViewerPresented = true
+            }
+        } label: {
+            imageContent(for: allImages[selectedImageIndex])
                 .frame(
                     width: UIScreen.main.bounds.width * 0.704,
                     height: UIScreen.main.bounds.height * 0.234
                 )
                 .cornerRadius(16)
-                    .clipped()
-                    .background(in: RoundedRectangle(cornerRadius: 24))
-                    .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+                .clipped()
+                .background(in: RoundedRectangle(cornerRadius: 24))
+                .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+        }
+        .buttonStyle(.plain)
+    }
+    
+    /// Empty state placeholder for main gallery
+    private var emptyStateGalleryImage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white)
+                .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
+            Image("addimageiconlarge")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 85, height: 79)
+        }
+        .frame(
+            width: UIScreen.main.bounds.width * 0.704,
+            height: UIScreen.main.bounds.height * 0.234
+        )
+    }
+    
+    /// Side panel with thumbnails
+    private var thumbnailSidePanel: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 8) {
+                addCameraButton
                 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 8) {
-                        Button {
-                            isCameraPresentedFromDetail = true
-                        } label: {
-                            HStack {
-                                Image("addimageiconingreen")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 30, height: 30)
-                            }
-                            .frame(width: 50, height: 50)
-                                .background(Color(hex: "#F6FCED"))
-                                .cornerRadius(8)
-                        }
-                        .disabled(isPlaceholderMode)
-
-                        if allImages.count <= 2 {
-                            // Up to three slots: real images first (if any), then placeholder(s)
-                            ForEach(0..<3, id: \.self) { index in
-                                if index < allImages.count {
-                                    Button {
-                                        if !isPlaceholderMode {
-                                            selectedImageIndex = index
-                                        }
-                                    } label: {
-                                        Group {
-                                            switch allImages[index] {
-                                            case .local(let image):
-                                                Image(uiImage: image)
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                            case .api(let location):
-                                                HeaderImage(imageLocation: location)
-                                            }
-                                        }
-                                        .frame(width: 50, height: 50)
-                                        .clipped()
-                                        .opacity(selectedImageIndex == index ? 0.5 : 1.0)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 11)
-                                                .stroke(
-                                                    selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
-                                                    lineWidth: 2
-                                                )
-                                        )
-                                    }
-                                    .disabled(isPlaceholderMode)
-                                } else {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 11)
-                                            .fill(Color(hex: "#F7F7F7"))
-                                        Image("addimageiconsmall")
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 30, height: 30)
-                                    }
-                                    .frame(width: 50, height: 50)
-                                }
-                            }
-                        } else {
-                            // Multiple images: show all as scrollable thumbnails
-                            ForEach(allImages.indices, id: \.self) { index in
-                                Button {
-                                    if !isPlaceholderMode {
-                                        selectedImageIndex = index
-                                    }
-                                } label: {
-                                    Group {
-                                        switch allImages[index] {
-                                        case .local(let image):
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                        case .api(let location):
-                                            HeaderImage(imageLocation: location)
-                                        }
-                                    }
-                                    .frame(width: 50, height: 50)
-                                    .clipped()
-                                    .opacity(selectedImageIndex == index ? 0.5 : 1.0)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 11)
-                                            .stroke(
-                                                selectedImageIndex == index ? Color.primary600 : Color(hex: "#E3E3E3"),
-                                                lineWidth: 2
-                                            )
-                                    )
-                                }
-                                .disabled(isPlaceholderMode)
-                            }
-                        }
+                // Determine which indices to show
+                let indices = allImages.count <= 2 ? Array(0..<3) : Array(allImages.indices)
+                
+                ForEach(indices, id: \.self) { index in
+                    if index < allImages.count {
+                        thumbnailView(at: index)
+                    } else {
+                        placeholderThumbnail
                     }
                 }
-                .frame(width: 60, height: 196)
+            }
+        }
+        .frame(width: 60, height: 196)
+    }
+    
+    /// Empty state side panel (all placeholders)
+    private var emptyStateSidePanel: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 8) {
+                addCameraButton
+                
+                ForEach(0..<3, id: \.self) { _ in
+                    placeholderThumbnail
+                }
+            }
+        }
+        .frame(width: 60, height: 196)
+    }
+    
+    // MARK: - Product Gallery
+    
+    private var productGallery: some View {
+        HStack(spacing: 12) {
+            if !allImages.isEmpty {
+                mainGalleryImage
+                thumbnailSidePanel
             } else {
-                // When there is no real product image, use a generic add-image icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color.white)
-                        .shadow(color: Color(hex: "#CECECE").opacity(0.25), radius: 12)
-                    Image("addimageiconlarge")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 85, height: 79)
-                }
-                .frame(
-                    width: UIScreen.main.bounds.width * 0.704,
-                    height: UIScreen.main.bounds.height * 0.234
-                )
-                
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 8) {
-                        // Show green tile + three placeholders for adding images
-                        Button {
-                            isCameraPresentedFromDetail = true
-                        } label: {
-                            HStack {
-                                Image("addimageiconingreen")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 30, height: 30)
-                            }
-                            .frame(width: 50, height: 50)
-                            .background(Color(hex: "#F6FCED"))
-                            .cornerRadius(8)
-                        }
-                        .disabled(isPlaceholderMode)
-                        
-                        ForEach(0..<3, id: \.self) { _ in
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 11)
-                                    .fill(Color(hex: "#F7F7F7"))
-                                Image("addimageiconsmall")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 30, height: 30)
-                            }
-                            .frame(width: 50, height: 50)
-                        }
-                    }
-                }
-                .frame(width: 60, height: 196)
+                emptyStateGalleryImage
+                emptyStateSidePanel
             }
         }
         .padding(.horizontal, 20)
@@ -624,9 +912,7 @@ struct ProductDetailView: View {
                 
                 VStack(alignment: .trailing, spacing: 16) {
                     HStack(spacing: 4) {
-                        Circle()
-                            .fill(resolvedStatus.color)
-                            .frame(width: 10, height: 10)
+                        StatusDotView(status: resolvedStatus)
                         
                         Text(resolvedStatus.title)
                             .font(NunitoFont.bold.size(14))
@@ -638,38 +924,38 @@ struct ProductDetailView: View {
                     
                     HStack(spacing: 12) {
                         Button {
-                            thumbSelection = .up
+                            handleProductFeedback(voteType: "up")
                         } label: {
-                            let isSelected = thumbSelection == .up
+                            let isSelected = scan?.product_info_vote?.value == "up"
                             let color = isSelected ? Color(hex: "#FBCB7F") : Color.grayScale100
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(color, lineWidth: 0.5)
-                                Image("thumbsup")
-                                    .renderingMode(.template)
+                                Image(isSelected ? "thumbsup.fill" : "thumbsup")
+                                    .renderingMode(isSelected ? .original : .template)
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 20, height: 18)
-                                    .foregroundStyle(color)
+                                    .foregroundStyle(isSelected ? Color.green : color)
                             }
                             .frame(width: 32, height: 28)
                         }
                         .buttonStyle(.plain)
 
                         Button {
-                            thumbSelection = .down
+                            handleProductFeedback(voteType: "down")
                         } label: {
-                            let isSelected = thumbSelection == .down
+                            let isSelected = scan?.product_info_vote?.value == "down"
                             let color = isSelected ? Color(hex: "#FF594E") : Color.grayScale100
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(color, lineWidth: 0.5)
-                                Image("thumbsdown")
-                                    .renderingMode(.template)
+                                Image(isSelected ? "thumbsdown.fill" : "thumbsdown")
+                                    .renderingMode(isSelected ? .original : .template)
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 20, height: 18)
-                                    .foregroundStyle(color)
+                                    .foregroundStyle(isSelected ? Color.red : color)
                             }
                             .frame(width: 32, height: 28)
                         }
@@ -687,7 +973,7 @@ struct ProductDetailView: View {
         if !dietaryTags.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(dietaryTags, id: \.name) { tag in
+                    ForEach(dietaryTags, id: \.claim) { tag in
                         DietaryTagView(tag: tag)
                     }
                 }
@@ -698,19 +984,70 @@ struct ProductDetailView: View {
     }
 }
 
-#if DEBUG
-#Preview("Normal Mode") {
-    ProductDetailView(isPlaceholderMode: false)
-        .environment(AppNavigationCoordinator())
+// MARK: - ScanCameraView Wrapper
+
+/// Wrapper to initialize ScanCameraView with specific mode and scanId
+struct ScanCameraViewWrapper: View {
+    let initialScanId: String?
+    let initialMode: CameraMode
+
+    var body: some View {
+        ScanCameraViewWithInitialState(
+            initialScanId: initialScanId,
+            initialMode: initialMode
+        )
+    }
 }
 
-#Preview("Recent Scan Empty State") {
-    ProductDetailView(isPlaceholderMode: true)
-        .environment(AppNavigationCoordinator())
+#if DEBUG
+// Sample product with ingredients for preview
+private let sampleProductWithIngredients = DTO.Product(
+    barcode: "1234567890",
+    brand: "Sample Brand",
+    name: "Sample Product",
+    ingredients: [
+        DTO.Ingredient(name: "Water", vegan: true, vegetarian: true, ingredients: []),
+        DTO.Ingredient(name: "Sugar", vegan: true, vegetarian: true, ingredients: []),
+        DTO.Ingredient(name: "Salt", vegan: true, vegetarian: true, ingredients: [])
+    ],
+    images: [],
+    claims: ["Vegan", "No gluten"]
+)
+
+// Sample product WITHOUT ingredients for preview (triggers Missing Ingredients UI)
+private let sampleProductMissingIngredients = DTO.Product(
+    barcode: "1234567890",
+    brand: "Sample Brand",
+    name: "Sample Product Without Ingredients",
+    ingredients: [],
+    images: [],
+    claims: []
+)
+
+#Preview("Normal Mode") {
+    ProductDetailView(
+        product: sampleProductWithIngredients,
+        isPlaceholderMode: false
+    )
+    .environment(WebService())
+    .environment(UserPreferences())
+    .environment(AppNavigationCoordinator())
+}
+
+#Preview("Missing Ingredients") {
+    ProductDetailView(
+        product: sampleProductMissingIngredients,
+        isPlaceholderMode: false
+    )
+    .environment(WebService())
+    .environment(UserPreferences())
+    .environment(AppNavigationCoordinator())
 }
 
 #Preview("Placeholder Mode") {
     ProductDetailView(isPlaceholderMode: true)
+        .environment(WebService())
+        .environment(UserPreferences())
         .environment(AppNavigationCoordinator())
 }
 #endif
@@ -779,7 +1116,4 @@ enum ProductMatchStatus {
     }
 }
 
-enum ThumbSelection {
-    case up
-    case down
-}
+

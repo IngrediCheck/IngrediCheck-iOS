@@ -3,18 +3,19 @@ import Combine
 import SimpleToast
 
 @MainActor struct ListsTab: View {
-    
+
     @State private var isSearching: Bool = false
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
 
     var body: some View {
         @Bindable var appState = appState
         NavigationStack(path: $appState.listsTabState.routes) {
             Group {
                 if isSearching {
-                    ScanHistorySearchingView(webService: webService, isSearching: $isSearching)
+                    ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
                 } else {
                     defaultView
                 }
@@ -179,12 +180,13 @@ import SimpleToast
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
         Group {
             if isSearching {
-                ScanHistorySearchingView(webService: webService, isSearching: $isSearching)
+                ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
                     .navigationBarBackButtonHidden()
             } else {
                 defaultView
@@ -194,20 +196,56 @@ import SimpleToast
     
     var defaultView: some View {
         Group {
-            if let scans = appState.listsTabState.scans {
+            if let scans = appState.listsTabState.scans, !scans.isEmpty {
                 RecentScansListView(scans: scans)
                     .refreshable {
-                        if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
-                            appState.listsTabState.scans = historyResponse.scans
-                        }
+                        // Load via store (single source of truth)
+                        await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+                        // Sync to AppState for backwards compatibility
+                        appState.listsTabState.scans = scanHistoryStore.scans
                     }
                     .padding(.top)
+            } else if scanHistoryStore.isLoading {
+                // Show loading indicator while loading
+                VStack {
+                    Spacer()
+                    ProgressView("Loading scans...")
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                // Empty state
+                VStack {
+                    Spacer()
+                    Text("No recent scans")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Recent Scans")
         .navigationBarBackButtonHidden(true)
+        .task {
+            // Load scan history when view appears if not already loaded
+            if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {
+                // Wait if store is currently loading
+                if scanHistoryStore.isLoading {
+                    while scanHistoryStore.isLoading {
+                        try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+                    }
+                } else if scanHistoryStore.scans.isEmpty {
+                    // Load from API if store is empty
+                    await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+                }
+                // Sync store data to AppState
+                await MainActor.run {
+                    appState.listsTabState.scans = scanHistoryStore.scans
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -236,6 +274,7 @@ import SimpleToast
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     
     var showViewAll: Bool {
         if let scans = appState.listsTabState.scans {
@@ -262,9 +301,10 @@ import SimpleToast
                 RecentScansListView(scans: scans)
                 .frame(maxWidth: .infinity)
                 .refreshable {
-                    if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
-                        appState.listsTabState.scans = historyResponse.scans
-                    }
+                    // Load via store (single source of truth)
+                    await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+                    // Sync to AppState for backwards compatibility
+                    appState.listsTabState.scans = scanHistoryStore.scans
                 }
                 .overlay {
                     if scans.isEmpty {
@@ -298,20 +338,39 @@ import SimpleToast
 @MainActor struct RecentScansListView: View {
     
     var scans: [DTO.Scan]
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
+    @Environment(AppState.self) var appState
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            LazyVStack(spacing: 0) {
                 ForEach(Array(scans.enumerated()), id: \.element.id) { index, scan in
                     NavigationLink(value: HistoryRouteItem.scan(scan)) {
                         ScanRow(scan: scan)
                     }
                     .foregroundStyle(.primary)
+                    .onAppear {
+                        // Load more when reaching the end (3 rows remaining)
+                        if index >= scans.count - 3 {
+                            Task {
+                                await scanHistoryStore.loadMore()
+                                // Sync to AppState for backwards compatibility
+                                appState.listsTabState.scans = scanHistoryStore.scans
+                            }
+                        }
+                    }
 
                     if index != scans.count - 1 {
                         Divider()
                             .padding(.vertical, 14)
                     }
+                }
+                
+                // Loading indicator at the bottom
+                if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
                 }
             }
         }
@@ -322,6 +381,7 @@ import SimpleToast
 @Observable @MainActor class ScanHistorySearchingViewModel {
 
     let webService: WebService
+    let scanHistoryStore: ScanHistoryStore
 
     var searchText: String = "" {
         didSet {
@@ -334,8 +394,9 @@ import SimpleToast
     private var searchTextSubject = PassthroughSubject<String, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    init(webService: WebService) {
+    init(webService: WebService, scanHistoryStore: ScanHistoryStore) {
         self.webService = webService
+        self.scanHistoryStore = scanHistoryStore
         searchTextSubject
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] text in
@@ -354,18 +415,17 @@ import SimpleToast
 
         Task {
             print("Searching for \(searchText)")
-            // Note: Search functionality needs to be implemented in fetchScanHistory
-            // For now, fetch all and filter client-side
-            if let historyResponse = try? await webService.fetchScanHistory(limit: 100, offset: 0) {
-                let filtered = historyResponse.scans.filter { scan in
-                    let name = scan.product_info.name?.lowercased() ?? ""
-                    let brand = scan.product_info.brand?.lowercased() ?? ""
-                    let query = searchText.lowercased()
-                    return name.contains(query) || brand.contains(query)
-                }
-                await MainActor.run {
-                    self.searchResults = filtered
-                }
+            // Load from store and filter client-side
+            await scanHistoryStore.loadHistory(limit: 100, offset: 0, forceRefresh: true)
+
+            let filtered = scanHistoryStore.scans.filter { scan in
+                let name = scan.product_info.name?.lowercased() ?? ""
+                let brand = scan.product_info.brand?.lowercased() ?? ""
+                let query = searchText.lowercased()
+                return name.contains(query) || brand.contains(query)
+            }
+            await MainActor.run {
+                self.searchResults = filtered
             }
         }
     }
@@ -382,9 +442,9 @@ import SimpleToast
     @State private var vm: ScanHistorySearchingViewModel
 
     @Environment(AppState.self) var appState
-    
-    init(webService: WebService, isSearching: Binding<Bool>) {
-        _vm = State(initialValue: ScanHistorySearchingViewModel(webService: webService))
+
+    init(webService: WebService, scanHistoryStore: ScanHistoryStore, isSearching: Binding<Bool>) {
+        _vm = State(initialValue: ScanHistorySearchingViewModel(webService: webService, scanHistoryStore: scanHistoryStore))
         _isSearching = isSearching
     }
 

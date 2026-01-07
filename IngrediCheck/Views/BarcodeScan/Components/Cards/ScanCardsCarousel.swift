@@ -33,27 +33,28 @@ struct ScanCardsCarousel<CardContent: View>: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 8) {
                     ForEach(displayItems, id: \.self) { itemId in
-                        GeometryReader { geo in
-                            let midX = geo.frame(in: .global).midX
-                            let distance = abs(midX - screenCenterX)
-                            let t = min(distance / maxDistance, 1)
-                            let scale = max(minScale, 1 - (1 - minScale) * t)
-
-                            cardContent(itemId)
-                                .scaleEffect(x: 1.0, y: scale, anchor: .center)
-                                .animation(.easeInOut(duration: 0.2), value: scale)
-                                .background(
+                        cardContent(itemId)
+                            .frame(width: 300, height: 120)
+                            .background(
+                                GeometryReader { geo in
                                     Color.clear.preference(
                                         key: CardCenterPreferenceKey.self,
-                                        value: [CardCenterPreferenceData(code: itemId, center: midX)]
+                                        value: [CardCenterPreferenceData(code: itemId, center: geo.frame(in: .global).midX)]
                                     )
-                                )
-                        }
-                        .frame(width: 300, height: 120)
-                        .id(itemId)
-                        .transition(.opacity)
+                                }
+                            )
+                            .scrollTransition(.interactive.threshold(.visible(0.5))) { content, phase in
+                                content
+                                    .scaleEffect(
+                                        x: 1.0,
+                                        y: phase.isIdentity ? 1.0 : max(minScale, 1.0 - (1.0 - minScale) * abs(phase.value)),
+                                        anchor: .center
+                                    )
+                            }
+                            .id(itemId)
                     }
                 }
+                .animation(.none, value: displayItems)
                 .scrollTargetLayout()
                 .padding(.horizontal, max((UIScreen.main.bounds.width - 300) / 2, 0))
             }
@@ -82,3 +83,54 @@ struct ScanCardsCarousel<CardContent: View>: View {
     }
 }
 
+// MARK: - Previews
+
+#if DEBUG
+struct ScanCardsCarouselPreview: View {
+    @State private var cardCenterData: [CardCenterPreferenceData] = []
+    @State private var centeredId: String? = nil
+    
+    let items: [String]
+    
+    var body: some View {
+        VStack {
+            Text("Centered: \(centeredId ?? "none")")
+                .font(.caption)
+                .foregroundStyle(.gray)
+            
+            ScanCardsCarousel(
+                items: items,
+                cardContent: { itemId in
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay(
+                            VStack {
+                                Text(itemId.isEmpty ? "Placeholder" : "Card: \(itemId)")
+                                    .font(.headline)
+                                Text("Sample card content")
+                                    .font(.caption)
+                                    .foregroundStyle(.gray)
+                            }
+                        )
+                },
+                onCardCenterChanged: { id in
+                    centeredId = id
+                },
+                cardCenterData: $cardCenterData
+            )
+        }
+    }
+}
+
+#Preview("Empty State") {
+    ScanCardsCarouselPreview(items: [])
+}
+
+#Preview("Single Card") {
+    ScanCardsCarouselPreview(items: ["item-1"])
+}
+
+#Preview("Multiple Cards") {
+    ScanCardsCarouselPreview(items: ["item-1", "item-2", "item-3", "item-4", "item-5"])
+}
+#endif

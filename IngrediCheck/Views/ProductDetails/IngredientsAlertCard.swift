@@ -6,6 +6,7 @@ struct IngredientsAlertCard: View {
     var status: ProductMatchStatus
     var overallAnalysis: String?  // Overall analysis text from API
     var ingredientRecommendations: [DTO.IngredientRecommendation]?  // To get unmatched ingredient names
+    var onFeedback: ((IngredientAlertItem, String) -> Void)? = nil // Item, Vote ("up", "down")
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -13,12 +14,17 @@ struct IngredientsAlertCard: View {
             summaryText
                 .padding(.horizontal, 20)
             
-            if isExpanded {
-                alertItemsList
+            if status != .matched {
+                if isExpanded {
+                    alertItemsList
+                } else {
+                    readMoreRow(text: "Read More")
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                }
             } else {
-                readMoreRow(text: "Read More")
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                // Add bottom padding for matched state since there's no read more row
+                Color.clear.frame(height: 0).padding(.bottom, 20)
             }
         }
         .background(
@@ -31,6 +37,7 @@ struct IngredientsAlertCard: View {
         )
         .contentShape(Rectangle())
         .onTapGesture {
+            guard status != .matched else { return }
             withAnimation(.easeInOut(duration: 0.3)) {
                 isExpanded.toggle()
             }
@@ -67,6 +74,10 @@ struct IngredientsAlertCard: View {
     private func buildHighlightedText() -> Text {
         guard let overallAnalysisText = overallAnalysis, !overallAnalysisText.isEmpty else {
             // Fallback to generic message if no analysis
+            if status == .matched {
+                return Text("This product aligns with your dietary preferences.")
+                    .foregroundStyle(.grayScale150)
+            }
             return Text("This product contains ingredients that may not be suitable for your family's dietary preferences.")
                 .foregroundStyle(.grayScale150)
         }
@@ -173,17 +184,25 @@ struct IngredientsAlertCard: View {
                         avatarStack(for: item)
                         Spacer()
                         HStack(spacing: 12) {
-                            Image("thumbsup")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 28, height: 24)
-                                .foregroundStyle(.grayScale130)
+                            Button {
+                                onFeedback?(item, "up")
+                            } label: {
+                                Image(item.vote?.value == "up" ? "thumbsup.fill" : "thumbsup")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 28, height: 24)
+                                    .foregroundStyle(item.vote?.value == "up" ? Color.green : .grayScale130)
+                            }
                             
-                            Image("thumbsdown")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 28, height: 24)
-                                .foregroundStyle(.grayScale130)
+                            Button {
+                                onFeedback?(item, "down")
+                            } label: {
+                                Image(item.vote?.value == "down" ? "thumbsdown.fill" : "thumbsdown")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 28, height: 24)
+                                    .foregroundStyle(item.vote?.value == "down" ? Color.red : .grayScale130)
+                            }
                         }
                     }
                 }
@@ -245,6 +264,8 @@ struct IngredientAlertItem: Identifiable {
     let detail: String
     let status: IngredientAlertStatus
     let memberIdentifiers: [String]?  // Array of member IDs or ["Everyone"]
+    let vote: DTO.Vote?
+    let rawIngredientName: String? // Actual ingredient name from API if available
 }
 
 // Member Avatar View for Ingredients Alert Card (32x32 size)

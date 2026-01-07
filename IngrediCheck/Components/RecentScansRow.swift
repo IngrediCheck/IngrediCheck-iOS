@@ -129,11 +129,18 @@ struct HomeRecentScanRow: View {
             .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 12))
         }
         .task {
-            if let firstImage = item.images.first,
-               let loaded = try? await webService.fetchImage(imageLocation: firstImage, imageSize: .small) {
-                await MainActor.run {
-                    image = loaded
+            if let firstImage = item.images.first {
+                do {
+                    print("[HomeRecentScanRow] Fetching image for history item: \(item.client_activity_id)")
+                    let loaded = try await webService.fetchImage(imageLocation: firstImage, imageSize: .small)
+                    await MainActor.run {
+                        image = loaded
+                    }
+                } catch {
+                    print("[HomeRecentScanRow] ❌ Failed to fetch image: \(error)")
                 }
+            } else {
+                print("[HomeRecentScanRow] ⚠️ No images found for history item")
             }
         }
     }
@@ -215,11 +222,10 @@ struct ScanRow: View {
             .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 12))
         }
         .task {
-            // Get first image from scan
-            if let firstImageInfo = scan.product_info.images?.first,
-               let urlString = firstImageInfo.url,
-               let url = URL(string: urlString),
-               let loaded = try? await webService.fetchImage(imageLocation: .url(url), imageSize: .small) {
+            // Get first image from scan using toProduct() logic which handles both inventory and user images
+            let product = scan.toProduct()
+            if let firstImage = product.images.first,
+               let loaded = try? await webService.fetchImage(imageLocation: firstImage, imageSize: .small) {
                 await MainActor.run {
                     image = loaded
                 }

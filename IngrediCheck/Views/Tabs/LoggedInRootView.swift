@@ -51,6 +51,7 @@ struct ListsTabState {
 @MainActor struct LoggedInRootView: View {
 
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
@@ -168,11 +169,15 @@ struct ListsTabState {
 
     private func refreshHistory() {
         Task {
-            if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
-                await MainActor.run {
-                    appState.listsTabState.scans = historyResponse.scans
-                }
+            // Load scan history via store (single source of truth)
+            await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+
+            // Sync to AppState for backwards compatibility
+            await MainActor.run {
+                appState.listsTabState.scans = scanHistoryStore.scans
             }
+
+            // Load favorites
             if let listItems = try? await webService.getFavorites() {
                 await MainActor.run {
                     appState.listsTabState.listItems = listItems

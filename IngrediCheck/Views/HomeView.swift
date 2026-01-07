@@ -17,41 +17,44 @@ struct HomeView: View {
     @State private var prevValue: CGFloat = 0
     @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
-
+    
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
     private struct ProductDetailPayload: Identifiable {
         let id = UUID()
+        let scanId: String  // scan.id for ProductDetailView to track
+        let scan: DTO.Scan  // Full scan object to pass as initialScan
         let product: DTO.Product
         let matchStatus: DTO.ProductRecommendation
         let ingredientRecommendations: [DTO.IngredientRecommendation]?
     }
-
+    
     @State private var activeProductDetail: ProductDetailPayload?
-
+    
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AuthController.self) private var authController
-
+    
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
     // ---------------------------
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
-
+    
     private var familyMembers: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
         return [family.selfMember] + family.otherMembers
     }
-
+    
     private var primaryMemberName: String {
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
-
+    
     // MARK: - Family avatars
-
+    
     /// Small avatar used under "Your IngrediFam". Shows the member's memoji
     /// if an imageFileHash is present, otherwise falls back to the first
     /// letter of their name on top of their color.
@@ -89,7 +92,7 @@ struct HomeView: View {
                         .stroke(lineWidth: 1)
                         .foregroundStyle(Color.white)
                 )
-                // Re-evaluate whenever the member's imageFileHash changes.
+            // Re-evaluate whenever the member's imageFileHash changes.
                 .task(id: member.imageFileHash) {
                     await loadAvatarForCurrentHash()
                 }
@@ -106,7 +109,7 @@ struct HomeView: View {
                 loadedHash = nil
                 return
             }
-
+            
             // If we've already loaded this exact hash, skip re-fetching.
             if loadedHash == hash, avatarImage != nil {
                 print("[HomeView.FamilyMemberAvatarView] Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
@@ -127,13 +130,13 @@ struct HomeView: View {
             }
         }
     }
-
+    
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 0) {
-
+                    
                     // Greeting section
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
@@ -141,34 +144,34 @@ struct HomeView: View {
                                 Text("Hello")
                                     .font(NunitoFont.regular.size(14))
                                     .foregroundStyle(.grayScale150)
-
+                                
                                 Text("👋")
                                     .font(.system(size: 10))
                                     .padding(.bottom, 1)
                             }
                             .frame(height: 16)
-
+                            
                             Text(primaryMemberName)
                                 .font(NunitoFont.semiBold.size(32))
                                 .foregroundStyle(.grayScale150)
                                 .frame(height: 28)
                                 .offset(x: -1.8)
-
+                            
                             Text("Complete your profile easily.")
                                 .font(ManropeFont.regular.size(12))
                                 .foregroundStyle(.grayScale100)
                                 .frame(height: 16)
                         }
-
+                        
                         Spacer()
-
+                        
                         ProfileCard(isProfileCompleted: true)
                             .onTapGesture {
                                 isSettingsPresented = true
                             }
                     }
                     .padding(.bottom, 28)
-
+                    
                     // Food Notes & Allergy Summary...
                     HStack {
                         VStack(alignment: .leading) {
@@ -177,53 +180,53 @@ struct HomeView: View {
                                     .font(ManropeFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
                                     .frame(height: 15)
-
+                                
                                 Text("Here’s what your family avoids  or needs to watch out for.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
                             }
                             Spacer()
-
+                            
                             AskIngrediBotButton {
                                 selectedChatDetent = .medium
                                 isChatSheetPresented = true
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
+                        
                         Spacer()
-
+                        
                         AllergySummaryCard()
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
-
+                    
                     // Lifestyle + Family + Average scans
                     HStack {
                         LifestyleAndChoicesCard()
-                    
+                        
                         Spacer()
-                    
+                        
                         VStack {
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
                                     .font(ManropeFont.medium.size(18))
                                     .foregroundStyle(.grayScale150)
-                            
+                                
                                 Text("Your people, their choices.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
-                            
+                                
                                 HStack {
                                     ZStack(alignment: .bottomTrailing) {
                                         let membersToShow = Array(familyMembers.prefix(3))
-                            
+                                        
                                         HStack(spacing: -8) {
                                             ForEach(membersToShow, id: \.id) { member in
                                                 FamilyMemberAvatarView(member: member)
                                             }
                                         }
-                            
+                                        
                                         if familyMembers.count > 3 {
                                             Text("+\(familyMembers.count - 3)")
                                                 .font(NunitoFont.semiBold.size(12))
@@ -236,9 +239,9 @@ struct HomeView: View {
                                                 .offset(x: 10, y: -2)
                                         }
                                     }
-                            
+                                    
                                     Spacer()
-                            
+                                    
                                     Button {
                                         coordinator.navigateInBottomSheet(.addMoreMembers)
                                     } label: {
@@ -248,29 +251,29 @@ struct HomeView: View {
                                 }
                             }
                             .frame(height: 103)
-                        
+                            
                             AverageScansCard()
                         }
                     }
                     .padding(.bottom, 20)
-
+                    
                     Image(.homescreenbanner)
                         .resizable()
                         .cornerRadius(20)
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .padding(.bottom, 20)
-
+                    
                     HStack {
                         YourBarcodeScans()
                         UserFeedbackCard()
                     }
                     .padding(.bottom, 20)
-
+                    
                     MatchingRateCard()
                         .padding(.bottom, 20)
-
+                    
                     CreateYourAvatarCard()
-
+                    
                         .onTapGesture {
                             // If family has more than one member, show SetUpAvatarFor first
                             // Otherwise, go directly to YourCurrentAvatar
@@ -281,8 +284,8 @@ struct HomeView: View {
                             }
                         }
                         .padding(.bottom, 20)
-
-
+                    
+                    
                     // Recent Scans header
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -292,31 +295,31 @@ struct HomeView: View {
                                     .foregroundStyle(.grayScale150)
                                 
                                 Button {
-                                                             Task {
-                                                                 await refreshRecentScans()
-                                                             }
-                                                         } label: {
-                                                             if isRefreshingHistory {
-                                                                 ProgressView()
-                                                                     .progressViewStyle(.circular)
-                                                                     .scaleEffect(0.7)
-                                                             } else {
-                                                                 Image(systemName: "arrow.clockwise")
-                                                                     .font(.system(size: 14, weight: .medium))
-                                                                     .foregroundStyle(Color(hex: "B6B6B6"))
-                                                             }
-                                                         }
-                                                         .buttonStyle(.plain)
-                                                         .disabled(isRefreshingHistory)
+                                    Task {
+                                        await refreshRecentScans()
+                                    }
+                                } label: {
+                                    if isRefreshingHistory {
+                                        ProgressView()
+                                            .progressViewStyle(.circular)
+                                            .scaleEffect(0.7)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(Color(hex: "B6B6B6"))
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isRefreshingHistory)
                             }
-
+                            
                             Text("Here’s what you checked last in past 2 days")
                                 .font(ManropeFont.regular.size(12))
                                 .foregroundStyle(.grayScale100)
                         }
-
+                        
                         Spacer()
-
+                        
                         // KEEP YOUR SHEET VERSION
                         HStack(spacing: 6) {
                             NavigationLink {
@@ -328,52 +331,54 @@ struct HomeView: View {
                                     .foregroundStyle(Color(hex: "B6B6B6"))
                             }
                             .buttonStyle(.plain)
-
-//                            Button {
-//                                Task {
-//                                    await refreshRecentScans()
-//                                }
-//                            } label: {
-//                                if isRefreshingHistory {
-//                                    ProgressView()
-//                                        .progressViewStyle(.circular)
-//                                        .scaleEffect(0.7)
-//                                } else {
-//                                    Image(systemName: "arrow.clockwise")
-//                                        .font(.system(size: 14, weight: .medium))
-//                                }
-//                            }
-//                            .buttonStyle(.plain)
-//                            .disabled(isRefreshingHistory)
+                            
+                            //                            Button {
+                            //                                Task {
+                            //                                    await refreshRecentScans()
+                            //                                }
+                            //                            } label: {
+                            //                                if isRefreshingHistory {
+                            //                                    ProgressView()
+                            //                                        .progressViewStyle(.circular)
+                            //                                        .scaleEffect(0.7)
+                            //                                } else {
+                            //                                    Image(systemName: "arrow.clockwise")
+                            //                                        .font(.system(size: 14, weight: .medium))
+                            //                                }
+                            //                            }
+                            //                            .buttonStyle(.plain)
+                            //                            .disabled(isRefreshingHistory)
                         }
                     }
                     .padding(.bottom, 20)
-
+                    
                     // Recent Scans list / empty state
                     if let scans = appState.listsTabState.scans,
                        !scans.isEmpty {
                         let items = Array(scans.prefix(5))
-
+                        
                         VStack(spacing: 0) {
                             ForEach(Array(items.enumerated()), id: \.element.id) { index, scan in
-
+                                
                                 Button {
                                     let product = scan.toProduct()
                                     let recommendations = scan.analysis_result?.toIngredientRecommendations()
                                     
                                     let payload = ProductDetailPayload(
+                                        scanId: scan.id,
+                                        scan: scan,
                                         product: product,
                                         matchStatus: scan.toProductRecommendation(),
                                         ingredientRecommendations: recommendations
                                     )
-
+                                    
                                     activeProductDetail = payload
-
+                                    
                                 } label: {
                                     ScanRow(scan: scan)
                                 }
                                 .buttonStyle(.plain)
-
+                                
                                 if index != items.count - 1 {
                                     Divider().padding(.vertical, 14)
                                 }
@@ -445,9 +450,9 @@ struct HomeView: View {
             .overlay(
                 LinearGradient(
                     colors: [
-                    
+                        
                         Color.white.opacity(0),
-                       Color(hex: "#FCFCFE"),
+                        Color(hex: "#FCFCFE"),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -457,58 +462,63 @@ struct HomeView: View {
                 .allowsHitTesting(false),
                 alignment: .bottom
             ).offset( y: 30)
-            .overlay(
-                TabBar(isExpanded: $isTabBarExpanded),
-                alignment: .bottom
-            )
-            .background(Color.white)
-
-            // ------------ HISTORY LOADING ------------
-            .task {
-                if appState.listsTabState.scans == nil {
-                    await refreshRecentScans()
-                }
-            }
-
-            // ------------ SETTINGS SCREEN ------------
-            .navigationDestination(isPresented: $isSettingsPresented) {
-                SettingsSheet()
-                    .environment(userPreferences)
-                    .environment(coordinator)
-            }
-
-            // ------------ CHAT SHEET ------------
-            .sheet(isPresented: $isChatSheetPresented) {
-                IngrediBotChatView {
-                    isChatSheetPresented = false
-                }
-                .presentationDetents([chatSmallDetent, .medium, .large],
-                                     selection: $selectedChatDetent)
-                .presentationDragIndicator(.visible)
-			            }
-
-            // ------------ PRODUCT DETAIL ------------
-            .fullScreenCover(item: $activeProductDetail) { detail in
-                ProductDetailView(
-                    product: detail.product,
-                    matchStatus: detail.matchStatus,
-                    ingredientRecommendations: detail.ingredientRecommendations,
-                    isPlaceholderMode: false
+                .overlay(
+                    TabBar(isExpanded: $isTabBarExpanded),
+                    alignment: .bottom
                 )
-            }
-
+                .background(Color.white)
+            
+            // ------------ HISTORY LOADING ------------
+                .task {
+                    if appState.listsTabState.scans == nil {
+                        await refreshRecentScans()
+                    }
+                }
+            
+            // ------------ SETTINGS SCREEN ------------
+                .navigationDestination(isPresented: $isSettingsPresented) {
+                    SettingsSheet()
+                        .environment(userPreferences)
+                        .environment(coordinator)
+                }
+            
+            // ------------ CHAT SHEET ------------
+                .sheet(isPresented: $isChatSheetPresented) {
+                    IngrediBotChatView {
+                        isChatSheetPresented = false
+                    }
+                    .presentationDetents([chatSmallDetent, .medium, .large],
+                                         selection: $selectedChatDetent)
+                    .presentationDragIndicator(.visible)
+                }
+            
+            // ------------ PRODUCT DETAIL ------------
+                .fullScreenCover(item: $activeProductDetail) { detail in
+                    ProductDetailView(
+                        scanId: detail.scanId,  // Pass scanId for real-time updates
+                        initialScan: detail.scan,  // Pass full scan with is_favorited
+                        product: detail.product,
+                        matchStatus: detail.matchStatus,
+                        ingredientRecommendations: detail.ingredientRecommendations,
+                        isPlaceholderMode: false,
+                        presentationSource: .homeView
+                    )
+                }
+            
         }
     }
-
+    
     private func refreshRecentScans() async {
         guard !isRefreshingHistory else { return }
         isRefreshingHistory = true
         defer { isRefreshingHistory = false }
 
-        if let historyResponse = try? await webService.fetchScanHistory(limit: 20, offset: 0) {
-            await MainActor.run {
-                appState.listsTabState.scans = historyResponse.scans
-            }
+        // Load via store (single source of truth)
+        await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+
+        // Sync store data to AppState for backwards compatibility with ListsTab
+        await MainActor.run {
+            appState.listsTabState.scans = scanHistoryStore.scans
         }
     }
 }
