@@ -37,7 +37,12 @@ struct AddMoreMembers: View {
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
                         Button {
-                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            // Context-aware back: if opened from Home canvas, dismiss to home; else go to minimal list (onboarding)
+                            if case .home = coordinator.currentCanvasRoute {
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            }
                         } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))
@@ -67,9 +72,28 @@ struct AddMoreMembers: View {
                                 .foregroundStyle(showError ? .red : .grayScale60)
                         )
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                        .onChange(of: name) { _, newValue in
+                        .onChange(of: name) { oldValue, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 showError = false
+                            }
+                            
+                            // Filter to letters and spaces only
+                            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+                            var finalized = filtered
+                            
+                            // Limit to 25 characters
+                            if finalized.count > 25 {
+                                finalized = String(finalized.prefix(25))
+                            }
+                            
+                            // Limit to max 3 words (max 2 spaces)
+                            let components = finalized.components(separatedBy: .whitespaces)
+                            if components.count > 3 {
+                                finalized = components.prefix(3).joined(separator: " ")
+                            }
+                            
+                            if finalized != newValue {
+                                name = finalized
                             }
                         }
                     
@@ -98,6 +122,8 @@ struct AddMoreMembers: View {
                                 } else {
                                     // Set display name before navigating
                                     memojiStore.displayName = trimmed
+                                    // Ensure GenerateAvatar back button returns to AddMoreMembers, not onboarding
+                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
                                     // Proceed to generate avatar
                                     coordinator.navigateInBottomSheet(.generateAvatar)
                                 }

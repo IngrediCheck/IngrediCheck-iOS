@@ -96,6 +96,12 @@ final class FamilyStore {
         )
     }
     
+    /// Set the pending self member from an existing FamilyMember (used when creating family from Settings)
+    func setPendingSelfMemberFromExisting(_ member: FamilyMember) {
+        print("[FamilyStore] Setting pending self member from existing: \(member.name)")
+        pendingSelfMember = member
+    }
+    
     /// Set or update the avatar image for the pending self member.
     /// This method accepts an asset name string (for backward compatibility).
     /// For immediate upload, use setPendingSelfMemberAvatar(image:webService:) instead.
@@ -450,6 +456,29 @@ final class FamilyStore {
         )
         
         // Clear the pending builder after a successful attempt.
+        if family != nil {
+            pendingSelfMember = nil
+            pendingOtherMembers = []
+        }
+    }
+    
+    /// Adds pending other members to the existing family (used when creating family from Settings)
+    func addPendingMembersToExistingFamily() async {
+        guard family != nil else {
+            print("[FamilyStore] addPendingMembersToExistingFamily: no existing family, falling back to createFamilyFromPendingIfNeeded")
+            await createFamilyFromPendingIfNeeded()
+            return
+        }
+        
+        let others = pendingOtherMembers
+        print("[FamilyStore] Adding pending members to existing family: \(others.map { $0.name })")
+        
+        // Add each pending member individually
+        for member in others {
+            await addMember(member)
+        }
+        
+        // Clear the pending builder after successful addition
         if family != nil {
             pendingSelfMember = nil
             pendingOtherMembers = []

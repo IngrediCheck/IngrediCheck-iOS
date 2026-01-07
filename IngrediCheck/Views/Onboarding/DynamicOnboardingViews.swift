@@ -631,87 +631,209 @@ struct MeetYourProfileView: View {
     var onContinue: () -> Void
     @Environment(FamilyStore.self) var familyStore
     @Environment(MemojiStore.self) var memojiStore
+    @Environment(AppNavigationCoordinator.self) var coordinator
+    @State private var primaryMemberName: String = ""
+    @FocusState private var isEditingPrimaryName: Bool
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with Back Button (Visual only, as logic handled by parent if needed)
-            HStack {
-                Button(action: {
-                    // Start over / Back logic if needed
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.black)
-                }
-                
-                Spacer()
-            }
-            
-                VStack() {
-                    Circle()
-                        .fill(
-                            Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4") // Default or store color
-                        )
-                        .frame(width:80, height: 80)
-                        
-                 
+            // Avatar Section
+            VStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    Group {
+                        if let image = memojiStore.image {
+                            // 1. Show the image that was JUST generated
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 80, height: 80)
+                                .background(Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4"))
+                                .clipShape(Circle())
+                        } else if let me = (familyStore.family?.selfMember ?? familyStore.pendingSelfMember),
+                                  let hash = me.imageFileHash, !hash.isEmpty {
+                            // 2. Show the avatar from the member's data (saved or pending)
+                            MemberAvatar.custom(member: me, size: 80, imagePadding: 0)
+                        } else {
+                            // 3. Default placeholder with curly-lady
+                            ZStack {
+                                Circle()
+                                    .fill(Color(hex: (familyStore.family?.selfMember.color ?? familyStore.pendingSelfMember?.color) ?? memojiStore.backgroundColorHex ?? "#E0BBE4"))
+                                    .frame(width: 80, height: 80)
+                                
+                                Image("curly-lady")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            }
+                        }
+                    }
                     
-                    // Edit Pencil
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 28, height: 28)
-                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
-                        .overlay(
-                            Image(systemName: "pencil")
-                                .font(.system(size: 14))
-                                .foregroundStyle(.grayScale100)
-                        )
-                        .offset(x: 5, y: 0)
+                    Button {
+                         // Sync current name to store before generating
+                         commitPrimaryName()
+                         
+                         // Navigation to avatar generation
+                         memojiStore.displayName = primaryMemberName
+                         
+                         // Set the target member ID so handleAssignAvatar knows who to update
+                         if let me = familyStore.family?.selfMember {
+                             familyStore.avatarTargetMemberId = me.id
+                         } else if let me = familyStore.pendingSelfMember {
+                             familyStore.avatarTargetMemberId = me.id
+                         } else {
+                             // Create pending self member if none exists
+                             familyStore.setPendingSelfMember(name: primaryMemberName)
+                             familyStore.avatarTargetMemberId = familyStore.pendingSelfMember?.id
+                         }
+                         
+                         memojiStore.previousRouteForGenerateAvatar = .meetYourProfile
+                         coordinator.navigateInBottomSheet(.generateAvatar)
+                    } label: {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 28, height: 28)
+                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
+                            .overlay(
+                                Image("pen-line")
+                                    .resizable()
+                                    .frame(width: 14, height: 14)
+                                    .foregroundStyle(.grayScale100)
+                            )
+                    }
+                    .offset(x: 4, y: 4)
                 }
             }
-         
+            .padding(.top, 16)
+
             // Greeting Title
             HStack(spacing: 8) {
                 Text("Hello,")
-                    .font(NunitoFont.bold.size(24))
+                    .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
-                HStack(spacing: 6) {
-                    Text(familyStore.family?.name ?? "Bite Buddy")
-                        .font(NunitoFont.bold.size(24))
-                        .foregroundStyle(.grayScale150)
+                HStack(spacing: 8) {
+                    TextField("", text: $primaryMemberName)
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(Color(hex: "#303030"))
+                        .disableAutocorrection(true)
+                        .focused($isEditingPrimaryName)
+                        .submitLabel(.done)
+                        .onSubmit { commitPrimaryName() }
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    Image(systemName: "pencil")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.grayScale80)
+                    Image("pen-line")
+                        .resizable()
+                        .frame(width: 12, height: 12)
+                        .foregroundStyle(.grayScale100)
+                        .onTapGesture { isEditingPrimaryName = true }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
+                .padding(.leading, 8)
+                .padding(.trailing, 5)
+                .frame(height: 35)
+                .frame(maxWidth: 250)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isEditingPrimaryName ? Color(hex: "#EEF5E3") : .white)
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
+                )
+                .contentShape(Rectangle())
+                .fixedSize(horizontal: true, vertical: false)
+                .onTapGesture { isEditingPrimaryName = true }
                 
                 Text("!")
-                    .font(NunitoFont.bold.size(24))
+                    .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
             }
+            .padding(.top, 24)
             .padding(.bottom, 16)
             
             // Description
             Text("We’ve created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
-                .font(ManropeFont.regular.size(14))
+                .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale100)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
             
-         
-            
             // Continue Button
-       GreenCapsule(title: "Continue",width: 159)
-            .frame(width :159)
+            Button(action: {
+                commitPrimaryName()
+                onContinue()
+            }) {
+                GreenCapsule(title: "Continue", width: 159)
+                    .frame(width: 159)
+            }
+            .padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity)
+        .onAppear {
+            if let family = familyStore.family {
+                // If it's the "Just Me" flow, backend defaults the member name to "Me"
+                // but the family name to "Bite Buddy". We should show "Bite Buddy" here.
+                if family.selfMember.name == "Me" && !family.name.isEmpty {
+                    primaryMemberName = family.name
+                } else {
+                    primaryMemberName = family.selfMember.name
+                }
+            } else if let pending = familyStore.pendingSelfMember {
+                primaryMemberName = pending.name
+            } else {
+                primaryMemberName = "Bite Buddy"
+            }
+        }
+        .onChange(of: isEditingPrimaryName) { _, editing in
+            if !editing {
+                commitPrimaryName()
+            }
+        }
+        .onChange(of: primaryMemberName) { oldValue, newValue in
+            // Filter to letters and spaces only
+            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+            var finalized = filtered
+            
+            // Limit to 25 characters
+            if finalized.count > 25 {
+                finalized = String(finalized.prefix(25))
+            }
+            
+            // Limit to max 3 words (max 2 spaces)
+            let components = finalized.components(separatedBy: .whitespaces)
+            if components.count > 3 {
+                finalized = components.prefix(3).joined(separator: " ")
+            }
+            
+            if finalized != newValue {
+                primaryMemberName = finalized
+            }
+        }
+    }
+    
+    private func commitPrimaryName() {
+        let trimmed = primaryMemberName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        Task { @MainActor in
+            if let family = familyStore.family {
+                var me = family.selfMember
+                guard me.name != trimmed else { return }
+                me.name = trimmed
+                await familyStore.editMember(me)
+            } else if let pending = familyStore.pendingSelfMember {
+                if pending.name != trimmed {
+                    familyStore.updatePendingSelfMemberName(trimmed)
+                }
+            } else {
+                // If neither exists, create pending self member
+                familyStore.setPendingSelfMember(name: trimmed)
+            }
+        }
     }
 }
 
@@ -738,8 +860,7 @@ struct MeetYourProfileIntroView: View {
             Spacer()
             
             Button(action: {
-                coordinator.showCanvas(.home)
-                coordinator.navigateInBottomSheet(.homeDefault)
+                coordinator.navigateInBottomSheet(.meetYourProfile)
             }) {
                 GreenCapsule(title: "Continue", width: 159)
                     .frame(width: 159)

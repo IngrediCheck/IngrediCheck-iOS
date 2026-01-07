@@ -45,6 +45,7 @@ struct ListsTabState {
     @MainActor var activeTab: TabScreen = .home
     @MainActor var listsTabState = ListsTabState()
     @MainActor var feedbackConfig: FeedbackConfig?
+    @MainActor var navigateToSettings: Bool = false
 }
 
 @MainActor struct LoggedInRootView: View {
@@ -54,6 +55,7 @@ struct ListsTabState {
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(AppNavigationCoordinator.self) var coordinator
+    @Environment(MemojiStore.self) var memojiStore
     @State private var lastPresentedSheet: Sheets? = nil
     
     // Provide Onboarding state object for PersistentBottomSheet and other consumers
@@ -109,8 +111,11 @@ struct ListsTabState {
             case .scan:
                 CheckTab()
                     .environment(userPreferences)
-            default:
-                EmptyView()
+            case .settings:
+                SettingsSheet()
+                    .environment(userPreferences)
+                    .environment(memojiStore)
+                    .environment(coordinator)
             }
         }
         .sheet(item: $appState.feedbackConfig) { feedbackConfig in

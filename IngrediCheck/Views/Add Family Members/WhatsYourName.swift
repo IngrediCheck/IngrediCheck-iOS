@@ -75,9 +75,28 @@ struct WhatsYourName: View {
                         )
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .autocorrectionDisabled(true)   // ✅ stops autocorrect
-                        .onChange(of: name) { _, newValue in
+                        .onChange(of: name) { oldValue, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 showError = false
+                            }
+                            
+                            // Filter to letters and spaces only
+                            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+                            var finalized = filtered
+                            
+                            // Limit to 25 characters
+                            if finalized.count > 25 {
+                                finalized = String(finalized.prefix(25))
+                            }
+                            
+                            // Limit to max 3 words (max 2 spaces)
+                            let components = finalized.components(separatedBy: .whitespaces)
+                            if components.count > 3 {
+                                finalized = components.prefix(3).joined(separator: " ")
+                            }
+                            
+                            if finalized != newValue {
+                                name = finalized
                             }
                         }
                     

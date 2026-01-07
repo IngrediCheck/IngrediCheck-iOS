@@ -36,7 +36,12 @@ struct EditMember: View {
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
                         Button {
-                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            // Context-aware back: from Home/Manage Family, dismiss; from onboarding, return to minimal list
+                            if case .home = coordinator.currentCanvasRoute {
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            }
                         } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))

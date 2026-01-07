@@ -44,10 +44,17 @@ struct RootContainerView: View {
 
     var body: some View {
         @Bindable var coordinator = coordinator
+        @Bindable var appState = appState
 
         ZStack(alignment: .bottom) {
-            // Show custom background when meetYourProfileIntro bottom sheet is active
-            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro {
+            // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
+            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
+               coordinator.currentBottomSheetRoute == .meetYourProfile ||
+               ((coordinator.currentBottomSheetRoute == .generateAvatar || 
+                 coordinator.currentBottomSheetRoute == .yourCurrentAvatar ||
+                 coordinator.currentBottomSheetRoute == .bringingYourAvatar ||
+                 coordinator.currentBottomSheetRoute == .meetYourAvatar) && 
+                (memojiStore.previousRouteForGenerateAvatar == .meetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro)) {
                 VStack {
                     Text("Meet your profile")
                         .font(ManropeFont.bold.size(16))
@@ -100,6 +107,19 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        // Allow presenting SettingsSheet from anywhere in this container
+        .sheet(item: $appState.activeSheet) { sheet in
+            switch sheet {
+            case .settings:
+                SettingsSheet()
+                    .environment(userPreferences)
+                    .environment(memojiStore)
+                    .environment(coordinator)
+            case .scan:
+                // Not used here; keep empty or route to a scan view if needed later
+                EmptyView()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)

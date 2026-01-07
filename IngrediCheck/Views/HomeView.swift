@@ -45,6 +45,7 @@ struct HomeView: View {
     // ---------------------------
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(MemojiStore.self) private var memojiStore
 
     private var familyMembers: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
@@ -427,12 +428,20 @@ struct HomeView: View {
                     await refreshRecentScans()
                 }
             }
+            // Trigger a push navigation to Settings when requested by app state
+            .onChange(of: appState.navigateToSettings) { _, newValue in
+                if newValue {
+                    isSettingsPresented = true
+                    appState.navigateToSettings = false
+                }
+            }
 
             // ------------ SETTINGS SCREEN ------------
             .navigationDestination(isPresented: $isSettingsPresented) {
                 SettingsSheet()
                     .environment(userPreferences)
                     .environment(coordinator)
+                    .environment(memojiStore)
             }
             
             // ------------ EDITABLE CANVAS ------------

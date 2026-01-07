@@ -11,6 +11,7 @@ struct SettingsSheet: View {
     @Environment(DietaryPreferences.self) var dietaryPreferences
     @Environment(\.openURL) var openURL
     @Environment(AppNavigationCoordinator.self) var coordinator
+    @Environment(MemojiStore.self) var memojiStore
     
     @State private var showInternalModeToast = false
     @State private var internalModeToastMessage = "Internal Mode Unlocked"
@@ -91,6 +92,15 @@ struct SettingsSheet: View {
                                 .overlay(Image("pen-line").resizable().frame(width: 14, height: 14))
                                 .offset(x: -6, y: -6)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let me = familyStore.family?.selfMember {
+                                familyStore.avatarTargetMemberId = me.id
+                                memojiStore.displayName = me.name
+                            }
+                            memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
+                            coordinator.navigateInBottomSheet(.yourCurrentAvatar)
+                        }
                     nameEditField()
                 }
             }
@@ -136,17 +146,37 @@ struct SettingsSheet: View {
                         
                         sectionCard {
                             VStack(spacing: 0) {
-                                NavigationLink {
-                                    ManageFamilyView()
-                                        .environment(coordinator)
-                                } label: {
-                                    rowContent(
-                                        image: Image("create-family-icon"),
-                                        title: (familyStore.family != nil ? "Manage Family" : "Create Family"),
-                                        iconColor: Color(hex: "#75990E")
-                                    )
+                                // Conditional navigation based on family existence AND other members
+                                // Show "Manage Family" only if family exists AND has other members
+                                // Show "Create Family" if no family OR family is just "Just Me" (no other members)
+                                if let family = familyStore.family, !family.otherMembers.isEmpty {
+                                    // Family exists with other members -> Navigate to ManageFamilyView
+                                    NavigationLink {
+                                        ManageFamilyView()
+                                            .environment(coordinator)
+                                    } label: {
+                                        rowContent(
+                                            image: Image("create-family-icon"),
+                                            title: "Manage Family",
+                                            iconColor: Color(hex: "#75990E")
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    // No family OR "Just Me" family -> Start family creation flow
+                                    Button {
+                                        coordinator.isCreatingFamilyFromSettings = true
+                                        coordinator.showCanvas(.letsMeetYourIngrediFam)
+                                        dismiss()
+                                    } label: {
+                                        rowContent(
+                                            image: Image("create-family-icon"),
+                                            title: "Create Family",
+                                            iconColor: Color(hex: "#75990E")
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                                 Divider()
                                     .padding(.horizontal, 16)
                                 settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {
@@ -289,14 +319,24 @@ struct SettingsSheet: View {
                 // 1) Prefill immediately from whatever is already in memory to avoid flicker/lag
                 primaryMemberName = familyStore.family?.selfMember.name
                 ?? familyStore.pendingSelfMember?.name
-                ?? "Ritika Raj"
+                ?? "Bite Buddy"
                 
                 // 2) Load family fresh in the background and update if it changes
                 Task {
                     await familyStore.loadCurrentFamily()
                     await MainActor.run {
-                        if let updated = familyStore.family?.selfMember.name ?? familyStore.pendingSelfMember?.name {
-                            primaryMemberName = updated
+                        if let family = familyStore.family {
+                            // If it's the "Just Me" flow, backend defaults the member name to "Me"
+                            // but the family name to "Bite Buddy". We should show "Bite Buddy" here.
+                            if family.selfMember.name == "Me" && !family.name.isEmpty {
+                                primaryMemberName = family.name
+                            } else {
+                                primaryMemberName = family.selfMember.name
+                            }
+                        } else if let pending = familyStore.pendingSelfMember {
+                            primaryMemberName = pending.name
+                        } else if primaryMemberName.isEmpty {
+                            primaryMemberName = "Bite Buddy"
                         }
                     }
                 }
@@ -321,6 +361,26 @@ struct SettingsSheet: View {
             .onChange(of: userPreferences.startScanningOnAppStart) { _, newValue in
                 if newValue && !dietaryPreferences.preferences.isEmpty {
                     appState.activeSheet = .scan
+                }
+            }
+            .onChange(of: primaryMemberName) { oldValue, newValue in
+                // Filter to letters and spaces only
+                let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+                var finalized = filtered
+                
+                // Limit to 25 characters
+                if finalized.count > 25 {
+                    finalized = String(finalized.prefix(25))
+                }
+                
+                // Limit to max 3 words (max 2 spaces)
+                let components = finalized.components(separatedBy: .whitespaces)
+                if components.count > 3 {
+                    finalized = components.prefix(3).joined(separator: " ")
+                }
+                
+                if finalized != newValue {
+                    primaryMemberName = finalized
                 }
             }
             .simpleToast(
@@ -460,9 +520,9 @@ struct SettingsSheet: View {
                             .background(Color.grayScale10)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
-                    }
                 }
             }
+        }
     }
         
     
@@ -514,10 +574,12 @@ struct SettingsSheet: View {
                     guard me.name != trimmed else { return }
                     me.name = trimmed
                     await familyStore.editMember(me)
-                } else if familyStore.pendingSelfMember != nil {
-                    if familyStore.pendingSelfMember?.name != trimmed {
+                } else if let pending = familyStore.pendingSelfMember {
+                    if pending.name != trimmed {
                         familyStore.updatePendingSelfMemberName(trimmed)
                     }
+                } else {
+                    familyStore.setPendingSelfMember(name: trimmed)
                 }
             }
         }
@@ -772,7 +834,6 @@ struct SettingsSheet: View {
             }
             return buildNumber
         }
-    }
     
     struct DeleteAccountView: View {
         
@@ -921,6 +982,7 @@ struct SettingsSheet: View {
             
         }
     }
+}
 
 
 @MainActor struct SettingsTabContainer: View {

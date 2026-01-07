@@ -71,7 +71,17 @@ struct IngrediBotView: View {
             // Action buttons
             HStack(spacing: 12) {
                 Button {
+                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
                     
+                    if isOnboarding {
+                        if coordinator.onboardingFlow == .individual {
+                            coordinator.showCanvas(.summaryJustMe)
+                        } else {
+                            coordinator.showCanvas(.summaryAddFamily)
+                        }
+                    } else {
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
                 } label: {
                     Text("Maybe later")
                         .lineLimit(1)
