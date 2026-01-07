@@ -22,6 +22,7 @@ struct PersistentBottomSheet: View {
     @State private var tutorialData: TutorialData? 
     @State private var isAnimatingHand: Bool = false
     @State private var dragOffsetY: CGFloat = 0
+    @State private var didTimeoutWaitingForPreferences: Bool = false
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -322,7 +323,7 @@ struct PersistentBottomSheet: View {
         case .setUpAvatarFor:
             return nil
         case .dietaryPreferencesSheet(let isFamilyFlow):
-            return nil
+            return 263
         case .allSetToJoinYourFamily:
             return 284
         // For preference sheets shown from MainCanvasView, let the
@@ -380,6 +381,9 @@ struct PersistentBottomSheet: View {
                     coordinator.navigateInBottomSheet(.fineTuneYourExperience)
                     return
                 }
+
+                // Capture nextStepId BEFORE advancing store, otherwise we skip one step.
+                let nextStepId = store.nextStepId
                 
                 // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
                 if store.isLastStep {
@@ -393,7 +397,7 @@ struct PersistentBottomSheet: View {
                 store.next()
                 
                 // Move the bottom sheet to the next onboarding question using JSON order
-                if let nextStepId = store.nextStepId {
+                if let nextStepId {
                     coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
                 }
             }
@@ -528,8 +532,7 @@ struct PersistentBottomSheet: View {
                     coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
                 }
             } continuePressed: {
-                // Maybe later -> mark member as pending and go back to minimal add members screen
-                familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+                // Maybe later -> do NOT mark pending; only invited members should show "Pending"
                 // If this flow was started from Home/Manage Family, dismiss the sheet.
                 // Otherwise, keep onboarding behavior.
                 if case .home = coordinator.currentCanvasRoute {
@@ -694,8 +697,26 @@ struct PersistentBottomSheet: View {
             )
             
         case .onboardingStep(let stepId):
-            // Dynamically load step from JSON using step ID
-            if let step = store.step(for: stepId) {
+            // If preferences are not yet loaded (e.g., right after app restart),
+            // avoid rendering empty selections to prevent user confusion.
+            if store.preferences.sections.isEmpty && !didTimeoutWaitingForPreferences {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Loading your choices…")
+                        .font(ManropeFont.medium.size(12))
+                        .foregroundStyle(.grayScale120)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 80)
+                .task(id: stepId) {
+                    didTimeoutWaitingForPreferences = false
+                    // Prevent this from hanging forever if the backend is slow/unavailable.
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    if store.preferences.sections.isEmpty {
+                        didTimeoutWaitingForPreferences = true
+                    }
+                }
+            } else if let step = store.step(for: stepId) {
                 DynamicOnboardingStepView(
                     step: step,
                     flowType: getOnboardingFlowType(),

@@ -71,6 +71,8 @@ struct DietaryPreferencesAndRestrictions: View {
 
         }
         .padding(.horizontal, 20)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             coordinator.setCanvasRoute(.dietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow))
         }
@@ -101,47 +103,13 @@ struct DietaryPreferencesSheetContent: View {
                 
             VStack(alignment: .center, spacing: 8) {
                 Text("Personalize your Choices")
-                    .font(NunitoFont.semiBold.size(28))
+                    .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
                 Text("Let’s get started with you! We’ll create a profile just for you and guide you through personalized food tips.")
                     .multilineTextAlignment(.center)
-                    .font(ManropeFont.regular.size(14))
+                    .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale100)
-            }
-            
-            if isFamilyFlow {
-                let members = familyStore.family.map { [$0.selfMember] + $0.otherMembers } ?? []
-                if members.isEmpty {
-                    // Fallback visuals while family data is loading
-//                    HStack(spacing: -8) {
-//                        Image(.imageBg1)
-//                            .resizable()
-//                            .frame(width: 36, height: 36)
-//                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-//                        Image(.imageBg2)
-//                            .resizable()
-//                            .frame(width: 36, height: 36)
-//                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-//                        Image(.imageBg3)
-//                            .resizable()
-//                            .frame(width: 36, height: 36)
-//                            .overlay(Circle().stroke(lineWidth: 1).foregroundStyle(Color(hex: "FFFFFF")))
-//                    }
-                } else {
-                    HStack(spacing: -8) {
-                        ForEach(members, id: \.id) { member in
-                            Circle()
-                                .fill(Color(hex: member.color))
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Circle()
-                                        .stroke(lineWidth: 1)
-                                        .foregroundStyle(Color.white)
-                                )
-                        }
-                    }
-                }
             }
             
 //            Spacer()
@@ -155,6 +123,7 @@ struct DietaryPreferencesSheetContent: View {
         }
         .padding(.vertical, isFamilyFlow ? 16 : 32)
         .padding(.horizontal, 20)
+        .frame(height: 263)
     }
 }
 

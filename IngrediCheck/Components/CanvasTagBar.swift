@@ -37,6 +37,15 @@ struct CanvasTagBar: View {
     }
     @State var visited: [String] = []
     
+    private var currentSelectedSectionIndex: Int {
+        if case .onboardingStep(let stepId) = currentBottomSheetRoute {
+            if let index = store.dynamicSteps.firstIndex(where: { $0.id == stepId }) {
+                return index
+            }
+        }
+        return store.currentSectionIndex
+    }
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -50,6 +59,9 @@ struct CanvasTagBar: View {
                                     // If fineTuneYourExperience is shown, return empty string so nothing is selected
                                     if case .fineTuneYourExperience = currentBottomSheetRoute {
                                         return ""
+                                    }
+                                    if store.sections.indices.contains(currentSelectedSectionIndex) {
+                                        return store.sections[currentSelectedSectionIndex].name
                                     }
                                     return store.sections[store.currentSectionIndex].name
                                 },
@@ -80,10 +92,9 @@ struct CanvasTagBar: View {
             }
         }
         .onAppear() {
-            // Initialize visited with sections up to and including current
-            if store.sections.indices.contains(store.currentSectionIndex) {
-                let currentIndex = store.currentSectionIndex
-                let initial = store.sections.prefix(currentIndex + 1).map { $0.name }
+            // Initialize visited with sections up to and including the restored/current selection.
+            if store.sections.indices.contains(currentSelectedSectionIndex) {
+                let initial = store.sections.prefix(currentSelectedSectionIndex + 1).map { $0.name }
                 visited = Array(initial)
             }
         }
@@ -95,6 +106,14 @@ struct CanvasTagBar: View {
                 if !visited.contains(currentName) {
                     visited.append(currentName)
                 }
+            }
+        }
+        .onChange(of: currentBottomSheetRoute) { _, _ in
+            // When restoring after app restart, the bottom sheet route may be restored
+            // before the tag bar store index catches up. Keep visited aligned.
+            if store.sections.indices.contains(currentSelectedSectionIndex) {
+                let initial = store.sections.prefix(currentSelectedSectionIndex + 1).map { $0.name }
+                visited = Array(initial)
             }
         }
     }
