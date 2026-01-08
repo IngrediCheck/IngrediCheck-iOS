@@ -92,30 +92,34 @@ struct CanvasTagBar: View {
             }
         }
         .onAppear() {
-            // Initialize visited with sections up to and including the restored/current selection.
-            if store.sections.indices.contains(currentSelectedSectionIndex) {
-                let initial = store.sections.prefix(currentSelectedSectionIndex + 1).map { $0.name }
-                visited = Array(initial)
-            }
+            syncVisitedFromStore()
         }
         .onChange(of: store.currentSectionIndex) { _, newIndex in
             // When user goes to a next section (or any section), mark it as visited
             // so it turns dark green immediately.
             if store.sections.indices.contains(newIndex) {
+                if newIndex > store.maxVisitedSectionIndex {
+                    store.maxVisitedSectionIndex = newIndex
+                }
                 let currentName = store.sections[newIndex].name
                 if !visited.contains(currentName) {
                     visited.append(currentName)
                 }
             }
         }
-        .onChange(of: currentBottomSheetRoute) { _, _ in
-            // When restoring after app restart, the bottom sheet route may be restored
-            // before the tag bar store index catches up. Keep visited aligned.
-            if store.sections.indices.contains(currentSelectedSectionIndex) {
-                let initial = store.sections.prefix(currentSelectedSectionIndex + 1).map { $0.name }
-                visited = Array(initial)
-            }
+        .onChange(of: store.maxVisitedSectionIndex) { _, _ in
+            syncVisitedFromStore()
         }
+    }
+
+    private func syncVisitedFromStore() {
+        guard store.sections.isEmpty == false else {
+            visited = []
+            return
+        }
+        let maxIndex = min(store.maxVisitedSectionIndex, max(store.sections.count - 1, 0))
+        let names = store.sections.prefix(maxIndex + 1).map { $0.name }
+        visited = Array(names)
     }
     
     private func handleSelection(newName: String, proxy: ScrollViewProxy) {
