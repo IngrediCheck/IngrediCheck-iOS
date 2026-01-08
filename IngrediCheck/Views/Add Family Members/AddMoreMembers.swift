@@ -121,7 +121,7 @@ struct AddMoreMembers: View {
                         .padding(.leading, 20)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 24) {
+                        HStack(spacing: 16) {
                             Button {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if trimmed.isEmpty {

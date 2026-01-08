@@ -86,7 +86,7 @@ struct EditMember: View {
                         .padding(.leading, 20)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 24) {
+                        HStack(spacing: 12 ) {
                             Button {
                                 // Track that we came from EditMember - need to get the actual route
                                 if case .editMember(let memberId, let isSelf) = coordinator.currentBottomSheetRoute {
@@ -139,7 +139,7 @@ struct EditMember: View {
                             }
                         }
                         .padding(.horizontal, 20)
-                    }
+                                            }
                 }
             }
             .padding(.bottom, 40)

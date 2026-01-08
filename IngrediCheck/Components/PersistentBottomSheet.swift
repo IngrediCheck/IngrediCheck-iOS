@@ -587,12 +587,23 @@ struct PersistentBottomSheet: View {
                         memojiStore: memojiStore,
                         familyStore: familyStore
                     )
+
+                    let pendingCount = (familyStore.pendingSelfMember == nil ? 0 : 1) + familyStore.pendingOtherMembers.count
                     
                     // Navigate back based on where we came from
                     if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
                         // If we came from meetYourProfile, go back there
                         if case .meetYourProfile = previousRoute {
                             coordinator.navigateInBottomSheet(.meetYourProfile)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        } else if previousRoute == .addMoreMembers, !(coordinator.currentCanvasRoute == .home) {
+                            // Onboarding family flow:
+                            // If we already have at least 2 members, show minimal sheet with All Set + Add Member.
+                            if pendingCount >= 2 {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            } else {
+                                coordinator.navigateInBottomSheet(.addMoreMembers)
+                            }
                             memojiStore.previousRouteForGenerateAvatar = nil
                         } else {
                             coordinator.navigateInBottomSheet(previousRoute)
@@ -601,7 +612,14 @@ struct PersistentBottomSheet: View {
                     } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembers)
+                        // Onboarding family flow:
+                        // - After assigning self avatar (only 1 member), show full AddMoreMembers form.
+                        // - After we have at least 2 members, show minimal sheet with All Set + Add Member.
+                        if pendingCount >= 2 {
+                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                        } else {
+                            coordinator.navigateInBottomSheet(.addMoreMembers)
+                        }
                     }
                 }
             }

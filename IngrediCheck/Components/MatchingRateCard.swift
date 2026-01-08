@@ -8,6 +8,24 @@
 import SwiftUI
 
 struct MatchingRateCard: View {
+    var matchedCount: Int = 0
+    var uncertainCount: Int = 00
+    var unmatchedCount: Int = 00
+    var increaseValue: Int? = nil
+
+    private var totalCount: Int {
+        matchedCount + uncertainCount + unmatchedCount
+    }
+
+    private var isEmptyState: Bool {
+        totalCount <= 0
+    }
+
+    private var matchedPercentage: Int {
+        guard totalCount > 0 else { return 0 }
+        return Int(round((Double(matchedCount) / Double(totalCount)) * 100.0))
+    }
+
     var body: some View {
         VStack( ){
             ZStack {
@@ -15,7 +33,11 @@ struct MatchingRateCard: View {
                     .fill(.clear)
                     .frame(width: 230)
                     .overlay(
-                        MatchingRateProgressBar(matchedCount: 78, uncertainCount: 31, unmatchedCount: 47)
+                        MatchingRateProgressBar(
+                            matchedCount: matchedCount,
+                            uncertainCount: uncertainCount,
+                            unmatchedCount: unmatchedCount
+                        )
                             .scaleEffect( UIScreen.main.bounds.width * 0.00217)
                             .offset(y: 35)
                         , alignment: .bottom
@@ -26,7 +48,7 @@ struct MatchingRateCard: View {
               
                 VStack() {
                     HStack(alignment: .bottom, spacing: 0) {
-                        Text("140")
+                        Text("\(matchedPercentage)")
                             .font(.system(size: 24, weight: .semibold))
                         
                         Text("%")
@@ -40,8 +62,25 @@ struct MatchingRateCard: View {
                         .foregroundStyle(.grayScale100)
                 }.offset(y : 35)
                 
-                MatchingRateCard1(increaseValue: 20)
-                    .offset(y: 80)
+                if isEmptyState {
+                    Text("Start scanning to unlock your matching insights")
+                        .font(ManropeFont.regular.size(10))
+                        .foregroundStyle(.grayScale120)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(
+                            Capsule()
+                                .fill(.white)
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color(hex: "#EEEEEE"), lineWidth: 1)
+                                )
+                        )
+                        .offset(y: 92)
+                } else if let increaseValue {
+                    MatchingRateCard1(increaseValue: increaseValue)
+                        .offset(y: 80)
+                }
             }
             
           
@@ -49,7 +88,12 @@ struct MatchingRateCard: View {
         }.frame(maxWidth: .infinity  )
             .frame(height: 229)
             .background(.grayScale10, in: RoundedRectangle(cornerRadius: 24))
-                .shadow(color: Color(hex: "#ECECEC"), radius: 9, x: 0, y: 0)
+            .shadow(
+                color: isEmptyState ? .clear : Color(hex: "#ECECEC"),
+                radius: isEmptyState ? 0 : 9,
+                x: 0,
+                y: 0
+            )
             .overlay(
                 Text("Matching Rate")
                     .frame(height: 17)
@@ -110,10 +154,21 @@ struct MatchingRateCard1: View {
 
 
 #Preview {
-//    MatchingRateCard1(increaseValue: 20)
-    ZStack {
-        Color.gray.opacity(0.1).ignoresSafeArea()
-        MatchingRateCard()
-            .padding(.horizontal, 20)
+    Group {
+        // Filled state preview
+        ZStack {
+            Color.gray.opacity(0.1).ignoresSafeArea()
+            MatchingRateCard(matchedCount: 0, uncertainCount: 0, unmatchedCount: 47, increaseValue: 20)
+                .padding(.horizontal, 20)
+        }
+        .previewDisplayName("Filled State")
+        
+        // Empty state preview
+        ZStack {
+            Color.gray.opacity(0.9).ignoresSafeArea()
+            MatchingRateCard(matchedCount: 0, uncertainCount: 0, unmatchedCount: 0)
+                .padding(.horizontal, 20)
+        }
+        .previewDisplayName("Empty State")
     }
 }

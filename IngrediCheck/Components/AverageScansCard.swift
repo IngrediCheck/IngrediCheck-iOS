@@ -23,16 +23,39 @@ struct AvgModel: Identifiable {
 struct AverageScansCard: View {
     
     @State var avgArray: [AvgModel] = [
-        AvgModel(value: 100, day: "M"),
-        AvgModel(value: 25, day: "T"),
-        AvgModel(value: 50, day: "W"),
-        AvgModel(value: 75, day: "T"),
-        AvgModel(value: 90, day: "F"),
+        AvgModel(value: 10, day: "M"),
+        AvgModel(value: 20, day: "T"),
+        AvgModel(value: 0, day: "W"),
+        AvgModel(value: 10, day: "T"),
+        AvgModel(value: 10, day: "F"),
         AvgModel(value: 10, day: "S"),
-        AvgModel(value: 100, day: "S")
+        AvgModel(value:10, day: "S")
     ]
-    
-    @State private var weeklyAverage: Int = 0
+
+    private var weeklyAverage: Int {
+        guard !avgArray.isEmpty else { return 0 }
+        return avgArray.map { $0.value }.reduce(0, +) / avgArray.count
+    }
+
+    private let chartHeight: CGFloat = 50
+    private let barWidth: CGFloat = 12
+    private let barSpacing: CGFloat = 8
+    private let chartSideSpacing: CGFloat = 4
+
+    private var chartWidth: CGFloat {
+        let count = max(1, avgArray.count)
+        let barsTotal = CGFloat(count) * barWidth + CGFloat(max(0, count - 1)) * barSpacing
+        return barsTotal + (chartSideSpacing * 2)
+    }
+
+    private var chartMaxValue: CGFloat {
+        let maxDataValue = avgArray.map { $0.value }.max() ?? 0
+        return CGFloat(max(1, max(maxDataValue, weeklyAverage)))
+    }
+
+    private func scaledHeight(for value: Int) -> CGFloat {
+        CGFloat(value) / chartMaxValue * chartHeight
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -57,19 +80,19 @@ struct AverageScansCard: View {
                     // Weekly Average Line
                     RoundedRectangle(cornerRadius: 1)
                         .fill(.primary300)
-                        .frame(width: 140, height: 1.5)
-                        .offset(y: -CGFloat(weeklyAverage) / 100 * 50) // move up from bottom
+                        .frame(width: chartWidth, height: 1.5)
+                        .offset(y: -CGFloat(weeklyAverage) / chartMaxValue * chartHeight) // move up from bottom
                     
                     // Bars
                     HStack(alignment: .bottom, spacing: 8) {
                         ForEach(avgArray) { array in
                             RoundedRectangle(cornerRadius: 3)
                                 .foregroundStyle(array.value >= weeklyAverage ? .secondary800 : .secondary400)
-                                .frame(width: 12, height: array.barHeight)
+                                .frame(width: barWidth, height: scaledHeight(for: array.value))
                         }
                     }
                 }
-                .frame(height: 50) // ensure ZStack height matches max bar height
+                .frame(height: chartHeight) // ensure ZStack height matches max bar height
                 
                 // Day Labels
                 HStack(spacing: 0) {
@@ -90,7 +113,8 @@ struct AverageScansCard: View {
         .background(
             RoundedRectangle(cornerRadius: 18)
                 .foregroundStyle(.white)
-                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                .shadow(color: Color(hex: "#E6F6CD"
+                                    ), radius: 9, x: 0, y: 0)
         )
         
         .overlay(
@@ -100,10 +124,6 @@ struct AverageScansCard: View {
                 .padding(12)
             , alignment: .topTrailing
         )
-        .onAppear() {
-            // calculates the weekly avg from the array values
-            weeklyAverage = avgArray.map { $0.value }.reduce(0, +) / avgArray.count
-        }
         .overlay(
             RoundedRectangle(cornerRadius: 18)
                 .stroke(lineWidth: 0.25)
