@@ -97,6 +97,7 @@
 		D3F0E0032F0A1B2C3D4E5F60 /* MemojiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */; };
 		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
+		D3F6A9652F0D33A00019F5C4 /* ScanHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F6A9642F0D33A00019F5C4 /* ScanHistoryStore.swift */; };
 		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
 		FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */; };
 /* End PBXBuildFile section */
@@ -185,6 +186,7 @@
 		D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiModels.swift; sourceTree = "<group>"; };
 		D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiStore.swift; sourceTree = "<group>"; };
 		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
+		D3F6A9642F0D33A00019F5C4 /* ScanHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanHistoryStore.swift; sourceTree = "<group>"; };
 		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
 		FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
@@ -202,6 +204,8 @@
 		D3BECC372ED98A3E0088E044 /* ProductDetails */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ProductDetails; sourceTree = "<group>"; };
 		D3BECC732ED98CFF0088E044 /* Splash Screen */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Splash Screen"; sourceTree = "<group>"; };
 		D3BECC742ED98CFF0088E044 /* Add Family Members */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Add Family Members"; sourceTree = "<group>"; };
+		D3F6A49D2F06D5720019F5C4 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
+		FAA88CBC2EF6B62300449EDF /* Resource */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resource; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -269,6 +273,7 @@
 		392D9C042B72D56700166CF1 /* Store */ = {
 			isa = PBXGroup;
 			children = (
+				D3F6A9642F0D33A00019F5C4 /* ScanHistoryStore.swift */,
 				D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */,
 				D382E05E2EDEE4B600F139B2 /* FamilyService.swift */,
 				D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */,
@@ -326,6 +331,7 @@
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				D3F6A49D2F06D5720019F5C4 /* Components */,
 				0C3A858A2F04EDB20018E877 /* Sheets */,
 				D3BED0612ED997490088E044 /* HomeView.swift */,
 				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
@@ -413,6 +419,7 @@
 			isa = PBXGroup;
 			children = (
 				D333A2702E3379F400E31F66 /* Constants.swift */,
+				FAA88CBC2EF6B62300449EDF /* Resource */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -444,6 +451,8 @@
 				D3BECC372ED98A3E0088E044 /* ProductDetails */,
 				D3BECC732ED98CFF0088E044 /* Splash Screen */,
 				D3BECC742ED98CFF0088E044 /* Add Family Members */,
+				D3F6A49D2F06D5720019F5C4 /* Components */,
+				FAA88CBC2EF6B62300449EDF /* Resource */,
 			);
 			name = IngrediCheck;
 			packageProductDependencies = (
@@ -581,6 +590,7 @@
 				397DA1D72B7A9BB000BFB26F /* PreferenceExamples.swift in Sources */,
 				393461CE2B93777200695FE5 /* FileCache.swift in Sources */,
 				39705AEA2BD47DEB000E487D /* OnboardingState.swift in Sources */,
+				D3F6A9652F0D33A00019F5C4 /* ScanHistoryStore.swift in Sources */,
 				39705AEC2BD48E2C000E487D /* UseCasesView.swift in Sources */,
 				397DA1D92B7C153100BFB26F /* FeedbackView.swift in Sources */,
 				392D9BFD2B72CCD300166CF1 /* SettingsSheet.swift in Sources */,
@@ -730,7 +740,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -748,7 +758,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -799,11 +809,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 5;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 58MYNHGN72;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IngrediCheck/Info.plist;
@@ -820,7 +829,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -857,7 +866,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "IngrediCheck App Store";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;

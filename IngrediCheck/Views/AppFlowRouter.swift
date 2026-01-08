@@ -3,6 +3,7 @@ import SwiftUI
 /// Routes between production and preview flows based on configuration
 struct AppFlowRouter: View {
     @State private var webService = WebService()
+    @State private var scanHistoryStore: ScanHistoryStore
     @State private var dietaryPreferences = DietaryPreferences()
     @State private var userPreferences: UserPreferences = UserPreferences()
     @State private var appState = AppState()
@@ -12,6 +13,12 @@ struct AppFlowRouter: View {
     @State private var coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
     @State private var memojiStore = MemojiStore()
     @State private var appResetID = UUID()
+
+    init() {
+        let ws = WebService()
+        _webService = State(initialValue: ws)
+        _scanHistoryStore = State(initialValue: ScanHistoryStore(webService: ws))
+    }
     
     var body: some View {
         Group {
@@ -19,6 +26,7 @@ struct AppFlowRouter: View {
                 PreviewFlowView()
                     .environment(authController)
                     .environment(webService)
+                    .environment(scanHistoryStore)
                     .environment(userPreferences)
                     .environment(appState)
                     .environment(dietaryPreferences)
@@ -30,6 +38,7 @@ struct AppFlowRouter: View {
                 ProductionFlowView()
                     .environment(authController)
                     .environment(webService)
+                    .environment(scanHistoryStore)
                     .environment(userPreferences)
                     .environment(appState)
                     .environment(dietaryPreferences)
@@ -42,7 +51,9 @@ struct AppFlowRouter: View {
         .id(appResetID)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
             appResetID = UUID()
-            webService = WebService()
+            let ws = WebService()
+            webService = ws
+            scanHistoryStore = ScanHistoryStore(webService: ws)
             dietaryPreferences = DietaryPreferences()
             userPreferences = UserPreferences()
             appState = AppState()

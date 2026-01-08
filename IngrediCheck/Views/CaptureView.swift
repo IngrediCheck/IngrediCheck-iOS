@@ -22,7 +22,10 @@ struct CaptureView: View {
                 ImageCaptureView(
                     capturedImages: $checkTabState.capturedImages,
                     onSubmit: {
-                        checkTabState.routes.append(.productImages(checkTabState.capturedImages))
+                        // Navigate to LabelAnalysisView with scanId
+                        if let scanId = checkTabState.scanId {
+                            checkTabState.routes.append(.productImages(scanId))
+                        }
                     },
                     showClearButton: true,
                     showTitle: false,

@@ -24,11 +24,12 @@ enum Sheets: Identifiable, Equatable {
 @Observable class CheckTabState {
     var routes: [CapturedItem] = []
     var capturedImages: [ProductImage] = []
+    var scanId: String?  // For photo scans - generated when first image is captured
     var feedbackConfig: FeedbackConfig?
 }
 
 enum HistoryRouteItem: Hashable {
-    case historyItem(DTO.HistoryItem)
+    case scan(DTO.Scan)
     case listItem(DTO.ListItem)
     case favoritesAll
     case recentScansAll
@@ -36,7 +37,7 @@ enum HistoryRouteItem: Hashable {
 
 struct ListsTabState {
     var routes: [HistoryRouteItem] = []
-    var historyItems: [DTO.HistoryItem]? = nil
+    var scans: [DTO.Scan]? = nil
     var listItems: [DTO.ListItem]? = nil
 }
 
@@ -51,6 +52,7 @@ struct ListsTabState {
 @MainActor struct LoggedInRootView: View {
 
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
@@ -197,11 +199,15 @@ struct ListsTabState {
 
     private func refreshHistory() {
         Task {
-            if let history = try? await webService.fetchHistory() {
-                await MainActor.run {
-                    appState.listsTabState.historyItems = history
-                }
+            // Load scan history via store (single source of truth)
+            await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+
+            // Sync to AppState for backwards compatibility
+            await MainActor.run {
+                appState.listsTabState.scans = scanHistoryStore.scans
             }
+
+            // Load favorites
             if let listItems = try? await webService.getFavorites() {
                 await MainActor.run {
                     appState.listsTabState.listItems = listItems
