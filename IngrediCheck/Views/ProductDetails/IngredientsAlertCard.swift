@@ -184,24 +184,20 @@ struct IngredientsAlertCard: View {
                         avatarStack(for: item)
                         Spacer()
                         HStack(spacing: 12) {
-                            Button {
+                            FeedbackButton(
+                                type: .up,
+                                isSelected: item.vote?.value == "up",
+                                style: .plain
+                            ) {
                                 onFeedback?(item, "up")
-                            } label: {
-                                Image(item.vote?.value == "up" ? "thumbsup.fill" : "thumbsup")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 28, height: 24)
-                                    .foregroundStyle(item.vote?.value == "up" ? Color.green : .grayScale130)
                             }
                             
-                            Button {
+                            FeedbackButton(
+                                type: .down,
+                                isSelected: item.vote?.value == "down",
+                                style: .plain
+                            ) {
                                 onFeedback?(item, "down")
-                            } label: {
-                                Image(item.vote?.value == "down" ? "thumbsdown.fill" : "thumbsdown")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 28, height: 24)
-                                    .foregroundStyle(item.vote?.value == "down" ? Color.red : .grayScale130)
                             }
                         }
                     }

@@ -9,6 +9,8 @@ import SwiftUI
 
 struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
@@ -35,7 +37,12 @@ struct AddMoreMembers: View {
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
                         Button {
-                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            // Context-aware back: if opened from Home canvas, dismiss to home; else go to minimal list (onboarding)
+                            if case .home = coordinator.currentCanvasRoute {
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            }
                         } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))
@@ -65,14 +72,33 @@ struct AddMoreMembers: View {
                                 .foregroundStyle(showError ? .red : .grayScale60)
                         )
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                        .onChange(of: name) { _, newValue in
+                        .onChange(of: name) { oldValue, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 showError = false
+                            }
+                            
+                            // Filter to letters and spaces only
+                            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+                            var finalized = filtered
+                            
+                            // Limit to 25 characters
+                            if finalized.count > 25 {
+                                finalized = String(finalized.prefix(25))
+                            }
+                            
+                            // Limit to max 3 words (max 2 spaces)
+                            let components = finalized.components(separatedBy: .whitespaces)
+                            if components.count > 3 {
+                                finalized = components.prefix(3).joined(separator: " ")
+                            }
+                            
+                            if finalized != newValue {
+                                name = finalized
                             }
                         }
                     
                     if showError {
-                        Text("Please enter a name")
+                        Text("Enter a name.")
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -89,7 +115,18 @@ struct AddMoreMembers: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
-                                coordinator.navigateInBottomSheet(.generateAvatar)
+                                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if trimmed.isEmpty {
+                                    // Show error if textfield is empty
+                                    showError = true
+                                } else {
+                                    // Set display name before navigating
+                                    memojiStore.displayName = trimmed
+                                    // Ensure GenerateAvatar back button returns to AddMoreMembers, not onboarding
+                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
+                                    // Proceed to generate avatar
+                                    coordinator.navigateInBottomSheet(.generateAvatar)
+                                }
                             } label: {
                                 ZStack {
                                     Circle()
@@ -143,13 +180,7 @@ struct AddMoreMembers: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
-                    familyStore.addPendingOtherMember(name: trimmed)
-                    familyStore.setAvatarForLastPendingOtherMember(imageName: selectedFamilyMember?.image)
-                    let memberName = trimmed
-                    name = ""
-                    showError = false
-                    continuePressed(memberName)
+                    handleAddMember(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Add Member")
@@ -166,5 +197,60 @@ struct AddMoreMembers: View {
                 .padding(.top, 11)
             , alignment: .top
         )
+        .onAppear {
+            // Reset all selection state when adding a new member
+            resetMemojiSelectionState()
+        }
+    }
+    
+    // Reset all memoji selection state to start fresh for new member
+    private func resetMemojiSelectionState() {
+        // Set to empty string so restoreState() treats it as fresh start
+        memojiStore.selectedFamilyMemberName = ""
+        memojiStore.selectedFamilyMemberImage = ""
+        memojiStore.selectedTool = "family-member"
+        memojiStore.currentToolIndex = 0
+        memojiStore.selectedGestureIcon = nil
+        memojiStore.selectedHairStyleIcon = nil
+        memojiStore.selectedSkinToneIcon = nil
+        memojiStore.selectedAccessoriesIcon = nil
+        memojiStore.selectedColorThemeIcon = nil
+        // Clear displayName to prevent previous member's name from persisting
+        memojiStore.displayName = nil
+        // Clear previous route so back button works correctly for new flow
+        memojiStore.previousRouteForGenerateAvatar = nil
+    }
+    
+    private func handleAddMember(trimmed: String) {
+        print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
+        familyStore.addPendingOtherMember(name: trimmed)
+        
+        // Handle avatar assignment - upload in background without blocking UI
+        // Priority: selected predefined avatar > custom avatar from memojiStore
+        if let selectedImageName = selectedFamilyMember?.image,
+           let assetImage = UIImage(named: selectedImageName) {
+            // Predefined avatar selected - upload it in background
+            Task {
+                await familyStore.setAvatarForLastPendingOtherMember(image: assetImage, webService: webService)
+            }
+        } else if let customImage = memojiStore.image {
+            // Custom avatar from memojiStore - upload it in background with memoji background color
+            Task {
+                await familyStore.setAvatarForLastPendingOtherMember(
+                    image: customImage,
+                    webService: webService,
+                    backgroundColorHex: memojiStore.backgroundColorHex
+                )
+            }
+        } else if let selectedImageName = selectedFamilyMember?.image {
+            // Fallback to old method if image can't be loaded
+            familyStore.setAvatarForLastPendingOtherMember(imageName: selectedImageName)
+        }
+        
+        let memberName = trimmed
+        name = ""
+        showError = false
+        // Call continuePressed immediately so sheet closes
+        continuePressed(memberName)
     }
 }

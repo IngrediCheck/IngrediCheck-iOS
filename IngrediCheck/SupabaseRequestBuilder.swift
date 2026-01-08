@@ -42,9 +42,9 @@ class SupabaseRequestBuilder {
 
     private static func baseURL(for endpoint: SafeEatsEndpoint) -> String {
         switch endpoint {
-        case .scan_barcode, .scan_image, .scan_reanalyze, .scan_feedback, .scan_feedback_update:
+        case .scan_barcode, .scan_image, .scan_reanalyze:
             return Config.flyDevAPIBase
-        case .scan_history, .scan_get, .scan_favorite:
+        case .scan_history, .scan_get, .scan_favorite, .scan_feedback, .scan_feedback_update:
             return Config.supabaseFunctionsURLBase
         default:
             return Config.supabaseFunctionsURLBase

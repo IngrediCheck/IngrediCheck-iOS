@@ -10,6 +10,8 @@ struct AppFlowRouter: View {
     @State private var onboardingState = OnboardingState()
     @State private var authController = AuthController()
     @State private var familyStore = FamilyStore()
+    @State private var coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
+    @State private var memojiStore = MemojiStore()
     @State private var appResetID = UUID()
 
     init() {
@@ -30,6 +32,8 @@ struct AppFlowRouter: View {
                     .environment(dietaryPreferences)
                     .environment(onboardingState)
                     .environment(familyStore)
+                    .environment(coordinator)
+                    .environment(memojiStore)
             } else {
                 ProductionFlowView()
                     .environment(authController)
@@ -40,6 +44,8 @@ struct AppFlowRouter: View {
                     .environment(dietaryPreferences)
                     .environment(onboardingState)
                     .environment(familyStore)
+                    .environment(coordinator)
+                    .environment(memojiStore)
             }
         }
         .id(appResetID)
@@ -54,6 +60,8 @@ struct AppFlowRouter: View {
             onboardingState = OnboardingState()
             authController = AuthController()
             familyStore = FamilyStore()
+            coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
+            memojiStore = MemojiStore()
         }
     }
 }

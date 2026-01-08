@@ -82,6 +82,20 @@ enum HistoryType: String {
                 )
             }
         }
+
+    // Cards Swipe Tutorial
+    
+    public static let cardsSwipeTutorialShownKey = "config.cardsSwipeTutorialShown"
+    
+    private static func readCardsSwipeTutorialShown() -> Bool {
+        return UserDefaults.standard.bool(forKey: UserPreferences.cardsSwipeTutorialShownKey)
+    }
+    
+    @ObservationIgnored var cardsSwipeTutorialShown: Bool = UserPreferences.readCardsSwipeTutorialShown() {
+        didSet {
+            UserDefaults.standard.set(cardsSwipeTutorialShown, forKey: UserPreferences.cardsSwipeTutorialShownKey)
+        }
+    }
     
     // MARK: - Rating Prompt Tracking
     

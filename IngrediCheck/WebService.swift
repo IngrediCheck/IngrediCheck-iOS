@@ -83,33 +83,62 @@ struct ScanStreamError: Error, LocalizedError {
     }
     
     func fetchImage(imageLocation: DTO.ImageLocationInfo, imageSize: ImageSize) async throws -> UIImage {
-
-        var fileLocation: FileLocation {
-            switch imageLocation {
-            case .url(let url):
-                return FileLocation.url(url)
-            case .imageFileHash(let imageFileHash):
-                return FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
-            case .scanImagePath(let storagePath):
-                // User-uploaded scan images are stored in the "scan-images" bucket
-                return FileLocation.supabase(SupabaseFile(bucket: "scan-images", name: storagePath))
-            }
-        }
-
-        var imageData: Data {
-            get async throws {
-                switch imageSize {
-                case .small:
-                    return try await smallImageStore.fetchFile(fileLocation: fileLocation)
-                case .medium:
-                    return try await mediumImageStore.fetchFile(fileLocation: fileLocation)
-                case .large:
-                    return try await largeImageStore.fetchFile(fileLocation: fileLocation)
+        
+        let fileLocation: FileLocation
+        switch imageLocation {
+        case .url(let url):
+            fileLocation = FileLocation.url(url)
+            
+        case .imageFileHash(let imageFileHash):
+            // Heuristic: memoji images live in the `memoji-images` bucket and include
+            // a year/month path segment (e.g. "2025/01/<hash>.png"). Product images
+            // are flat hashes without slashes.
+            if imageFileHash.contains("/") {
+                // For memoji images in public bucket, use public URL directly
+                // Format: https://<project>.supabase.co/storage/v1/object/public/memoji-images/<path>
+                // URL-encode each path segment to handle special characters properly
+                let pathComponents = imageFileHash.split(separator: "/")
+                let encodedComponents = pathComponents.map { component in
+                    component.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String(component)
                 }
+                let encodedPath = encodedComponents.joined(separator: "/")
+                let publicUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/memoji-images/\(encodedPath)"
+                
+                guard let publicUrl = URL(string: publicUrlString) else {
+                    print("[WebService] fetchImage: ❌ Failed to construct URL for memoji path: \(imageFileHash)")
+                    throw NetworkError.badUrl
+                }
+                fileLocation = FileLocation.url(publicUrl)
+            } else {
+                // For product images, use Supabase download API
+                fileLocation = FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
             }
+            
+        case .scanImagePath(let storagePath):
+            // User-uploaded scan images are stored in the "scan-images" bucket
+            fileLocation = FileLocation.supabase(SupabaseFile(bucket: "scan-images", name: storagePath))
         }
 
-        return UIImage(data: try await imageData)!
+        let data: Data
+        switch imageSize {
+        case .small:
+            data = try await smallImageStore.fetchFile(fileLocation: fileLocation)
+        case .medium:
+            data = try await mediumImageStore.fetchFile(fileLocation: fileLocation)
+        case .large:
+            data = try await largeImageStore.fetchFile(fileLocation: fileLocation)
+        }
+        
+        // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
+        let image = await MainActor.run {
+            UIImage(data: data)
+        }
+        
+        guard let validImage = image else {
+            throw NetworkError.decodingError
+        }
+        
+        return validImage
     }
 
     func streamUnifiedAnalysis(
@@ -1097,8 +1126,16 @@ struct ScanStreamError: Error, LocalizedError {
     }
 
     func uploadImage(image: UIImage) async throws -> String {
-    
-        let imageData = image.jpegData(compressionQuality: 1.0)!
+        print("[WebService] uploadImage: Before pngData() - Thread.isMainThread=\(Thread.isMainThread)")
+        // CRITICAL: pngData() must be called on main thread - UIImage operations are not thread-safe
+        let imageData = await MainActor.run {
+            let isMainThread = Thread.isMainThread
+            print("[WebService] uploadImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            let data = image.pngData()!
+            print("[WebService] uploadImage: pngData() completed - data size=\(data.count) bytes")
+            return data
+        }
+        print("[WebService] uploadImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
         let imageFileName = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
         
         print("[WebService] uploadImage: Uploading image to storage with key=\(imageFileName)")
@@ -1107,7 +1144,7 @@ struct ScanStreamError: Error, LocalizedError {
             try await supabaseClient.storage.from("productimages").upload(
                 path: imageFileName,
                 file: imageData,
-                options: FileOptions(contentType: "image/jpeg")
+                options: FileOptions(contentType: "image/png")
             )
             print("[WebService] uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
         } catch {
@@ -2084,12 +2121,17 @@ struct ScanStreamError: Error, LocalizedError {
         }
         
         let requestBody = try JSONEncoder().encode(request)
+        if let jsonString = String(data: requestBody, encoding: .utf8) {
+            print("[WebService] submitFeedback Request Body: \(jsonString)")
+        }
         
         let urlRequest = SupabaseRequestBuilder(endpoint: .scan_feedback)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
             .setJsonBody(to: requestBody)
             .build()
+        
+        print("[WebService] submitFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
@@ -2098,6 +2140,9 @@ struct ScanStreamError: Error, LocalizedError {
         }
         
         if httpResponse.statusCode == 200 {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("[WebService] submitFeedback Response Body: \(responseString)")
+            }
             do {
                 let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
                 return scan
@@ -2118,12 +2163,17 @@ struct ScanStreamError: Error, LocalizedError {
         
         let updateRequest = DTO.FeedbackUpdateRequest(vote: vote)
         let requestBody = try JSONEncoder().encode(updateRequest)
+        if let jsonString = String(data: requestBody, encoding: .utf8) {
+            print("[WebService] updateFeedback Request Body: \(jsonString)")
+        }
         
         let urlRequest = SupabaseRequestBuilder(endpoint: .scan_feedback_update, itemId: feedbackId)
             .setAuthorization(with: token)
             .setMethod(to: "PATCH")
             .setJsonBody(to: requestBody)
             .build()
+        
+        print("[WebService] updateFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
@@ -2132,6 +2182,9 @@ struct ScanStreamError: Error, LocalizedError {
         }
          
         if httpResponse.statusCode == 200 {
+             if let responseString = String(data: data, encoding: .utf8) {
+                 print("[WebService] updateFeedback Response Body: \(responseString)")
+             }
              do {
                  let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
                  return scan

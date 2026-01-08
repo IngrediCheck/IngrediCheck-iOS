@@ -59,6 +59,13 @@ class AppNavigationCoordinator {
     private(set) var currentBottomSheetRoute: BottomSheetRoute
     private(set) var onboardingFlow: OnboardingFlowType = .individual
     private var previousBottomSheetRoute: BottomSheetRoute?
+    // Track if family creation was initiated from Settings
+    var isCreatingFamilyFromSettings: Bool = false
+    
+    // Global state for secondary edit sheet
+    var editingStepId: String? = nil
+    var isEditSheetPresented: Bool = false
+    var currentEditingSectionIndex: Int = 0
     
     /// Optional callback invoked after navigation changes to sync state to Supabase
     var onNavigationChange: (() async -> Void)?
@@ -179,6 +186,10 @@ class AppNavigationCoordinator {
             return .homeDefault
         case .home:
             return .homeDefault
+        case .summaryJustMe:
+            return .preferencesAddedSuccess
+        case .summaryAddFamily:
+            return .allSetToJoinYourFamily
         }
     }
     
@@ -215,7 +226,7 @@ class AppNavigationCoordinator {
             }
             return .dynamicOnboarding
             
-        case .home:
+        case .home, .summaryJustMe, .summaryAddFamily:
             return .completed
         }
     }
@@ -281,6 +292,12 @@ class AppNavigationCoordinator {
             return (.chatConversation, nil)
         case .workingOnSummary:
             return (.workingOnSummary, nil)
+        case .meetYourProfileIntro:
+            return (.meetYourProfileIntro, nil)
+        case .meetYourProfile:
+            return (.meetYourProfile, nil)
+        case .preferencesAddedSuccess:
+            return (.preferencesAddedSuccess, nil)
         }
     }
     
@@ -359,6 +376,12 @@ class AppNavigationCoordinator {
             return .chatConversation
         case .workingOnSummary:
             return .workingOnSummary
+        case .meetYourProfileIntro:
+            return .meetYourProfileIntro
+        case .meetYourProfile:
+            return .meetYourProfile
+        case .preferencesAddedSuccess:
+            return .preferencesAddedSuccess
         }
     }
     static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
@@ -382,6 +405,7 @@ class AppNavigationCoordinator {
         case .fineTune:
             canvas = .mainCanvas(flow: flow)
         case .completed:
+            // summaryJustMe uses .completed stage too, but we distinguish by sheet
             canvas = .home
         }
 
@@ -397,7 +421,7 @@ class AppNavigationCoordinator {
              // handled by stage .dietaryIntro usually, but enforce correct canvas
              canvas = .dietaryPreferencesAndRestrictions(isFamilyFlow: flow == .family)
         case .allSetToJoinYourFamily:
-             canvas = .welcomeToYourFamily
+             canvas = .summaryAddFamily
         case .onboardingStep:
              canvas = .mainCanvas(flow: flow)
         case .fineTuneYourExperience:
@@ -407,6 +431,10 @@ class AppNavigationCoordinator {
              // If we are restoring fresh, we might not know background. 
              // Defaulting to home or based on stage is safe.
              break 
+        case .meetYourProfile:
+             canvas = .home
+        case .preferencesAddedSuccess:
+             canvas = .summaryJustMe
         default:
              break
         }

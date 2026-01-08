@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Observation
 
 struct RootContainerView: View {
     @State private var coordinator: AppNavigationCoordinator
@@ -43,10 +44,43 @@ struct RootContainerView: View {
 
     var body: some View {
         @Bindable var coordinator = coordinator
+        @Bindable var appState = appState
 
         ZStack(alignment: .bottom) {
-            canvasContent(for: coordinator.currentCanvasRoute)
+            // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
+            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
+               coordinator.currentBottomSheetRoute == .meetYourProfile ||
+               ((coordinator.currentBottomSheetRoute == .generateAvatar || 
+                 coordinator.currentBottomSheetRoute == .yourCurrentAvatar ||
+                 coordinator.currentBottomSheetRoute == .bringingYourAvatar ||
+                 coordinator.currentBottomSheetRoute == .meetYourAvatar) && 
+                (memojiStore.previousRouteForGenerateAvatar == .meetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro)) {
+                VStack {
+                    Text("Meet your profile")
+                        .font(ManropeFont.bold.size(16))
+                        .padding(.top, 32)
+                        .padding(.bottom, 4)
+                    Text("This helps us tailor food checks and tips just for you.")
+                        .font(ManropeFont.regular.size(13))
+                        .foregroundColor(Color(hex: "#BDBDBD"))
+                        .lineLimit(2)
+                        .frame(width: 247)
+                        .multilineTextAlignment(.center)
+                    
+                    Image("addfamilyimg")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 369)
+                        .frame(maxWidth: .infinity)
+                        .offset(y: -50)
+                    
+                    Spacer()
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                canvasContent(for: coordinator.currentCanvasRoute)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             // Dim background when certain sheets are presented (e.g., Invite)
             Group {
@@ -62,6 +96,9 @@ struct RootContainerView: View {
             }
 
             PersistentBottomSheet()
+            
+            // Secondary edit sheet overlay on top of everything
+            editSheetOverlay
         }
         .environment(coordinator)
         .environmentObject(onboarding)
@@ -70,6 +107,19 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        // Allow presenting SettingsSheet from anywhere in this container
+        .sheet(item: $appState.activeSheet) { sheet in
+            switch sheet {
+            case .settings:
+                SettingsSheet()
+                    .environment(userPreferences)
+                    .environment(memojiStore)
+                    .environment(coordinator)
+            case .scan:
+                // Not used here; keep empty or route to a scan view if needed later
+                EmptyView()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)
@@ -129,11 +179,43 @@ struct RootContainerView: View {
         case .dietaryPreferencesAndRestrictions(let isFamilyFlow):
             DietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow)
         case .welcomeToYourFamily:
-            WelcomeToYourFamilyView()
+            NavigationStack {
+                EditableCanvasView(
+                    titleOverride: "Welcome to \(familyStore.family?.name ?? "your")'s family",
+                    showBackButton: false
+                )
+            }
         case .mainCanvas(let flow):
             MainCanvasView(flow: flow)
         case .home:
             HomeView()
+        case .summaryJustMe:
+            NavigationStack {
+                EditableCanvasView(titleOverride: "Your Food Notes", showBackButton: false)
+            }
+        case .summaryAddFamily:
+            NavigationStack {
+                EditableCanvasView(titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editSheetOverlay: some View {
+        @Bindable var coordinator = coordinator
+        if coordinator.isEditSheetPresented, let stepId = coordinator.editingStepId {
+            EditSectionBottomSheet(
+                isPresented: $coordinator.isEditSheetPresented,
+                stepId: stepId,
+                currentSectionIndex: coordinator.currentEditingSectionIndex
+            )
+            .transition(AnyTransition.asymmetric(
+                insertion: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity),
+                removal: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity)
+            ))
+            .zIndex(100)
+            .frame(maxWidth: CGFloat.infinity, maxHeight: CGFloat.infinity, alignment: Alignment.bottom)
+            .ignoresSafeArea()
         }
     }
 }

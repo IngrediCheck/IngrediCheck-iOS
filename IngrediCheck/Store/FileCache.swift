@@ -70,13 +70,40 @@ struct ImageFileStore: FileStore {
         guard let resize else {
             return data
         }
-        let uiImage = UIImage(data: data)!
+        
+        guard let uiImage = UIImage(data: data) else {
+            return data
+        }
+        
         let resizedImage = await withCheckedContinuation { continuation in
             uiImage.prepareThumbnail(of: resize) { thumbnail in
                 continuation.resume(returning: thumbnail)
             }
         }
-        return (resizedImage!.jpegData(compressionQuality: 1.0))!
+        
+        guard let resizedImage = resizedImage else {
+            return data
+        }
+        
+        // Check if the original image has transparency (alpha channel)
+        // If it does, preserve PNG format; otherwise use JPEG for smaller size
+        if let cgImage = uiImage.cgImage,
+           cgImage.alphaInfo != .none && 
+           cgImage.alphaInfo != .noneSkipFirst && 
+           cgImage.alphaInfo != .noneSkipLast {
+            // Has transparency - preserve as PNG
+            if let pngData = resizedImage.pngData() {
+                return pngData
+            }
+        }
+        
+        // No transparency or PNG conversion failed - use JPEG for smaller file size
+        if let jpegData = resizedImage.jpegData(compressionQuality: 1.0) {
+            return jpegData
+        }
+        
+        // Fallback: return original data if both conversions fail
+        return data
     }
 }
 

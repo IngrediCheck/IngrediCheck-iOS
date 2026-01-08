@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
+		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
 		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
-		0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */; };
 		0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */; };
 		110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */; };
 		1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5987792E30C51E00381E32 /* TipJarView.swift */; };
@@ -75,7 +75,6 @@
 		D3BECC822ED98D320088E044 /* RootContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC7B2ED98D320088E044 /* RootContainerView.swift */; };
 		D3BECC832ED98D320088E044 /* LetsMeetYourIngrediFamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC7A2ED98D320088E044 /* LetsMeetYourIngrediFamView.swift */; };
 		D3BECC842ED98D320088E044 /* LetsGetStartedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC792ED98D320088E044 /* LetsGetStartedView.swift */; };
-		D3BECC862ED98E380088E044 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC852ED98E380088E044 /* ContentView.swift */; };
 		D3BECC8B2ED98E860088E044 /* TempStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC892ED98E860088E044 /* TempStore.swift */; };
 		D3BECC8C2ED98E860088E044 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC882ED98E860088E044 /* Onboarding.swift */; };
 		D3BECC8D2ED98E860088E044 /* AppNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC872ED98E860088E044 /* AppNavigationCoordinator.swift */; };
@@ -90,6 +89,7 @@
 		D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC982ED98EA10088E044 /* Temp4.swift */; };
 		D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC912ED98EA10088E044 /* CustomSheet.swift */; };
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
+		D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
@@ -99,12 +99,12 @@
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
 		D3F6A9652F0D33A00019F5C4 /* ScanHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F6A9642F0D33A00019F5C4 /* ScanHistoryStore.swift */; };
 		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
+		FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
-		0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
 		0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicSteps.swift; sourceTree = "<group>"; };
 		1F5987792E30C51E00381E32 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
@@ -164,7 +164,6 @@
 		D3BECC7A2ED98D320088E044 /* LetsMeetYourIngrediFamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetsMeetYourIngrediFamView.swift; sourceTree = "<group>"; };
 		D3BECC7B2ED98D320088E044 /* RootContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootContainerView.swift; sourceTree = "<group>"; };
 		D3BECC7C2ED98D320088E044 /* WelcomeToYourFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeToYourFamilyView.swift; sourceTree = "<group>"; };
-		D3BECC852ED98E380088E044 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D3BECC872ED98E860088E044 /* AppNavigationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationCoordinator.swift; sourceTree = "<group>"; };
 		D3BECC882ED98E860088E044 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
 		D3BECC892ED98E860088E044 /* TempStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempStore.swift; sourceTree = "<group>"; };
@@ -179,6 +178,7 @@
 		D3BECC962ED98EA10088E044 /* Temp2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp2.swift; sourceTree = "<group>"; };
 		D3BECC972ED98EA10088E044 /* Temp3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp3.swift; sourceTree = "<group>"; };
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
+		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
@@ -189,9 +189,12 @@
 		D3F6A9642F0D33A00019F5C4 /* ScanHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanHistoryStore.swift; sourceTree = "<group>"; };
 		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
+		FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0C3A858A2F04EDB20018E877 /* Sheets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sheets; sourceTree = "<group>"; };
+		0CBB73342F03B575003ED0F5 /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
@@ -210,6 +213,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */,
 				D35F3C262E2A25FB0002CDE7 /* GoogleSignInSwift in Frameworks */,
 				D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */,
 				D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */,
@@ -243,6 +247,7 @@
 				D3BECC912ED98EA10088E044 /* CustomSheet.swift */,
 				D3BECC922ED98EA10088E044 /* FlowLayout.swift */,
 				D3BECC932ED98EA10088E044 /* HexColorExtension.swift */,
+				D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */,
 				D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */,
 				D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */,
 				D3BECC962ED98EA10088E044 /* Temp2.swift */,
@@ -286,7 +291,7 @@
 				3976C4222BC32ED50026991A /* DietaryPreferences.swift */,
 				39705AE92BD47DEB000E487D /* OnboardingState.swift */,
 				39705AF22BD49794000E487D /* NetworkState.swift */,
-				0CF25DF22EDD9EAC00C582FA /* dynamicJsonData.json */,
+				FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */,
 				0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */,
 				D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */,
 				D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */,
@@ -327,6 +332,7 @@
 			isa = PBXGroup;
 			children = (
 				D3F6A49D2F06D5720019F5C4 /* Components */,
+				0C3A858A2F04EDB20018E877 /* Sheets */,
 				D3BED0612ED997490088E044 /* HomeView.swift */,
 				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
 				D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */,
@@ -381,8 +387,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
-				FAA88CBC2EF6B62300449EDF /* Resource */,
-				D3BECC852ED98E380088E044 /* ContentView.swift */,
+				0CBB73342F03B575003ED0F5 /* Resources */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBA72ED9898E0088E044 /* Components */,
@@ -414,6 +419,7 @@
 			isa = PBXGroup;
 			children = (
 				D333A2702E3379F400E31F66 /* Constants.swift */,
+				FAA88CBC2EF6B62300449EDF /* Resource */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -434,6 +440,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				0C3A858A2F04EDB20018E877 /* Sheets */,
+				0CBB73342F03B575003ED0F5 /* Resources */,
 				D3BECBA72ED9898E0088E044 /* Components */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
@@ -457,6 +465,7 @@
 				D35F3C232E2A25FB0002CDE7 /* GoogleSignIn */,
 				D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */,
 				0C51E2F02E335C1E00A3E3A9 /* PostHog */,
+				0CE0D52B2F03A1390050C904 /* DotLottie */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -493,6 +502,7 @@
 				D35BCF242E27D5B600125580 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				D35F3C222E2A25FB0002CDE7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -510,7 +520,7 @@
 			files = (
 				39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */,
 				1F5987B42E30E56500381E32 /* TipJarConnectFile.storekit in Resources */,
-				0CF25DF32EDD9EAC00C582FA /* dynamicJsonData.json in Resources */,
+				FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -535,7 +545,6 @@
 				635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */,
 				D3BECC8E2ED98E860088E044 /* User.swift in Sources */,
 				390F0CAA2BABA460009081AD /* Fancy3DotsIndexView.swift in Sources */,
-				D3BECC862ED98E380088E044 /* ContentView.swift in Sources */,
 				D3BECC992ED98EA10088E044 /* NunitoFontEnum.swift in Sources */,
 				D3BECC9A2ED98EA10088E044 /* ManropeFontEnum.swift in Sources */,
 				D3BECC9B2ED98EA10088E044 /* BottomSheetRoute.swift in Sources */,
@@ -552,6 +561,7 @@
 				D3BECCA02ED98EA10088E044 /* Temp4.swift in Sources */,
 				D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */,
 				D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */,
+				D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */,
 				392D9C0E2B755AE900166CF1 /* AnalysisResultView.swift in Sources */,
 				397C85FA2B6B538500FB9DAD /* AuthController.swift in Sources */,
 				110D4DFFDD1244FC86E17F05 /* AnalyticsService.swift in Sources */,
@@ -730,7 +740,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -748,7 +758,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -799,11 +809,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = IngrediCheck/IngrediCheck.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 5;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 58MYNHGN72;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 58MYNHGN72;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = IngrediCheck/Info.plist;
@@ -820,7 +829,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.0;
+				MARKETING_VERSION = 2.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -857,7 +866,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = llc.fungee.ingredicheck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "IngrediCheck App Store";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -898,6 +906,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 3.33.0;
+			};
+		};
+		0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/LottieFiles/dotlottie-ios.git";
+			requirement = {
+				branch = main;
+				kind = branch;
 			};
 		};
 		390F0CA22BA73ED7009081AD /* XCRemoteSwiftPackageReference "swiftui-flow-layout" */ = {
@@ -947,6 +963,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
+		};
+		0CE0D52B2F03A1390050C904 /* DotLottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
+			productName = DotLottie;
 		};
 		390F0CA32BA73ED7009081AD /* SwiftUIFlowLayout */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -16,6 +16,7 @@ struct ProductDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(WebService.self) private var webService
     @Environment(UserPreferences.self) private var userPreferences
+    @Environment(ScanHistoryStore.self) private var scanHistoryStore
 
     @State private var isFavorite = false
     @State private var isIngredientsExpanded = false
@@ -95,13 +96,13 @@ struct ProductDetailView: View {
     // This ensures photo mode shows the user's captured images
     enum ProductImage: Identifiable {
         case local(UIImage)
-        case api(DTO.ImageLocationInfo)
+        case api(DTO.ImageLocationInfo, vote: DTO.Vote?)
 
         var id: String {
             switch self {
             case .local(let image):
                 return "local_\(image.hashValue)"
-            case .api(let location):
+            case .api(let location, _):
                 switch location {
                 case .url(let url):
                     return "api_\(url.absoluteString)"
@@ -122,12 +123,27 @@ struct ProductDetailView: View {
             images.append(contentsOf: localImages.map { ProductImage.local($0) })
         }
 
-        // Add API images if no local images or as additional images
-        if let product = resolvedProduct, !product.images.isEmpty {
-            // If we have local images, only add API images if they're different
-            // For now, just add API images after local images
+        // Add API images
+        if let scan = scan, !scan.images.isEmpty {
+             // Prefer scan images as they contain vote info
+             if localImages == nil || localImages?.isEmpty == true {
+                 for scanImage in scan.images {
+                     switch scanImage {
+                     case .inventory(let img):
+                         if let url = URL(string: img.url) {
+                             images.append(.api(.url(url), vote: img.vote))
+                         }
+                     case .user(let img):
+                         if img.status == "processed", let storagePath = img.storage_path {
+                             images.append(.api(.scanImagePath(storagePath), vote: nil))
+                         }
+                     }
+                 }
+             }
+        } else if let product = resolvedProduct, !product.images.isEmpty {
+            // Fallback for legacy mode
             if localImages == nil || localImages?.isEmpty == true {
-                images.append(contentsOf: product.images.map { ProductImage.api($0) })
+                images.append(contentsOf: product.images.map { ProductImage.api($0, vote: nil) })
             }
         }
 
@@ -340,7 +356,10 @@ struct ProductDetailView: View {
         .fullScreenCover(isPresented: $isImageViewerPresented) {
             FullScreenImageViewer(
                 images: allImages,
-                selectedIndex: $selectedImageIndex
+                selectedIndex: $selectedImageIndex,
+                onFeedback: { url, vote in
+                    handleImageFeedback(imageUrl: url, voteType: vote)
+                }
             )
         }
         .task(id: scanId) {
@@ -556,27 +575,45 @@ struct ProductDetailView: View {
     // MARK: - Feedback Handling
     
     private func handleProductFeedback(voteType: String) {
-        guard let scan = scan else { return }
+        guard let currentScan = scan else { return }
+        
+        // 1. Calculate optimistic new vote
+        let oldVote = currentScan.product_info_vote
+        
+        var optimisticVote: DTO.Vote?
+        
+        if let currentVote = currentScan.product_info_vote, currentVote.value == voteType {
+             // Toggle off
+             optimisticVote = nil
+        } else {
+             // Set new vote
+             optimisticVote = DTO.Vote(id: oldVote?.id ?? "optimistic-\(UUID().uuidString)", value: voteType)
+        }
+        
+        // 2. Apply optimistic state
+        var optimisticScan = currentScan
+        optimisticScan.product_info_vote = optimisticVote
+        self.scan = optimisticScan
+        // Sync to central store
+        scanHistoryStore.upsertScan(optimisticScan)
         
         Task {
             do {
                 let updatedScan: DTO.Scan
                 
-                // Check if user already voted with same value -> Toggle off (Update to "none")
-                if let currentVote = scan.product_info_vote, currentVote.value == voteType {
+                // 3. Perform network request
+                if let currentVote = currentScan.product_info_vote, currentVote.value == voteType {
                    updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
                 }
-                // Check if user already voted but different value -> Update to new value
-                else if let currentVote = scan.product_info_vote {
+                else if let currentVote = currentScan.product_info_vote {
                     updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
                 }
-                // No existing vote -> Create new feedback
                 else {
                     let request = DTO.FeedbackRequest(
-                        target: "product_info",
+                        target: "analysis",
                         vote: voteType,
-                        scan_id: scan.id,
-                        analysis_id: scan.analysis_id,
+                        scan_id: currentScan.id,
+                        analysis_id: currentScan.analysis_id,
                         image_url: nil,
                         ingredient_name: nil,
                         comment: nil
@@ -584,33 +621,75 @@ struct ProductDetailView: View {
                     updatedScan = try await webService.submitFeedback(request: request)
                 }
                 
+                // 4. Confirm state with server response (replaces optimistic ID with real one)
                 await MainActor.run {
                     self.scan = updatedScan
+                    // Sync confirmed state to central store
+                    scanHistoryStore.upsertScan(updatedScan)
                 }
             } catch {
                 print("Error submitting feedback: \(error)")
+                // 5. Revert on error
+                await MainActor.run {
+                    self.scan = currentScan
+                    // Revert in central store
+                    scanHistoryStore.upsertScan(currentScan)
+                }
             }
         }
     }
     
     private func handleIngredientFeedback(item: IngredientAlertItem, voteType: String) {
-        guard let scan = scan, let rawName = item.rawIngredientName else { return }
+        guard let currentScan = scan, let rawName = item.rawIngredientName else { return }
         
+        // 1. Calculate optimistic new vote
+        let oldVote = item.vote
+        
+        var optimisticVote: DTO.Vote?
+        if let currentVote = item.vote, currentVote.value == voteType {
+             optimisticVote = nil // Toggle off
+        } else {
+             optimisticVote = DTO.Vote(id: oldVote?.id ?? "optimistic-\(UUID().uuidString)", value: voteType)
+        }
+        
+        // 2. Apply optimistic state locally by modifying the scan's analysis result
+        // We need to find the specific ingredient in the scan and update its vote
+        var optimisticScan = currentScan
+        if var analysisResult = optimisticScan.analysis_result {
+            var ingredientAnalysis = analysisResult.ingredient_analysis
+            
+            // Find index of ingredient matching rawName
+            if let index = ingredientAnalysis.firstIndex(where: { $0.ingredient == rawName }) {
+                var updatedIngredient = ingredientAnalysis[index]
+                updatedIngredient.vote = optimisticVote
+                ingredientAnalysis[index] = updatedIngredient
+                
+                // Assign back nested structs
+                analysisResult.ingredient_analysis = ingredientAnalysis
+                optimisticScan.analysis_result = analysisResult
+                
+                // Update state
+                self.scan = optimisticScan
+                // Sync to central store
+                scanHistoryStore.upsertScan(optimisticScan)
+            }
+        }
+
         Task {
             do {
                 let updatedScan: DTO.Scan
                 
-                // Check existing vote
+                // 3. Perform network request
                 if let currentVote = item.vote, currentVote.value == voteType {
                      updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
                 } else if let currentVote = item.vote {
                      updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
                 } else {
                     let request = DTO.FeedbackRequest(
-                        target: "ingredient_analysis",
+                        target: "flagged_ingredient",
                         vote: voteType,
-                        scan_id: scan.id,
-                        analysis_id: scan.analysis_id,
+                        scan_id: currentScan.id,
+                        analysis_id: currentScan.analysis_id,
                         image_url: nil,
                         ingredient_name: rawName,
                         comment: nil
@@ -618,11 +697,94 @@ struct ProductDetailView: View {
                     updatedScan = try await webService.submitFeedback(request: request)
                 }
                 
+                // 4. Confirm state
                 await MainActor.run {
                     self.scan = updatedScan
+                    // Sync confirmed state to central store
+                    scanHistoryStore.upsertScan(updatedScan)
                 }
             } catch {
                 print("Error submitting ingredient feedback: \(error)")
+                // 5. Revert
+                await MainActor.run {
+                    self.scan = currentScan
+                    // Revert in central store
+                    scanHistoryStore.upsertScan(currentScan)
+                }
+            }
+        }
+    }
+    
+    private func handleImageFeedback(imageUrl: String, voteType: String) {
+        guard let currentScan = scan else { return }
+        
+        // 1. Find the image and current vote
+        guard let imageIndex = currentScan.images.firstIndex(where: { img in
+            switch img {
+            case .inventory(let i): return i.url == imageUrl
+            default: return false
+            }
+        }) else { return }
+        
+        var targetImage = currentScan.images[imageIndex]
+        var oldVote: DTO.Vote?
+        if case .inventory(let invImg) = targetImage {
+            oldVote = invImg.vote
+        }
+        
+        // 2. Calculate optimistic vote
+        var optimisticVote: DTO.Vote?
+        if let currentVote = oldVote, currentVote.value == voteType {
+             optimisticVote = nil // Toggle off
+        } else {
+             optimisticVote = DTO.Vote(id: oldVote?.id ?? "optimistic-\(UUID().uuidString)", value: voteType)
+        }
+        
+        // 3. Apply optimistic state
+        var optimisticScan = currentScan
+        // Update the specific image
+        if case .inventory(var invImg) = targetImage {
+            invImg.vote = optimisticVote
+            targetImage = .inventory(invImg)
+            optimisticScan.images[imageIndex] = targetImage
+            
+            self.scan = optimisticScan
+            scanHistoryStore.upsertScan(optimisticScan)
+        }
+        
+        Task {
+            do {
+                let updatedScan: DTO.Scan
+                
+                // 4. Network request
+                if let currentVote = oldVote, currentVote.value == voteType {
+                     updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
+                } else if let currentVote = oldVote {
+                     updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
+                } else {
+                    let request = DTO.FeedbackRequest(
+                        target: "product_image",
+                        vote: voteType,
+                        scan_id: currentScan.id,
+                        analysis_id: nil,
+                        image_url: imageUrl,
+                        ingredient_name: nil,
+                        comment: nil
+                    )
+                    updatedScan = try await webService.submitFeedback(request: request)
+                }
+                
+                // 5. Confirm state
+                await MainActor.run {
+                    self.scan = updatedScan
+                    scanHistoryStore.upsertScan(updatedScan)
+                }
+            } catch {
+                print("Error submitting image feedback: \(error)")
+                await MainActor.run {
+                    self.scan = currentScan
+                    scanHistoryStore.upsertScan(currentScan)
+                }
             }
         }
     }
@@ -635,7 +797,7 @@ struct ProductDetailView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.black)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 24, height: 24)
                     .contentShape(Rectangle())
             }
             
@@ -727,7 +889,7 @@ struct ProductDetailView: View {
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-        case .api(let location):
+        case .api(let location, _):
             HeaderImage(imageLocation: location)
         }
     }
@@ -923,43 +1085,21 @@ struct ProductDetailView: View {
                     .background(resolvedStatus.badgeBackground, in: Capsule())
                     
                     HStack(spacing: 12) {
-                        Button {
+                        FeedbackButton(
+                            type: .up,
+                            isSelected: scan?.product_info_vote?.value == "up",
+                            style: .boxed
+                        ) {
                             handleProductFeedback(voteType: "up")
-                        } label: {
-                            let isSelected = scan?.product_info_vote?.value == "up"
-                            let color = isSelected ? Color(hex: "#FBCB7F") : Color.grayScale100
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(color, lineWidth: 0.5)
-                                Image(isSelected ? "thumbsup.fill" : "thumbsup")
-                                    .renderingMode(isSelected ? .original : .template)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 20, height: 18)
-                                    .foregroundStyle(isSelected ? Color.green : color)
-                            }
-                            .frame(width: 32, height: 28)
                         }
-                        .buttonStyle(.plain)
-
-                        Button {
+                        
+                        FeedbackButton(
+                            type: .down,
+                            isSelected: scan?.product_info_vote?.value == "down",
+                            style: .boxed
+                        ) {
                             handleProductFeedback(voteType: "down")
-                        } label: {
-                            let isSelected = scan?.product_info_vote?.value == "down"
-                            let color = isSelected ? Color(hex: "#FF594E") : Color.grayScale100
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(color, lineWidth: 0.5)
-                                Image(isSelected ? "thumbsdown.fill" : "thumbsdown")
-                                    .renderingMode(isSelected ? .original : .template)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 20, height: 18)
-                                    .foregroundStyle(isSelected ? Color.red : color)
-                            }
-                            .frame(width: 32, height: 28)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }

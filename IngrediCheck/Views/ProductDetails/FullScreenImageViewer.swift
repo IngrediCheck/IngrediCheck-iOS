@@ -12,6 +12,7 @@ struct FullScreenImageViewer: View {
 
     let images: [ProductDetailView.ProductImage]
     @Binding var selectedIndex: Int
+    var onFeedback: ((String, String) -> Void)?
 
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -125,6 +126,32 @@ struct FullScreenImageViewer: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
+        .overlay(alignment: .trailing) {
+            // Feedback buttons
+            if let image = images[safe: selectedIndex], case .api(let locationInfo, let vote) = image, case .url(let url) = locationInfo {
+                HStack(spacing: 12) {
+                    // Thumbs Up
+                    FeedbackButton(
+                        type: .up,
+                        isSelected: vote?.value == "up",
+                        style: .overlay
+                    ) {
+                        onFeedback?(url.absoluteString, "up")
+                    }
+
+                    // Thumbs Down
+                    FeedbackButton(
+                        type: .down,
+                        isSelected: vote?.value == "down",
+                        style: .overlay
+                    ) {
+                        onFeedback?(url.absoluteString, "down")
+                    }
+                }
+                .padding(.trailing, 20)
+                .padding(.top, 16)
+            }
+        }
     }
 
     // MARK: - Thumbnail Strip
@@ -165,7 +192,7 @@ struct FullScreenImageViewer: View {
         case .local(let uiImage):
             Image(uiImage: uiImage)
                 .resizable()
-        case .api(let location):
+        case .api(let location, _):
             HeaderImage(imageLocation: location)
         }
     }
@@ -251,3 +278,4 @@ struct FullScreenImageViewer: View {
     )
 }
 #endif
+

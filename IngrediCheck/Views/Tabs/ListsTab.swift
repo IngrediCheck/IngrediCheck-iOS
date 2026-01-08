@@ -23,7 +23,17 @@ import SimpleToast
             .navigationDestination(for: HistoryRouteItem.self) { item in
                 switch item {
                 case .scan(let scan):
-                    ScanDetailView(scan: scan)
+                    let product = scan.toProduct()
+                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
+                    ProductDetailView(
+                        scanId: scan.id,
+                        initialScan: scan,
+                        product: product,
+                        matchStatus: scan.toProductRecommendation(),
+                        ingredientRecommendations: recommendations,
+                        isPlaceholderMode: false,
+                        presentationSource: .homeView
+                    )
                 case .listItem(let item):
                     FavoriteItemDetailView(item: item)
                 case .favoritesAll:

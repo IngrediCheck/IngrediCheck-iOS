@@ -14,24 +14,80 @@ struct PersistentBottomSheet: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(WebService.self) private var webService
+    @Environment(AppState.self) private var appState
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
+    @State private var generationTask: Task<Void, Never>?
+    @State private var tutorialData: TutorialData? 
+    @State private var isAnimatingHand: Bool = false
+    @State private var dragOffsetY: CGFloat = 0
     
     var body: some View {
         @Bindable var coordinator = coordinator
         @Bindable var memojiStore = memojiStore
+
+        let canTapOutsideToDismiss: Bool = {
+            guard case .home = coordinator.currentCanvasRoute else { return false }
+
+            switch coordinator.currentBottomSheetRoute {
+            case .homeDefault:
+                return false
+            case .yourCurrentAvatar, .setUpAvatarFor, .generateAvatar, .bringingYourAvatar, .meetYourAvatar, .meetYourProfile, .meetYourProfileIntro:
+                return true
+            default:
+                return false
+            }
+        }()
         
-        VStack {
-            Spacer()
-            
-            bottomSheetContainer()
+        ZStack(alignment: .bottom) {
+            if canTapOutsideToDismiss {
+                Color.black
+                    .opacity(0.0)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
+            }
+
+            VStack {
+                Spacer()
+                
+                bottomSheetContainer()
+            }
         }
         .background(
             .clear
         )
         .padding(.bottom, keyboardHeight)
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: coordinator.currentBottomSheetRoute) { oldValue, newValue in
+            // Cancel generation task only when leaving avatar-related routes
+            // Don't cancel when transitioning between avatar routes (generateAvatar -> bringingYourAvatar -> meetYourAvatar)
+            let avatarRoutes: Set<BottomSheetRoute> = [.generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor]
+            let wasInAvatarFlow = avatarRoutes.contains(oldValue)
+            let isInAvatarFlow = avatarRoutes.contains(newValue)
+            
+            // Only cancel if we're leaving the avatar flow entirely
+            if wasInAvatarFlow && !isInAvatarFlow {
+                print("[PersistentBottomSheet] Leaving avatar flow, cancelling generation task")
+                generationTask?.cancel()
+                generationTask = nil
+            }
+
+            // Animate sheet presentation (swipe-up feel) for avatar sheets opened from Home/Settings
+            if (newValue == .yourCurrentAvatar || newValue == .setUpAvatarFor),
+               !(oldValue == .yourCurrentAvatar || oldValue == .setUpAvatarFor),
+               case .home = coordinator.currentCanvasRoute {
+                dragOffsetY = 700
+                withAnimation(.easeOut(duration: 0.28)) {
+                    dragOffsetY = 0
+                }
+            } else {
+                dragOffsetY = 0
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
             guard let userInfo = notification.userInfo,
                   let frameValue = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
@@ -49,10 +105,103 @@ struct PersistentBottomSheet: View {
                 keyboardHeight = 0
             }
         }
+        .onPreferenceChange(TutorialOverlayPreferenceKey.self) { value in
+            // Only update if value changed to avoid loops, though Equatable handles it
+            self.tutorialData = value
+        }
+        .overlay(
+            Group {
+                if let data = tutorialData, data.show {
+                    GeometryReader { proxy in
+                        // We are already at the screen coordinate space in PersistentBottomSheet (mostly)
+                        // But let's use global origin to be safe
+                        let globalOrigin = proxy.frame(in: .global).origin
+                        
+                        ZStack {
+                            // Dimmed background with hole
+                            Color.black.opacity(0.63)
+                                .mask(
+                                    ZStack {
+                                        Rectangle().fill(Color.black)
+                                        
+                                        // cutout
+                                        RoundedRectangle(cornerRadius: 24)
+                                            .frame(width: data.cardFrame.width, height: data.cardFrame.height)
+                                            .position(x: data.cardFrame.midX, y: data.cardFrame.midY)
+                                            .blendMode(.destinationOut)
+                                    }
+                                    .compositingGroup()
+                                )
+                            
+                            // Hand icon and text
+                            VStack(spacing: -1) {
+                                Image("swipe-hand")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height : 80)
+                                    .foregroundStyle(.white)
+                                    .rotationEffect(.degrees(isAnimatingHand ? 10 : -20))
+                                    .offset(x: isAnimatingHand ? 30 : -30, y: 0)
+                                    .animation(
+                                        .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
+                                        value: isAnimatingHand
+                                    )
+                                    .onAppear {
+                                        isAnimatingHand = true
+                                    }
+                                
+                                Text("Swipe cards to review each category")
+                                    .font(NunitoFont.bold.size(16))
+                                    .foregroundStyle(.white)
+                            }
+                            .offset(x: 0, y: -40)
+                            .position(x: data.cardFrame.midX, y: data.cardFrame.maxY + 60)
+                        }
+                        .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                        .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
+                        .ignoresSafeArea()
+                        .offset(x: -globalOrigin.x, y: -globalOrigin.y)
+                    }
+                    .zIndex(9999) // Ensure it's on top of everything
+                    .allowsHitTesting(false) // Let touches pass through
+                }
+            }
+        )
     }
     
     @ViewBuilder
     private func bottomSheetContainer() -> some View {
+        let canSwipeToDismiss = coordinator.currentBottomSheetRoute == .yourCurrentAvatar || coordinator.currentBottomSheetRoute == .setUpAvatarFor
+        let dismissThreshold: CGFloat = 120
+        let dismissAnimationDistance: CGFloat = 700
+
+        let dragGesture = DragGesture()
+            .onChanged { value in
+                guard canSwipeToDismiss else { return }
+                let t = value.translation.height
+                withAnimation(.interactiveSpring(response: 0.25, dampingFraction: 0.9, blendDuration: 0.1)) {
+                    dragOffsetY = max(0, t)
+                }
+            }
+            .onEnded { value in
+                guard canSwipeToDismiss else { return }
+                let t = value.translation.height
+                if t > dismissThreshold {
+                    withAnimation(.easeOut(duration: 0.22)) {
+                        dragOffsetY = dismissAnimationDistance
+                    }
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                        dragOffsetY = 0
+                    }
+                } else {
+                    withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.85, blendDuration: 0.1)) {
+                        dragOffsetY = 0
+                    }
+                }
+            }
+
         let sheet = ZStack(alignment: .bottomTrailing) {
             let _ = print("[PersistentBottomSheet] currentCanvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
             bottomSheetContent(for: coordinator.currentBottomSheetRoute)
@@ -60,9 +209,26 @@ struct PersistentBottomSheet: View {
             
             if shouldShowOnboardingNextArrow {
                 Button(action: handleOnboardingNextTapped) {
-                    GreenCircle()
+                    if familyStore.pendingUploadCount > 0 {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 52, height: 52)
+                            .background(
+                                Capsule()
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(hex: "4CAF50"), Color(hex: "8BC34A")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                    } else {
+                        GreenCircle()
+                    }
                 }
                 .buttonStyle(.plain)
+                .disabled(familyStore.pendingUploadCount > 0)
                 .padding(.trailing, 20)
                 .padding(.bottom, 24)
             }
@@ -76,6 +242,8 @@ struct PersistentBottomSheet: View {
                 .cornerRadius(36, corners: [.topLeft, .topRight])
                 
                 .shadow(color :.grayScale70, radius: 27.5)
+                .offset(y: dragOffsetY)
+                .gesture(dragGesture)
                 
 //                .overlay(
 //                    LinearGradient(
@@ -98,6 +266,8 @@ struct PersistentBottomSheet: View {
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
                 .shadow(color :.grayScale70, radius: 27.5)
+                .offset(y: dragOffsetY)
+                .gesture(dragGesture)
 //                .shadow(radius: 27.5)
 //                .overlay(
 //                    LinearGradient(
@@ -144,7 +314,7 @@ struct PersistentBottomSheet: View {
         case .generateAvatar:
             return 379
         case .bringingYourAvatar:
-            return 282
+            return 316
         case .meetYourAvatar:
             return 391
         case .yourCurrentAvatar:
@@ -164,12 +334,17 @@ struct PersistentBottomSheet: View {
         case .homeDefault:
             return 0
         case .chatIntro:
-            return 540
+            return 738
         case .chatConversation:
-            return UIScreen.main.bounds.height * 0.75
+            return 738
         case .workingOnSummary:
-            return 250
-
+            return 281
+        case .meetYourProfileIntro:
+            return 200
+        case .meetYourProfile:
+            return 389
+        case .preferencesAddedSuccess:
+            return 285
         }
     }
     
@@ -190,31 +365,38 @@ struct PersistentBottomSheet: View {
     }
     
     private func handleOnboardingNextTapped() {
-        // Get current step ID from route
-        guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
-            return
-        }
-        
-        // Check if current step is "lifeStyle" → show FineTuneYourExperience
-        if currentStepId == "lifeStyle" {
-            coordinator.navigateInBottomSheet(.fineTuneYourExperience)
-            return
-        }
-        
-        // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
-        if store.isLastStep {
-            // Mark the last section as complete to show 100% progress
-            store.next()
-            coordinator.navigateInBottomSheet(.workingOnSummary)
-            return
-        }
-        
-        // Advance logical onboarding progress (for progress bar & tag bar)
-        store.next()
-        
-        // Move the bottom sheet to the next onboarding question using JSON order
-        if let nextStepId = store.nextStepId {
-            coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+        Task {
+            // Wait for all pending uploads to complete before navigating
+            await familyStore.waitForPendingUploads()
+            
+            await MainActor.run {
+                // Get current step ID from route
+                guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
+                    return
+                }
+                
+                // Check if current step is "lifeStyle" → show FineTuneYourExperience
+                if currentStepId == "lifeStyle" {
+                    coordinator.navigateInBottomSheet(.fineTuneYourExperience)
+                    return
+                }
+                
+                // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
+                if store.isLastStep {
+                    // Mark the last section as complete to show 100% progress
+                    store.next()
+                    coordinator.navigateInBottomSheet(.workingOnSummary)
+                    return
+                }
+                
+                // Advance logical onboarding progress (for progress bar & tag bar)
+                store.next()
+                
+                // Move the bottom sheet to the next onboarding question using JSON order
+                if let nextStepId = store.nextStepId {
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                }
+            }
         }
     }
     
@@ -268,7 +450,17 @@ struct PersistentBottomSheet: View {
             
         case .letsMeetYourIngrediFam:
             MeetYourIngrediFam {
-                coordinator.navigateInBottomSheet(.whatsYourName)
+                // If coming from Settings, user already exists - skip to adding members
+                // Otherwise, go to whatsYourName for new family creation
+                if coordinator.isCreatingFamilyFromSettings {
+                    // User already exists, create pending self member from existing family
+                    if let family = familyStore.family {
+                        familyStore.setPendingSelfMemberFromExisting(family.selfMember)
+                    }
+                    coordinator.navigateInBottomSheet(.addMoreMembers)
+                } else {
+                    coordinator.navigateInBottomSheet(.whatsYourName)
+                }
             }
             
         case .whatsYourName:
@@ -294,7 +486,13 @@ struct PersistentBottomSheet: View {
         case .addMoreMembersMinimal:
             AddMoreMembersMinimal {
                 Task {
-                    await familyStore.createFamilyFromPendingIfNeeded()
+                    // If creating family from Settings, add members to existing family
+                    // Otherwise, create a new family
+                    if coordinator.isCreatingFamilyFromSettings {
+                        await familyStore.addPendingMembersToExistingFamily()
+                    } else {
+                        await familyStore.createFamilyFromPendingIfNeeded()
+                    }
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
                 }
             } addMorePressed: {
@@ -307,13 +505,38 @@ struct PersistentBottomSheet: View {
             }
             
         case .wouldYouLikeToInvite(let memberId, let name):
+            let _ = print("[PersistentBottomSheet] Rendering .wouldYouLikeToInvite for \(name) (id: \(memberId))")
             WouldYouLikeToInvite(name: name) {
-                // Invite button pressed - TODO: Implement invite functionality
-                coordinator.navigateInBottomSheet(.homeDefault)
+                // Invite button pressed - mark member as pending so the UI reflects it
+                familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+                
+                // If this is a real family (not just pending onboarding members), call the invite API
+                if familyStore.family != nil {
+                    Task {
+                        if let code = await familyStore.invite(memberId: memberId) {
+                            print("--------------------------------------------------")
+                            print("[INVITE CODE] Successfully generated: \(code.lowercased())")
+                            print("--------------------------------------------------")
+                        }
+                    }
+                }
+                
+                // Return to previous screen or home depending on where we are
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             } continuePressed: {
                 // Maybe later -> mark member as pending and go back to minimal add members screen
                 familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
-                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                // If this flow was started from Home/Manage Family, dismiss the sheet.
+                // Otherwise, keep onboarding behavior.
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                }
             }
             
         case .wantToAddPreference(let name):
@@ -330,12 +553,16 @@ struct PersistentBottomSheet: View {
             GenerateAvatar(
                 isExpandedMinimal: $isExpandedMinimal,
                 randomPressed: { selection in
-                    Task {
+                    // Cancel any existing generation task
+                    generationTask?.cancel()
+                    generationTask = Task {
                         await memojiStore.generate(selection: selection, coordinator: coordinator)
                     }
                 },
                 generatePressed: { selection in
-                    Task {
+                    // Cancel any existing generation task
+                    generationTask?.cancel()
+                    generationTask = Task {
                         await memojiStore.generate(selection: selection, coordinator: coordinator)
                     }
                 }
@@ -349,31 +576,45 @@ struct PersistentBottomSheet: View {
             IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             
         case .meetYourAvatar:
+            // CRITICAL: Capture image and background color immediately to prevent EXC_BAD_ACCESS
+            // This ensures the image is not deallocated while the view is being created
+            let capturedImage = memojiStore.image
+            let capturedBackgroundColor = memojiStore.backgroundColorHex
+            
             MeetYourAvatar(
-                image: memojiStore.image,
-                backgroundColorHex: memojiStore.backgroundColorHex
+                image: capturedImage,
+                backgroundColorHex: capturedBackgroundColor
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
                 Task {
                     await handleAssignAvatar(
                         memojiStore: memojiStore,
-                        familyStore: familyStore,
-                        webService: webService
+                        familyStore: familyStore
                     )
                     
-                    // If opened from home screen, dismiss the sheet
-                    // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
-                    if case .home = coordinator.currentCanvasRoute {
+                    // Navigate back based on where we came from
+                    if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
+                        // If we came from meetYourProfile, go back there
+                        if case .meetYourProfile = previousRoute {
+                            coordinator.navigateInBottomSheet(.meetYourProfile)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        } else {
+                            coordinator.navigateInBottomSheet(previousRoute)
+                            memojiStore.previousRouteForGenerateAvatar = nil
+                        }
+                    } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                        coordinator.navigateInBottomSheet(.addMoreMembers)
                     }
                 }
             }
             
         case .yourCurrentAvatar:
             YourCurrentAvatar {
+                // Ensure GenerateAvatar knows to go back to YourCurrentAvatar when launched from Home/Settings flows
+                memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
                 coordinator.navigateInBottomSheet(.generateAvatar)
             }
             
@@ -394,16 +635,45 @@ struct PersistentBottomSheet: View {
                 }
                 coordinator.showCanvas(.mainCanvas(flow: isFamilyFlow ? .family : .individual))
             }
+            .onAppear {
+                // If the user initiated family creation from Settings, skip the
+                // "Personalize your Choices" sheet and auto-advance directly
+                // into the first dynamic onboarding step.
+                if coordinator.isCreatingFamilyFromSettings {
+                    // Stop haptics immediately to avoid lingering feedback
+                    NotificationCenter.default.post(name: PhysicsController.stopHapticsNotification, object: nil)
+
+                    // Navigate to the first dynamic step and switch canvas
+                    let steps = DynamicStepsProvider.loadSteps()
+                    if let firstStepId = steps.first?.id {
+                        coordinator.navigateInBottomSheet(.onboardingStep(stepId: firstStepId))
+                    }
+                    coordinator.showCanvas(.mainCanvas(flow: isFamilyFlow ? .family : .individual))
+                }
+            }
             
         case .allSetToJoinYourFamily:
-            AllSetToJoinYourFamily {
-                coordinator.showCanvas(.home)
+            PreferencesAddedSuccessSheet {
+                // Check if family creation was initiated from Settings
+                if coordinator.isCreatingFamilyFromSettings {
+                    // Reset the flag
+                    coordinator.isCreatingFamilyFromSettings = false
+                    // Navigate back to Home and request a push to Settings
+                    coordinator.showCanvas(.home)
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        appState.navigateToSettings = true
+                    }
+                } else {
+                    // Normal flow - go to Home
+                    coordinator.showCanvas(.home)
+                }
             }
             
         case .fineTuneYourExperience:
             FineTuneExperience(
                 allSetPressed: {
-                    coordinator.showCanvas(.home)
+                    coordinator.navigateInBottomSheet(.workingOnSummary)
                 },
                 addPreferencesPressed: {
                     // Check if there's a next step available before advancing
@@ -444,8 +714,9 @@ struct PersistentBottomSheet: View {
         case .workingOnSummary:
             IngrediBotWithText(
                 text: "Working on your personalized summary…",
+                showBackgroundImage: false,
                 viewDidAppear: {
-                    // After 2 seconds, navigate to IngrediBotView
+                    // After 2 seconds, navigate to chat intro
                     coordinator.navigateInBottomSheet(.chatIntro)
                 },
                 delay: 2.0
@@ -453,6 +724,44 @@ struct PersistentBottomSheet: View {
             
         case .homeDefault:
             EmptyView()
+            
+        case .meetYourProfileIntro:
+            MeetYourProfileIntroView()
+            
+        case .meetYourProfile:
+            MeetYourProfileView {
+                // Check if family creation was initiated from Settings
+                if coordinator.isCreatingFamilyFromSettings {
+                    // Reset the flag
+                    coordinator.isCreatingFamilyFromSettings = false
+                    // Navigate to home first
+                    coordinator.showCanvas(.home)
+                    // Then reopen Settings sheet after a brief delay to allow home to load
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        appState.activeSheet = .settings
+                    }
+                } else {
+                    // Normal flow - navigate to home
+                    coordinator.showCanvas(.home)
+                }
+            }
+            
+        case .preferencesAddedSuccess:
+            PreferencesAddedSuccessSheet {
+                // If this success sheet was reached while creating family from Settings,
+                // return back to Settings instead of proceeding to Meet Your Profile/Home.
+                if coordinator.isCreatingFamilyFromSettings {
+                    coordinator.isCreatingFamilyFromSettings = false
+                    coordinator.showCanvas(.home)
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        appState.navigateToSettings = true
+                    }
+                } else {
+                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                }
+            }
         }
     }
     
@@ -477,54 +786,142 @@ struct PersistentBottomSheet: View {
 @MainActor
 private func handleAssignAvatar(
     memojiStore: MemojiStore,
-    familyStore: FamilyStore,
-    webService: WebService
+    familyStore: FamilyStore
 ) async {
-    guard let image = memojiStore.image else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji image to upload, skipping")
+    // CRITICAL: Capture all data immediately to prevent accessing deallocated memory.
+    // We no longer re-upload the PNG; instead we use the storage path inside the
+    // `memoji-images` bucket returned by the backend.
+    guard let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji storage path available, skipping")
         return
     }
     
-    guard let targetMemberId = familyStore.avatarTargetMemberId else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set, skipping upload")
+    // CRITICAL: Capture ALL data immediately to prevent accessing deallocated objects during async operations
+    let backgroundColorHex = memojiStore.backgroundColorHex
+    let displayName = memojiStore.displayName
+    let currentFamily = familyStore.family
+    let currentAvatarTargetMemberId = familyStore.avatarTargetMemberId
+    let currentPendingSelfMember = familyStore.pendingSelfMember
+    let currentPendingOtherMembers = familyStore.pendingOtherMembers
+    
+    // During onboarding, if avatarTargetMemberId is not set but we have displayName,
+    // it means the user generated an avatar without adding the member first.
+    // We need to add the member to the pending list first.
+    var targetMemberId: UUID? = currentAvatarTargetMemberId
+    
+    // If no targetMemberId is set but we're in onboarding and have a displayName, add the member
+    if targetMemberId == nil,
+        currentFamily == nil, // We're in onboarding (no family exists yet)
+       let name = displayName,
+        !name.isEmpty {
+        
+        // If we came from MeetYourProfile, this is ALWAYS for the self member
+        let isFromProfile = memojiStore.previousRouteForGenerateAvatar == .meetYourProfile
+        
+        if isFromProfile || currentPendingSelfMember == nil {
+            // This is for the self member
+            if familyStore.pendingSelfMember == nil {
+                print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+                familyStore.setPendingSelfMember(name: name)
+            }
+            // Re-capture after modification
+            if let newSelfMember = familyStore.pendingSelfMember {
+                targetMemberId = newSelfMember.id
+            }
+        } else {
+            // This is for an other member
+            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
+            familyStore.addPendingOtherMember(name: name)
+            // Re-capture after modification
+            let updatedPendingMembers = familyStore.pendingOtherMembers
+            if !updatedPendingMembers.isEmpty, let lastMember = updatedPendingMembers.last {
+                targetMemberId = lastMember.id
+            }
+        }
+    }
+    
+    guard let targetMemberId = targetMemberId else {
+        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
         return
     }
     
     print("[PersistentBottomSheet] handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
     
+    // CRITICAL: Re-check pending members AFTER potentially adding a new member
+    // We need to check the current state because we may have just added a member
+    // It's safe to access familyStore properties here since we're in an async function with familyStore as a parameter
+    
+    // 1. Check if this is a pending self member
+    // Check current state first (includes newly added members), fallback to captured state
+    if let pendingSelf = familyStore.pendingSelfMember ?? currentPendingSelfMember,
+       pendingSelf.id == targetMemberId {
+        // This is the pending self member - use setPendingSelfMemberAvatar
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending self member: \(pendingSelf.name)")
+        // Set the memoji storage path as imageFileHash and update color to match memoji background.
+        await familyStore.setPendingSelfMemberAvatarFromMemoji(
+            storagePath: storagePath,
+            backgroundColorHex: backgroundColorHex
+        )
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending self member")
+        return
+    }
+    
+    // 2. Check if this is a pending other member
+    // Check current state first (includes newly added members), fallback to captured state
+    let currentPendingOthers = familyStore.pendingOtherMembers
+    let pendingOthersToCheck = !currentPendingOthers.isEmpty ? currentPendingOthers : currentPendingOtherMembers
+    if let pendingOther = pendingOthersToCheck.first(where: { $0.id == targetMemberId }) {
+        // This is a pending other member - use setAvatarForPendingOtherMember
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
+        await familyStore.setAvatarForPendingOtherMemberFromMemoji(
+            id: targetMemberId,
+            storagePath: storagePath,
+            backgroundColorHex: backgroundColorHex
+        )
+        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending other member")
+        return
+    }
+    
+    // 3. Otherwise, this is an existing member (from home view) - update directly without re-uploading
     do {
-        // 1. Upload the avatar image to Supabase and get an imageFileHash
-        let imageFileHash = try await webService.uploadImage(image: image)
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
-        
-        // 2. Find the matching FamilyMember and update its imageFileHash
-        guard let family = familyStore.family else {
+        // 1. Get the member first to access their color for compositing - use captured data
+        guard let family = currentFamily else {
             print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No family loaded, cannot update member")
             return
         }
         
         let allMembers = [family.selfMember] + family.otherMembers
         guard let member = allMembers.first(where: { $0.id == targetMemberId }) else {
-            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member not found in current family for id=\(targetMemberId)")
+            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member \(targetMemberId) not found in family")
             return
         }
+
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating existing member \(member.name) with new avatar...")
         
+        // 2. Upload transparent PNG image directly (no compositing - background color stored separately in member.color)
+        // Use captured background color if available, otherwise member's existing color
+        let bgColor = backgroundColorHex ?? member.color
+        print("[PersistentBottomSheet] handleAssignAvatar: Assigning memoji from storagePath=\(storagePath) with background color: \(bgColor)")
+
         var updatedMember = member
-        updatedMember.imageFileHash = imageFileHash
+        // Use the memoji storage path as imageFileHash so we can load directly from
+        // the `memoji-images` bucket without duplicating the PNG in `productimages`.
+        updatedMember.imageFileHash = storagePath
         
         // Also persist the memoji background color as the member's color so
         // small avatars (e.g. in HomeView) use the same color as the
         // MeetYourAvatar sheet.
-        if let bgHex = memojiStore.backgroundColorHex, !bgHex.isEmpty {
+        // Use captured backgroundColorHex to avoid accessing deallocated object
+        if let bgHex = backgroundColorHex, !bgHex.isEmpty {
             // Ensure color has a # prefix (backend check constraint requires it)
             let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
             print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
             updatedMember.color = normalizedColor
         }
         
-        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(imageFileHash) and color=\(updatedMember.color)")
+        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(storagePath) and color=\(updatedMember.color)")
         
-        // 3. Persist the updated member via FamilyStore
+        // 4. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)
         
         // Check if editMember succeeded (it doesn't throw, but sets errorMessage on failure)
@@ -535,7 +932,7 @@ private func handleAssignAvatar(
             print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
         }
     } catch {
-        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to upload or assign avatar: \(error.localizedDescription)")
+        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
     }
+    
 }
-

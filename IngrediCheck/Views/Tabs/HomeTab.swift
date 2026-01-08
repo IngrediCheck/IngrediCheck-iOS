@@ -25,6 +25,8 @@ enum ValidationResult {
     @Environment(WebService.self) var webService
     @Environment(DietaryPreferences.self) var dp
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(MemojiStore.self) var memojiStore
+    @Environment(AppNavigationCoordinator.self) var coordinator
 
     var body: some View {
         NavigationStack {
@@ -74,6 +76,8 @@ enum ValidationResult {
         NavigationLink {
             SettingsSheet()
                 .environment(userPreferences)
+                .environment(memojiStore)
+                .environment(coordinator)
         } label: {
             Image(systemName: "gearshape")
         }

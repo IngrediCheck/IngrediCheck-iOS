@@ -1,7 +1,10 @@
 import SwiftUI
+import UIKit
 
 struct EditMember: View {
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(WebService.self) private var webService
+    @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
 
     let memberId: UUID
@@ -33,7 +36,12 @@ struct EditMember: View {
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
                         Button {
-                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            // Context-aware back: from Home/Manage Family, dismiss; from onboarding, return to minimal list
+                            if case .home = coordinator.currentCanvasRoute {
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            }
                         } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))
@@ -80,6 +88,13 @@ struct EditMember: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             Button {
+                                // Track that we came from EditMember - need to get the actual route
+                                if case .editMember(let memberId, let isSelf) = coordinator.currentBottomSheetRoute {
+                                    memojiStore.previousRouteForGenerateAvatar = .editMember(memberId: memberId, isSelf: isSelf)
+                                } else {
+                                    // Fallback to addMoreMembersMinimal if we can't determine the route
+                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembersMinimal
+                                }
                                 coordinator.navigateInBottomSheet(.generateAvatar)
                             } label: {
                                 ZStack {
@@ -134,14 +149,7 @@ struct EditMember: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    if isSelf {
-                        familyStore.updatePendingSelfMemberName(trimmed)
-                        if let img = selectedAvatar?.image { familyStore.setPendingSelfMemberAvatar(imageName: img) }
-                    } else {
-                        familyStore.updatePendingOtherMemberName(id: memberId, name: trimmed)
-                        if let img = selectedAvatar?.image { familyStore.setAvatarForPendingOtherMember(id: memberId, imageName: img) }
-                    }
-                    onSave()
+                    handleSave(trimmed: trimmed)
                 }
             } label: {
                 GreenCapsule(title: "Save")
@@ -176,5 +184,60 @@ struct EditMember: View {
                 }
             }
         }
+    }
+    
+    private func handleSave(trimmed: String) {
+        if isSelf {
+            familyStore.updatePendingSelfMemberName(trimmed)
+            // Handle avatar assignment - upload in background without blocking UI
+            // Priority:
+            // 1. Selected predefined avatar (upload to productimages)
+            // 2. Custom memoji (use memoji-images storage path, no re-upload)
+            if let selectedImageName = selectedAvatar?.image,
+               let assetImage = UIImage(named: selectedImageName) {
+                // Predefined avatar selected - upload it in background
+                Task {
+                    await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
+                }
+            } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+                // Custom avatar from memojiStore - use memoji storage path directly
+                Task {
+                    await familyStore.setPendingSelfMemberAvatarFromMemoji(
+                        storagePath: storagePath,
+                        backgroundColorHex: memojiStore.backgroundColorHex
+                    )
+                }
+            } else if let selectedImageName = selectedAvatar?.image {
+                // Fallback to old method if image can't be loaded
+                familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
+            }
+        } else {
+            familyStore.updatePendingOtherMemberName(id: memberId, name: trimmed)
+            // Handle avatar assignment - upload in background without blocking UI
+            // Priority:
+            // 1. Selected predefined avatar (upload to productimages)
+            // 2. Custom memoji (use memoji-images storage path, no re-upload)
+            if let selectedImageName = selectedAvatar?.image,
+               let assetImage = UIImage(named: selectedImageName) {
+                // Predefined avatar selected - upload it in background
+                Task {
+                    await familyStore.setAvatarForPendingOtherMember(id: memberId, image: assetImage, webService: webService)
+                }
+            } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
+                // Custom avatar from memojiStore - use memoji storage path directly
+                Task {
+                    await familyStore.setAvatarForPendingOtherMemberFromMemoji(
+                        id: memberId,
+                        storagePath: storagePath,
+                        backgroundColorHex: memojiStore.backgroundColorHex
+                    )
+                }
+            } else if let selectedImageName = selectedAvatar?.image {
+                // Fallback to old method if image can't be loaded
+                familyStore.setAvatarForPendingOtherMember(id: memberId, imageName: selectedImageName)
+            }
+        }
+        // Call onSave immediately so sheet closes
+        onSave()
     }
 }

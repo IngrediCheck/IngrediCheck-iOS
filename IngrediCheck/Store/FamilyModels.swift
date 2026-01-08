@@ -16,7 +16,7 @@ import Foundation
 struct Family: Codable, Equatable {
     let name: String
     let selfMember: FamilyMember
-    let otherMembers: [FamilyMember]
+    var otherMembers: [FamilyMember]
     /// Monotonic version derived from updated_at timestamps in the backend.
     /// Represented as a Unix epoch seconds BIGINT in SQL.
     let version: Int64

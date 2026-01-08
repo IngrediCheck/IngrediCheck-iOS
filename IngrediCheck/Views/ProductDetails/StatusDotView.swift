@@ -33,5 +33,17 @@ struct StatusDotView: View {
 }
 
 #Preview {
-    StatusDotView(status: .analyzing)
+    VStack {
+        HStack {
+            StatusDotView(status: .analyzing)
+            
+            Text("Analyzing")
+        }
+        .padding()
+        .background(.blue)
+        .clipShape(Capsule())
+        
+        Spacer()
+        
+    }
 }

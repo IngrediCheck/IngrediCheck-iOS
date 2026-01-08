@@ -8,30 +8,43 @@
 import SwiftUI
 
 struct TabBar: View {
+    @Environment(AppNavigationCoordinator.self) private var coordinator
     
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
     @State private var isCameraPresented = false
     @Environment(ScanHistoryStore.self) var scanHistoryStore
+    var onRecentScansTap: (() -> Void)? = nil
+
     
     var body: some View {
 //        ZStack {
             ZStack(alignment: .bottom) {
                 HStack(alignment: .center) {
-                    Image("tabBar-heart")
-                        .renderingMode(.template)
-                        .resizable()
-                        .foregroundColor(Color(hex: "676A64"))
-                        .frame(width: 26, height: 26)
+                    Button {
+                        onRecentScansTap?()
+                    } label: {
+                        Image("tabBar-history")
+                            .renderingMode(.template)
+                            .resizable()
+                            .foregroundColor(Color(hex: "676A64"))
+                            .frame(width: 26, height: 26)
+                    }
+                   
                     
                     Spacer()
                     
-                    Image("tabBar-ingredibot")
-                        .renderingMode(.template)
-                        .resizable()
-                        .foregroundColor(Color(hex: "676A64"))
-                        .frame(width: 26, height: 26)
+                    Button {
+                        coordinator.presentChatBot(startAtConversation: true)
+                    } label: {
+                        Image("tabBar-ingredibot")
+                            .renderingMode(.template)
+                            .resizable()
+                            .foregroundColor(Color(hex: "676A64"))
+                            .frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12.5)

@@ -1,3 +1,4 @@
+
 //
 //  HomeView.swift
 //  IngrediCheckPreview
@@ -17,7 +18,9 @@ struct HomeView: View {
     @State private var prevValue: CGFloat = 0
     @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
-    
+    @State private var showEditableCanvas: Bool = false
+    @State private var editTargetSectionName: String? = nil
+    @State private var navigationPath: [HistoryRouteItem] = []
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -37,18 +40,17 @@ struct HomeView: View {
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AuthController.self) private var authController
-    
+    @EnvironmentObject private var onboarding: Onboarding
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
     // ---------------------------
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    
+    @Environment(MemojiStore.self) private var memojiStore
     private var familyMembers: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
         return [family.selfMember] + family.otherMembers
     }
-    
     private var primaryMemberName: String {
         return familyStore.family?.selfMember.name ?? "IngrediFriend"
     }
@@ -59,80 +61,16 @@ struct HomeView: View {
     /// if an imageFileHash is present, otherwise falls back to the first
     /// letter of their name on top of their color.
     struct FamilyMemberAvatarView: View {
-        @Environment(WebService.self) private var webService
         let member: FamilyMember
         
-        @State private var avatarImage: UIImage? = nil
-        @State private var loadedHash: String? = nil
-        
         var body: some View {
-            // Base colored circle - always visible as background
-            Circle()
-                .fill(Color(hex: member.color))
-                .frame(width: 36, height: 36)
-                .overlay {
-                    // Content layer overlaid on background
-                    if let avatarImage {
-                        // Show loaded memoji avatar - slightly smaller to show background border
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 32, height: 32)
-                            .clipShape(Circle())
-                    } else {
-                        // Fallback: first letter of name
-                        Text(String(member.name.prefix(1)))
-                            .font(NunitoFont.semiBold.size(14))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .overlay(
-                    // White stroke overlay on top
-                    Circle()
-                        .stroke(lineWidth: 1)
-                        .foregroundStyle(Color.white)
-                )
-            // Re-evaluate whenever the member's imageFileHash changes.
-                .task(id: member.imageFileHash) {
-                    await loadAvatarForCurrentHash()
-                }
-        }
-        
-        @MainActor
-        private func loadAvatarForCurrentHash() async {
-            // If there is no hash, clear any cached avatar and fall back to initials.
-            guard let hash = member.imageFileHash, !hash.isEmpty else {
-                if avatarImage != nil {
-                    print("[HomeView.FamilyMemberAvatarView] imageFileHash cleared for \(member.name), resetting avatarImage")
-                }
-                avatarImage = nil
-                loadedHash = nil
-                return
-            }
-            
-            // If we've already loaded this exact hash, skip re-fetching.
-            if loadedHash == hash, avatarImage != nil {
-                print("[HomeView.FamilyMemberAvatarView] Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
-                return
-            }
-            
-            print("[HomeView.FamilyMemberAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-            do {
-                let uiImage = try await webService.fetchImage(
-                    imageLocation: .imageFileHash(hash),
-                    imageSize: .small
-                )
-                avatarImage = uiImage
-                loadedHash = hash
-                print("[HomeView.FamilyMemberAvatarView] ✅ Loaded avatar for \(member.name) (hash=\(hash))")
-            } catch {
-                print("[HomeView.FamilyMemberAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-            }
+            // Use centralized MemberAvatar component
+            MemberAvatar.small(member: member)
         }
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView(showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 0) {
@@ -195,16 +133,21 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         
                         Spacer()
-                        
-                        AllergySummaryCard()
+                        AllergySummaryCard(onTap: {
+                            editTargetSectionName = nil
+                            showEditableCanvas = true
+                        })
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
                     
                     // Lifestyle + Family + Average scans
                     HStack {
-                        LifestyleAndChoicesCard()
-                        
+                        LifestyleAndChoicesCard(onTap: {
+                            // Request centering of Lifestyle/Nutrition when opening editor
+                            editTargetSectionName = "Lifestyle"
+                            showEditableCanvas = true
+                        })
                         Spacer()
                         
                         VStack {
@@ -322,9 +265,7 @@ struct HomeView: View {
                         
                         // KEEP YOUR SHEET VERSION
                         HStack(spacing: 6) {
-                            NavigationLink {
-                                RecentScansPageView()
-                            } label: {
+                            NavigationLink(value: HistoryRouteItem.recentScansAll) {
                                 Text("View All")
                                     .underline()
                                     .font(ManropeFont.medium.size(14))
@@ -448,9 +389,9 @@ struct HomeView: View {
             .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
             .overlay(
+                // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
                 LinearGradient(
                     colors: [
-                        
                         Color.white.opacity(0),
                         Color(hex: "#FCFCFE"),
                     ],
@@ -461,49 +402,96 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false),
                 alignment: .bottom
-            ).offset( y: 30)
-                .overlay(
-                    TabBar(isExpanded: $isTabBarExpanded),
-                    alignment: .bottom
-                )
-                .background(Color.white)
-            
+            ).ignoresSafeArea(edges: .bottom)
+            .overlay(
+                // TabBar in its original position (respects safe area)
+                TabBar(isExpanded: $isTabBarExpanded, onRecentScansTap: {
+                    navigationPath.append(.recentScansAll)
+                }),
+                alignment: .bottom
+            )
+            .background(Color.white)
+           
             // ------------ HISTORY LOADING ------------
-                .task {
-                    if appState.listsTabState.scans == nil {
-                        await refreshRecentScans()
-                    }
+            .task {
+                if appState.listsTabState.scans == nil {
+                    await refreshRecentScans()
                 }
-            
+            }
+            // Trigger a push navigation to Settings when requested by app state
+            .onChange(of: appState.navigateToSettings) { _, newValue in
+                if newValue {
+                    isSettingsPresented = true
+                    appState.navigateToSettings = false
+                }
+            }
+
             // ------------ SETTINGS SCREEN ------------
-                .navigationDestination(isPresented: $isSettingsPresented) {
-                    SettingsSheet()
-                        .environment(userPreferences)
-                        .environment(coordinator)
-                }
+            .navigationDestination(isPresented: $isSettingsPresented) {
+                SettingsSheet()
+                    .environment(userPreferences)
+                    .environment(coordinator)
+                    .environment(memojiStore)
+            }
             
+            // ------------ EDITABLE CANVAS ------------
+            .navigationDestination(isPresented: $showEditableCanvas) {
+                EditableCanvasView(targetSectionName: editTargetSectionName)
+                    .environmentObject(onboarding)
+            }
+            
+
+
             // ------------ CHAT SHEET ------------
-                .sheet(isPresented: $isChatSheetPresented) {
-                    IngrediBotChatView {
-                        isChatSheetPresented = false
-                    }
-                    .presentationDetents([chatSmallDetent, .medium, .large],
-                                         selection: $selectedChatDetent)
-                    .presentationDragIndicator(.visible)
+            .sheet(isPresented: $isChatSheetPresented) {
+                IngrediBotChatView {
+                    isChatSheetPresented = false
                 }
-            
+                .presentationDetents([chatSmallDetent, .medium, .large],
+                                     selection: $selectedChatDetent)
+                .presentationDragIndicator(.visible)
+            }
+
             // ------------ PRODUCT DETAIL ------------
-                .fullScreenCover(item: $activeProductDetail) { detail in
+            .fullScreenCover(item: $activeProductDetail) { detail in
+                ProductDetailView(
+                    scanId: detail.scanId,  // Pass scanId for real-time updates
+                    initialScan: detail.scan,  // Pass full scan with is_favorited
+                    product: detail.product,
+                    matchStatus: detail.matchStatus,
+                    ingredientRecommendations: detail.ingredientRecommendations,
+                    isPlaceholderMode: false,
+                    presentationSource: .homeView
+                )
+            }
+            
+
+
+            // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
+            .navigationDestination(for: HistoryRouteItem.self) { item in
+                switch item {
+                case .scan(let scan):
+                    let product = scan.toProduct()
+                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
                     ProductDetailView(
-                        scanId: detail.scanId,  // Pass scanId for real-time updates
-                        initialScan: detail.scan,  // Pass full scan with is_favorited
-                        product: detail.product,
-                        matchStatus: detail.matchStatus,
-                        ingredientRecommendations: detail.ingredientRecommendations,
+                        scanId: scan.id,
+                        initialScan: scan,
+                        product: product,
+                        matchStatus: scan.toProductRecommendation(),
+                        ingredientRecommendations: recommendations,
                         isPlaceholderMode: false,
                         presentationSource: .homeView
                     )
+                case .listItem(let item):
+                    // Fallback for list items if reached from Home
+                    FavoriteItemDetailView(item: item)  // Assuming FavoriteItemDetailView is available
+                case .favoritesAll:
+                     // Fallback, not strictly needed for Recent Scans
+                     FavoritesPageView()
+                case .recentScansAll:
+                     RecentScansPageView()
                 }
+            }
             
         }
     }
@@ -525,4 +513,11 @@ struct HomeView: View {
 
 #Preview {
     HomeView()
+        .environmentObject(Onboarding(onboardingFlowtype: .individual))
+        .environment(AppState())
+        .environment(WebService())
+        .environment(UserPreferences())
+        .environment(AuthController())
+        .environment(FamilyStore())
+        .environment(AppNavigationCoordinator(initialRoute: .home))
 }

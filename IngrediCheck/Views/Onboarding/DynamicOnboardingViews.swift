@@ -110,12 +110,16 @@ struct DynamicSubStepsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
+    @Environment(UserPreferences.self) var userPreferences
+    
+    @State private var showTutorial: Bool = false
+    @State private var cardFrame: CGRect = .zero
+    @State private var isAnimatingHand: Bool = false
     
     var body: some View {
         let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
         let subSteps = step.content.subSteps ?? []
         
-        // Map dynamic sub-steps into existing `Card` model used by `StackedCards`
         let cards: [Card] = subSteps.map { subStep in
             let chipModels = (subStep.options ?? []).map { ChipsModel(name: $0.name, icon: $0.icon) }
             let color: Color
@@ -132,36 +136,71 @@ struct DynamicSubStepsQuestionView: View {
             )
         }
         
-        VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                onboardingSheetTitle(title: headerVariant.question)
-                if let description = headerVariant.description {
-                    onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
+        ZStack {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    onboardingSheetTitle(title: headerVariant.question)
+                    if let description = headerVariant.description {
+                        onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
+                    }
                 }
+                .padding(.horizontal, 20)
+                
+                if flowType == .family {
+                    VStack(alignment: .leading, spacing: 8) {
+                        FamilyCarouselView()
+                        onboardingSheetFamilyMemberSelectNote()
+                    }
+                    .padding(.leading, 20)
+                }
+                
+                StackedCards(
+                    cards: cards,
+                    isChipSelected: { card, chip in
+                        selections(for: card.title).contains(chip.name)
+                    },
+                    onChipTap: { card, chip in
+                        toggleSelection(cardTitle: card.title, chipName: chip.name)
+                    },
+                    onSwipe: {
+                        if showTutorial {
+                            withAnimation {
+                                showTutorial = false
+                                userPreferences.cardsSwipeTutorialShown = true
+                            }
+                        }
+                    }
+                )
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear {
+                                cardFrame = geo.frame(in: .global)
+                            }
+                            .onChange(of: geo.frame(in: .global)) {
+                                cardFrame = $0
+                            }
+                    }
+                )
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
-            
-            if flowType == .family {
-                VStack(alignment: .leading, spacing: 8) {
-                    FamilyCarouselView()
-                    onboardingSheetFamilyMemberSelectNote()
-                }
-                .padding(.leading, 20)
-            }
-            // Don't show carousel for singleMember flow (adding specific member from home)
-            
-            StackedCards(
-                cards: cards,
-                isChipSelected: { card, chip in
-                    selections(for: card.title).contains(chip.name)
-                },
-                onChipTap: { card, chip in
-                    toggleSelection(cardTitle: card.title, chipName: chip.name)
-                }
+            .preference(
+                key: TutorialOverlayPreferenceKey.self,
+                value: TutorialData(show: showTutorial, cardFrame: cardFrame)
             )
-            .padding(.horizontal, 20)
         }
         .id(step.id)
+        .onAppear {
+            if step.id == "avoid" && !userPreferences.cardsSwipeTutorialShown {
+                // Determine if we should show tutorial
+                // Wait slightly for layout to settle
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        showTutorial = true
+                    }
+                }
+            }
+        }
     }
     
     private func selections(for cardTitle: String) -> Set<String> {
@@ -180,21 +219,17 @@ struct DynamicSubStepsQuestionView: View {
         let isExclusive = (lowerName == "other" || lowerName == "none of these apply")
         
         if isExclusive {
-            // If Exclusive option is selected, clear everything else in this card and select only it
             if set.contains(chipName) {
                 set.remove(chipName)
             } else {
                 set = [chipName]
             }
         } else {
-            // Normal option selected
-            // 1. Remove exclusive options if present
             let exclusives = set.filter { $0.lowercased() == "other" || $0.lowercased() == "none of these apply" }
             for exclusive in exclusives {
                 set.remove(exclusive)
             }
             
-            // 2. Toggle the selected option
             if set.contains(chipName) {
                 set.remove(chipName)
             } else {
@@ -209,7 +244,6 @@ struct DynamicSubStepsQuestionView: View {
         let sectionName = step.header.name
         var nestedDict: [String: [String]]
         
-        // Get existing nested dict or create new one
         if let existingValue = preferences.sections[sectionName],
            case .nested(let existingDict) = existingValue {
             nestedDict = existingDict
@@ -217,11 +251,26 @@ struct DynamicSubStepsQuestionView: View {
             nestedDict = [:]
         }
         
-        // Update the specific card's selections
         nestedDict[cardTitle] = Array(set)
-        
-        // Save back to preferences
         preferences.sections[sectionName] = .nested(nestedDict)
+    }
+}
+
+// MARK: - Tutorial Data Structures
+
+struct TutorialData: Equatable {
+    var show: Bool
+    var cardFrame: CGRect
+}
+
+struct TutorialOverlayPreferenceKey: PreferenceKey {
+    static var defaultValue: TutorialData = TutorialData(show: false, cardFrame: .zero)
+    
+    static func reduce(value: inout TutorialData, nextValue: () -> TutorialData) {
+        let next = nextValue()
+        if next.show {
+            value = next
+        }
     }
 }
 
@@ -576,5 +625,376 @@ struct DynamicOnboardingStepView: View {
     return DynamicOnboardingStepView(step: step, flowType: .individual, preferences: .constant(Preferences()))
 }
 
+// MARK: - Meet Your Profile View
 
+struct MeetYourProfileView: View {
+    var onContinue: () -> Void
+    @Environment(FamilyStore.self) var familyStore
+    @Environment(MemojiStore.self) var memojiStore
+    @Environment(AppNavigationCoordinator.self) var coordinator
+    @State private var primaryMemberName: String = ""
+    @FocusState private var isEditingPrimaryName: Bool
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Avatar Section
+            VStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    Group {
+                        if let image = memojiStore.image {
+                            // 1. Show the image that was JUST generated
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 80, height: 80)
+                                .background(Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4"))
+                                .clipShape(Circle())
+                        } else if let me = (familyStore.family?.selfMember ?? familyStore.pendingSelfMember),
+                                  let hash = me.imageFileHash, !hash.isEmpty {
+                            // 2. Show the avatar from the member's data (saved or pending)
+                            MemberAvatar.custom(member: me, size: 80, imagePadding: 0)
+                        } else {
+                            // 3. Default placeholder with curly-lady
+                            ZStack {
+                                Circle()
+                                    .fill(Color(hex: (familyStore.family?.selfMember.color ?? familyStore.pendingSelfMember?.color) ?? memojiStore.backgroundColorHex ?? "#E0BBE4"))
+                                    .frame(width: 80, height: 80)
+                                
+                                Image("curly-lady")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            }
+                        }
+                    }
+                    
+                    Button {
+                         // Sync current name to store before generating
+                         commitPrimaryName()
+                         
+                         // Navigation to avatar generation
+                         memojiStore.displayName = primaryMemberName
+                         
+                         // Set the target member ID so handleAssignAvatar knows who to update
+                         if let me = familyStore.family?.selfMember {
+                             familyStore.avatarTargetMemberId = me.id
+                         } else if let me = familyStore.pendingSelfMember {
+                             familyStore.avatarTargetMemberId = me.id
+                         } else {
+                             // Create pending self member if none exists
+                             familyStore.setPendingSelfMember(name: primaryMemberName)
+                             familyStore.avatarTargetMemberId = familyStore.pendingSelfMember?.id
+                         }
+                         
+                         memojiStore.previousRouteForGenerateAvatar = .meetYourProfile
+                         coordinator.navigateInBottomSheet(.generateAvatar)
+                    } label: {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 28, height: 28)
+                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
+                            .overlay(
+                                Image("pen-line")
+                                    .resizable()
+                                    .frame(width: 14, height: 14)
+                                    .foregroundStyle(.grayScale100)
+                            )
+                    }
+                    .offset(x: 4, y: 4)
+                }
+            }
+            .padding(.top, 16)
 
+            // Greeting Title
+            HStack(spacing: 8) {
+                Text("Hello,")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                
+                HStack(spacing: 8) {
+                    TextField("", text: $primaryMemberName)
+                        .font(NunitoFont.bold.size(22))
+                        .foregroundStyle(Color(hex: "#303030"))
+                        .disableAutocorrection(true)
+                        .focused($isEditingPrimaryName)
+                        .submitLabel(.done)
+                        .onSubmit { commitPrimaryName() }
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Image("pen-line")
+                        .resizable()
+                        .frame(width: 12, height: 12)
+                        .foregroundStyle(.grayScale100)
+                        .onTapGesture { isEditingPrimaryName = true }
+                }
+                .padding(.leading, 8)
+                .padding(.trailing, 5)
+                .frame(height: 35)
+                .frame(maxWidth: 250)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isEditingPrimaryName ? Color(hex: "#EEF5E3") : .white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
+                )
+                .contentShape(Rectangle())
+                .fixedSize(horizontal: true, vertical: false)
+                .onTapGesture { isEditingPrimaryName = true }
+                
+                Text("!")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+            
+            // Description
+            Text("We’ve created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
+                .font(ManropeFont.medium.size(12))
+                .foregroundStyle(.grayScale100)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
+            
+            // Continue Button
+            Button(action: {
+                commitPrimaryName()
+                onContinue()
+            }) {
+                GreenCapsule(title: "Continue", width: 159)
+                    .frame(width: 159)
+            }
+            .padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity)
+        .onAppear {
+            if let family = familyStore.family {
+                // If it's the "Just Me" flow, backend defaults the member name to "Me"
+                // but the family name to "Bite Buddy". We should show "Bite Buddy" here.
+                if family.selfMember.name == "Me" && !family.name.isEmpty {
+                    primaryMemberName = family.name
+                } else {
+                    primaryMemberName = family.selfMember.name
+                }
+            } else if let pending = familyStore.pendingSelfMember {
+                primaryMemberName = pending.name
+            } else {
+                primaryMemberName = "Bite Buddy"
+            }
+        }
+        .onChange(of: isEditingPrimaryName) { _, editing in
+            if !editing {
+                commitPrimaryName()
+            }
+        }
+        .onChange(of: primaryMemberName) { oldValue, newValue in
+            // Filter to letters and spaces only
+            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+            var finalized = filtered
+            
+            // Limit to 25 characters
+            if finalized.count > 25 {
+                finalized = String(finalized.prefix(25))
+            }
+            
+            // Limit to max 3 words (max 2 spaces)
+            let components = finalized.components(separatedBy: .whitespaces)
+            if components.count > 3 {
+                finalized = components.prefix(3).joined(separator: " ")
+            }
+            
+            if finalized != newValue {
+                primaryMemberName = finalized
+            }
+        }
+    }
+    
+    private func commitPrimaryName() {
+        let trimmed = primaryMemberName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        Task { @MainActor in
+            if let family = familyStore.family {
+                var me = family.selfMember
+                guard me.name != trimmed else { return }
+                me.name = trimmed
+                await familyStore.editMember(me)
+            } else if let pending = familyStore.pendingSelfMember {
+                if pending.name != trimmed {
+                    familyStore.updatePendingSelfMemberName(trimmed)
+                }
+            } else {
+                // If neither exists, create pending self member
+                familyStore.setPendingSelfMember(name: trimmed)
+            }
+        }
+    }
+}
+
+#Preview("Meet Your Profile View") {
+    let familyStore = FamilyStore()
+    let memojiStore = MemojiStore()
+    
+    // Set up mock memoji data for preview
+    memojiStore.backgroundColorHex = "#E0BBE4"
+    memojiStore.image = UIImage(systemName: "person.circle.fill")
+    
+    return MeetYourProfileView(onContinue: {})
+        .environment(familyStore)
+        .environment(memojiStore)
+}
+
+// MARK: - Meet Your Profile Intro View
+
+struct MeetYourProfileIntroView: View {
+    @Environment(AppNavigationCoordinator.self) var coordinator
+    
+    var body: some View {
+        VStack {
+            Spacer()
+            
+            Button(action: {
+                coordinator.navigateInBottomSheet(.meetYourProfile)
+            }) {
+                GreenCapsule(title: "Continue", width: 159)
+                    .frame(width: 159)
+            }
+            .padding(.bottom, 40)
+        }
+    }
+}
+
+// MARK: - Preferences Added Success Sheet
+
+struct PreferencesAddedSuccessSheet: View {
+    var onContinue: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                Text("Preferences added successfully!")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 32)
+                
+                Text("Your food preferences are saved. You can review them anytime, or edit a specific preference section by tapping Edit.")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+                  
+                    .padding(.horizontal, 24)
+            }
+            
+            Spacer()
+            
+            Button(action: onContinue) {
+                GreenCapsule(title: "Continue")
+                    .frame(width : 152 , height : 52)
+            }
+            .buttonStyle(.plain)
+         
+           
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 21)
+        .padding(.top , 28)
+        .padding(.bottom, 24)
+    }
+}
+struct EditSectionBottomSheet: View {
+    @EnvironmentObject private var store: Onboarding
+    @Environment(FamilyStore.self) private var familyStore
+    @Binding var isPresented: Bool
+    
+    let stepId: String
+    let currentSectionIndex: Int
+    let foodNotesStore: FoodNotesStore? = nil
+    
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging: Bool = false
+    
+    // Determine flow type: use .family if user has a family, otherwise use store's flow type
+    private var effectiveFlowType: OnboardingFlowType {
+        if let family = familyStore.family, !family.otherMembers.isEmpty {
+            return .family
+        }
+        return .individual
+    }
+    
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                // Drag indicator
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale60)
+                    .frame(width: 60, height: 4)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                if value.translation.height > 0 {
+                                    isDragging = true
+                                    dragOffset = value.translation.height
+                                }
+                            }
+                            .onEnded { value in
+                                isDragging = false
+                                if value.translation.height > 100 || value.predictedEndTranslation.height > 200 {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                        isPresented = false
+                                    }
+                                } else {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                            }
+                    )
+                
+                if let step = store.step(for: stepId) {
+                    DynamicOnboardingStepView(
+                        step: step,
+                        flowType: effectiveFlowType,
+                        preferences: $store.preferences
+                    )
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
+                    .transition(.opacity)
+                }
+            }
+            
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    isPresented = false
+                }
+            }) {
+                GreenCapsule(
+                    title: "Done",
+                    takeFullWidth: false,
+                    isLoading: false // Simplified for now to avoid dependency issues in preview/root
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
+            .padding(.bottom, 24)
+        }
+        .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+        .cornerRadius(36, corners: [.topLeft, .topRight])
+        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: -5)
+        .ignoresSafeArea(edges: .bottom)
+        .offset(y: dragOffset)
+        .animation(isDragging ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: dragOffset)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: stepId)
+    }
+}

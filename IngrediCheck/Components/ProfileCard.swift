@@ -119,64 +119,12 @@ struct ProfileCard: View {
 
 /// Avatar view used in ProfileCard to show the self member's memoji avatar.
 struct ProfileCardAvatarView: View {
-    @Environment(WebService.self) private var webService
     let member: FamilyMember
     let size: CGFloat
     
-    @State private var avatarImage: UIImage? = nil
-    @State private var loadedHash: String? = nil
-    
     var body: some View {
-        Group {
-            if let avatarImage {
-                // Show loaded memoji avatar
-                Image(uiImage: avatarImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: size, height: size)
-                    .clipShape(Circle())
-            } else {
-                // Fallback: first letter of name on colored background
-                Circle()
-                    .fill(Color(hex: member.color))
-                    .frame(width: size, height: size)
-                    .overlay {
-                        Text(String(member.name.prefix(1)))
-                            .font(NunitoFont.semiBold.size(size * 0.4))
-                            .foregroundStyle(.white)
-                    }
-            }
-        }
-        .task(id: member.imageFileHash) {
-            await loadAvatarIfNeeded()
-        }
-    }
-    
-    @MainActor
-    private func loadAvatarIfNeeded() async {
-        guard let hash = member.imageFileHash, !hash.isEmpty else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        // Skip if already loaded for this hash
-        if loadedHash == hash, avatarImage != nil {
-            return
-        }
-        
-        print("[ProfileCardAvatarView] Loading avatar for \(member.name), imageFileHash=\(hash)")
-        do {
-            let uiImage = try await webService.fetchImage(
-                imageLocation: .imageFileHash(hash),
-                imageSize: .small
-            )
-            avatarImage = uiImage
-            loadedHash = hash
-            print("[ProfileCardAvatarView] ✅ Loaded avatar for \(member.name)")
-        } catch {
-            print("[ProfileCardAvatarView] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
-        }
+        // Use centralized MemberAvatar component
+        MemberAvatar.custom(member: member, size: size, imagePadding: 0)
     }
 }
 

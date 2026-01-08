@@ -538,9 +538,9 @@ class DTO {
     struct ScanAnalysisResult: Codable, Hashable {
         let overall_analysis: String?
         let overall_match: String?  // "matched", "uncertain", "unmatched" - optional as it may be missing in some responses
-        let ingredient_analysis: [ScanIngredientAnalysis]
+        var ingredient_analysis: [ScanIngredientAnalysis]
         let is_stale: Bool?
-        let vote: Vote?
+        var vote: Vote?
         
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -591,7 +591,7 @@ class DTO {
         let match: String  // "unmatched", "uncertain"
         let reasoning: String
         let members_affected: [String]
-        let vote: Vote?
+        var vote: Vote?
         
         // Note: API uses snake_case (members_affected), so we use default CodingKeys
     }
@@ -619,7 +619,7 @@ class DTO {
         struct InventoryScanImage: Codable, Hashable {
             let type: String  // "inventory"
             let url: String
-            let vote: Vote?
+            var vote: Vote?
         }
         
         struct UserScanImage: Codable, Hashable {
@@ -670,9 +670,9 @@ class DTO {
         let state: String  // "processing_images", "analyzing", or "done"
         let product_info: ScanProductInfo
         let product_info_source: String?  // "openfoodfacts", "extraction", "enriched"
-        let product_info_vote: Vote?
-        let analysis_result: ScanAnalysisResult?
-        let images: [ScanImage]
+        var product_info_vote: Vote?
+        var analysis_result: ScanAnalysisResult?
+        var images: [ScanImage]
         let latest_guidance: String?
         let created_at: String
         let last_activity_at: String
@@ -814,7 +814,7 @@ extension DTO.ScanAnalysisResult {
             }
             
             // Log raw members_affected data for debugging
-            print("[INGREDIENT_ANALYSIS] ingredient: \(analysis.ingredient), match: \(analysis.match), members_affected: \(analysis.members_affected)")
+//            print("[INGREDIENT_ANALYSIS] ingredient: \(analysis.ingredient), match: \(analysis.match), members_affected: \(analysis.members_affected)")
             
             return DTO.IngredientRecommendation(
                 ingredientName: analysis.ingredient,

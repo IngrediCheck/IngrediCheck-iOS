@@ -37,7 +37,7 @@ struct IngrediBotView: View {
                 .foregroundStyle(.grayScale150)
                 .padding(.top, 12)
 
-            Spacer(minLength: 40)
+            Spacer()
             
             Text("Shall we get started?")
                 .font(NunitoFont.medium.size(20))
@@ -71,7 +71,17 @@ struct IngrediBotView: View {
             // Action buttons
             HStack(spacing: 12) {
                 Button {
+                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
                     
+                    if isOnboarding {
+                        if coordinator.onboardingFlow == .individual {
+                            coordinator.showCanvas(.summaryJustMe)
+                        } else {
+                            coordinator.showCanvas(.summaryAddFamily)
+                        }
+                    } else {
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
                 } label: {
                     Text("Maybe later")
                         .lineLimit(1)
@@ -102,9 +112,10 @@ struct IngrediBotView: View {
                 .padding(.top, 13)
                 .padding(.horizontal, -2)
                 .padding(.horizontal, 1)
+                .padding(.bottom, 32	)
                 
 
-            Spacer(minLength: 20)
+            
         }
         .padding(.horizontal, 20)
         
