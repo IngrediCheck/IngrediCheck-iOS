@@ -29,6 +29,13 @@ struct ProductDetailView: View {
 
     var clientActivityId: String? = nil
 
+    private var favoritedFromAppState: Bool? {
+        guard let clientActivityId else { return nil }
+        return appState.listsTabState.historyItems?
+            .first(where: { $0.client_activity_id == clientActivityId })?
+            .favorited
+    }
+
     init(
         product: DTO.Product? = nil,
         matchStatus: DTO.ProductRecommendation? = nil,
@@ -199,6 +206,12 @@ struct ProductDetailView: View {
         .fullScreenCover(isPresented: $isCameraPresentedFromDetail) {
             CameraScreen()
         }
+        .onChange(of: favoritedFromAppState) { _, newValue in
+            guard let newValue else { return }
+            if !isTogglingFavorite {
+                isFavorite = newValue
+            }
+        }
     }
     
     private var header: some View {
@@ -226,15 +239,19 @@ struct ProductDetailView: View {
                     return
                 }
 
-                let previous = isFavorite
-                isFavorite.toggle()
+                let previous = favoritedFromAppState ?? isFavorite
+                let next = !previous
+
+                // Optimistic UI + shared state update
+                isFavorite = next
+                appState.setHistoryItemFavorited(clientActivityId: clientActivityId, favorited: next)
                 isTogglingFavorite = true
 
                 Task {
                     do {
                         let updated = try await webService.setHistoryFavorite(
                             clientActivityId: clientActivityId,
-                            favorited: isFavorite
+                            favorited: next
                         )
                         await MainActor.run {
                             isFavorite = updated
@@ -250,6 +267,7 @@ struct ProductDetailView: View {
                     } catch {
                         await MainActor.run {
                             isFavorite = previous
+                            appState.setHistoryItemFavorited(clientActivityId: clientActivityId, favorited: previous)
                             isTogglingFavorite = false
                         }
                     }

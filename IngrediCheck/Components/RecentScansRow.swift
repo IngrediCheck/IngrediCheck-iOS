@@ -66,6 +66,12 @@ struct HomeRecentScanRow: View {
         self.item = item
         _isFavorited = State(initialValue: item.favorited)
     }
+
+    private var favoritedFromAppState: Bool {
+        appState.listsTabState.historyItems?
+            .first(where: { $0.client_activity_id == item.client_activity_id })?
+            .favorited ?? item.favorited
+    }
     
     private var feedback: Bool? {
         switch item.calculateMatch() {
@@ -137,8 +143,12 @@ struct HomeRecentScanRow: View {
             VStack(alignment: .trailing, spacing: 12) {
                 Button {
                     guard !isTogglingFavorite else { return }
-                    let previous = isFavorited
-                    isFavorited.toggle()
+                    let previous = favoritedFromAppState
+                    let next = !previous
+
+                    // Optimistic UI + shared state update
+                    isFavorited = next
+                    appState.setHistoryItemFavorited(clientActivityId: item.client_activity_id, favorited: next)
                     isTogglingFavorite = true
 
                     print("[HomeRecentScanRow] favorite tap: scanId=\(item.client_activity_id), previous=\(previous), optimistic=\(isFavorited)")
@@ -147,7 +157,7 @@ struct HomeRecentScanRow: View {
                         do {
                             let updated = try await webService.setHistoryFavorite(
                                 clientActivityId: item.client_activity_id,
-                                favorited: isFavorited
+                                favorited: next
                             )
                             await MainActor.run {
                                 print("[HomeRecentScanRow] favorite success: scanId=\(item.client_activity_id), updated=\(updated)")
@@ -165,6 +175,7 @@ struct HomeRecentScanRow: View {
                             await MainActor.run {
                                 print("[HomeRecentScanRow] favorite error: scanId=\(item.client_activity_id), error=\(error.localizedDescription)")
                                 isFavorited = previous
+                                appState.setHistoryItemFavorited(clientActivityId: item.client_activity_id, favorited: previous)
                                 isTogglingFavorite = false
                             }
                         }
@@ -191,6 +202,11 @@ struct HomeRecentScanRow: View {
                 await MainActor.run {
                     image = loaded
                 }
+            }
+        }
+        .onChange(of: favoritedFromAppState) { _, newValue in
+            if !isTogglingFavorite {
+                isFavorited = newValue
             }
         }
     }
