@@ -8,6 +8,7 @@ enum SafeEatsEndpoint: String {
     case feedback = "feedback"
     case memoji = "memoji"
     case history = "history"
+    case scan_favorite = "scan/%@/favorite"
     case list_items = "lists/%@"
     case list_items_item = "lists/%@/%@"
     case preference_lists_grandfathered = "preferencelists/grandfathered"

@@ -57,7 +57,14 @@ struct HomeRecentScanRow: View {
     let item: DTO.HistoryItem
     
     @State private var image: UIImage? = nil
+    @State private var isFavorited: Bool
+    @State private var isTogglingFavorite: Bool = false
     @Environment(WebService.self) var webService
+
+    init(item: DTO.HistoryItem) {
+        self.item = item
+        _isFavorited = State(initialValue: item.favorited)
+    }
     
     private var feedback: Bool? {
         switch item.calculateMatch() {
@@ -127,10 +134,43 @@ struct HomeRecentScanRow: View {
             
             Spacer()
             VStack(alignment: .trailing, spacing: 12) {
-                Image("favoriate")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 18, height:17)
+                Button {
+                    guard !isTogglingFavorite else { return }
+                    let previous = isFavorited
+                    isFavorited.toggle()
+                    isTogglingFavorite = true
+
+                    print("[HomeRecentScanRow] favorite tap: scanId=\(item.client_activity_id), previous=\(previous), optimistic=\(isFavorited)")
+
+                    Task {
+                        do {
+                            let updated = try await webService.setHistoryFavorite(
+                                clientActivityId: item.client_activity_id,
+                                favorited: isFavorited
+                            )
+                            await MainActor.run {
+                                print("[HomeRecentScanRow] favorite success: scanId=\(item.client_activity_id), updated=\(updated)")
+                                isFavorited = updated
+                                isTogglingFavorite = false
+                            }
+                        } catch {
+                            await MainActor.run {
+                                print("[HomeRecentScanRow] favorite error: scanId=\(item.client_activity_id), error=\(error.localizedDescription)")
+                                isFavorited = previous
+                                isTogglingFavorite = false
+                            }
+                        }
+                    }
+                } label: {
+                    Image("favoriate")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 18, height: 17)
+                        .foregroundStyle(isFavorited ? Color(hex: "#FF1100") : .grayScale70)
+                }
+                .buttonStyle(.plain)
+                .disabled(isTogglingFavorite)
                 
                 Text(item.relativeTimeDescription())
                 .font(ManropeFont.regular.size(12))
