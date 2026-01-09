@@ -87,7 +87,7 @@ class DTO {
         let images: [ImageLocationInfo]
         let ingredient_recommendations: [IngredientRecommendation]
         let rating: Int
-        let favorited: Bool
+        var favorited: Bool
 
         func calculateMatch() -> ProductRecommendation {
             var result: ProductRecommendation = .match

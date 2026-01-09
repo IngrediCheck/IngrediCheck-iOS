@@ -176,6 +176,14 @@ import SimpleToast
 @MainActor struct RecentScansPageView: View {
 
     @State private var isSearching: Bool = false
+    @State private var isShowingFilterMenu: Bool = false
+
+    private enum RecentScansFilter {
+        case all
+        case favorites
+    }
+
+    @State private var selectedFilter: RecentScansFilter = .all
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
@@ -195,7 +203,16 @@ import SimpleToast
     var defaultView: some View {
         Group {
             if let historyItems = appState.listsTabState.historyItems {
-                RecentScansListView(historyItems: historyItems)
+                let filteredItems: [DTO.HistoryItem] = {
+                    switch selectedFilter {
+                    case .all:
+                        return historyItems
+                    case .favorites:
+                        return historyItems.filter { $0.favorited }
+                    }
+                }()
+
+                RecentScansListView(historyItems: filteredItems)
                     .refreshable {
                         if let history = try? await webService.fetchHistory() {
                             appState.listsTabState.historyItems = history
@@ -220,13 +237,70 @@ import SimpleToast
                 .padding(.leading, 5)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    isSearching = true
-                }, label: {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.black)
+                Button {
+                    isShowingFilterMenu.toggle()
+                } label: {
+                    Image("filter")
+                        .resizable()
+                        .scaledToFit()
                         .frame(width: 24, height: 24)
-                })
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if isShowingFilterMenu {
+                ZStack(alignment: .topTrailing) {
+                    Color.black
+                        .opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            isShowingFilterMenu = false
+                        }
+
+                    VStack(spacing: 0) {
+                        Button {
+                            selectedFilter = .all
+                            isShowingFilterMenu = false
+                        } label: {
+                            HStack {
+                                Text("All")
+                                    .font(ManropeFont.regular.size(20))
+                                    .foregroundStyle(.grayScale150)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 18)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            selectedFilter = .favorites
+                            isShowingFilterMenu = false
+                        } label: {
+                            HStack {
+                                Text("Favorites")
+                                    .font(ManropeFont.regular.size(20))
+                                    .foregroundStyle(.grayScale150)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 18)
+                            .background(Color.grayScale20)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .frame(width: 210)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.grayScale30, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
+                    .padding(.top, 8)
+                    .padding(.trailing, 6)
+                }
             }
         }
     }
@@ -297,40 +371,97 @@ import SimpleToast
 
 @MainActor struct RecentScansListView: View {
     
-    var historyItems: [DTO.HistoryItem]
+    @Environment(AppState.self) var appState
+    @State private var isCameraPresented: Bool = false
+
+    var historyItems: [DTO.HistoryItem] = []
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(Array(historyItems.enumerated()), id: \.element.client_activity_id) { index, item in
-                    NavigationLink {
-                        let product = DTO.Product(
-                            barcode: item.barcode,
-                            brand: item.brand,
-                            name: item.name,
-                            ingredients: item.ingredients,
-                            images: item.images
-                        )
-                        ProductDetailView(
-                            product: product,
-                            matchStatus: item.calculateMatch(),
-                            ingredientRecommendations: item.ingredient_recommendations,
-                            isPlaceholderMode: false
-                        )
-                    } label: {
-                        HomeRecentScanRow(item: item)
-                    }
-                    .foregroundStyle(.primary)
+        Group {
+            if historyItems.isEmpty {
+                VStack {
+                    ZStack(alignment: .bottom) {
+                        Image("history-emptystate")
+                            .resizable()
+                            .scaledToFit()
 
-                    if index != historyItems.count - 1 {
-                        Divider()
-                            .padding(.vertical, 14)
+                        VStack(spacing: 0) {
+                            Text("No Scans !")
+                                .font(ManropeFont.bold.size(16))
+                                .foregroundStyle(.grayScale150)
+
+                            Text("Your recent scans will appear here once")
+                                .font(ManropeFont.regular.size(13))
+                                .foregroundStyle(.grayScale100)
+                                .multilineTextAlignment(.center)
+
+                            Text("you start scanning products.")
+                                .font(ManropeFont.regular.size(13))
+                                .foregroundStyle(.grayScale100)
+                                .multilineTextAlignment(.center)
+
+                            Button {
+                                isCameraPresented = true
+                            } label: {
+                                GreenCapsule(
+                                    title: "Start Scanning",
+                                    width: 159,
+                                    height: 52,
+                                    takeFullWidth: false,
+                                    labelFont: ManropeFont.bold.size(16)
+                                )
+                            }
+                            .padding(.top,24)
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .offset(y: -UIScreen.main.bounds.height * 0.2)
                 }
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(historyItems.enumerated()), id: \.element.client_activity_id) { index, item in
+                            NavigationLink {
+                                let product = DTO.Product(
+                                    barcode: item.barcode,
+                                    brand: item.brand,
+                                    name: item.name,
+                                    ingredients: item.ingredients,
+                                    images: item.images
+                                )
+                                ProductDetailView(
+                                    product: product,
+                                    matchStatus: item.calculateMatch(),
+                                    ingredientRecommendations: item.ingredient_recommendations,
+                                    isPlaceholderMode: false,
+                                    clientActivityId: item.client_activity_id,
+                                    favorited: item.favorited
+                                )
+                            } label: {
+                                HomeRecentScanRow(item: item)
+                            }
+                            .foregroundStyle(.primary)
+
+                            if index != historyItems.count - 1 {
+                                Divider()
+                                    .padding(.vertical, 14)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollIndicators(.hidden)
             }
         }
-        .scrollIndicators(.hidden)
+        .fullScreenCover(isPresented: $isCameraPresented) {
+            CameraScreen()
+        }
     }
+}
+
+#Preview {
+    RecentScansListView()
+        .environment(AppState())
 }
 
 @Observable @MainActor class ScanHistorySearchingViewModel {
@@ -412,7 +543,9 @@ import SimpleToast
                                 product: product,
                                 matchStatus: item.calculateMatch(),
                                 ingredientRecommendations: item.ingredient_recommendations,
-                                isPlaceholderMode: false
+                                isPlaceholderMode: false,
+                                clientActivityId: item.client_activity_id,
+                                favorited: item.favorited
                             )
                         } label: {
                             HomeRecentScanRow(item: item)

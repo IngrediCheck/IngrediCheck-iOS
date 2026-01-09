@@ -629,7 +629,9 @@ struct CameraScreen: View {
                     product: product,
                     matchStatus: selectedMatchStatus,
                     ingredientRecommendations: selectedIngredientRecommendations,
-                    isPlaceholderMode: false
+                    isPlaceholderMode: false,
+                    clientActivityId: nil,
+                    favorited: false
                 )
             } else {
                 ProductDetailView(isPlaceholderMode: true)

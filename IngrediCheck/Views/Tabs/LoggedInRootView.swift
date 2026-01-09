@@ -46,6 +46,13 @@ struct ListsTabState {
     @MainActor var listsTabState = ListsTabState()
     @MainActor var feedbackConfig: FeedbackConfig?
     @MainActor var navigateToSettings: Bool = false
+
+    @MainActor func setHistoryItemFavorited(clientActivityId: String, favorited: Bool) {
+        guard var items = listsTabState.historyItems else { return }
+        guard let idx = items.firstIndex(where: { $0.client_activity_id == clientActivityId }) else { return }
+        items[idx].favorited = favorited
+        listsTabState.historyItems = items
+    }
 }
 
 @MainActor struct LoggedInRootView: View {

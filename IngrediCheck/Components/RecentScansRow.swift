@@ -60,6 +60,7 @@ struct HomeRecentScanRow: View {
     @State private var isFavorited: Bool
     @State private var isTogglingFavorite: Bool = false
     @Environment(WebService.self) var webService
+    @Environment(AppState.self) var appState
 
     init(item: DTO.HistoryItem) {
         self.item = item
@@ -151,7 +152,14 @@ struct HomeRecentScanRow: View {
                             await MainActor.run {
                                 print("[HomeRecentScanRow] favorite success: scanId=\(item.client_activity_id), updated=\(updated)")
                                 isFavorited = updated
+                                appState.setHistoryItemFavorited(clientActivityId: item.client_activity_id, favorited: updated)
                                 isTogglingFavorite = false
+                            }
+
+                            if let listItems = try? await webService.getFavorites() {
+                                await MainActor.run {
+                                    appState.listsTabState.listItems = listItems
+                                }
                             }
                         } catch {
                             await MainActor.run {

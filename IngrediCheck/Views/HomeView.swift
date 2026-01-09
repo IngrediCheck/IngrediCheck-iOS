@@ -31,6 +31,8 @@ struct HomeView: View {
         let product: DTO.Product
         let matchStatus: DTO.ProductRecommendation
         let ingredientRecommendations: [DTO.IngredientRecommendation]?
+        let clientActivityId: String
+        let favorited: Bool
     }
 
     @State private var activeProductDetail: ProductDetailPayload?
@@ -319,7 +321,9 @@ struct HomeView: View {
                                     let payload = ProductDetailPayload(
                                         product: product,
                                         matchStatus: item.calculateMatch(),
-                                        ingredientRecommendations: item.ingredient_recommendations
+                                        ingredientRecommendations: item.ingredient_recommendations,
+                                        clientActivityId: item.client_activity_id,
+                                        favorited: item.favorited
                                     )
 
                                     activeProductDetail = payload
@@ -476,7 +480,9 @@ struct HomeView: View {
                     product: detail.product,
                     matchStatus: detail.matchStatus,
                     ingredientRecommendations: detail.ingredientRecommendations,
-                    isPlaceholderMode: false
+                    isPlaceholderMode: false,
+                    clientActivityId: detail.clientActivityId,
+                    favorited: detail.favorited
                 )
             }
 

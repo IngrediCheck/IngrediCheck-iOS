@@ -9,7 +9,8 @@ import SwiftUI
 
 struct ProductDetailView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var isFavorite = false
+    @State private var isFavorite: Bool
+    @State private var isTogglingFavorite: Bool = false
     @State private var isDescriptionExpanded = false
     @State private var isIngredientsExpanded = false
     @State private var isIngredientsAlertExpanded = false
@@ -17,11 +18,32 @@ struct ProductDetailView: View {
     @State private var activeIngredientHighlight: IngredientHighlight?
     @State private var thumbSelection: ThumbSelection? = nil
     @State private var isCameraPresentedFromDetail = false
+
+    @Environment(WebService.self) private var webService
+    @Environment(AppState.self) private var appState
     
     var product: DTO.Product? = nil
     var matchStatus: DTO.ProductRecommendation? = nil
     var ingredientRecommendations: [DTO.IngredientRecommendation]? = nil
     var isPlaceholderMode: Bool = false
+
+    var clientActivityId: String? = nil
+
+    init(
+        product: DTO.Product? = nil,
+        matchStatus: DTO.ProductRecommendation? = nil,
+        ingredientRecommendations: [DTO.IngredientRecommendation]? = nil,
+        isPlaceholderMode: Bool = false,
+        clientActivityId: String? = nil,
+        favorited: Bool = false
+    ) {
+        self.product = product
+        self.matchStatus = matchStatus
+        self.ingredientRecommendations = ingredientRecommendations
+        self.isPlaceholderMode = isPlaceholderMode
+        self.clientActivityId = clientActivityId
+        _isFavorite = State(initialValue: favorited)
+    }
     
     private let fallbackProductImages = ["maggie1", "maggie2"]
     private let fallbackProductBrand = "Nestlé"
@@ -198,7 +220,40 @@ struct ProductDetailView: View {
             Spacer()
             
             Button {
+                guard !isTogglingFavorite else { return }
+                guard let clientActivityId else {
+                    isFavorite.toggle()
+                    return
+                }
+
+                let previous = isFavorite
                 isFavorite.toggle()
+                isTogglingFavorite = true
+
+                Task {
+                    do {
+                        let updated = try await webService.setHistoryFavorite(
+                            clientActivityId: clientActivityId,
+                            favorited: isFavorite
+                        )
+                        await MainActor.run {
+                            isFavorite = updated
+                            appState.setHistoryItemFavorited(clientActivityId: clientActivityId, favorited: updated)
+                            isTogglingFavorite = false
+                        }
+
+                        if let listItems = try? await webService.getFavorites() {
+                            await MainActor.run {
+                                appState.listsTabState.listItems = listItems
+                            }
+                        }
+                    } catch {
+                        await MainActor.run {
+                            isFavorite = previous
+                            isTogglingFavorite = false
+                        }
+                    }
+                }
             } label: {
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
                     .font(.system(size: 20))
