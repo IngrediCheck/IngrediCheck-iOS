@@ -85,46 +85,57 @@ struct HomeRecentScanRow: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 42, height: 42)
+                    .frame(width: 55, height: 55)
                     .cornerRadius(8)
                     .clipped()
             } else {
                 HStack{
-                            Image("imagenotfound1")
-                                 .resizable()
-                                 .scaledToFill()
-                                 .frame(width: 20, height:20)
-                                 
-                             }.frame(width: 42, height: 42)
-                             .background(Color.grayScale50)
-                             .cornerRadius(8)
+                    Image("imagenotfound1")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 20, height:20)
+                    
+                }.frame(width: 55, height: 55)
+                    .background(Color.grayScale50)
+                    .cornerRadius(8)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text(titleText)
-                    .font(ManropeFont.bold.size(12))
+                    .font(ManropeFont.semiBold.size(14))
                     .foregroundStyle(.teritairy1000)
                     .lineLimit(1)
                 
-                Text(item.relativeTimeDescription())
-                    .font(ManropeFont.regular.size(12))
-                    .foregroundStyle(.grayScale100)
+                HStack(spacing: 4) {
+                  Circle()
+                        .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                        .frame(width: 10, height: 10)
+                    
+                    Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
+                        .font(ManropeFont.medium.size(12))
+                        .foregroundStyle(feedback == nil ? Color(hex: "#FF594E") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                }
+                .padding(.vertical, 5)
+                .padding(.horizontal, 8)
+                .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 25))
+                
+                //                Text(item.relativeTimeDescription())
+                //                    .font(ManropeFont.regular.size(12))
+                //                    .foregroundStyle(.grayScale100)
             }
+        }
             
             Spacer()
-            
-            HStack(spacing: 4) {
-                Circle()
-                    .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
-                    .frame(width: 10, height: 10)
+            VStack(alignment: .trailing, spacing: 12) {
+                Image("favoriate")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 18, height:17)
                 
-                Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
-                    .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(feedback == nil ? Color(hex: "#FF594E") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
-            }
-            .padding(.vertical, 5)
-            .padding(.horizontal, 8)
-            .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 12))
+                Text(item.relativeTimeDescription())
+                .font(ManropeFont.regular.size(12))
+                .foregroundStyle(.grayScale100)
+                
         }
         .task {
             if let firstImage = item.images.first,

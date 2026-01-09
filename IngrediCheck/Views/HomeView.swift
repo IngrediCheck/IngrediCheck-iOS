@@ -79,7 +79,7 @@ struct HomeView: View {
 
                     // Greeting section
                     HStack {
-                        VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 3) {
                                 Text("Hello")
                                     .font(NunitoFont.regular.size(14))
@@ -143,27 +143,27 @@ struct HomeView: View {
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
-
+                    
                     // Lifestyle + Family + Average scans
-                    HStack {
-                        LifestyleAndChoicesCard(onTap: {
-                            // Request centering of Lifestyle/Nutrition when opening editor
-                            editTargetSectionName = "Lifestyle"
-                            showEditableCanvas = true
-                        })
-                    
-                        Spacer()
-                    
+                    HStack (){
+                        AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
+                            .onAppear {
+                                didPlayAverageScansLaunchAnimation = true
+                            }
+                         
+                           .padding(.trailing ,15)
+                        
                         VStack {
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
                                     .font(ManropeFont.medium.size(18))
                                     .foregroundStyle(.grayScale150)
+                                    .padding(.bottom ,4)
                             
                                 Text("Your people, their choices.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
-                            
+                               Spacer()
                                 HStack {
                                     ZStack(alignment: .bottomTrailing) {
                                         let membersToShow = Array(familyMembers.prefix(3))
@@ -197,12 +197,9 @@ struct HomeView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .frame(height: 103)
+                            .frame(height: 125)
                         
-                            AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
-                                .onAppear {
-                                    didPlayAverageScansLaunchAnimation = true
-                                }
+                           
                         }
                     }
                     .padding(.bottom, 20)
@@ -355,6 +352,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom , 30)
+                .padding(.top ,16)
                 .navigationBarBackButtonHidden(true)
                 // ← Attach GeometryReader here so it measures inside the ScrollView's coordinate space
                 .background(
@@ -425,6 +423,9 @@ struct HomeView: View {
                 alignment: .bottom
             )
             .background(Color.white)
+//            .padding(.top , 16)
+//            .background(Color.red)
+            
            
             // ------------ HISTORY LOADING ------------
             .task {

@@ -31,6 +31,10 @@ struct MyIcon: Shape {
 
 struct AllergySummaryCard: View {
     var onTap: (() -> Void)? = nil
+
+    private var emptyStateFormattedText: String {
+        formatCardText("\"Add *allergies* or *dietary* needs for your *family* members to make meal *choices* easier for everyone .”\"")
+    }
     
     var body: some View {
         ZStack {
@@ -50,7 +54,7 @@ struct AllergySummaryCard: View {
             
             // Content
             VStack(alignment: .leading, spacing: 8) {
-                Text("25% Allergies")
+                Text("No Data Yet")
                     .font(ManropeFont.regular.size(8))
                     .foregroundStyle(.grayScale130)
                     .padding(.vertical, 4)
@@ -62,9 +66,14 @@ struct AllergySummaryCard: View {
                             .foregroundStyle(.grayScale70)
                     )
                 
-                Text("\"Your family avoids 🥜, dairy, 🦀, eggs, gluten, red meat 🥩, alcohol, making meal choices \nsimpler and \nsafer for \neveryone.\"")
-                    .font(ManropeFont.bold.size(14))
-                    .foregroundStyle(.grayScale140)
+                MultiColorText(text: emptyStateFormattedText)
+                    .padding(.trailing, 10)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(6)
+                
+//                Text("\"Your family avoids 🥜, dairy, 🦀, eggs, gluten, red meat 🥩, alcohol, making meal choices simpler and safer for everyone.\"")
+//                    .font(ManropeFont.bold.size(14))
+//                    .foregroundStyle(.grayScale140)
             }
             .padding(.horizontal, 10)
             .padding(.top, 12)
