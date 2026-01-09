@@ -46,12 +46,13 @@ struct AverageScansCard: View {
     animatedBarHeights = Array(repeating: 0, count: count)
 
     Task { @MainActor in
-      let totalDuration: Double = 5.0
       let frameDuration: Double = 1.0 / 30.0
-      let frames = Int((totalDuration / frameDuration).rounded(.up))
 
-      let phaseStep: Double = Double.pi / 6
-      let cyclesPerSecond: Double = 1.0
+      let phaseStep: Double = Double.pi / 5
+      let cyclesPerSecond: Double = 0.5
+      let cycleCount: Double = 1
+      let totalDuration: Double = cycleCount / cyclesPerSecond
+      let frames = Int((totalDuration / frameDuration).rounded(.up))
       let omega: Double = 2 * Double.pi * cyclesPerSecond
 
       for frame in 0..<frames {

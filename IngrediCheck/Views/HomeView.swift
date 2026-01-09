@@ -21,6 +21,7 @@ struct HomeView: View {
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
     @State private var showRecentScansPage: Bool = false
+    @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
 
     // ---------------------------
     // MERGED FROM YOUR BRANCH
@@ -198,7 +199,10 @@ struct HomeView: View {
                             }
                             .frame(height: 103)
                         
-                            AverageScansCard()
+                            AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
+                                .onAppear {
+                                    didPlayAverageScansLaunchAnimation = true
+                                }
                         }
                     }
                     .padding(.bottom, 20)
