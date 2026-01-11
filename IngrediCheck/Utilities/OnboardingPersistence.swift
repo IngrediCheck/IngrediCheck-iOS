@@ -75,6 +75,13 @@ final class OnboardingPersistence {
              return
         }
 
+        // CRITICAL: If onboarding is already completed locally, don't overwrite it.
+        // This prevents regression when navigation temporarily goes to early onboarding screens.
+        if isLocallyCompleted {
+            print("[OnboardingPersistence] sync skipped: Onboarding already completed locally. Preventing regression.")
+            return
+        }
+
         let metadata = coordinator.buildOnboardingMetadata()
         if let stage = metadata.stage {
             // Update local stage to match what the coordinator thinks we are in

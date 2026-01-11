@@ -21,6 +21,7 @@ struct HomeView: View {
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
     @State private var navigationPath: [HistoryRouteItem] = []
+    @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -31,6 +32,8 @@ struct HomeView: View {
         let product: DTO.Product
         let matchStatus: DTO.ProductRecommendation
         let ingredientRecommendations: [DTO.IngredientRecommendation]?
+        let clientActivityId: String?  // Optional for backwards compatibility (legacy API)
+        let favorited: Bool
     }
     
     @State private var activeProductDetail: ProductDetailPayload?
@@ -77,7 +80,7 @@ struct HomeView: View {
                     
                     // Greeting section
                     HStack {
-                        VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 3) {
                                 Text("Hello")
                                     .font(NunitoFont.regular.size(14))
@@ -143,22 +146,24 @@ struct HomeView: View {
                     
                     // Lifestyle + Family + Average scans
                     HStack {
-                        LifestyleAndChoicesCard(onTap: {
-                            // Request centering of Lifestyle/Nutrition when opening editor
-                            editTargetSectionName = "Lifestyle"
-                            showEditableCanvas = true
-                        })
-                        Spacer()
+                        AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
+                            .onAppear {
+                                didPlayAverageScansLaunchAnimation = true
+                            }
+                            .padding(.trailing, 15)
                         
                         VStack {
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
                                     .font(ManropeFont.medium.size(18))
                                     .foregroundStyle(.grayScale150)
-                                
+                                    .padding(.bottom, 4)
+                            
                                 Text("Your people, their choices.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
+                                
+                                Spacer()
                                 
                                 HStack {
                                     ZStack(alignment: .bottomTrailing) {
@@ -193,9 +198,7 @@ struct HomeView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .frame(height: 103)
-                            
-                            AverageScansCard()
+                            .frame(height: 125)
                         }
                     }
                     .padding(.bottom, 20)
@@ -310,7 +313,9 @@ struct HomeView: View {
                                         scan: scan,
                                         product: product,
                                         matchStatus: scan.toProductRecommendation(),
-                                        ingredientRecommendations: recommendations
+                                        ingredientRecommendations: recommendations,
+                                        clientActivityId: nil,
+                                        favorited: scan.is_favorited ?? false
                                     )
                                     
                                     activeProductDetail = payload
@@ -343,6 +348,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom , 30)
+                .padding(.top ,16)
                 .navigationBarBackButtonHidden(true)
                 // ← Attach GeometryReader here so it measures inside the ScrollView's coordinate space
                 .background(
@@ -411,6 +417,9 @@ struct HomeView: View {
                 alignment: .bottom
             )
             .background(Color.white)
+//            .padding(.top , 16)
+//            .background(Color.red)
+            
            
             // ------------ HISTORY LOADING ------------
             .task {

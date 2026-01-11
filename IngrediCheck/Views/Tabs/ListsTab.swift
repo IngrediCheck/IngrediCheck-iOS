@@ -187,6 +187,14 @@ import SimpleToast
 @MainActor struct RecentScansPageView: View {
 
     @State private var isSearching: Bool = false
+    @State private var isShowingFilterMenu: Bool = false
+
+    private enum RecentScansFilter {
+        case all
+        case favorites
+    }
+
+    @State private var selectedFilter: RecentScansFilter = .all
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
@@ -207,7 +215,17 @@ import SimpleToast
     var defaultView: some View {
         Group {
             if let scans = appState.listsTabState.scans, !scans.isEmpty {
-                RecentScansListView(scans: scans)
+                // Apply filter if favorites is selected
+                let filteredScans: [DTO.Scan] = {
+                    switch selectedFilter {
+                    case .all:
+                        return scans
+                    case .favorites:
+                        return scans.filter { $0.is_favorited == true }
+                    }
+                }()
+                
+                RecentScansListView(scans: filteredScans)
                     .refreshable {
                         // Load via store (single source of truth)
                         await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
@@ -268,13 +286,70 @@ import SimpleToast
                 .padding(.leading, 5)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    isSearching = true
-                }, label: {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.black)
+                Button {
+                    isShowingFilterMenu.toggle()
+                } label: {
+                    Image("filter")
+                        .resizable()
+                        .scaledToFit()
                         .frame(width: 24, height: 24)
-                })
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if isShowingFilterMenu {
+                ZStack(alignment: .topTrailing) {
+                    Color.black
+                        .opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            isShowingFilterMenu = false
+                        }
+
+                    VStack(spacing: 0) {
+                        Button {
+                            selectedFilter = .all
+                            isShowingFilterMenu = false
+                        } label: {
+                            HStack {
+                                Text("All")
+                                    .font(ManropeFont.regular.size(20))
+                                    .foregroundStyle(.grayScale150)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 18)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            selectedFilter = .favorites
+                            isShowingFilterMenu = false
+                        } label: {
+                            HStack {
+                                Text("Favorites")
+                                    .font(ManropeFont.regular.size(20))
+                                    .foregroundStyle(.grayScale150)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 18)
+                            .background(Color.grayScale20)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .frame(width: 210)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.grayScale30, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
+                    .padding(.top, 8)
+                    .padding(.trailing, 6)
+                }
             }
         }
     }
@@ -350,43 +425,95 @@ import SimpleToast
     var scans: [DTO.Scan]
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(AppState.self) var appState
+    @State private var isCameraPresented: Bool = false
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(Array(scans.enumerated()), id: \.element.id) { index, scan in
-                    NavigationLink(value: HistoryRouteItem.scan(scan)) {
-                        ScanRow(scan: scan)
+        Group {
+            if scans.isEmpty {
+                VStack {
+                    ZStack(alignment: .bottom) {
+                        Image("history-emptystate")
+                            .resizable()
+                            .scaledToFit()
+
+                        VStack(spacing: 0) {
+                            Text("No Scans !")
+                                .font(ManropeFont.bold.size(16))
+                                .foregroundStyle(.grayScale150)
+
+                            Text("Your recent scans will appear here once")
+                                .font(ManropeFont.regular.size(13))
+                                .foregroundStyle(.grayScale100)
+                                .multilineTextAlignment(.center)
+
+                            Text("you start scanning products.")
+                                .font(ManropeFont.regular.size(13))
+                                .foregroundStyle(.grayScale100)
+                                .multilineTextAlignment(.center)
+
+                            Button {
+                                isCameraPresented = true
+                            } label: {
+                                GreenCapsule(
+                                    title: "Start Scanning",
+                                    width: 159,
+                                    height: 52,
+                                    takeFullWidth: false,
+                                    labelFont: ManropeFont.bold.size(16)
+                                )
+                            }
+                            .padding(.top,24)
+                            .buttonStyle(.plain)
+                        }
+                        .offset(y: -UIScreen.main.bounds.height * 0.2)
                     }
-                    .foregroundStyle(.primary)
-                    .onAppear {
-                        // Load more when reaching the end (3 rows remaining)
-                        if index >= scans.count - 3 {
-                            Task {
-                                await scanHistoryStore.loadMore()
-                                // Sync to AppState for backwards compatibility
-                                appState.listsTabState.scans = scanHistoryStore.scans
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(scans.enumerated()), id: \.element.id) { index, scan in
+                            NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                                ScanRow(scan: scan)
+                            }
+                            .foregroundStyle(.primary)
+                            .onAppear {
+                                // Load more when reaching the end (3 rows remaining)
+                                if index >= scans.count - 3 {
+                                    Task {
+                                        await scanHistoryStore.loadMore()
+                                        // Sync to AppState for backwards compatibility
+                                        appState.listsTabState.scans = scanHistoryStore.scans
+                                    }
+                                }
+                            }
+
+                            if index != scans.count - 1 {
+                                Divider()
+                                    .padding(.vertical, 14)
                             }
                         }
-                    }
-
-                    if index != scans.count - 1 {
-                        Divider()
-                            .padding(.vertical, 14)
+                        
+                        // Loading indicator at the bottom
+                        if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 20)
+                        }
                     }
                 }
-                
-                // Loading indicator at the bottom
-                if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 20)
-                }
+                .scrollIndicators(.hidden)
             }
         }
-        .scrollIndicators(.hidden)
+        .fullScreenCover(isPresented: $isCameraPresented) {
+            ScanCameraView()
+        }
     }
 }
+
+//#Preview {
+//    RecentScansListView()
+//        .environment(AppState())
+//}
 
 @Observable @MainActor class ScanHistorySearchingViewModel {
 

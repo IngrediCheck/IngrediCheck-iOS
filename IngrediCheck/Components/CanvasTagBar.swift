@@ -37,6 +37,15 @@ struct CanvasTagBar: View {
     }
     @State var visited: [String] = []
     
+    private var currentSelectedSectionIndex: Int {
+        if case .onboardingStep(let stepId) = currentBottomSheetRoute {
+            if let index = store.dynamicSteps.firstIndex(where: { $0.id == stepId }) {
+                return index
+            }
+        }
+        return store.currentSectionIndex
+    }
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -50,6 +59,9 @@ struct CanvasTagBar: View {
                                     // If fineTuneYourExperience is shown, return empty string so nothing is selected
                                     if case .fineTuneYourExperience = currentBottomSheetRoute {
                                         return ""
+                                    }
+                                    if store.sections.indices.contains(currentSelectedSectionIndex) {
+                                        return store.sections[currentSelectedSectionIndex].name
                                     }
                                     return store.sections[store.currentSectionIndex].name
                                 },
@@ -80,23 +92,34 @@ struct CanvasTagBar: View {
             }
         }
         .onAppear() {
-            // Initialize visited with sections up to and including current
-            if store.sections.indices.contains(store.currentSectionIndex) {
-                let currentIndex = store.currentSectionIndex
-                let initial = store.sections.prefix(currentIndex + 1).map { $0.name }
-                visited = Array(initial)
-            }
+            syncVisitedFromStore()
         }
         .onChange(of: store.currentSectionIndex) { _, newIndex in
             // When user goes to a next section (or any section), mark it as visited
             // so it turns dark green immediately.
             if store.sections.indices.contains(newIndex) {
+                if newIndex > store.maxVisitedSectionIndex {
+                    store.maxVisitedSectionIndex = newIndex
+                }
                 let currentName = store.sections[newIndex].name
                 if !visited.contains(currentName) {
                     visited.append(currentName)
                 }
             }
         }
+        .onChange(of: store.maxVisitedSectionIndex) { _, _ in
+            syncVisitedFromStore()
+        }
+    }
+
+    private func syncVisitedFromStore() {
+        guard store.sections.isEmpty == false else {
+            visited = []
+            return
+        }
+        let maxIndex = min(store.maxVisitedSectionIndex, max(store.sections.count - 1, 0))
+        let names = store.sections.prefix(maxIndex + 1).map { $0.name }
+        visited = Array(names)
     }
     
     private func handleSelection(newName: String, proxy: ScrollViewProxy) {

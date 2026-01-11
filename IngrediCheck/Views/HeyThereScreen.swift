@@ -47,12 +47,24 @@ struct HeyThereScreen: View {
                         }
                     case .doYouHaveAnInviteCode, .enterInviteCode:
                         VStack {
-                            Spacer()
+                            Text("Welcome to IngrediFam !")
+                                .font(ManropeFont.bold.size(16))
+                                .padding(.top ,32)
+                                .padding(.bottom ,4)
+                            Text("Join your family space and personalize food choices together.")
+                                .font(ManropeFont.regular.size(13))
+                                .foregroundColor(Color(hex: "#BDBDBD"))
+                                .lineLimit(2)
+                                .frame(width : 247)
+                                .multilineTextAlignment(.center )
+
+                           
                             Image("onbordingfamilyimg")
                                 .resizable()
                                 .scaledToFit()
-                                .frame(height: 269)
+                                .frame(height: 369)
                                 .frame(maxWidth: .infinity)
+                                .offset(y : -50)
                             Spacer()
                         }
                     default:

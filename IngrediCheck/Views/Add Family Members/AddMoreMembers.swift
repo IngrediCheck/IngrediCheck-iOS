@@ -50,6 +50,17 @@ struct AddMoreMembers: View {
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                        } else if !familyStore.pendingOtherMembers.isEmpty {
+                            Button {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
 
@@ -113,7 +124,7 @@ struct AddMoreMembers: View {
                         .padding(.leading, 20)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 24) {
+                        HStack(spacing: 16) {
                             Button {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if trimmed.isEmpty {

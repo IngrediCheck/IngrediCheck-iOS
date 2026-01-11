@@ -375,8 +375,8 @@ struct ManageFamilyView: View {
                 .background(Color(hex: "#FFF7E6"), in: Capsule())
             } else {
                 Text("Not joined yet !")
-                    .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(.grayScale110)
+                    .font(NunitoFont.regular.size(12))
+                    .foregroundStyle(.grayScale100)
             }
         }
 

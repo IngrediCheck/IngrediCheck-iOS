@@ -122,9 +122,11 @@ class AppNavigationCoordinator {
         withAnimation(.easeInOut) {
             // When navigating back to the early onboarding sheets that live on the HeyThere canvas,
             // ensure the canvas is reset to .heyThere so the correct background imagery shows.
+            // BUT: Only do this if onboarding is NOT completed, otherwise we'll reset users back to Get Started screen
             switch route {
             case .alreadyHaveAnAccount, .welcomeBack, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
-                if currentCanvasRoute != .heyThere {
+                // Only reset to .heyThere if onboarding is not completed
+                if !OnboardingPersistence.shared.isLocallyCompleted && currentCanvasRoute != .heyThere {
                     currentCanvasRoute = .heyThere
                 }
             default:

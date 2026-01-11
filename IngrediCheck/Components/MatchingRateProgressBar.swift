@@ -237,7 +237,7 @@ struct MatchingRateProgressBar: View {
                             outerRadius: outerRadius,
                             cornerRadius: 4
                         )
-                        .fill(isFilled ? .orange : .grayScale30)
+                        .fill(isFilled ? .orange : .grayScale40)
                     }
                 case .breakdown(let matched, let uncertain, let unmatched):
                     let kinds = segmentsForBreakdown(
@@ -263,11 +263,11 @@ struct MatchingRateProgressBar: View {
                             outerRadius: outerRadius,
                             cornerRadius: 4
                         )
-                        .fill(hasData ? fillColor(for: kind!) : .grayScale30)
+                        .fill(hasData ? fillColor(for: kind!) : .grayScale40)
                         .opacity(dimmed ? 0.3 : 1)
                         .shadow(
-                            color: showShadow ? Color.black.opacity(0.12) : .clear,
-                            radius: showShadow ? 2 : 0,
+                            color: showShadow && hasData ? Color.black.opacity(0.12) : .clear,
+                            radius: showShadow && hasData ? 2 : 0,
                             x: 0,
                             y: 0
                         )

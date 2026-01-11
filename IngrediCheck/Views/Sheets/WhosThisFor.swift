@@ -69,12 +69,12 @@ struct WhosThisFor: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
-        )
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 4)
+//                .fill(.neutral500)
+//                .frame(width: 60, height: 4)
+//                .padding(.top, 11)
+//            , alignment: .top
+//        )
     }
 }
