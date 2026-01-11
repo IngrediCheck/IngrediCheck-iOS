@@ -1,10 +1,6 @@
 
 import SwiftUI
 
-enum CameraMode {
-    case scanner
-    case photo
-}
 
 struct CameraSwipeButton: View {
     @Binding var mode: CameraMode

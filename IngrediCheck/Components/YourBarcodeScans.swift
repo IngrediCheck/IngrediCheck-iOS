@@ -10,6 +10,7 @@ import SwiftUI
 struct YourBarcodeScans: View {
     @Environment(UserPreferences.self) var userPreferences
     @State private var isCameraPresented = false
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -76,8 +77,14 @@ struct YourBarcodeScans: View {
                 .stroke(lineWidth: 0.25)
                 .foregroundStyle(.grayScale60)
         )
-        .fullScreenCover(isPresented: $isCameraPresented) {
-            CameraScreen()
+        .fullScreenCover(isPresented: $isCameraPresented, onDismiss: {
+            Task {
+                await scanHistoryStore.loadHistory(forceRefresh: true)
+                // Also refresh scan count since a new scan might have occurred
+                userPreferences.refreshScanCount()
+            }
+        }) {
+            ScanCameraView()
         }
         .onAppear {
             // Refresh count from UserDefaults when view appears to ensure it's up-to-date

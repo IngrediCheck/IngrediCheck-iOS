@@ -574,6 +574,34 @@ private enum AuthFlowMode {
         
         if let session {
             signInState = .signedIn
+            
+            // Log user ID and login type
+            let userId = session.user.id
+            
+            // Determine login type by checking session directly
+            var loginType = "Unknown"
+            if let identities = session.user.identities {
+                if identities.contains(where: { $0.provider.lowercased() == "apple" }) {
+                    loginType = "Social Login (Apple)"
+                } else if identities.contains(where: { $0.provider.lowercased() == "google" }) {
+                    loginType = "Social Login (Google)"
+                } else if identities.contains(where: { $0.provider == "anonymous" }) {
+                    loginType = "Guest Login"
+                }
+            } else if let provider = session.user.appMetadata["provider"] as? String {
+                if provider.lowercased() == "apple" {
+                    loginType = "Social Login (Apple)"
+                } else if provider.lowercased() == "google" {
+                    loginType = "Social Login (Google)"
+                } else if provider == "email" || provider == "anonymous" {
+                    loginType = "Guest Login"
+                }
+            } else if session.user.isAnonymous == true {
+                loginType = "Guest Login"
+            }
+            
+            print("[AUTH] ✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
+            
             registerDeviceAfterLogin(session: session)
             pingAfterLogin()
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
@@ -581,6 +609,7 @@ private enum AuthFlowMode {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
             if shouldReset {
+                print("[AUTH] 🔴 User signed out")
                 AnalyticsService.shared.resetAnalytics()
                 // Reset ping flag on sign out so it can run again on next login
                 Self.hasPinged = false

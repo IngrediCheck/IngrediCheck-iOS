@@ -46,6 +46,12 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     var errorDescription: String? { message }
 }
 
+struct ScanStreamError: Error, LocalizedError {
+    let message: String
+    let statusCode: Int?
+    var errorDescription: String? { message }
+}
+
 @Observable final class WebService {
     
     private let smallImageStore: FileStore
@@ -76,11 +82,12 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
     }
     
     func fetchImage(imageLocation: DTO.ImageLocationInfo, imageSize: ImageSize) async throws -> UIImage {
-        // Construct FileLocation - handle memoji paths with proper URL encoding
+        
         let fileLocation: FileLocation
         switch imageLocation {
         case .url(let url):
             fileLocation = FileLocation.url(url)
+            
         case .imageFileHash(let imageFileHash):
             // Heuristic: memoji images live in the `memoji-images` bucket and include
             // a year/month path segment (e.g. "2025/01/<hash>.png"). Product images
@@ -98,19 +105,19 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
                 
                 guard let publicUrl = URL(string: publicUrlString) else {
                     print("[WebService] fetchImage: ❌ Failed to construct URL for memoji path: \(imageFileHash)")
-                    print("[WebService] fetchImage: Encoded path: \(encodedPath)")
-                    print("[WebService] fetchImage: Full URL string: \(publicUrlString)")
                     throw NetworkError.badUrl
                 }
-                print("[WebService] fetchImage: ✅ Constructed memoji URL: \(publicUrlString)")
                 fileLocation = FileLocation.url(publicUrl)
             } else {
                 // For product images, use Supabase download API
                 fileLocation = FileLocation.supabase(SupabaseFile(bucket: "productimages", name: imageFileHash))
             }
+            
+        case .scanImagePath(let storagePath):
+            // User-uploaded scan images are stored in the "scan-images" bucket
+            fileLocation = FileLocation.supabase(SupabaseFile(bucket: "scan-images", name: storagePath))
         }
-        
-        // Fetch image data based on size
+
         let data: Data
         switch imageSize {
         case .small:
@@ -121,21 +128,16 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             data = try await largeImageStore.fetchFile(fileLocation: fileLocation)
         }
         
-        print("[WebService] fetchImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
         // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
         let image = await MainActor.run {
-            let isMainThread = Thread.isMainThread
-            print("[WebService] fetchImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
-            let img = UIImage(data: data)
-            print("[WebService] fetchImage: UIImage(data:) created - image=\(img != nil ? "✅" : "❌")")
-            return img
+            UIImage(data: data)
         }
-        print("[WebService] fetchImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
-        guard let image = image else {
+        
+        guard let validImage = image else {
             throw NetworkError.decodingError
         }
         
-        return image
+        return validImage
     }
 
     func streamUnifiedAnalysis(
@@ -175,23 +177,10 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             requestBuilder = requestBuilder.setFormData(name: "barcode", value: barcode)
             analyticsProperties["input_type"] = "barcode"
             analyticsProperties["barcode"] = barcode
-        case .productImages(let productImages):
-            let productImagesDTO = try await productImages.asyncMap { productImage in
-                DTO.ImageInfo(
-                    imageFileHash: try await productImage.uploadTask.value,
-                    imageOCRText: try await productImage.ocrTask.value,
-                    barcode: try await productImage.barcodeDetectionTask.value
-                )
-            }
-
-            let productImagesData = try JSONEncoder().encode(productImagesDTO)
-            guard let productImagesString = String(data: productImagesData, encoding: .utf8) else {
-                throw NetworkError.decodingError
-            }
-
-            requestBuilder = requestBuilder.setFormData(name: "productImages", value: productImagesString)
-            analyticsProperties["input_type"] = "product_images"
-            analyticsProperties["image_count"] = productImages.count
+        case .productImages:
+            // DEPRECATED: productImages case no longer supported
+            // Use the new Scan API (submitScanImage + getScan) for photo scans instead
+            throw NetworkError.invalidResponse(400)  // Bad request - method deprecated
         }
 
         var request = requestBuilder.build()
@@ -297,6 +286,113 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             guard let resolvedEventType = eventType else { return }
 
             switch resolvedEventType {
+            case "scan":
+                guard !payloadString.isEmpty else { return }
+                
+                // Define payload structure locally to match the partial/progressive SSE response
+                struct ScanStreamPayload: Decodable {
+                    let id: String
+                    let state: String
+                    let barcode: String?
+                    let product_info: DTO.ScanProductInfo?
+                    let analysis_result: DTO.ScanAnalysisResult?
+                    let error: String?
+                    
+                    func toProduct() -> DTO.Product? {
+                        guard let info = product_info else { return nil }
+                        
+                        // Map images from ScanProductInfo to ImageLocationInfo
+                        let mappedImages = info.images?.compactMap { imgInfo -> DTO.ImageLocationInfo? in
+                            guard let urlString = imgInfo.url, let url = URL(string: urlString) else { return nil }
+                            return .url(url)
+                        } ?? []
+                        
+                        return DTO.Product(
+                            barcode: barcode,
+                            brand: info.brand,
+                            name: info.name ?? "Scanning...",
+                            ingredients: info.ingredients,
+                            images: mappedImages,
+                            claims: info.claims
+                        )
+                    }
+                }
+
+                do {
+                    let scanPayload: ScanStreamPayload = try decodePayload(payloadString, as: ScanStreamPayload.self)
+                    
+                    switch scanPayload.state {
+                    case "fetching_product_info":
+                        // Initial state, maybe just log or update generic feedback
+                        // The UI might use "Scanning..." based on analyzing state
+                        break
+                        
+                    case "analyzing":
+                        // We have product info but no analysis yet
+                        if let product = scanPayload.toProduct() {
+                            productReceivedTime = Date().timeIntervalSince1970
+                            
+                            var productProps = analyticsProperties
+                            productProps["product_name"] = product.name ?? "Unknown"
+                            productProps["state"] = "analyzing"
+                            PostHogSDK.shared.capture("Unified Analysis Stream Product", properties: productProps)
+                            
+                            await MainActor.run {
+                                onProduct(product)
+                            }
+                        }
+                        
+                    case "done":
+                        // Final state with analysis
+                        if let analysis = scanPayload.analysis_result {
+                            let recommendations = analysis.toIngredientRecommendations()
+                            
+                            analysisReceivedTime = Date().timeIntervalSince1970
+                            
+                            var analysisProps = analyticsProperties
+                            analysisProps["recommendations_count"] = recommendations.count
+                            analysisProps["state"] = "done"
+                            PostHogSDK.shared.capture("Unified Analysis Stream Done", properties: analysisProps)
+                            
+                            // Send product update again (to ensure match status is updated with analysis)
+                            if let product = scanPayload.toProduct() {
+                                await MainActor.run {
+                                    onProduct(product)
+                                }
+                            }
+                            
+                            await MainActor.run {
+                                onAnalysis(recommendations)
+                            }
+                            
+                            shouldTerminate = true
+                        }
+                        
+                    case "error":
+                        hasReportedError = true
+                        let errorMessage = scanPayload.error ?? "Unknown scan error"
+                        
+                        var errorProps = analyticsProperties
+                        errorProps["error_message"] = errorMessage
+                        PostHogSDK.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
+                        
+                        await MainActor.run {
+                            onError(UnifiedAnalysisStreamError(message: errorMessage, statusCode: nil))
+                        }
+                        shouldTerminate = true
+                        
+                    default:
+                        break
+                    }
+                    
+                } catch {
+                    var errorProps = analyticsProperties
+                    errorProps["decode_stage"] = "scan"
+                    errorProps["raw_payload"] = payloadString
+                    PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    print("[SSE] Failed to decode scan payload: \(error)")
+                }
+
             case "product":
                 guard !payloadString.isEmpty else { return }
                 do {
@@ -443,6 +539,471 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
     }
 
+    // MARK: - Scan API
+    
+    func streamBarcodeScan(
+        barcode: String,
+        onProductInfo: @escaping (DTO.ScanProductInfo, String, String, [DTO.ScanImage]) -> Void,  // (productInfo, scanId, product_info_source, images)
+        onAnalysis: @escaping (DTO.ScanAnalysisResult) -> Void,
+        onError: @escaping (ScanStreamError, String?) -> Void  // (error, scanId)
+    ) async throws {
+        
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        var scanId: String?
+        var hasReportedError = false
+        
+        print("[BARCODE_SCAN] 🔵 Starting barcode scan - barcode: \(barcode), request_id: \(requestId)")
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[BARCODE_SCAN] ❌ Auth error - no access token")
+            throw NetworkError.authError
+        }
+        
+        let requestBody = try JSONEncoder().encode(["barcode": barcode])
+        let endpoint = Config.flyDevAPIBase + SafeEatsEndpoint.scan_barcode.rawValue
+        
+        var request = SupabaseRequestBuilder(endpoint: .scan_barcode)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setJsonBody(to: requestBody)
+            .build()
+        
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 60
+        
+        print("[BARCODE_SCAN] 📡 API Call: POST \(endpoint)")
+        print("[BARCODE_SCAN] 📡 Request body: barcode=\(barcode)")
+        
+        PostHogSDK.shared.capture("Barcode Scan Started", properties: [
+            "request_id": requestId,
+            "barcode": barcode
+        ])
+        
+        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("[BARCODE_SCAN] ❌ HTTP Error - Status: \(statusCode)")
+            PostHogSDK.shared.capture("Barcode Scan Failed - HTTP", properties: [
+                "request_id": requestId,
+                "status_code": statusCode
+            ])
+            throw NetworkError.invalidResponse(statusCode)
+        }
+        
+        print("[BARCODE_SCAN] ✅ Connected to SSE stream - Status: 200, starting to receive events...")
+        print("[BARCODE_SCAN] ⏳ Polling: NO (using Server-Sent Events stream)")
+        
+        var buffer = ""
+        let doubleNewline = "\n\n"
+        
+        func processEvent(_ rawEvent: String) async {
+            let trimmed = rawEvent.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            
+            var eventType: String?
+            var dataLines: [String] = []
+            
+            trimmed.split(whereSeparator: \.isNewline).forEach { line in
+                if line.hasPrefix("event:") {
+                    eventType = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                } else if line.hasPrefix("data:") {
+                    dataLines.append(String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces))
+                }
+            }
+            
+            let payloadString = dataLines.joined(separator: "\n")
+            guard let resolvedEventType = eventType,
+                  let payloadData = payloadString.data(using: .utf8) else { return }
+            
+            switch resolvedEventType {
+            case "product_info":
+                // Log raw payload before decoding
+                print("[BARCODE_SCAN] 📄 Raw SSE Event (product_info):")
+                print(payloadString)
+                
+                do {
+                    let event = try JSONDecoder().decode(DTO.ScanProductInfoEvent.self, from: payloadData)
+                    scanId = event.scan_id
+                    
+                    let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+                    print("[BARCODE_SCAN] 📦 Event: product_info - scan_id: \(event.scan_id), source: \(event.product_info_source), latency: \(Int(latency))ms")
+                    
+                    PostHogSDK.shared.capture("Barcode Scan Product Info", properties: [
+                        "request_id": requestId,
+                        "scan_id": event.scan_id,
+                        "source": event.product_info_source,
+                        "latency_ms": latency
+                    ])
+                    
+                    await MainActor.run {
+                        // Pass full event data to callback
+                        onProductInfo(event.product_info, event.scan_id, event.product_info_source, event.images)
+                    }
+                } catch {
+                    print("[BARCODE_SCAN] ❌ Failed to decode product_info: \(error)")
+                    // Log the raw payload for debugging
+                    if let payloadString = String(data: payloadData, encoding: .utf8) {
+                        print("[BARCODE_SCAN] 📄 Raw product_info payload: \(payloadString.prefix(1000))")
+                    }
+                }
+                
+            case "analysis":
+                // Log raw payload before decoding
+                print("[BARCODE_SCAN] 📄 Raw SSE Event (analysis):")
+                print(payloadString)
+                
+                do {
+                    let event = try JSONDecoder().decode(DTO.ScanAnalysisEvent.self, from: payloadData)
+                    
+                    let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+                    print("[BARCODE_SCAN] ✅ Event: analysis - scan_id: \(scanId ?? "unknown"), status: \(event.analysis_status), latency: \(Int(latency))ms")
+                    
+                    if let result = event.analysis_result {
+                        // Log raw ingredient_analysis data including members_affected
+                        print("[BARCODE_SCAN] 📊 Raw analysis_result - ingredient_analysis count: \(result.ingredient_analysis.count)")
+                        for (index, analysis) in result.ingredient_analysis.enumerated() {
+                            print("[BARCODE_SCAN] 📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
+                        }
+                        
+                        print("[BARCODE_SCAN] 🎯 Scan complete - no polling needed (SSE stream)")
+                        
+                        PostHogSDK.shared.capture("Barcode Scan Analysis", properties: [
+                            "request_id": requestId,
+                            "scan_id": scanId ?? "unknown"
+                        ])
+                        
+                        await MainActor.run {
+                            onAnalysis(result)
+                        }
+                    } else {
+                        print("[BARCODE_SCAN] ⚠️ Analysis event received but analysis_result is nil - status: \(event.analysis_status)")
+                    }
+                } catch {
+                    print("[BARCODE_SCAN] ❌ Failed to decode analysis: \(error)")
+                    // Log the raw payload for debugging
+                    if let payloadString = String(data: payloadData, encoding: .utf8) {
+                        print("[BARCODE_SCAN] 📄 Raw payload: \(payloadString.prefix(500))")
+                    }
+                }
+                
+            case "error":
+                // Log raw payload before processing
+                print("[BARCODE_SCAN] 📄 Raw SSE Event (error):")
+                print(payloadString)
+                
+                hasReportedError = true
+                var errorMessage = "Product not found"
+                
+                if let jsonObject = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] {
+                    if let id = jsonObject["scan_id"] as? String {
+                        scanId = id
+                    }
+                    if let msg = jsonObject["error"] as? String {
+                        errorMessage = msg
+                    }
+                }
+                
+                print("[BARCODE_SCAN] ❌ Event: error - scan_id: \(scanId ?? "unknown"), error: \(errorMessage)")
+                
+                PostHogSDK.shared.capture("Barcode Scan Error", properties: [
+                    "request_id": requestId,
+                    "scan_id": scanId ?? "unknown",
+                    "error": errorMessage
+                ])
+                
+                await MainActor.run {
+                    onError(ScanStreamError(message: errorMessage, statusCode: nil), scanId)
+                }
+                
+            case "done":
+                print("[BARCODE_SCAN] ✅ Event: done - stream completed")
+                break
+                
+            default:
+                print("[BARCODE_SCAN] ⚠️ Unknown event type: \(resolvedEventType ?? "nil")")
+                break
+            }
+        }
+        
+        do {
+            for try await byte in asyncBytes {
+                let scalar = UnicodeScalar(byte)
+                buffer.append(Character(scalar))
+                
+                while let range = buffer.range(of: doubleNewline) {
+                    let eventString = String(buffer[..<range.lowerBound])
+                    buffer.removeSubrange(buffer.startIndex..<range.upperBound)
+                    await processEvent(eventString)
+                }
+            }
+            
+            if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                await processEvent(buffer)
+            }
+        } catch {
+            if !hasReportedError && !(error is CancellationError) {
+                print("[BARCODE_SCAN] ❌ Stream error: \(error.localizedDescription)")
+                await MainActor.run {
+                    onError(ScanStreamError(message: error.localizedDescription, statusCode: nil), scanId)
+                }
+            }
+            throw error
+        }
+        
+        let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
+        print("[BARCODE_SCAN] ✅ Barcode scan completed - total latency: \(Int(totalLatency))ms")
+    }
+    
+    func submitScanImage(
+        scanId: String,
+        imageData: Data
+    ) async throws -> DTO.SubmitImageResponse {
+        
+        let imageSizeKB = imageData.count / 1024
+        print("[PHOTO_SCAN] 📸 Submitting image - scan_id: \(scanId), image_size: \(imageSizeKB)KB")
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[PHOTO_SCAN] ❌ Auth error - no access token")
+            throw NetworkError.authError
+        }
+        
+        let endpoint = Config.flyDevAPIBase + String(format: SafeEatsEndpoint.scan_image.rawValue, scanId)
+        let request = SupabaseRequestBuilder(endpoint: .scan_image, itemId: scanId)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setFormData(name: "image", value: imageData, contentType: "image/jpeg")
+            .build()
+        
+        print("[PHOTO_SCAN] 📡 API Call: POST \(endpoint)")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        switch httpResponse.statusCode {
+        case 200:
+            let submitResponse = try JSONDecoder().decode(DTO.SubmitImageResponse.self, from: data)
+            print("[PHOTO_SCAN] ✅ Image submitted successfully - scan_id: \(scanId), queued: \(submitResponse.queued), queue_position: \(submitResponse.queue_position)")
+            return submitResponse
+        case 401:
+            print("[PHOTO_SCAN] ❌ Status 401 - Unauthorized")
+            throw NetworkError.authError
+        case 403:
+            print("[PHOTO_SCAN] ❌ Status 403 - Scan belongs to another user")
+            throw NetworkError.notFound("Scan belongs to another user")
+        case 413:
+            print("[PHOTO_SCAN] ❌ Status 413 - Image too large (>10MB)")
+            throw NetworkError.invalidResponse(413)  // Image too large (>10MB)
+        case 400:
+            print("[PHOTO_SCAN] ❌ Status 400 - Max images reached (20)")
+            throw NetworkError.invalidResponse(400)  // Max images reached (20)
+        case 502, 503, 504:
+            // Server-side errors - gateway/proxy/upstream issues
+            let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+            print("[PHOTO_SCAN] ❌ Status \(httpResponse.statusCode) - Server error (likely server-side issue)")
+            print("[PHOTO_SCAN] 📄 Response body: \(responseBody.prefix(500))")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        default:
+            let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+            print("[PHOTO_SCAN] ❌ Status \(httpResponse.statusCode) - Unexpected error")
+            print("[PHOTO_SCAN] 📄 Response body: \(responseBody.prefix(500))")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func reanalyzeScan(scanId: String) async throws -> DTO.Scan {
+        print("[REANALYZE] 🔄 Reanalyzing scan - scan_id: \(scanId)")
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[REANALYZE] ❌ Auth error - no access token")
+            throw NetworkError.authError
+        }
+        
+        // Use endpoint construction logic directly or update SupabaseRequestBuilder to handle it
+        // Since we added .scan_reanalyze to SupabaseRequestBuilder, we can use it.
+        // Note: The formatted URL string logic in SupabaseRequestBuilder might need double check 
+        // if it handles single parameter correctly for scan/%@/reanalyze
+        // endpoint.rawValue is scan/%@/reanalyze. formatting with scanId should work.
+        
+        let endpoint = Config.flyDevAPIBase + String(format: SafeEatsEndpoint.scan_reanalyze.rawValue, scanId)
+        let request = SupabaseRequestBuilder(endpoint: .scan_reanalyze, itemId: scanId)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .build()
+        
+        print("[REANALYZE] 📡 API Call: POST \(endpoint)")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+            print("[REANALYZE] ❌ HTTP Error - Status: \(httpResponse.statusCode)")
+            print("[REANALYZE] 📄 Response body: \(responseBody)")
+            
+            if httpResponse.statusCode == 400 {
+                // Cannot reanalyze (e.g. no ingredients)
+                throw NetworkError.invalidResponse(400)
+            } else if httpResponse.statusCode == 404 {
+                throw NetworkError.notFound("Scan not found")
+            } else {
+                throw NetworkError.invalidResponse(httpResponse.statusCode)
+            }
+        }
+        
+        do {
+            let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
+            print("[REANALYZE] ✅ Reanalysis complete - scan_id: \(scan.id)")
+            return scan
+        } catch {
+            print("[REANALYZE] ❌ Failed to decode reanalysis response: \(error)")
+            throw NetworkError.decodingError
+        }
+    }
+    
+    func getScan(scanId: String) async throws -> DTO.Scan {
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[PHOTO_SCAN] ❌ Auth error - no access token for polling")
+            throw NetworkError.authError
+        }
+        
+        let endpoint = Config.supabaseFunctionsURLBase + String(format: SafeEatsEndpoint.scan_get.rawValue, scanId)
+        let request = SupabaseRequestBuilder(endpoint: .scan_get, itemId: scanId)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        print("[PHOTO_SCAN] 🔄 Polling: GET \(endpoint)")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        switch httpResponse.statusCode {
+        case 200:
+            // Log raw response for debugging
+            if let rawResponse = String(data: data, encoding: .utf8) {
+                print("[PHOTO_SCAN] 📄 Raw response: \(rawResponse)")
+            }
+            
+            do {
+                let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
+            print("[PHOTO_SCAN] ✅ Poll response - scan_id: \(scanId), state: \(scan.state)")
+            
+                // Log raw ingredient_analysis data including members_affected if available
+                if let analysisResult = scan.analysis_result {
+                    print("[PHOTO_SCAN] 📊 Raw analysis_result - ingredient_analysis count: \(analysisResult.ingredient_analysis.count)")
+                    for (index, analysis) in analysisResult.ingredient_analysis.enumerated() {
+                        print("[PHOTO_SCAN] 📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
+                    }
+                }
+                
+                return scan
+            } catch let error {
+                // Log detailed decoding error
+                print("[PHOTO_SCAN] ❌ Failed to decode Scan: \(error)")
+                if let rawResponse = String(data: data, encoding: .utf8) {
+                    print("[PHOTO_SCAN] 📄 Raw response that failed to decode: \(rawResponse)")
+                }
+                if let decodingError = error as? DecodingError {
+                    switch decodingError {
+                    case .keyNotFound(let key, let context):
+                        print("[PHOTO_SCAN] ❌ Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                    case .typeMismatch(let type, let context):
+                        print("[PHOTO_SCAN] ❌ Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                    case .valueNotFound(let type, let context):
+                        print("[PHOTO_SCAN] ❌ Value not found: \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                    case .dataCorrupted(let context):
+                        print("[PHOTO_SCAN] ❌ Data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: ".")), \(context.debugDescription)")
+                    @unknown default:
+                        print("[PHOTO_SCAN] ❌ Unknown decoding error: \(decodingError)")
+                    }
+                }
+                throw error
+            }
+        case 401:
+            print("[PHOTO_SCAN] ❌ Poll Status 401 - Unauthorized")
+            throw NetworkError.authError
+        case 403:
+            print("[PHOTO_SCAN] ❌ Poll Status 403 - Scan belongs to another user")
+            throw NetworkError.notFound("Scan belongs to another user")
+        case 404:
+            print("[PHOTO_SCAN] ❌ Poll Status 404 - Scan not found")
+            throw NetworkError.notFound("Scan not found")
+        default:
+            print("[PHOTO_SCAN] ❌ Poll Status \(httpResponse.statusCode) - Unexpected error")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func fetchScanHistory(
+        limit: Int = 20,
+        offset: Int = 0
+    ) async throws -> DTO.ScanHistoryResponse {
+        
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        let request = SupabaseRequestBuilder(endpoint: .scan_history)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "offset", value: String(offset))
+            ])
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        // Log raw response
+        if let rawResponse = String(data: data, encoding: .utf8) {
+            print("[SCAN_HISTORY] 📄 Raw API Response:")
+            print(rawResponse)
+        } else {
+            print("[SCAN_HISTORY] ⚠️ Could not convert response data to string")
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            PostHogSDK.shared.capture("Scan History Fetch Failed", properties: [
+                "request_id": requestId,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        do {
+            let historyResponse = try JSONDecoder().decode(DTO.ScanHistoryResponse.self, from: data)
+            
+            PostHogSDK.shared.capture("Scan History Fetch Successful", properties: [
+                "request_id": requestId,
+                "scan_count": historyResponse.scans.count,
+                "total": historyResponse.total,
+                "has_more": historyResponse.has_more,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            
+            return historyResponse
+        } catch {
+            print("Failed to decode ScanHistoryResponse: \(error)")
+            
+            PostHogSDK.shared.capture("Scan History Decode Error", properties: [
+                "request_id": requestId,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            
+            throw NetworkError.decodingError
+        }
+    }
+
     func submitFeedback(
         clientActivityId: String,
         feedbackData: FeedbackData
@@ -466,10 +1027,13 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
             feedbackData.images.isEmpty
             ? nil
             : try await feedbackData.images.asyncMap { productImage in
-                DTO.ImageInfo(
-                    imageFileHash: try await productImage.uploadTask.value,
-                    imageOCRText: try await productImage.ocrTask.value,
-                    barcode: try await productImage.barcodeDetectionTask.value
+                // Upload image and get hash
+                let imageFileHash = try await uploadImage(image: productImage.image)
+                // For feedback, we don't need OCR text or barcode
+                return DTO.ImageInfo(
+                    imageFileHash: imageFileHash,
+                    imageOCRText: "",  // Not needed for feedback
+                    barcode: nil  // Not needed for feedback
                 )
             }
 
@@ -671,49 +1235,73 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         _ = try await supabaseClient.storage.from("productimages").remove(paths: imageFileNames)
     }
 
-    func addToFavorites(clientActivityId: String) async throws {
+    /// Toggles favorite status for a scan using the v2 API
+    /// POST /v2/scan/{scan_id}/favorite
+    /// Returns the new `is_favorited` state
+    func toggleFavorite(scanId: String) async throws -> Bool {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
+            print("[FAVORITE] ❌ Auth error - no access token")
             throw NetworkError.authError
         }
-
-        let listId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!.uuidString
-        let request = SupabaseRequestBuilder(endpoint: .list_items, itemId: listId)
+        
+        let endpoint = Config.supabaseFunctionsURLBase + String(format: SafeEatsEndpoint.scan_favorite.rawValue, scanId)
+        let request = SupabaseRequestBuilder(endpoint: .scan_favorite, itemId: scanId)
             .setAuthorization(with: token)
-            .setMethod(to: "POST")
-            .setFormData(name: "clientActivityId", value: clientActivityId)
+            .setMethod(to: "PATCH")
             .build()
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-
+        
+        print("[FAVORITE] 📡 API Call: POST \(endpoint)")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
-
-        guard httpResponse.statusCode == 201 else {
-            print("Bad response from server: \(httpResponse.statusCode)")
+        
+        switch httpResponse.statusCode {
+        case 200:
+            // Parse response to get is_favorited value
+            struct FavoriteResponse: Codable {
+                let is_favorited: Bool
+            }
+            
+            do {
+                let favoriteResponse = try JSONDecoder().decode(FavoriteResponse.self, from: data)
+                print("[FAVORITE] ✅ Toggle successful - scanId: \(scanId), is_favorited: \(favoriteResponse.is_favorited)")
+                return favoriteResponse.is_favorited
+            } catch {
+                print("[FAVORITE] ❌ Failed to decode response: \(error)")
+                if let rawResponse = String(data: data, encoding: .utf8) {
+                    print("[FAVORITE] 📄 Raw response: \(rawResponse)")
+                }
+                throw NetworkError.decodingError
+            }
+        case 401:
+            print("[FAVORITE] ❌ Status 401 - Unauthorized")
+            throw NetworkError.authError
+        case 404:
+            print("[FAVORITE] ❌ Status 404 - Scan not found")
+            throw NetworkError.notFound("Scan not found")
+        default:
+            let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+            print("[FAVORITE] ❌ Status \(httpResponse.statusCode) - Unexpected error")
+            print("[FAVORITE] 📄 Response body: \(responseBody.prefix(500))")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
     
+    // MARK: - Legacy Favorite Methods (deprecated, use toggleFavorite instead)
+    
+    @available(*, deprecated, message: "Use toggleFavorite(scanId:) instead")
+    func addToFavorites(clientActivityId: String) async throws {
+        // For backward compatibility, call toggleFavorite
+        // Note: This may toggle OFF if already favorited
+        _ = try await toggleFavorite(scanId: clientActivityId)
+    }
+    
+    @available(*, deprecated, message: "Use toggleFavorite(scanId:) instead")
     func removeFromFavorites(clientActivityId: String) async throws {
-
-        guard let token = try? await supabaseClient.auth.session.accessToken else {
-            throw NetworkError.authError
-        }
-
-        let listId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!.uuidString
-        let request = SupabaseRequestBuilder(endpoint: .list_items_item, itemId: listId, subItemId: clientActivityId)
-            .setAuthorization(with: token)
-            .setMethod(to: "DELETE")
-            .build()
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-
-        let httpResponse = response as! HTTPURLResponse
-
-        guard httpResponse.statusCode == 200 else {
-            print("Bad response from server: \(httpResponse.statusCode)")
-            throw NetworkError.invalidResponse(httpResponse.statusCode)
-        }
+        // For backward compatibility, call toggleFavorite
+        // Note: This may toggle ON if not favorited
+        _ = try await toggleFavorite(scanId: clientActivityId)
     }
     
     func getFavorites(searchText: String? = nil) async throws -> [DTO.ListItem] {
@@ -1591,5 +2179,88 @@ struct UnifiedAnalysisStreamError: Error, LocalizedError {
         }
         
         return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
+    }
+    // MARK: - Feedback API
+
+    func submitFeedback(request: DTO.FeedbackRequest) async throws -> DTO.Scan {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        let requestBody = try JSONEncoder().encode(request)
+        if let jsonString = String(data: requestBody, encoding: .utf8) {
+            print("[WebService] submitFeedback Request Body: \(jsonString)")
+        }
+        
+        let urlRequest = SupabaseRequestBuilder(endpoint: .scan_feedback)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setJsonBody(to: requestBody)
+            .build()
+        
+        print("[WebService] submitFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse(0)
+        }
+        
+        if httpResponse.statusCode == 200 {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("[WebService] submitFeedback Response Body: \(responseString)")
+            }
+            do {
+                let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
+                return scan
+            } catch {
+                print("Decoding error: \(error)")
+                throw NetworkError.decodingError
+            }
+        } else {
+            print("Feedback API Error Status: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+    }
+    
+    func updateFeedback(feedbackId: String, vote: String) async throws -> DTO.Scan {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+             throw NetworkError.authError
+        }
+        
+        let updateRequest = DTO.FeedbackUpdateRequest(vote: vote)
+        let requestBody = try JSONEncoder().encode(updateRequest)
+        if let jsonString = String(data: requestBody, encoding: .utf8) {
+            print("[WebService] updateFeedback Request Body: \(jsonString)")
+        }
+        
+        let urlRequest = SupabaseRequestBuilder(endpoint: .scan_feedback_update, itemId: feedbackId)
+            .setAuthorization(with: token)
+            .setMethod(to: "PATCH")
+            .setJsonBody(to: requestBody)
+            .build()
+        
+        print("[WebService] updateFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+             throw NetworkError.invalidResponse(0)
+        }
+         
+        if httpResponse.statusCode == 200 {
+             if let responseString = String(data: data, encoding: .utf8) {
+                 print("[WebService] updateFeedback Response Body: \(responseString)")
+             }
+             do {
+                 let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
+                 return scan
+             } catch {
+                 print("Decoding error: \(error)")
+                 throw NetworkError.decodingError
+             }
+        } else {
+             throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
     }
 }

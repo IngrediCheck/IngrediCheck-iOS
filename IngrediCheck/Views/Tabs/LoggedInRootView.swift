@@ -24,11 +24,12 @@ enum Sheets: Identifiable, Equatable {
 @Observable class CheckTabState {
     var routes: [CapturedItem] = []
     var capturedImages: [ProductImage] = []
+    var scanId: String?  // For photo scans - generated when first image is captured
     var feedbackConfig: FeedbackConfig?
 }
 
 enum HistoryRouteItem: Hashable {
-    case historyItem(DTO.HistoryItem)
+    case scan(DTO.Scan)
     case listItem(DTO.ListItem)
     case favoritesAll
     case recentScansAll
@@ -36,7 +37,7 @@ enum HistoryRouteItem: Hashable {
 
 struct ListsTabState {
     var routes: [HistoryRouteItem] = []
-    var historyItems: [DTO.HistoryItem]? = nil
+    var scans: [DTO.Scan]? = nil
     var listItems: [DTO.ListItem]? = nil
 }
 
@@ -48,16 +49,44 @@ struct ListsTabState {
     @MainActor var navigateToSettings: Bool = false
 
     @MainActor func setHistoryItemFavorited(clientActivityId: String, favorited: Bool) {
-        guard var items = listsTabState.historyItems else { return }
-        guard let idx = items.firstIndex(where: { $0.client_activity_id == clientActivityId }) else { return }
-        items[idx].favorited = favorited
-        listsTabState.historyItems = items
+        // Legacy function for backwards compatibility with old HistoryItem API
+        // The new API uses scans with id instead of clientActivityId
+        // Try to find matching scan by id (clientActivityId might be a scan id)
+        guard var scans = listsTabState.scans else { return }
+        guard let idx = scans.firstIndex(where: { $0.id == clientActivityId }) else {
+            // If not found, this might be a legacy HistoryItem - no-op for now
+            // The new API handles favorites via toggleFavorite(scanId:) in WebService
+            return
+        }
+        
+        // Update the scan's is_favorited field
+        var updatedScan = scans[idx]
+        // Since is_favorited is let, we need to create a new Scan with updated value
+        let newScan = DTO.Scan(
+            id: updatedScan.id,
+            scan_type: updatedScan.scan_type,
+            barcode: updatedScan.barcode,
+            state: updatedScan.state,
+            product_info: updatedScan.product_info,
+            product_info_source: updatedScan.product_info_source,
+            product_info_vote: updatedScan.product_info_vote,
+            analysis_result: updatedScan.analysis_result,
+            images: updatedScan.images,
+            latest_guidance: updatedScan.latest_guidance,
+            created_at: updatedScan.created_at,
+            last_activity_at: updatedScan.last_activity_at,
+            is_favorited: favorited,
+            analysis_id: updatedScan.analysis_id
+        )
+        scans[idx] = newScan
+        listsTabState.scans = scans
     }
 }
 
 @MainActor struct LoggedInRootView: View {
 
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
     @Environment(DietaryPreferences.self) var dietaryPreferences
@@ -204,11 +233,15 @@ struct ListsTabState {
 
     private func refreshHistory() {
         Task {
-            if let history = try? await webService.fetchHistory() {
-                await MainActor.run {
-                    appState.listsTabState.historyItems = history
-                }
+            // Load scan history via store (single source of truth)
+            await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+
+            // Sync to AppState for backwards compatibility
+            await MainActor.run {
+                appState.listsTabState.scans = scanHistoryStore.scans
             }
+
+            // Load favorites
             if let listItems = try? await webService.getFavorites() {
                 await MainActor.run {
                     appState.listsTabState.listItems = listItems

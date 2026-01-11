@@ -38,6 +38,12 @@ struct AnalysisResultView: View {
                         .onAppear {
                             checkAndPromptForRating()
                         }
+                case .unknown:
+                    CapsuleWithDivider(state: .fail)
+                        .onAppear {
+                            checkAndPromptForRating()
+                        }
+
                 }
             } else {
                 CapsuleWithDivider(state: .analyzing)

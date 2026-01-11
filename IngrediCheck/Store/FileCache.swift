@@ -52,10 +52,18 @@ struct ImageFileStore: FileStore {
     }
     
     private func downloadImageFrom(supabaseFile: SupabaseFile) async throws -> Data {
-        let data = try await supabaseClient.storage
-            .from(supabaseFile.bucket)
-            .download(path: supabaseFile.name) //, options: TransformOptions(width: 0, height: 0))
-        return await resizeIfNeeded(data)
+        print("📥 [FileCache] Downloading from Supabase - bucket: \(supabaseFile.bucket), path: \(supabaseFile.name)")
+        do {
+            let data = try await supabaseClient.storage
+                .from(supabaseFile.bucket)
+                .download(path: supabaseFile.name)
+            print("✅ [FileCache] Download success - bucket: \(supabaseFile.bucket), path: \(supabaseFile.name), bytes: \(data.count)")
+            return await resizeIfNeeded(data)
+        } catch {
+            print("❌ [FileCache] Download FAILED - bucket: \(supabaseFile.bucket), path: \(supabaseFile.name)")
+            print("❌ [FileCache] Error: \(error)")
+            throw error
+        }
     }
     
     private func resizeIfNeeded(_ data: Data) async -> Data {
@@ -215,7 +223,7 @@ actor FileCache: FileStore {
             let hash = SHA256.hash(data: data)
             return hash.compactMap { String(format: "%02x", $0) }.joined()
         case .supabase(let supabaseFile):
-            return supabaseFile.name
+            return supabaseFile.name.replacingOccurrences(of: "/", with: "_")
         }
     }
     
