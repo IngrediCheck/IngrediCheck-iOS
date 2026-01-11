@@ -36,21 +36,29 @@ struct AddMoreMembers: View {
                     }
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
-                        Button {
-                            // Context-aware back: if opened from Home canvas, dismiss to home; else go to minimal list (onboarding)
-                            if case .home = coordinator.currentCanvasRoute {
+                        if case .home = coordinator.currentCanvasRoute {
+                            Button {
                                 coordinator.navigateInBottomSheet(.homeDefault)
-                            } else {
-                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Rectangle())
                             }
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.black)
-                                .frame(width: 24, height: 24)
-                                .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                        } else if !familyStore.pendingOtherMembers.isEmpty {
+                            Button {
+                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
@@ -113,7 +121,7 @@ struct AddMoreMembers: View {
                         .padding(.leading, 20)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 24) {
+                        HStack(spacing: 16) {
                             Button {
                                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if trimmed.isEmpty {

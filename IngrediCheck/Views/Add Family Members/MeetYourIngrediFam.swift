@@ -10,6 +10,7 @@ import SwiftUI
 struct MeetYourIngrediFam: View {
     @State var addMemberPressed: () -> Void = { }
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(AppState.self) private var appState
     var body: some View {
         VStack(spacing: 20) {
             HStack{
@@ -20,7 +21,16 @@ struct MeetYourIngrediFam: View {
             .frame(maxWidth: .infinity)
             .overlay(alignment: .topLeading) {
                 Button {
-                    coordinator.navigateInBottomSheet(.whosThisFor)
+                    if coordinator.isCreatingFamilyFromSettings {
+                        coordinator.isCreatingFamilyFromSettings = false
+                        coordinator.showCanvas(.home)
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 250_000_000)
+                            appState.navigateToSettings = true
+                        }
+                    } else {
+                        coordinator.navigateInBottomSheet(.whosThisFor)
+                    }
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 18, weight: .semibold))
@@ -53,12 +63,12 @@ struct MeetYourIngrediFam: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
-            , alignment: .top
-        )
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 4)
+//                .fill(.neutral500)
+//                .frame(width: 60, height: 4)
+//                .padding(.top, 11)
+//            , alignment: .top
+//        )
     }
 }

@@ -47,6 +47,40 @@ struct ListsTabState {
     @MainActor var listsTabState = ListsTabState()
     @MainActor var feedbackConfig: FeedbackConfig?
     @MainActor var navigateToSettings: Bool = false
+
+    @MainActor func setHistoryItemFavorited(clientActivityId: String, favorited: Bool) {
+        // Legacy function for backwards compatibility with old HistoryItem API
+        // The new API uses scans with id instead of clientActivityId
+        // Try to find matching scan by id (clientActivityId might be a scan id)
+        guard var scans = listsTabState.scans else { return }
+        guard let idx = scans.firstIndex(where: { $0.id == clientActivityId }) else {
+            // If not found, this might be a legacy HistoryItem - no-op for now
+            // The new API handles favorites via toggleFavorite(scanId:) in WebService
+            return
+        }
+        
+        // Update the scan's is_favorited field
+        var updatedScan = scans[idx]
+        // Since is_favorited is let, we need to create a new Scan with updated value
+        let newScan = DTO.Scan(
+            id: updatedScan.id,
+            scan_type: updatedScan.scan_type,
+            barcode: updatedScan.barcode,
+            state: updatedScan.state,
+            product_info: updatedScan.product_info,
+            product_info_source: updatedScan.product_info_source,
+            product_info_vote: updatedScan.product_info_vote,
+            analysis_result: updatedScan.analysis_result,
+            images: updatedScan.images,
+            latest_guidance: updatedScan.latest_guidance,
+            created_at: updatedScan.created_at,
+            last_activity_at: updatedScan.last_activity_at,
+            is_favorited: favorited,
+            analysis_id: updatedScan.analysis_id
+        )
+        scans[idx] = newScan
+        listsTabState.scans = scans
+    }
 }
 
 @MainActor struct LoggedInRootView: View {

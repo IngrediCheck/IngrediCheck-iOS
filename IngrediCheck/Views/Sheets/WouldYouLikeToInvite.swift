@@ -8,6 +8,7 @@ import SwiftUI
 
 struct WouldYouLikeToInvite: View {
     var name: String
+    var isLoading: Bool = false
     var invitePressed: () -> Void = { }
     var continuePressed: () -> Void = { }
     var body: some View {
@@ -36,11 +37,21 @@ struct WouldYouLikeToInvite: View {
                         .frame(maxWidth: .infinity)
                         .background(.grayScale40, in: .capsule)
                 }
+                .disabled(isLoading)
                 Button {
                     invitePressed()
                 } label: {
-                    GreenCapsule(title: "Invite" , icon: "share" ,iconWidth: 12 , iconHeight: 12 ,)
+                    ZStack {
+                        GreenCapsule(title: "Invite" , icon: "share" ,iconWidth: 12 , iconHeight: 12 ,)
+                            .opacity(isLoading ? 0.6 : 1)
+
+                        if isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    }
                 }
+                .disabled(isLoading)
                 
                
 

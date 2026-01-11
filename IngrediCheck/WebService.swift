@@ -24,7 +24,6 @@ extension Sequence {
         for element in self {
             try await values.append(transform(element))
         }
-
         return values
     }
 }
@@ -1122,6 +1121,74 @@ struct ScanStreamError: Error, LocalizedError {
             ])
 
             throw NetworkError.decodingError
+        }
+    }
+
+    func toggleScanFavorite(scanId: String) async throws -> Bool {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        print("[WebService] toggleScanFavorite: start scanId=\(scanId)")
+
+        let request = SupabaseRequestBuilder(endpoint: .scan_favorite, itemId: scanId)
+            .setAuthorization(with: token)
+            .setMethod(to: "PATCH")
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+
+        print("[WebService] toggleScanFavorite: status=\(httpResponse.statusCode), bytes=\(data.count)")
+
+        guard httpResponse.statusCode == 200 else {
+            let responseText = String(data: data, encoding: .utf8) ?? ""
+            print("[WebService] toggleScanFavorite: non-200 response body=\(responseText)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+
+        // Some backends return the updated scan record; others return a small payload.
+        if let decoded = try? JSONDecoder().decode(DTO.HistoryItem.self, from: data) {
+            print("[WebService] toggleScanFavorite: decoded HistoryItem favorited=\(decoded.favorited)")
+            return decoded.favorited
+        }
+
+        struct ToggleFavoriteResponse: Decodable {
+            let favorited: Bool?
+            let favorite: Bool?
+        }
+
+        if let decoded = try? JSONDecoder().decode(ToggleFavoriteResponse.self, from: data) {
+            print("[WebService] toggleScanFavorite: decoded ToggleFavoriteResponse favorited=\(String(describing: decoded.favorited)) favorite=\(String(describing: decoded.favorite))")
+            if let favorited = decoded.favorited { return favorited }
+            if let favorite = decoded.favorite { return favorite }
+        }
+
+        if let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+            print("[WebService] toggleScanFavorite: decoded JSON keys=\(Array(json.keys))")
+            if let favorited = json["favorited"] as? Bool { return favorited }
+            if let favorite = json["favorite"] as? Bool { return favorite }
+        }
+
+        let responseText = String(data: data, encoding: .utf8) ?? ""
+        print("[WebService] toggleScanFavorite: failed to decode response body=\(responseText)")
+        throw NetworkError.decodingError
+    }
+
+    func setHistoryFavorite(clientActivityId: String, favorited: Bool) async throws -> Bool {
+        print("[WebService] setHistoryFavorite: start clientActivityId=\(clientActivityId), favorited=\(favorited)")
+        do {
+            if favorited {
+                try await addToFavorites(clientActivityId: clientActivityId)
+                print("[WebService] setHistoryFavorite: addToFavorites ✅ clientActivityId=\(clientActivityId)")
+            } else {
+                try await removeFromFavorites(clientActivityId: clientActivityId)
+                print("[WebService] setHistoryFavorite: removeFromFavorites ✅ clientActivityId=\(clientActivityId)")
+            }
+            return favorited
+        } catch {
+            print("[WebService] setHistoryFavorite: ❌ clientActivityId=\(clientActivityId), error=\(error.localizedDescription)")
+            throw error
         }
     }
 

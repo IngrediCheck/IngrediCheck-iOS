@@ -57,6 +57,8 @@ struct OnboardingSection: Identifiable {
 
 @MainActor
 class Onboarding: ObservableObject {
+    private static let preferencesCacheKey = "onboardingPreferencesCache"
+
     @Published var isOnboardingCompleted: Bool = false
     @Published var onboardingFlowtype: OnboardingFlowType = .individual
     @Published var sections: [OnboardingSection] = []
@@ -65,9 +67,14 @@ class Onboarding: ObservableObject {
     @Published var dynamicSteps: [DynamicStep] = []
     @Published var currentSectionIndex: Int = 0
     @Published var currentScreenIndex: Int = 0
+    @Published var maxVisitedSectionIndex: Int = 0
     @Published var isUploading: Bool = false
     @Published var uploadError: String?
-    @Published var preferences: Preferences = Preferences()
+    @Published var preferences: Preferences = Preferences() {
+        didSet {
+            Self.writeCachedPreferences(preferences)
+        }
+    }
 
     
     var progress: Double {
@@ -99,6 +106,10 @@ class Onboarding: ObservableObject {
                 name: step.header.name,
                 screens: [screen]
             )
+        }
+
+        if let cached = Self.readCachedPreferences() {
+            self.preferences = cached
         }
     }
     
@@ -164,6 +175,9 @@ class Onboarding: ObservableObject {
             sections[currentSectionIndex] = section
             if currentSectionIndex < sections.count - 1 {
                 currentSectionIndex += 1
+                if currentSectionIndex > maxVisitedSectionIndex {
+                    maxVisitedSectionIndex = currentSectionIndex
+                }
                 currentScreenIndex = 0
             }
         }
@@ -174,8 +188,11 @@ class Onboarding: ObservableObject {
         onboardingFlowtype = flowType
         currentSectionIndex = 0
         currentScreenIndex = 0
+        maxVisitedSectionIndex = 0
         preferences = Preferences()
         isOnboardingCompleted = false
+
+        UserDefaults.standard.removeObject(forKey: Self.preferencesCacheKey)
         
         // Reset all sections to incomplete
         sections = sections.map { section in
@@ -223,10 +240,26 @@ class Onboarding: ObservableObject {
             if stepIndex < accumulatedSteps + screenCount {
                 // Found the section
                 currentSectionIndex = secIndex
+                if currentSectionIndex > maxVisitedSectionIndex {
+                    maxVisitedSectionIndex = currentSectionIndex
+                }
                 currentScreenIndex = stepIndex - accumulatedSteps
                 return
             }
             accumulatedSteps += screenCount
         }
+    }
+
+    private static func readCachedPreferences() -> Preferences? {
+        guard let rawValue = UserDefaults.standard.data(forKey: Onboarding.preferencesCacheKey),
+              let data = try? JSONDecoder().decode(Preferences.self, from: rawValue) else {
+            return nil
+        }
+        return data
+    }
+
+    private static func writeCachedPreferences(_ preferences: Preferences) {
+        guard let rawData = try? JSONEncoder().encode(preferences) else { return }
+        UserDefaults.standard.set(rawData, forKey: Onboarding.preferencesCacheKey)
     }
 }
