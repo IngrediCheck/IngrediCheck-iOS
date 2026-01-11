@@ -110,13 +110,11 @@ struct EnterYourInviteCode : View {
                         }
                     }
                 } label: {
-                    ZStack {
-                        GreenCapsule(title: isVerifying ? "Verifying..." : "Verify & Continue")
-                        if isVerifying {
-                            ProgressView()
-                                .tint(.white)
-                        }
-                    }
+                    GreenCapsule(
+                        title: "Verify & Continue",
+                        isLoading: isVerifying,
+                        isDisabled: isVerifying
+                    )
                 }
                 .disabled(isVerifying)
             }

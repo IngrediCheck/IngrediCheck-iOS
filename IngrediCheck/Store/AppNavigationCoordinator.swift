@@ -71,19 +71,39 @@ class AppNavigationCoordinator {
     var onNavigationChange: (() async -> Void)?
 
     init(initialRoute: CanvasRoute = .heyThere) {
-        self.currentCanvasRoute = initialRoute
-        if case .mainCanvas(let flow) = initialRoute {
-            self.onboardingFlow = flow
+        // PRIORITY: Check local persistence first.
+        // If the user has completed onboarding previously, FORCE start at .home
+        // regardless of what the caller passed (unless we want to support deep linking to specific onboarding steps, 
+        // but for app launch .heyThere is usually passed).
+        if OnboardingPersistence.shared.isLocallyCompleted {
+            self.currentCanvasRoute = .home
+            self.onboardingFlow = .individual // Default, will be updated if needed or doesn't matter for Home
+            self.currentBottomSheetRoute = .homeDefault
+        } else {
+            self.currentCanvasRoute = initialRoute
+            if case .mainCanvas(let flow) = initialRoute {
+                self.onboardingFlow = flow
+            }
+            self.currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: initialRoute)
         }
-        self.currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: initialRoute)
     }
     
     func setCanvasRoute(_ route: CanvasRoute) {
         withAnimation(.easeInOut) {
             currentCanvasRoute = route
-            if case .mainCanvas(let flow) = route {
+            
+            // Explicitly update onboardingFlow based on the route
+            switch route {
+            case .mainCanvas(let flow):
                 onboardingFlow = flow
+            case .letsMeetYourIngrediFam, .welcomeToYourFamily:
+                onboardingFlow = .family
+            case .dietaryPreferencesAndRestrictions(let isFamilyFlow):
+                onboardingFlow = isFamilyFlow ? .family : .individual
+            default:
+                break
             }
+            
             currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: route)
         }
         

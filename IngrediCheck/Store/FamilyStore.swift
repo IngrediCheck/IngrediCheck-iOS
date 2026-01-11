@@ -686,6 +686,122 @@ final class FamilyStore {
             print("[FamilyStore] createBiteBuddyFamily error: \(error)")
         }
     }
+    
+    // MARK: - Immediate Actions (Throwing)
+    
+    /// Creates a family immediately with the given self name.
+    /// Throws error for UI handling (Toast/Navigation blocking).
+    func createFamilyImmediate(selfName: String) async throws {
+        print("[FamilyStore] createFamilyImmediate called with selfName=\(selfName)")
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        
+        let trimmed = selfName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
+        }
+        
+        // Check if we have a pending self member logic we should respect?
+        // Or just create fresh? The flow "WhatsYourName" usually sets pending self member.
+        // We will respect pending color/avatar if available, otherwise new.
+        
+        let selfMember: FamilyMember
+        if let pending = pendingSelfMember {
+            selfMember = FamilyMember(
+                id: pending.id,
+                name: trimmed,
+                color: pending.color,
+                joined: true,
+                imageFileHash: pending.imageFileHash
+            )
+        } else {
+             selfMember = FamilyMember(
+                id: UUID(),
+                name: trimmed,
+                color: randomColor(),
+                joined: true,
+                imageFileHash: nil
+            )
+        }
+        
+        let familyName = "\(trimmed)'s Family"
+        
+        family = try await service.createFamily(
+            name: familyName,
+            selfMember: selfMember,
+            otherMembers: nil
+        )
+        
+        if let family = family {
+            selectedMemberId = family.selfMember.id
+            // Clear pending self member as it is now persisted
+            pendingSelfMember = nil
+        }
+    }
+    
+    /// Adds a member immediately with the given name and optional avatar.
+    /// Uploads image if provided.
+    /// Throws error for UI handling.
+    /// Returns the added member.
+    @discardableResult
+    func addMemberImmediate(
+        name: String,
+        image: UIImage? = nil,
+        storagePath: String? = nil,
+        color: String? = nil,
+        webService: WebService
+    ) async throws -> FamilyMember {
+        print("[FamilyStore] addMemberImmediate called with name=\(name)")
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
+        }
+        
+        var avatarHash: String? = storagePath
+        
+        if let image = image {
+            pendingUploadCount += 1
+             // Using task priority to ensure upload logic runs
+            do {
+                print("[FamilyStore] addMemberImmediate: Uploading avatar image for \(trimmed)")
+                let hash = try await webService.uploadImage(image: image)
+                print("[FamilyStore] addMemberImmediate: ✅ Uploaded avatar hash=\(hash)")
+                avatarHash = hash
+                pendingUploadCount = max(0, pendingUploadCount - 1)
+            } catch {
+                pendingUploadCount = max(0, pendingUploadCount - 1)
+                print("[FamilyStore] addMemberImmediate: ❌ Failed to upload avatar: \(error.localizedDescription)")
+                // Fail soft: Proceed without avatar if upload fails, instead of blocking member creation
+                avatarHash = nil
+            }
+        }
+        
+        // Use provided color or generate random
+        let memberColor = color ?? randomColor()
+        
+        let member = FamilyMember(
+            id: UUID(),
+            name: trimmed,
+            color: memberColor,
+            joined: false, // Other members are not joined by default (requires invite)
+            imageFileHash: avatarHash
+        )
+        
+        family = try await service.addMember(member)
+        
+        // Update pending invite status
+        syncPendingInviteStatus()
+        
+        if let found = family?.otherMembers.first(where: { $0.id == member.id }) {
+            return found
+        }
+        return member
+    }
 
     func resetLocalState() {
         family = nil

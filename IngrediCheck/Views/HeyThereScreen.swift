@@ -109,17 +109,18 @@ struct HeyThereScreen: View {
                 .toolbar(.hidden, for: .navigationBar)
             }
         }
-        .task {
-            // Trigger anonymous sign-in when .heyThere screen appears
-            // This ensures all navigation after this point can sync to Supabase
-            if authController.session == nil {
-                print("[OnboardingMeta] Auto-triggering guest login on .heyThere screen")
-                await authController.signIn()
+        .task(id: coordinator.currentBottomSheetRoute) {
+            // Trigger anonymous sign-in only when explicitly asking "Who's this for?"
+            // This prevents "Get Started" or other pre-onboarding states from creating sessions.
+            if coordinator.currentBottomSheetRoute == .whosThisFor {
+                if authController.session == nil {
+                    print("[OnboardingMeta] Auto-triggering guest login on .whosThisFor screen")
+                    await authController.signIn()
 
-                // Sync initial state to Supabase immediately after session is created
-                // This ensures if user kills app right away, they can resume from this screen
-                print("[OnboardingMeta] Syncing initial state after guest login")
-                await authController.syncRemoteOnboardingMetadata(from: coordinator)
+                    // Sync initial state to Supabase immediately after session is created
+                    print("[OnboardingMeta] Syncing initial state after guest login")
+                    await OnboardingPersistence.shared.sync(from: coordinator)
+                }
             }
         }
     }

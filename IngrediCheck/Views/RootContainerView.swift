@@ -42,9 +42,12 @@ struct RootContainerView: View {
     @Environment(AuthController.self) private var authController
     @Environment(\.dismiss) private var dismiss
 
+    @State private var toastManager = ToastManager()
+
     var body: some View {
         @Bindable var coordinator = coordinator
         @Bindable var appState = appState
+        @Bindable var toastManagerBindable = toastManager
 
         ZStack(alignment: .bottom) {
             // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
@@ -97,7 +100,20 @@ struct RootContainerView: View {
 
             PersistentBottomSheet()
             
-            // Secondary edit sheet overlay on top of everything
+            // Toast Overlay
+            if let toastData = toastManager.toast, toastManager.isPresented {
+                VStack {
+                    ToastView(data: toastData) {
+                        toastManager.dismiss()
+                    }
+                    Spacer()
+                }
+                .padding(.top, 60) // Adjust based on safe area or design
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(200) // Ensure on top of everything including edit sheet
+            }
+            
+            // Secondary edit sheet overlay on top of everything (z-index 100)
             editSheetOverlay
         }
         .environment(coordinator)
@@ -107,6 +123,7 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        .environment(toastManager)
         // Allow presenting SettingsSheet from anywhere in this container
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {
@@ -130,7 +147,7 @@ struct RootContainerView: View {
             // Set up callback to sync onboarding state to Supabase whenever navigation changes
             coordinator.onNavigationChange = {
                 print("[OnboardingMeta] onNavigationChange fired with canvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
-                await authController.syncRemoteOnboardingMetadata(from: coordinator)
+                await OnboardingPersistence.shared.sync(from: coordinator)
             }
         }
         .task {
@@ -144,8 +161,14 @@ struct RootContainerView: View {
             // Sync Onboarding view model to match the restored coordinator state
             if let stepId = coordinator.currentOnboardingStepId {
                 onboarding.restoreState(forStepId: stepId)
-
+            } else if case .fineTuneYourExperience = coordinator.currentBottomSheetRoute {
+                onboarding.restoreState(forStepId: "lifeStyle")
+            } else if case .workingOnSummary = coordinator.currentBottomSheetRoute {
+                onboarding.restoreToLastStep()
             }
+            
+            // Ensure section completion status is accurate based on loaded preferences
+            onboarding.updateSectionCompletionStatus()
         }
         // Whenever authentication completes (including first-time login or
         // upgrading a guest account), refresh the family from the backend so

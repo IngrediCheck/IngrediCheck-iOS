@@ -13,8 +13,10 @@ struct WhatsYourName: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(ToastManager.self) private var toastManager
     @State var name: String = ""
     @State var showError: Bool = false
+    @State var isLoading: Bool = false
     @State var familyMembersList: [UserModel] = [
         UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
         UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
@@ -24,9 +26,9 @@ struct WhatsYourName: View {
     ]
     @State var selectedFamilyMember: UserModel? = nil
     
-    var continuePressed: () -> Void = { }
+    var continuePressed: (String) async throws -> Void = { _ in }
     
-    init(continuePressed: @escaping () -> Void = {}) {
+    init(continuePressed: @escaping (String) async throws -> Void = { _ in }) {
         self.continuePressed = continuePressed
     }
     
@@ -181,13 +183,20 @@ struct WhatsYourName: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    handleContinue(trimmed: trimmed)
+                    Task {
+                        await handleContinue(trimmed: trimmed)
+                    }
                 }
             } label: {
-                GreenCapsule(title: "Continue")
-                    .frame(width: 159)
+                GreenCapsule(
+                    title: "Continue",
+                    width: 159,
+                    isLoading: isLoading,
+                    isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+                .frame(width: 159)
             }
-            .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
+            .disabled(isLoading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -206,8 +215,12 @@ struct WhatsYourName: View {
         }
     }
     
-    private func handleContinue(trimmed: String) {
+    @MainActor
+    private func handleContinue(trimmed: String) async {
         print("[WhatsYourName] Continue tapped with name=\(trimmed)")
+        isLoading = true
+        defer { isLoading = false }
+        
         familyStore.setPendingSelfMember(name: trimmed)
         
         // Handle avatar assignment - upload in background without blocking UI
@@ -216,24 +229,24 @@ struct WhatsYourName: View {
         // 2. Custom memoji (use memoji-images storage path, no re-upload)
         if let selectedImageName = selectedFamilyMember?.image,
            let assetImage = UIImage(named: selectedImageName) {
-            // Predefined avatar selected - upload it in background
-            Task {
-                await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
-            }
+            // Predefined avatar selected - upload it
+            await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
         } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
             // Custom avatar from memojiStore - use memoji storage path directly
-            Task {
-                await familyStore.setPendingSelfMemberAvatarFromMemoji(
-                    storagePath: storagePath,
-                    backgroundColorHex: memojiStore.backgroundColorHex
-                )
-            }
+            await familyStore.setPendingSelfMemberAvatarFromMemoji(
+                storagePath: storagePath,
+                backgroundColorHex: memojiStore.backgroundColorHex
+            )
         } else if let selectedImageName = selectedFamilyMember?.image {
             // Fallback to old method if image can't be loaded
             familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
         }
         
-        // Call continuePressed immediately so sheet closes
-        continuePressed()
+        do {
+            try await continuePressed(trimmed)
+        } catch {
+            print("[WhatsYourName] Error creating family: \(error)")
+            toastManager.show(message: "Failed to create family: \(error.localizedDescription)", type: .error)
+        }
     }
 }

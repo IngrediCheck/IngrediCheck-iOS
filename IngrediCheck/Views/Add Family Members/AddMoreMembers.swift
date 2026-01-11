@@ -11,9 +11,11 @@ struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(ToastManager.self) private var toastManager
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
+    @State var isLoading: Bool = false
     @State var familyMembersList: [UserModel] = [
         UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
         UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
@@ -22,7 +24,8 @@ struct AddMoreMembers: View {
         UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
-    @State var continuePressed: (String) -> Void = { _ in }
+    @State var continuePressed: (String, UIImage?, String?, String?) async throws -> Void = { _, _, _, _ in }
+    
     var body: some View {
         VStack {
             
@@ -36,21 +39,18 @@ struct AddMoreMembers: View {
                     }
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
-                        Button {
-                            // Context-aware back: if opened from Home canvas, dismiss to home; else go to minimal list (onboarding)
-                            if case .home = coordinator.currentCanvasRoute {
+                        if case .home = coordinator.currentCanvasRoute {
+                            Button {
                                 coordinator.navigateInBottomSheet(.homeDefault)
-                            } else {
-                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Rectangle())
                             }
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.black)
-                                .frame(width: 24, height: 24)
-                                .contentShape(Rectangle())
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
@@ -180,13 +180,19 @@ struct AddMoreMembers: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    handleAddMember(trimmed: trimmed)
+                    Task {
+                        await handleAddMember(trimmed: trimmed)
+                    }
                 }
             } label: {
-                GreenCapsule(title: "Add Member")
-                    .frame(width: 159)
-                    .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
+                GreenCapsule(
+                    title: "Add Member",
+                    width: 159,
+                    isLoading: isLoading,
+                    isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
             }
+            .disabled(isLoading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -221,36 +227,74 @@ struct AddMoreMembers: View {
         memojiStore.previousRouteForGenerateAvatar = nil
     }
     
-    private func handleAddMember(trimmed: String) {
+    @MainActor
+    private func handleAddMember(trimmed: String) async {
         print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
-        familyStore.addPendingOtherMember(name: trimmed)
+        isLoading = true
+        defer { isLoading = false }
         
-        // Handle avatar assignment - upload in background without blocking UI
-        // Priority: selected predefined avatar > custom avatar from memojiStore
+        var uploadImage: UIImage? = nil
+        var storagePath: String? = nil
+        var colorHex: String? = nil
+        
+        // Handle avatar selection
         if let selectedImageName = selectedFamilyMember?.image,
            let assetImage = UIImage(named: selectedImageName) {
-            // Predefined avatar selected - upload it in background
-            Task {
-                await familyStore.setAvatarForLastPendingOtherMember(image: assetImage, webService: webService)
+            // Predefined avatar selected
+            uploadImage = assetImage
+            // Predefined models have background color
+            // Using a simple extraction if available, otherwise defaulting to valid random color on backend/store
+            // We can try to use `description` or similar but Color doesn't expose hex easily.
+            // However, we can use the `toHex()` if available or just nil.
+            if let color = selectedFamilyMember?.backgroundColor {
+                colorHex = color.toHex() 
             }
         } else if let customImage = memojiStore.image {
-            // Custom avatar from memojiStore - upload it in background with memoji background color
-            Task {
-                await familyStore.setAvatarForLastPendingOtherMember(
-                    image: customImage,
-                    webService: webService,
-                    backgroundColorHex: memojiStore.backgroundColorHex
-                )
-            }
+            // Custom avatar from memojiStore
+            uploadImage = customImage
+            colorHex = memojiStore.backgroundColorHex
+            
         } else if let selectedImageName = selectedFamilyMember?.image {
-            // Fallback to old method if image can't be loaded
-            familyStore.setAvatarForLastPendingOtherMember(imageName: selectedImageName)
+            // Fallback
+            storagePath = selectedImageName // Use as static name
         }
         
-        let memberName = trimmed
-        name = ""
-        showError = false
-        // Call continuePressed immediately so sheet closes
-        continuePressed(memberName)
+        // Call continue callback with all data
+        do {
+            try await continuePressed(trimmed, uploadImage, storagePath, colorHex)
+            
+            // On success, clean up UI state
+            name = ""
+            showError = false
+        } catch {
+             print("[AddMoreMembers] Error adding member: \(error)")
+             toastManager.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+        }
+    }
+}
+
+extension Color {
+    func toHex() -> String? {
+        // Platform agnostic way to get hex from SwiftUI Color
+        // Convert to UIColor/NSColor first
+        let uiColor = UIColor(self)
+        guard let components = uiColor.cgColor.components, components.count >= 3 else {
+            return nil
+        }
+        
+        let r = Float(components[0])
+        let g = Float(components[1])
+        let b = Float(components[2])
+        var a = Float(1.0)
+        
+        if components.count >= 4 {
+            a = Float(components[3])
+        }
+        
+        if a != 1.0 {
+            return String(format: "#%02lX%02lX%02lX%02lX", lroundf(r * 255), lroundf(g * 255), lroundf(b * 255), lroundf(a * 255))
+        } else {
+            return String(format: "#%02lX%02lX%02lX", lroundf(r * 255), lroundf(g * 255), lroundf(b * 255))
+        }
     }
 }

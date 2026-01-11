@@ -70,9 +70,10 @@ struct SplashScreen: View {
                 // launch (e.g., carried over via keychain from a previous
                 // install), clear it so the user is not auto-logged in
                 // before they choose Google/Apple or "Sign-in later".
-                if authController.session != nil {
-                    await authController.signOut()
-                }
+                // We call signOut unconditionally to handle race conditions where
+                // authController.session might still be nil but GoTrue is restoring.
+                print("[SplashScreen] First launch detected. Ensuring clean slate.")
+                await authController.signOut()
             } else {
                 isFirstLaunch = false
             }
@@ -95,7 +96,7 @@ struct SplashScreen: View {
                 
                 if authController.session != nil {
                     // Check metadata
-                    let metadata = authController.readRemoteOnboardingMetadata()
+                    let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
                     print("[SplashScreen] Metadata check result: \(metadata != nil ? "found" : "not found")")
                     
                     if let metadata = metadata {

@@ -46,6 +46,7 @@ struct WelcomeBack: View {
                     authController.signInWithGoogle { result in
                         switch result {
                         case .success:
+                            OnboardingPersistence.shared.markCompleted()
                             coordinator.showCanvas(.home)
                             isSigningIn = false
                         case .failure(let error):
@@ -77,6 +78,7 @@ struct WelcomeBack: View {
                     authController.signInWithApple { result in
                         switch result {
                         case .success:
+                            OnboardingPersistence.shared.markCompleted()
                             coordinator.showCanvas(.home)
                             isSigningIn = false
                         case .failure(let error):

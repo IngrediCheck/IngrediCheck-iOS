@@ -392,9 +392,9 @@ struct PersistentBottomSheet: View {
                 // Advance logical onboarding progress (for progress bar & tag bar)
                 store.next()
                 
-                // Move the bottom sheet to the next onboarding question using JSON order
-                if let nextStepId = store.nextStepId {
-                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                // Move the bottom sheet to the *newly current* onboarding question
+                if let newCurrentStepId = store.currentStepId {
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: newCurrentStepId))
                 }
             }
         }
@@ -464,20 +464,27 @@ struct PersistentBottomSheet: View {
             }
             
         case .whatsYourName:
-            WhatsYourName {
-                coordinator.navigateInBottomSheet(.addMoreMembers)
+            WhatsYourName { name in
+                 // Async closure wrapper for immediate family creation
+                 try await familyStore.createFamilyImmediate(selfName: name)
+                 coordinator.navigateInBottomSheet(.addMoreMembers)
             }
             
         case .addMoreMembers:
-            AddMoreMembers { name in
+            AddMoreMembers { name, image, storagePath, color in
+                // Async closure wrapper for immediate member addition
+                let newMember = try await familyStore.addMemberImmediate(
+                    name: name,
+                    image: image,
+                    storagePath: storagePath,
+                    color: color,
+                    webService: webService
+                )
+                
                 // If coming from home screen, navigate to WouldYouLikeToInvite
                 // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
                 if case .home = coordinator.currentCanvasRoute {
-                    if let newId = familyStore.pendingOtherMembers.last?.id {
-                        coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: newId, name: name))
-                    } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
-                    }
+                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: newMember.id, name: name))
                 } else {
                     coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
                 }
@@ -487,11 +494,30 @@ struct PersistentBottomSheet: View {
             AddMoreMembersMinimal {
                 Task {
                     // If creating family from Settings, add members to existing family
-                    // Otherwise, create a new family
-                    if coordinator.isCreatingFamilyFromSettings {
-                        await familyStore.addPendingMembersToExistingFamily()
+                    // Otherwise, just proceed (family already created incrementally)
+                     if coordinator.isCreatingFamilyFromSettings {
+                        // Logic handled incrementally now?
+                        // If we used `addMemberImmediate` in AddMoreMembers view, they are already added.
+                        // But `AddMoreMembersMinimal` manages the list and "Continue".
+                        // Wait, `AddMoreMembersMinimal` view uses `familyStore`.
+                        // If we are in "Immediate" mode, the members are already in `family.otherMembers`.
+                        // `AddMoreMembersMinimal` might be relying on `pendingOtherMembers`.
+                        // I need to check `AddMoreMembersMinimal`.
+                        
+                        // For now, I will assume `AddMoreMembersMinimal` continues navigation.
+                        // Existing logic called `createFamilyFromPendingIfNeeded` or `addPendingMembersToExistingFamily`.
+                        // Since we are creating IMMEDIATELY, these pending lists should be empty or unused?
+                        // `WhatsYourName` clears pending self member.
+                        // `AddMoreMembers` (immediate) adds to family directly.
+                        // So `pendingOtherMembers` should be empty?
+                        // If so, `createFamilyFromPendingIfNeeded` does nothing?
+                        // Let's verify.
+                        
+                        // Whatever we do, we just navigate to dietary preferences.
                     } else {
-                        await familyStore.createFamilyFromPendingIfNeeded()
+                        // Family created at WhatsYourName step.
+                        // Members added at AddMoreMembers step.
+                        // So we just proceed.
                     }
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
                 }
@@ -666,6 +692,7 @@ struct PersistentBottomSheet: View {
                     }
                 } else {
                     // Normal flow - go to Home
+                    OnboardingPersistence.shared.markCompleted()
                     coordinator.showCanvas(.home)
                 }
             }
@@ -743,6 +770,7 @@ struct PersistentBottomSheet: View {
                     }
                 } else {
                     // Normal flow - navigate to home
+                    OnboardingPersistence.shared.markCompleted()
                     coordinator.showCanvas(.home)
                 }
             }

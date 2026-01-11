@@ -77,7 +77,7 @@ struct LetsMeetYourIngrediFamView: View {
                 Spacer()
             }
             .navigationBarBackButtonHidden(true)
-        } else if let me = familyStore.pendingSelfMember {
+        } else if let me = familyStore.family?.selfMember ?? familyStore.pendingSelfMember {
             VStack(spacing: 0) {
                 Text("Your Family Overview")
                     .font(NunitoFont.bold.size(18))
@@ -153,7 +153,12 @@ struct LetsMeetYourIngrediFamView: View {
                             coordinator.navigateInBottomSheet(.editMember(memberId: me.id, isSelf: true))
                         }
 
-                        ForEach(familyStore.pendingOtherMembers) { member in
+                        let others = (familyStore.family?.otherMembers ?? []) + familyStore.pendingOtherMembers
+                        // Remove duplicates if any (though pending should be cleared if family exists)
+                        // Actually, if family exists, pendingOtherMembers should be empty after create/add.
+                        // But if we are in AddMoreMembers flow, we might have added members to family immediately.
+                        
+                        ForEach(others) { member in
                             HStack(spacing: 12) {
                                 MemberAvatarView(member: member, initial: initial(from:))
 
@@ -161,7 +166,9 @@ struct LetsMeetYourIngrediFamView: View {
                                     Text(member.name)
                                         .font(NunitoFont.semiBold.size(18))
                                         .foregroundStyle(.grayScale150)
-                                    if member.invitePending == true {
+                                    if member.invitePending == true || (!member.joined && member.id != me.id) {
+                                        // Show pending for anyone not joined (except self which is assumed joined)
+                                        // or if explicitly invitePending
                                         HStack(spacing: 6) {
                                             Image(systemName: "exclamationmark.circle.fill")
                                                 .font(.system(size: 12, weight: .semibold))
