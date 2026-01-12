@@ -41,7 +41,7 @@ struct AlreadyHaveAnAccount: View {
                 } label: {
                     Text("Yes, continue")
                         .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
+                        .foregroundStyle(.primary700)
                         .frame(height: 52)
                         .frame(minWidth: 152)
                         .frame(maxWidth: .infinity)

@@ -24,6 +24,8 @@ struct SettingsSheet: View {
     @State private var showSignOutConfirm = false
     @State private var showDeleteConfirm = false
     @State private var deleteConfirmText: String = ""
+    @State private var showEditableCanvas: Bool = false
+    @State private var editTargetSectionName: String? = nil
     
     // Binding helper to avoid local @Bindable in body
     private var startScanningOnAppStartBinding: Binding<Bool> {
@@ -55,61 +57,62 @@ struct SettingsSheet: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Sticky Header Section
-            VStack(spacing: 24) {
-                // Top bar with back chevron and title (effective 12pt horizontal padding)
-                HStack() {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.grayScale150)
-                            .padding(.horizontal , 8)
-                            
-                    }
-                    Text("Profile")
-                        .onTapGesture {
-                            dismiss()
-                        }
-                        .font(NunitoFont.bold.size(18))
-                        .foregroundStyle(.grayScale150)
-                    Text("& Settings")
-                        .font(NunitoFont.bold.size(18))
-                        .foregroundStyle(.grayScale150)
-                    Spacer()
-                }
-                .padding(.horizontal, -8)
-                .padding(.top, 8)
-                
-                // Profile Image and Name Header
-                VStack(spacing: 8) {
-                    ProfileCard(isProfileCompleted: true)
-                        .frame(width: 72, height: 72)
-                        .overlay(alignment: .bottomTrailing) {
-                            Circle()
-                                .fill(.white)
-                                .frame(width: 24, height: 24)
-                                .overlay(Image("pen-line").resizable().frame(width: 14, height: 14))
-                                .offset(x: -6, y: -6)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if let me = familyStore.family?.selfMember {
-                                familyStore.avatarTargetMemberId = me.id
-                                memojiStore.displayName = me.name
-                            }
-                            memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
-                            coordinator.navigateInBottomSheet(.yourCurrentAvatar)
-                        }
-                    nameEditField()
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24) // Spacing from Header to the start of scrolling content
-            
-            // Scrolling Content Section
-            ScrollView {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Sticky Header Section
                 VStack(spacing: 24) {
+                    // Top bar with back chevron and title (effective 12pt horizontal padding)
+                    HStack() {
+                        Button { dismiss() } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.grayScale150)
+                                .padding(.horizontal , 8)
+                                
+                        }
+                        Text("Profile")
+                            .onTapGesture {
+                                dismiss()
+                            }
+                            .font(NunitoFont.bold.size(18))
+                            .foregroundStyle(.grayScale150)
+                        Text("& Settings")
+                            .font(NunitoFont.bold.size(18))
+                            .foregroundStyle(.grayScale150)
+                        Spacer()
+                    }
+                    .padding(.horizontal, -8)
+                    .padding(.top, 8)
+                    
+                    // Profile Image and Name Header
+                    VStack(spacing: 8) {
+                        ProfileCard(isProfileCompleted: true)
+                            .frame(width: 72, height: 72)
+                            .overlay(alignment: .bottomTrailing) {
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 24, height: 24)
+                                    .overlay(Image("pen-line").resizable().frame(width: 14, height: 14))
+                                    .offset(x: -6, y: -6)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if let me = familyStore.family?.selfMember {
+                                    familyStore.avatarTargetMemberId = me.id
+                                    memojiStore.displayName = me.name
+                                }
+                                memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
+                                coordinator.navigateInBottomSheet(.yourCurrentAvatar)
+                            }
+                        nameEditField()
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24) // Spacing from Header to the start of scrolling content
+                
+                // Scrolling Content Section
+                ScrollView {
+                    VStack(spacing: 24) {
                     // Account
                     VStack(spacing: 8) {
                         Text("ACCOUNT")
@@ -180,7 +183,8 @@ struct SettingsSheet: View {
                                 Divider()
                                     .padding(.horizontal, 16)
                                 settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {
-                                    // TODO: wire navigation
+                                    editTargetSectionName = nil
+                                    showEditableCanvas = true
                                 }
                             }
                         }
@@ -296,12 +300,22 @@ struct SettingsSheet: View {
                         }
                         .padding(.top, 20)
                     }
-                }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
-                }
-            
-        }.background(Color(hex: "#F7F7F7"))
+                    }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
+                    }
+                
+            }
+            .fullScreenCover(isPresented: $showEditableCanvas) {
+                EditableCanvasView(
+                    targetSectionName: editTargetSectionName,
+                    onBack: {
+                        showEditableCanvas = false
+                    }
+                )
+            }
+        }
+        .background(Color(hex: "#F7F7F7"))
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .sheet(isPresented: $isFeedbackPresented) {

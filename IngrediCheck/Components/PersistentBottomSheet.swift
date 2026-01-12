@@ -241,7 +241,7 @@ struct PersistentBottomSheet: View {
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
                 
-                .shadow(color :.grayScale70, radius: 27.5)
+                .shadow(color: .grayScale70, radius: 27.5)
                 .offset(y: dragOffsetY)
                 .gesture(dragGesture)
                 
@@ -265,7 +265,7 @@ struct PersistentBottomSheet: View {
                 .frame(maxWidth: .infinity, alignment: .top)
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
-                .shadow(color :.grayScale70, radius: 27.5)
+                .shadow(color: .grayScale70, radius: 27.5)
                 .offset(y: dragOffsetY)
                 .gesture(dragGesture)
 //                .shadow(radius: 27.5)

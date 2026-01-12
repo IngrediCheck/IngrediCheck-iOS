@@ -82,8 +82,9 @@ struct LetsMeetYourIngrediFamView: View {
                 Text("Your Family Overview")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
-                    .padding(.top, 32)
+//                    .padding(.top, 32)
                     .padding(.bottom, 12)
+                  
 
                 ScrollView {
                     VStack(spacing: 12) {

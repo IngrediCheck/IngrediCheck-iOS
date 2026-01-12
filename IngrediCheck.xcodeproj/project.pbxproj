@@ -62,7 +62,6 @@
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
 		D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = D35F3C232E2A25FB0002CDE7 /* GoogleSignIn */; };
 		D35F3C262E2A25FB0002CDE7 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */; };
-		D35FB7F22E56E85C009A5AA1 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35FB7F12E56E859009A5AA1 /* Config.swift */; };
 		D382E0602EDEE4B600F139B2 /* FamilyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */; };
 		D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05E2EDEE4B600F139B2 /* FamilyService.swift */; };
 		D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */; };
@@ -101,6 +100,7 @@
 		D3F6ACC82F10E3490019F5C4 /* OnboardingPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F6ACC72F10E3490019F5C4 /* OnboardingPersistence.swift */; };
 		D3F6ACCC2F1102EC0019F5C4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F6ACCB2F1102EC0019F5C4 /* ToastManager.swift */; };
 		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
+		FA2A590D2F14B99000C57D89 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2A590C2F14B99000C57D89 /* Config.swift */; };
 		FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */; };
 /* End PBXBuildFile section */
 
@@ -153,7 +153,6 @@
 		39F2A8812A9D3974004EBB9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A56B13C32B7A4D9DA858F158 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
 		D333A2702E3379F400E31F66 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
-		D35FB7F12E56E859009A5AA1 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyModels.swift; sourceTree = "<group>"; };
 		D382E05E2EDEE4B600F139B2 /* FamilyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyService.swift; sourceTree = "<group>"; };
 		D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyStore.swift; sourceTree = "<group>"; };
@@ -193,6 +192,7 @@
 		D3F6ACCB2F1102EC0019F5C4 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
 		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
+		FA2A590C2F14B99000C57D89 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -395,7 +395,7 @@
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBA72ED9898E0088E044 /* Components */,
-				D35FB7F12E56E859009A5AA1 /* Config.swift */,
+				FA2A590C2F14B99000C57D89 /* Config.swift */,
 				1FF63CC92E32020C005BEDF1 /* Utilities */,
 				39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */,
 				392D9C072B73665500166CF1 /* Info.plist */,
@@ -576,6 +576,7 @@
 				D3BECC7E2ED98D320088E044 /* HeyThereScreen.swift in Sources */,
 				D3BECC7F2ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift in Sources */,
 				D3BECC802ED98D320088E044 /* AppFlowRouter.swift in Sources */,
+				FA2A590D2F14B99000C57D89 /* Config.swift in Sources */,
 				D3BECC812ED98D320088E044 /* BlankScreen.swift in Sources */,
 				D3BECC822ED98D320088E044 /* RootContainerView.swift in Sources */,
 				D3BECC832ED98D320088E044 /* LetsMeetYourIngrediFamView.swift in Sources */,
@@ -606,7 +607,6 @@
 				39397AE92BC64A200096C5E3 /* ListsTab.swift in Sources */,
 				0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */,
 				1F5987B82E30E74D00381E32 /* TipJarViewModel.swift in Sources */,
-				D35FB7F22E56E85C009A5AA1 /* Config.swift in Sources */,
 				39705AF12BD490DA000E487D /* SignInView.swift in Sources */,
 				392D9C0C2B75500000166CF1 /* CapsuleWithDivider.swift in Sources */,
 				3976C41D2BBF12250026991A /* WebView.swift in Sources */,
