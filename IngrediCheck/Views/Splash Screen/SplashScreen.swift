@@ -12,6 +12,7 @@ struct SplashScreen: View {
     @State private var isCheckingLaunchState: Bool = true
     @State private var shouldNavigateToHome: Bool = false
     @State private var shouldNavigateToOnboarding: Bool = false
+    @State private var shouldNavigateFromWelcome: Bool = false
     @State private var restoredState: (canvas: CanvasRoute, sheet: BottomSheetRoute)?
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
@@ -37,6 +38,11 @@ struct SplashScreen: View {
                         .environment(authController)
                         .environment(familyStore)
                 }
+            } else if shouldNavigateFromWelcome {
+                // User tapped "Get Started" - navigate directly without showing splash again
+                RootContainerView(restoredState: restoredState)
+                    .environment(authController)
+                    .environment(familyStore)
             } else if shouldNavigateToOnboarding {
                 // If there's a session but onboarding isn't complete,
                 // go to RootContainerView which will restore from metadata
@@ -51,7 +57,10 @@ struct SplashScreen: View {
                         .environment(familyStore)
                 }
             } else {
-                WelcomeView()
+                WelcomeView(onGetStarted: {
+                    restoredState = nil
+                    shouldNavigateFromWelcome = true
+                })
             }
         }
         .task {

@@ -9,34 +9,56 @@ import SwiftUI
 
 struct WelcomeView: View {
     @State private var isFillingComplete: Bool = false
-    @Environment(AuthController.self) private var authController
-    @Environment(FamilyStore.self) private var familyStore
+    let onGetStarted: () -> Void
 
     var body: some View {
-        NavigationStack {
+        GeometryReader { geometry in
             VStack(spacing: 0) {
+                
+                // FillingPipeLine at top
                 FillingPipeLine(onComplete: {
                     isFillingComplete = true
                 })
-
-                Image("onbording-emptyimg1s")
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
+                
+                // Main heading
+                Text("TIRED OF INGREDIENT LISTS THAT FEEL LIKE A PUZZLE?")
+                    .font(ManropeFont.bold.size(24))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    .padding(.top, 32)
+                
+                // Subtitle
+                Text("IngrediCheck instantly highlights what's matched and unmatched.")
+                    .font(ManropeFont.regular.size(14))
+                    .foregroundStyle(.grayScale100)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 18)
+                
+                // Central illustration - image contains all visual elements
+                Image("ph")
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 610)
-                    .padding(.top, 18)
+//                    .frame(height: 610)
                     .padding(.bottom, 46)
-
+                
+                Spacer()
+                
+                // Get Started button
                 if isFillingComplete {
-                    HStack {
-                        Spacer()
-                        NavigationLink {
-                            RootContainerView()
-                                .environment(authController)
-                                .environment(familyStore)
-                        } label: {
-                            GreenCapsule(title: "Get Started")
-                        }
+                    Button {
+                        onGetStarted()
+                    } label: {
+                        GreenCapsule(title: "Get Started")
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 32)
                     .transition(.scale.combined(with: .opacity))
                 } else {
                     Button {
@@ -55,14 +77,14 @@ struct WelcomeView: View {
                         )
                     }
                     .disabled(true)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 32)
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isFillingComplete)
             .padding(.horizontal, 20)
-            .navigationBarHidden(true)
         }
-        .ignoresSafeArea(edges: .top)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isFillingComplete)
     }
 }
 
@@ -104,7 +126,5 @@ struct FillingPipeLine: View {
 }
 
 #Preview {
-    WelcomeView()
-        .environment(AuthController())
-        .environment(FamilyStore())
+    WelcomeView(onGetStarted: {})
 }

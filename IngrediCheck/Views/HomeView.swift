@@ -74,7 +74,7 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView(showsIndicators: false) {
+            ScrollView(.vertical, showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 0) {
                     
@@ -114,7 +114,7 @@ struct HomeView: View {
                     .padding(.bottom, 28)
                     
                     // Food Notes & Allergy Summary...
-                    HStack {
+                    HStack(spacing: 12) {
                         VStack(alignment: .leading) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Food Notes")
@@ -122,7 +122,7 @@ struct HomeView: View {
                                     .foregroundStyle(.grayScale150)
                                     .frame(height: 15)
                                 
-                                Text("Here’s what your family avoids  or needs to watch out for.")
+                                Text("Here's what your family avoids  or needs to watch out for.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
                             }
@@ -135,22 +135,22 @@ struct HomeView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         
-                        Spacer()
                         AllergySummaryCard(onTap: {
                             editTargetSectionName = nil
                             showEditableCanvas = true
                         })
+                        .frame(maxWidth: .infinity)
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
                     
-                    // Lifestyle + Family + Average scans
-                    HStack {
+                    // Family + Average scans
+                    HStack(spacing: 12) {
                         AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
                             .onAppear {
                                 didPlayAverageScansLaunchAnimation = true
                             }
-                            .padding(.trailing, 15)
+                            .frame(maxWidth: .infinity)
                         
                         VStack {
                             VStack(alignment: .leading) {
@@ -200,18 +200,23 @@ struct HomeView: View {
                             }
                             .frame(height: 125)
                         }
+                        .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
                     Image(.homescreenbanner)
                         .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
                         .cornerRadius(20)
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .padding(.bottom, 20)
                     
-                    HStack {
+                    HStack(spacing: 12) {
                         YourBarcodeScans()
+                            .frame(maxWidth: .infinity)
                         UserFeedbackCard()
+                            .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
@@ -346,6 +351,7 @@ struct HomeView: View {
                         .padding(.bottom , 129)
                     }
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 20)
                 .padding(.bottom , 30)
                 .padding(.top ,16)
@@ -394,6 +400,8 @@ struct HomeView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
+            .frame(maxWidth: .infinity)
+            .clipped()
             .overlay(
                 // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
                 LinearGradient(
