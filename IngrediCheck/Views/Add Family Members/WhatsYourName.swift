@@ -13,7 +13,6 @@ struct WhatsYourName: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(ToastManager.self) private var toastManager
     @State var name: String = ""
     @State var showError: Bool = false
     @State var isLoading: Bool = false
@@ -246,7 +245,7 @@ struct WhatsYourName: View {
             try await continuePressed(trimmed)
         } catch {
             print("[WhatsYourName] Error creating family: \(error)")
-            toastManager.show(message: "Failed to create family: \(error.localizedDescription)", type: .error)
+            ToastManager.shared.show(message: "Failed to create family: \(error.localizedDescription)", type: .error)
         }
     }
 }

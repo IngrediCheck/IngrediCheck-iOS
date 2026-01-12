@@ -11,7 +11,6 @@ struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
-    @Environment(ToastManager.self) private var toastManager
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
@@ -279,7 +278,7 @@ struct AddMoreMembers: View {
             showError = false
         } catch {
              print("[AddMoreMembers] Error adding member: \(error)")
-             toastManager.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+             ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
         }
     }
 }

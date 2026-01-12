@@ -112,20 +112,31 @@ final class MemojiStore {
                 return
             }
             
-            // UIImage(named:) is safe - already on main thread due to @MainActor
-            let fallbackImage = UIImage(named: "ingrediBot")
-            print("[MemojiStore] Fallback image created - image=\(fallbackImage != nil ? "exists" : "nil"), Thread.isMainThread=\(Thread.isMainThread)")
-            image = fallbackImage
-            print("[MemojiStore] Fallback image assigned to memojiStore.image")
-            
-            guard !Task.isCancelled else {
-                print("[MemojiStore] ⚠️ Task cancelled before fallback navigation")
-                isGenerating = false
-                return
+            // Show toast error message
+            let errorMessage: String
+            if let memojiError = error as? AIMemojiError {
+                errorMessage = memojiError.localizedDescription
+            } else {
+                errorMessage = "Failed to generate avatar. Please try again."
             }
             
-            coordinator.navigateInBottomSheet(.meetYourAvatar)
-            print("[MemojiStore] Navigated to .meetYourAvatar (with fallback)")
+            ToastManager.shared.show(message: errorMessage, type: .error, duration: 4.0)
+            print("[MemojiStore] ✅ Toast error shown: \(errorMessage)")
+            
+            // Navigate back to the previous screen instead of showing avatar
+            // Check if we have a previous route to go back to
+            if let previousRoute = previousRouteForGenerateAvatar {
+                print("[MemojiStore] Navigating back to previous route: \(previousRoute)")
+                coordinator.navigateInBottomSheet(previousRoute)
+            } else {
+                // If no previous route, go back to generateAvatar screen
+                print("[MemojiStore] No previous route, navigating back to .generateAvatar")
+                coordinator.navigateInBottomSheet(.generateAvatar)
+            }
+            
+            // Don't set fallback image - keep it nil so user can try again
+            image = nil
+            imageStoragePath = nil
         }
         
         // Final cancellation check before clearing the generating flag

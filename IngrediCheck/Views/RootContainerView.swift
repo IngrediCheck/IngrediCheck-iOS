@@ -42,12 +42,11 @@ struct RootContainerView: View {
     @Environment(AuthController.self) private var authController
     @Environment(\.dismiss) private var dismiss
 
-    @State private var toastManager = ToastManager()
 
     var body: some View {
         @Bindable var coordinator = coordinator
         @Bindable var appState = appState
-        @Bindable var toastManagerBindable = toastManager
+        @Bindable var toastManager = ToastManager.shared
 
         ZStack(alignment: .bottom) {
             // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
@@ -123,7 +122,6 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
-        .environment(toastManager)
         // Allow presenting SettingsSheet from anywhere in this container
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {

@@ -65,62 +65,114 @@ final class FamilyService {
         otherMembers: [FamilyMember]?
     ) async throws -> Family {
         let otherNames = otherMembers?.map { $0.name } ?? []
-        print("[FamilyService] createFamily request name=\(name), self=\(selfMember.name) (id=\(selfMember.id)), others=\(otherNames)")
-        let jwt = try await currentJWT()
+        print("[FamilyService] 🔵 createFamily called")
+        print("[FamilyService] 📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherNames)")
         
-        func memberDict(_ member: FamilyMember) -> [String: Any] {
-            var dict: [String: Any] = [
-                "id": member.id.uuidString,
-                "name": member.name,
-                "color": member.color
-            ]
-            if let imageFileHash = member.imageFileHash {
-                dict["imageFileHash"] = imageFileHash
+        do {
+            let jwt = try await currentJWT()
+            print("[FamilyService] ✅ JWT obtained (length: \(jwt.count) chars)")
+            
+            func memberDict(_ member: FamilyMember) -> [String: Any] {
+                var dict: [String: Any] = [
+                    "id": member.id.uuidString,
+                    "name": member.name,
+                    "color": member.color
+                ]
+                if let imageFileHash = member.imageFileHash {
+                    dict["imageFileHash"] = imageFileHash
+                    print("[FamilyService] 📸 Member \(member.name) has imageFileHash: \(imageFileHash)")
+                }
+                return dict
             }
-            return dict
-        }
-        
-        let selfMemberDict = memberDict(selfMember)
-        let otherMembersDict = otherMembers?.map(memberDict)
-        
-        print("[FamilyService] createFamily URL base=\(baseURL), full path=\(baseURL)family")
-        print("[FamilyService] createFamily request body: name=\(name), selfMember=\(selfMemberDict), otherMembers=\(otherMembersDict?.count ?? 0) items")
-        
-        let result = try await FamilyAPI.createFamily(
-            baseURL: baseURL,
-            apiKey: apiKey,
-            jwt: jwt,
-            name: name,
-            selfMember: selfMemberDict,
-            otherMembers: otherMembersDict
-        )
-        
-        print("[FamilyService] createFamily response status=\(result.statusCode), body length=\(result.body.count)")
-        if !result.body.isEmpty {
-            print("[FamilyService] createFamily response body (first 1000 chars): \(String(result.body.prefix(1000)))")
-        } else {
-            print("[FamilyService] createFamily response body: (empty)")
-        }
-        
-        guard (200 ..< 300).contains(result.statusCode) else {
-            print("[FamilyService] createFamily bad status: \(result.statusCode), body=\(result.body)")
-            throw NetworkError.invalidResponse(result.statusCode)
-        }
-        
-        // Some endpoints might return 204 No Content, but createFamily should return the created family
-        guard !result.body.isEmpty else {
-            print("[FamilyService] createFamily error: empty response body for status \(result.statusCode)")
-            // If we got 201/200 but empty body, try fetching the family instead
-            if result.statusCode == 200 || result.statusCode == 201 {
-                print("[FamilyService] createFamily attempting to fetch family after empty response")
-                return try await fetchFamily()
+            
+            let selfMemberDict = memberDict(selfMember)
+            let otherMembersDict = otherMembers?.map(memberDict)
+            
+            print("[FamilyService] 📡 API Configuration - baseURL: \(baseURL), full path: \(baseURL)family")
+            print("[FamilyService] 📦 Request - name: \(name), selfMember keys: \(selfMemberDict.keys), otherMembers count: \(otherMembersDict?.count ?? 0)")
+            
+            let result = try await FamilyAPI.createFamily(
+                baseURL: baseURL,
+                apiKey: apiKey,
+                jwt: jwt,
+                name: name,
+                selfMember: selfMemberDict,
+                otherMembers: otherMembersDict
+            )
+            
+            print("[FamilyService] 📥 Response received - status: \(result.statusCode), body length: \(result.body.count) chars")
+            
+            if !result.body.isEmpty {
+                print("[FamilyService] 📄 Response body (first 1000 chars): \(String(result.body.prefix(1000)))")
+            } else {
+                print("[FamilyService] ⚠️ Response body is empty")
             }
-            throw NetworkError.decodingError
+            
+            guard (200 ..< 300).contains(result.statusCode) else {
+                print("[FamilyService] ❌ Error response - status: \(result.statusCode)")
+                print("[FamilyService] 📄 Error body: \(result.body)")
+                throw NetworkError.invalidResponse(result.statusCode)
+            }
+            
+            // Some endpoints might return 204 No Content, but createFamily should return the created family
+            guard !result.body.isEmpty else {
+                print("[FamilyService] ⚠️ Empty response body for status \(result.statusCode)")
+                // If we got 201/200 but empty body, try fetching the family instead
+                if result.statusCode == 200 || result.statusCode == 201 {
+                    print("[FamilyService] 🔄 Attempting to fetch family after empty response")
+                    // Add a small delay to ensure backend has finished processing
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    
+                    // Retry fetching the family up to 3 times
+                    var lastError: Error?
+                    for attempt in 1...3 {
+                        do {
+                            print("[FamilyService] 🔄 Fetch attempt \(attempt)/3")
+                            let family = try await fetchFamily()
+                            print("[FamilyService] ✅ Successfully fetched family after creation")
+                            return family
+                        } catch {
+                            lastError = error
+                            print("[FamilyService] ⚠️ Fetch attempt \(attempt) failed: \(error.localizedDescription)")
+                            if attempt < 3 {
+                                // Exponential backoff: 0.5s, 1s, 2s
+                                let delay = UInt64(500_000_000 * UInt64(pow(2.0, Double(attempt - 1))))
+                                try? await Task.sleep(nanoseconds: delay)
+                            }
+                        }
+                    }
+                    
+                    // If all retries failed, throw the last error
+                    if let error = lastError {
+                        print("[FamilyService] ❌ All fetch attempts failed, throwing last error")
+                        throw error
+                    }
+                    
+                    print("[FamilyService] ❌ All fetch attempts failed with no error")
+                    throw NetworkError.decodingError
+                }
+                print("[FamilyService] ❌ Cannot proceed with empty body and status \(result.statusCode)")
+                throw NetworkError.decodingError
+            }
+            
+            do {
+                let family = try decodeFamily(from: result.body)
+                print("[FamilyService] ✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
+                return family
+            } catch {
+                print("[FamilyService] ❌ Failed to decode family response: \(error)")
+                print("[FamilyService] 📄 Response body that failed to decode: \(result.body)")
+                throw error
+            }
+        } catch {
+            print("[FamilyService] ❌ createFamily failed with error: \(error)")
+            if let networkError = error as? NetworkError {
+                print("[FamilyService] ❌ NetworkError type: \(networkError)")
+            } else if let urlError = error as? URLError {
+                print("[FamilyService] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+            }
+            throw error
         }
-        
-        let family = try decodeFamily(from: result.body)
-        print("[FamilyService] createFamily decoded family name=\(family.name), members=\(family.selfMember.name) + \(family.otherMembers.map { $0.name })")
-        return family
     }
     
     func fetchFamily() async throws -> Family {

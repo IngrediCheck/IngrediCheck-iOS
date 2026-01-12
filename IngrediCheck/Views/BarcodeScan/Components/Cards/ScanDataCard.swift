@@ -268,7 +268,7 @@ struct ScanDataCard: View {
                     .frame(width: 39, height: 34)
             } else {
                 // No product yet: show placeholder based on scan type
-                let placeholderImage = scan?.scan_type == "photo" ? "PhotoScanEmptyState" : "Barcodelinecorners"
+                let placeholderImage = (scan?.scan_type == "photo" || scan?.scan_type == "barcode_plus_photo") ? "PhotoScanEmptyState" : "Barcodelinecorners"
                 Image(placeholderImage)
                     .resizable()
                     .scaledToFit()
@@ -705,17 +705,18 @@ struct ScanDataCard: View {
             return
         }
         
-        // Only poll for photo scans - barcode scans use SSE
-        guard let currentScan = scan, currentScan.scan_type == "photo" else {
-            print("[SCAN_CARD] ⚠️ startPolling() called but scan is not a photo scan - skipping")
+        // Only poll for photo scans and barcode_plus_photo scans - barcode scans use SSE
+        guard let currentScan = scan, (currentScan.scan_type == "photo" || currentScan.scan_type == "barcode_plus_photo") else {
+            print("[SCAN_CARD] ⚠️ startPolling() called but scan is not a photo or barcode_plus_photo scan - skipping")
             return
         }
         
-        print("[SCAN_CARD] ⏳ Starting polling for photo scan - scan_id: \(scanId)")
+        print("[SCAN_CARD] ⏳ Starting polling for \(currentScan.scan_type) scan - scan_id: \(scanId)")
         isPolling = true
         
         pollingTask = Task {
             var pollCount = 0
+            
             
             while !Task.isCancelled {
                 pollCount += 1

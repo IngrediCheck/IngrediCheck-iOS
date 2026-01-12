@@ -667,7 +667,7 @@ class DTO {
         let id: String
         let scan_type: String  // "barcode", "photo", or "barcode_plus_photo"
         let barcode: String?
-        let state: String  // "processing_images", "analyzing", or "done"
+        let state: String  // "fetching_product_info", "processing_images", "analyzing", "done", "error"
         let product_info: ScanProductInfo
         let product_info_source: String?  // "openfoodfacts", "extraction", "enriched"
         var product_info_vote: Vote?
@@ -676,6 +676,7 @@ class DTO {
         let latest_guidance: String?
         let created_at: String
         let last_activity_at: String
+        let error: String?  // Error message when state is "error"
 
         // Additional fields that may be present in API response but not always used
         let is_favorited: Bool?
@@ -694,6 +695,7 @@ class DTO {
             case latest_guidance
             case created_at
             case last_activity_at
+            case error
             case is_favorited
             case analysis_id
         }
@@ -729,6 +731,7 @@ class DTO {
             latest_guidance = try container.decodeIfPresent(String.self, forKey: .latest_guidance)
             created_at = try container.decode(String.self, forKey: .created_at)
             last_activity_at = try container.decode(String.self, forKey: .last_activity_at)
+            error = try container.decodeIfPresent(String.self, forKey: .error)
             is_favorited = try container.decodeIfPresent(Bool.self, forKey: .is_favorited)
             analysis_id = try container.decodeIfPresent(String.self, forKey: .analysis_id)
         }
@@ -747,6 +750,7 @@ class DTO {
             latest_guidance: String?,
             created_at: String,
             last_activity_at: String,
+            error: String? = nil,
             is_favorited: Bool? = nil,
             analysis_id: String? = nil
         ) {
@@ -762,6 +766,7 @@ class DTO {
             self.latest_guidance = latest_guidance
             self.created_at = created_at
             self.last_activity_at = last_activity_at
+            self.error = error
             self.is_favorited = is_favorited
             self.analysis_id = analysis_id
         }
