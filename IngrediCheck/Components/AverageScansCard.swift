@@ -28,6 +28,7 @@ struct AverageScansCard: View {
     AvgModel(value: 100, day: "S")
   ]
   var playsLaunchAnimation: Bool = false
+  var avgScans: Int = 0
   @State private var weeklyAverage: Int = 0
   @State private var animatedBarHeights: [CGFloat] = []
   @State private var didPlayLaunchAnimation: Bool = false
@@ -134,8 +135,13 @@ struct AverageScansCard: View {
       , alignment: .topTrailing
     )
     .onAppear() {
-      // calculates the weekly avg from the array values
-      weeklyAverage = avgArray.map { $0.value }.reduce(0, +) / avgArray.count
+      // Use provided avgScans if available, otherwise calculate from array
+      if avgScans > 0 {
+        weeklyAverage = avgScans
+      } else {
+        // calculates the weekly avg from the array values
+        weeklyAverage = avgArray.map { $0.value }.reduce(0, +) / avgArray.count
+      }
 
       if animatedBarHeights.isEmpty {
         animatedBarHeights = targetBarHeights

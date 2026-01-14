@@ -22,6 +22,8 @@ struct HomeView: View {
     @State private var editTargetSectionName: String? = nil
     @State private var navigationPath: [HistoryRouteItem] = []
     @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
+    @State private var stats: DTO.StatsResponse? = nil
+    @State private var isLoadingStats: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -146,7 +148,10 @@ struct HomeView: View {
                     
                     // Family + Average scans
                     HStack(spacing: 12) {
-                        AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
+                        AverageScansCard(
+                            playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
+                            avgScans: stats?.avgScans ?? 0
+                        )
                             .onAppear {
                                 didPlayAverageScansLaunchAnimation = true
                             }
@@ -213,14 +218,18 @@ struct HomeView: View {
                         .padding(.bottom, 20)
                     
                     HStack(spacing: 12) {
-                        YourBarcodeScans()
+                        YourBarcodeScans(barcodeScansCount: stats?.barcodeScansCount ?? 0)
                             .frame(maxWidth: .infinity)
                         UserFeedbackCard()
                             .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
-                    MatchingRateCard()
+                    MatchingRateCard(
+                        matchedCount: stats?.matchingStats.matched ?? 0,
+                        uncertainCount: stats?.matchingStats.uncertain ?? 0,
+                        unmatchedCount: stats?.matchingStats.unmatched ?? 0
+                    )
                         .padding(.bottom, 20)
                     
                     CreateYourAvatarCard()
@@ -509,7 +518,25 @@ struct HomeView: View {
                      RecentScansPageView()
                 }
             }
+            .task {
+                await loadStats()
+            }
             
+        }
+    }
+    
+    private func loadStats() async {
+        guard !isLoadingStats else { return }
+        isLoadingStats = true
+        defer { isLoadingStats = false }
+        
+        do {
+            let fetchedStats = try await webService.fetchStats()
+            await MainActor.run {
+                stats = fetchedStats
+            }
+        } catch {
+            print("[HomeView] Failed to load stats: \(error.localizedDescription)")
         }
     }
     
@@ -525,6 +552,9 @@ struct HomeView: View {
         await MainActor.run {
             appState.listsTabState.scans = scanHistoryStore.scans
         }
+        
+        // Refresh stats
+        await loadStats()
     }
 }
 

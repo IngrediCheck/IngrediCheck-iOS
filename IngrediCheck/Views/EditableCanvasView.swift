@@ -108,6 +108,14 @@ struct EditableCanvasView: View {
             foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
             isLoadingMemberPreferences = false
         }
+        .onDisappear {
+            // Dismiss bottom sheet when view disappears (handles both back button and system swipe gesture)
+            if navCoordinator.isEditSheetPresented {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    navCoordinator.isEditSheetPresented = false
+                }
+            }
+        }
     }
     
     private func icon(for stepId: String) -> String {
@@ -515,6 +523,12 @@ private extension EditableCanvasView {
                 HStack {
                     if showBackButton {
                         Button {
+                            // Dismiss bottom sheet if it's open
+                            if navCoordinator.isEditSheetPresented {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    navCoordinator.isEditSheetPresented = false
+                                }
+                            }
                             dismiss()
                         } label: {
                             Image(systemName: "chevron.left")

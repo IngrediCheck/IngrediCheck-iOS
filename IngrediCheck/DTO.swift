@@ -801,6 +801,20 @@ class DTO {
     struct FeedbackUpdateRequest: Codable {
         let vote: String // "up", "down", "none"
     }
+    
+    // MARK: - Stats
+    
+    struct StatsResponse: Codable {
+        let avgScans: Int
+        let barcodeScansCount: Int
+        let matchingStats: MatchingStats
+    }
+    
+    struct MatchingStats: Codable {
+        let matched: Int
+        let unmatched: Int
+        let uncertain: Int
+    }
 }
 
 // MARK: - Scan API Extension Helpers

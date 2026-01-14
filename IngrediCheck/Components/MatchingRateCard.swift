@@ -8,10 +8,17 @@
 import SwiftUI
 
 struct MatchingRateCard: View {
-    var matchedCount: Int = 0
-    var uncertainCount: Int = 00
-    var unmatchedCount: Int = 00
+    var matchedCount: Int
+    var uncertainCount: Int
+    var unmatchedCount: Int
     var increaseValue: Int? = nil
+    
+    init(matchedCount: Int = 0, uncertainCount: Int = 0, unmatchedCount: Int = 0, increaseValue: Int? = nil) {
+        self.matchedCount = matchedCount
+        self.uncertainCount = uncertainCount
+        self.unmatchedCount = unmatchedCount
+        self.increaseValue = increaseValue
+    }
 
     private var totalCount: Int {
         matchedCount + uncertainCount + unmatchedCount

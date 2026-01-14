@@ -1022,6 +1022,55 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.decodingError
         }
     }
+    
+    func fetchStats() async throws -> DTO.StatsResponse {
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+        
+        let request = SupabaseRequestBuilder(endpoint: .stats_v2)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        guard httpResponse.statusCode == 200 else {
+            PostHogSDK.shared.capture("Stats Fetch Failed", properties: [
+                "request_id": requestId,
+                "status_code": httpResponse.statusCode,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        do {
+            let stats = try JSONDecoder().decode(DTO.StatsResponse.self, from: data)
+            
+            PostHogSDK.shared.capture("Stats Fetch Successful", properties: [
+                "request_id": requestId,
+                "avg_scans": stats.avgScans,
+                "barcode_scans_count": stats.barcodeScansCount,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            
+            return stats
+        } catch {
+            print("Failed to decode StatsResponse: \(error)")
+            
+            PostHogSDK.shared.capture("Stats Decode Error", properties: [
+                "request_id": requestId,
+                "error": error.localizedDescription,
+                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+            ])
+            
+            throw NetworkError.decodingError
+        }
+    }
 
     func submitFeedback(
         clientActivityId: String,

@@ -807,6 +807,33 @@ struct PersistentBottomSheet: View {
         
         return .individual
     }
+    
+    private func presentShareSheet(items: [Any]) {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+            popover.sourceRect = CGRect(
+                x: UIScreen.main.bounds.midX,
+                y: UIScreen.main.bounds.maxY,
+                width: 0,
+                height: 0
+            )
+            popover.permittedArrowDirections = []
+        }
+
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              let root = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            return
+        }
+
+        root.present(controller, animated: true)
+    }
 }
 
 // MARK: - Avatar Assignment Helpers
