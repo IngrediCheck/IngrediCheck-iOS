@@ -7,14 +7,6 @@ struct ManageFamilyView: View {
     @Environment(WebService.self) private var webService
     @State private var selfMemberName: String = ""
     @FocusState private var isEditingFamilyName: Bool
-    @State private var nameFieldWidth: CGFloat = 0
-
-    private struct NameWidthPreferenceKey: PreferenceKey {
-        static var defaultValue: CGFloat = 0
-        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-            value = nextValue()
-        }
-    }
 
     private var members: [FamilyMember] {
         if let family = familyStore.family {
@@ -29,12 +21,6 @@ struct ManageFamilyView: View {
     private var extraMemberCount: Int {
         let maxShown = 6
         return max(members.count - maxShown, 0)
-    }
-
-    // Keep type-checking simple by pulling complex width math out of the view modifiers
-    private var nameFieldEffectiveWidth: CGFloat {
-        let measured = (nameFieldWidth == 0 ? 300 : nameFieldWidth)
-        return min(max(measured, 144), 300)
     }
 
     var body: some View {
@@ -161,6 +147,43 @@ struct ManageFamilyView: View {
         }
     }
 
+    @ViewBuilder
+    private func selfNameEditField() -> some View {
+        HStack(spacing: 12) {
+            TextField("", text: $selfMemberName)
+                .font(NunitoFont.semiBold.size(22))
+                .foregroundStyle(Color(hex: "#303030"))
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+                .focused($isEditingFamilyName)
+                .submitLabel(.done)
+                .onSubmit { commitSelfName() }
+            Image("pen-line")
+                .resizable()
+                .frame(width: 12, height: 12)
+                .foregroundStyle(.grayScale100)
+                .onTapGesture { isEditingFamilyName = true }
+        }
+        .padding(.horizontal, 20)
+        .frame(minWidth: 144)
+        .frame(maxWidth: 335)
+        .frame(height: 38)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isEditingFamilyName ? Color(hex: "#EEF5E3") : .white))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
+        )
+        .contentShape(Rectangle())
+        .fixedSize(horizontal: true, vertical: false)
+        .padding(.top, 10)
+        .onTapGesture { isEditingFamilyName = true }
+        .onChange(of: isEditingFamilyName) { _, editing in
+            if !editing { commitSelfName() }
+        }
+    }
+
     private var header: some View {
         HStack(spacing: 8) {
             Button { dismiss() } label: {
@@ -182,50 +205,14 @@ struct ManageFamilyView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 4) {
-                        TextField("", text: $selfMemberName)
-                            .font(NunitoFont.semiBold.size(20))
-                            .foregroundStyle(.grayScale150)
-                            .textInputAutocapitalization(.words)
-                            .disableAutocorrection(true)
-                            .focused($isEditingFamilyName)
-                            .submitLabel(.done)
-                            .onSubmit { commitSelfName() }
-                            .onChange(of: isEditingFamilyName) { _, editing in
-                                if !editing { commitSelfName() }
-                            }
-                            .frame(width: nameFieldEffectiveWidth)
-                            .overlay(alignment: .leading) {
-                                Text(selfMemberName.isEmpty ? " " : selfMemberName)
-                                    .font(NunitoFont.semiBold.size(20))
-                                    .background(
-                                        GeometryReader { proxy in
-                                            Color.clear.preference(key: NameWidthPreferenceKey.self, value: min(proxy.size.width, 300))
-                                        }
-                                    )
-                                    .hidden()
-                            }
-                        Button { isEditingFamilyName = true } label: {
-                            Image("pen-line")
-                                .resizable()
-                                .frame(width: 12, height: 12)
-                                .foregroundStyle(.grayScale100)
-                        }
-                        .buttonStyle(.plain)
-                            .contentShape(Rectangle())
-                            .onTapGesture { isEditingFamilyName = true }
-                    }
-                    .padding(.horizontal, 4)
-                    .onPreferenceChange(NameWidthPreferenceKey.self) { width in
-                        if nameFieldWidth != width { nameFieldWidth = width }
-                    }
-                        Text("Everyone stays connected and updated here.")
-                            .font(ManropeFont.regular.size(12))
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: 161, alignment: .leading)
-                            .foregroundStyle(.grayScale110)
+                    selfNameEditField()
+                    Text("Everyone stays connected and updated here.")
+                        .font(ManropeFont.regular.size(12))
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(width: 161, alignment: .leading)
+                        .foregroundStyle(.grayScale110)
                     
                 }
                 
