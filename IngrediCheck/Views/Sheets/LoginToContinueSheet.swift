@@ -8,25 +8,30 @@ struct LoginToContinueSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.grayScale150)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+            ZStack {
+                // CENTER TEXT
+                Text("Log in to continue")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
 
-                Spacer()
+                // LEFT ICON
+                HStack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.grayScale150)
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                        Spacer()
+                    }
+                    .buttonStyle(.plain)
+
+                    
+                }
             }
             .padding(.top, 8)
-
-            Text("Log in to continue")
-                .font(NunitoFont.bold.size(22))
-                .foregroundStyle(.grayScale150)
-                .multilineTextAlignment(.center)
-                .padding(.top, 4)
 
             Text("Sign in to save your preferences and scans, and keep\n them in sync across devices.")
                 .font(ManropeFont.medium.size(12))
@@ -35,7 +40,7 @@ struct LoginToContinueSheet: View {
                 .padding(.top, 12)
                 .padding(.horizontal, 24)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Button {
                     Task {
                         await authController.upgradeCurrentAccount(to: .google)
@@ -49,14 +54,18 @@ struct LoginToContinueSheet: View {
                     HStack(spacing: 8) {
                         Image("google_logo")
                             .resizable()
-                            .frame(width: 18, height: 18)
+                            .frame(width: 24, height: 24)
                         Text("Google")
-                            .font(NunitoFont.semiBold.size(14))
+                            .font(NunitoFont.semiBold.size(16))
                             .foregroundStyle(.grayScale150)
                     }
-                    .padding(.vertical, 10)
                     .frame(maxWidth: .infinity)
-                    .background(Color(hex: "#F7F7F7"), in: .capsule)
+                    .frame(height: 52)
+                    .background(Color.white, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale40, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(authController.isUpgradingAccount)
@@ -74,21 +83,24 @@ struct LoginToContinueSheet: View {
                     HStack(spacing: 8) {
                         Image("apple_logo")
                             .resizable()
-                            .frame(width: 18, height: 18)
+                            .frame(width: 24, height: 24)
                         Text("Apple")
-                            .font(NunitoFont.semiBold.size(14))
+                            .font(NunitoFont.semiBold.size(16))
                             .foregroundStyle(.grayScale150)
                     }
-                    .padding(.vertical, 10)
                     .frame(maxWidth: .infinity)
-                    .background(Color(hex: "#F7F7F7"), in: .capsule)
+                    .frame(height: 52)
+                    .background(Color.white, in: .capsule)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale40, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(authController.isUpgradingAccount)
             }
             .padding(.top, 24)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
+            .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 21)

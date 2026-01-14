@@ -1,25 +1,24 @@
-
 import SwiftUI
 
-struct ReadyToScanCanvas: View {
+struct OnboardingPhoneCanvas: View {
+    let phoneImageName: String
+
+    init(phoneImageName: String = "Iphone-image") {
+        self.phoneImageName = phoneImageName
+    }
+
     var body: some View {
-        VStack (spacing : 0){
-          
-            Text("Got a product handy?")
-                .font(ManropeFont.bold.size(16))
-                .foregroundStyle(Color.grayScale150)
-                
-                .padding(.top ,34)
-            Text("Scan it to see what’s inside.")
-                .font(ManropeFont.regular.size(13))
-                .foregroundStyle(Color.grayScale100)
-             
-            Image("Iphone-product-image")
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth : .infinity)
-                .frame(height: 494)
-            
+        VStack {
+            Image("Ingredicheck-logo")
+                .frame(width: 107.3, height: 36)
+                .padding(.top, 44)
+                .padding(.bottom, 33)
+
+            ZStack {
+                Image(phoneImageName)
+                    .resizable()
+                    .frame(width: 238, height: 460)
+            }
 
             Spacer()
         }
@@ -47,10 +46,11 @@ struct ReadyToScanCanvas: View {
             .frame(maxWidth: .infinity)
             .offset(y: 75)
         )
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
 #Preview {
-    ReadyToScanCanvas()
+    OnboardingPhoneCanvas()
 }
-

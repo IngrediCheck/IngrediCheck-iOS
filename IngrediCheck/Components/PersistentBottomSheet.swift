@@ -290,7 +290,7 @@ struct PersistentBottomSheet: View {
     private func getBottomSheetHeight() -> CGFloat? {
         switch coordinator.currentBottomSheetRoute {
         case .alreadyHaveAnAccount:
-            return 275
+            return 271
         case  .doYouHaveAnInviteCode:
             return 241
         case .welcomeBack:
@@ -856,12 +856,8 @@ struct PersistentBottomSheet: View {
                     coordinator.navigateInBottomSheet(.seeHowScanningWorks)
                 },
                 onGoToHome: {
-                    if authController.session != nil, authController.signedInAsGuest {
-                        coordinator.navigateInBottomSheet(.loginToContinue)
-                    } else {
-                        OnboardingPersistence.shared.markCompleted()
-                        coordinator.showCanvas(.home)
-                    }
+                    OnboardingPersistence.shared.markCompleted()
+                    coordinator.showCanvas(.home)
                 }
             )
 

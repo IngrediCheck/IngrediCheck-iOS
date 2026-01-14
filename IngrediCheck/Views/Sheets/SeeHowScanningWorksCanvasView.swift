@@ -2,8 +2,8 @@ import SwiftUI
 
 struct ScanningHelpCanvas: View {
     var body: some View {
-        Color.white
-            .ignoresSafeArea()
+        OnboardingPhoneCanvas(phoneImageName: "Iphone-image")
+            .padding(.top ,20)
     }
 }
 
