@@ -1055,6 +1055,9 @@ struct ScanStreamError: Error, LocalizedError {
                 "request_id": requestId,
                 "avg_scans": stats.avgScans,
                 "barcode_scans_count": stats.barcodeScansCount,
+                "matching_rate_matched": stats.matchingStats.matched,
+                "matching_rate_unmatched": stats.matchingStats.unmatched,
+                "matching_rate_uncertain": stats.matchingStats.uncertain,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
             

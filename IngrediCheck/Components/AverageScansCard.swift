@@ -135,13 +135,10 @@ struct AverageScansCard: View {
       , alignment: .topTrailing
     )
     .onAppear() {
-      // Use provided avgScans if available, otherwise calculate from array
-      if avgScans > 0 {
-        weeklyAverage = avgScans
-      } else {
-        // calculates the weekly avg from the array values
-        weeklyAverage = avgArray.map { $0.value }.reduce(0, +) / avgArray.count
-      }
+      // Use provided avgScans if it has been set (even if 0), otherwise calculate from array
+      // Check if avgScans was explicitly provided by checking if it differs from initial state
+      // Since HomeView always passes a value (stats?.avgScans ?? 0), we use avgScans directly
+      weeklyAverage = avgScans
 
       if animatedBarHeights.isEmpty {
         animatedBarHeights = targetBarHeights
