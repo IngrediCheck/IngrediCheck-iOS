@@ -877,6 +877,7 @@ struct PreferencesAddedSuccessSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
+          
             VStack(spacing: 12) {
                 Text("Preferences added successfully!")
                     .font(NunitoFont.bold.size(22))
@@ -891,14 +892,17 @@ struct PreferencesAddedSuccessSheet: View {
                   
                     .padding(.horizontal, 24)
             }
-            
-            Spacer()
+            .padding(.bottom , 40)
+        
+           
             
             Button(action: onContinue) {
                 GreenCapsule(title: "Continue")
                     .frame(width : 152 , height : 52)
             }
+            
             .buttonStyle(.plain)
+            .padding(.bottom ,32)
          
            
         }
@@ -908,6 +912,8 @@ struct PreferencesAddedSuccessSheet: View {
         .padding(.bottom, 24)
     }
 }
+
+
 struct EditSectionBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(FamilyStore.self) private var familyStore

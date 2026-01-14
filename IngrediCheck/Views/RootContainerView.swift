@@ -220,6 +220,12 @@ struct RootContainerView: View {
             NavigationStack {
                 EditableCanvasView(titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
             }
+        case .readyToScanFirstProduct:
+            ReadyToScanCanvas()
+        case .seeHowScanningWorks:
+            ScanningHelpCanvas()
+        case .whyWeNeedThesePermissions:
+            PermissionsCanvas()
         }
     }
 

@@ -345,6 +345,14 @@ struct PersistentBottomSheet: View {
             return 389
         case .preferencesAddedSuccess:
             return 285
+        case .readyToScanFirstProduct:
+            return 271
+        case .seeHowScanningWorks:
+            return 263
+        case .quickAccessNeeded:
+            return 253
+        case .loginToContinue:
+            return 236
         }
     }
     
@@ -691,9 +699,9 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    // Normal flow - go to Home
-                    OnboardingPersistence.shared.markCompleted()
-                    coordinator.showCanvas(.home)
+                    // Normal flow (Add Family): show Ready to Scan first product.
+                    coordinator.showCanvas(.readyToScanFirstProduct)
+                    coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
                 }
             }
             
@@ -769,9 +777,15 @@ struct PersistentBottomSheet: View {
                         appState.activeSheet = .settings
                     }
                 } else {
-                    // Normal flow - navigate to home
-                    OnboardingPersistence.shared.markCompleted()
-                    coordinator.showCanvas(.home)
+                    // Normal flow - in Just Me flow, show Ready to Scan first product after Meet Your Profile.
+                    // In family flow, skip this and go home.
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.showCanvas(.readyToScanFirstProduct)
+                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    } else {
+                        OnboardingPersistence.shared.markCompleted()
+                        coordinator.showCanvas(.home)
+                    }
                 }
             }
             
@@ -787,9 +801,80 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                    // After preferences success:
+                    // - Just Me flow: show Meet Your Profile
+                    // - Add Family flow: go directly to Ready to Scan
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.navigateInBottomSheet(.meetYourProfile)
+                    } else {
+                        coordinator.showCanvas(.readyToScanFirstProduct)
+                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    }
                 }
             }
+
+        case .readyToScanFirstProduct:
+            ReadyToScanSheet(
+                onBack: {
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.navigateInBottomSheet(.meetYourProfile)
+                    } else {
+                        coordinator.showCanvas(.summaryAddFamily)
+                        coordinator.navigateInBottomSheet(.allSetToJoinYourFamily)
+                    }
+                },
+                onNotRightNow: {
+                    coordinator.showCanvas(.seeHowScanningWorks)
+                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                },
+                onHaveAProduct: {
+                    OnboardingPersistence.shared.markCompleted()
+                    coordinator.showCanvas(.home)
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        appState.activeSheet = .scan
+                    }
+                }
+            )
+
+        case .seeHowScanningWorks:
+            ScanningHelpSheet(
+                onBack: {
+                    coordinator.showCanvas(.readyToScanFirstProduct)
+                    coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                },
+                onGotIt: {
+                    coordinator.showCanvas(.whyWeNeedThesePermissions)
+                    coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                }
+            )
+
+        case .quickAccessNeeded:
+            QuickAccessSheet(
+                onBack: {
+                    coordinator.showCanvas(.seeHowScanningWorks)
+                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                },
+                onGoToHome: {
+                    if authController.session != nil, authController.signedInAsGuest {
+                        coordinator.navigateInBottomSheet(.loginToContinue)
+                    } else {
+                        OnboardingPersistence.shared.markCompleted()
+                        coordinator.showCanvas(.home)
+                    }
+                }
+            )
+
+        case .loginToContinue:
+            LoginToContinueSheet(
+                onBack: {
+                    coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                },
+                onSignedIn: {
+                    OnboardingPersistence.shared.markCompleted()
+                    coordinator.showCanvas(.home)
+                }
+            )
         }
     }
     
