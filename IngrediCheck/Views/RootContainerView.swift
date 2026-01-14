@@ -50,13 +50,31 @@ struct RootContainerView: View {
 
         ZStack(alignment: .bottom) {
             // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
-            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
-               coordinator.currentBottomSheetRoute == .meetYourProfile ||
+            // BUT only if we're NOT on the family overview screen (letsMeetYourIngrediFam) or home screen
+            // (where SettingsSheet might be shown)
+            let isOnFamilyOverview = coordinator.currentCanvasRoute == .letsMeetYourIngrediFam
+            let isOnHomeScreen = coordinator.currentCanvasRoute == .home
+            let isFromMeetYourProfile: Bool = {
+                if case .meetYourProfile = memojiStore.previousRouteForGenerateAvatar {
+                    return true
+                }
+                return false
+            }()
+            let isMeetYourProfileRoute: Bool = {
+                if case .meetYourProfile = coordinator.currentBottomSheetRoute {
+                    return true
+                }
+                return false
+            }()
+            let shouldShowCustomBackground = (coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
+               isMeetYourProfileRoute ||
                ((coordinator.currentBottomSheetRoute == .generateAvatar || 
                  coordinator.currentBottomSheetRoute == .yourCurrentAvatar ||
                  coordinator.currentBottomSheetRoute == .bringingYourAvatar ||
                  coordinator.currentBottomSheetRoute == .meetYourAvatar) && 
-                (memojiStore.previousRouteForGenerateAvatar == .meetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro)) {
+                (isFromMeetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro))) && !isOnFamilyOverview && !isOnHomeScreen
+            
+            if shouldShowCustomBackground {
                 VStack {
                     Text("Meet your profile")
                         .font(ManropeFont.bold.size(16))

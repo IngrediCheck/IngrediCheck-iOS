@@ -15,11 +15,20 @@ struct EditMember: View {
     @State private var showError: Bool = false
 
     @State private var avatarChoices: [UserModel] = [
-        UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
+        UserModel(familyMemberName: "Memoji 1", familyMemberImage: "memoji_1", backgroundColor: Color(hex: "FFB3BA")),
+        UserModel(familyMemberName: "Memoji 2", familyMemberImage: "memoji_2", backgroundColor: Color(hex: "FFDFBA")),
+        UserModel(familyMemberName: "Memoji 3", familyMemberImage: "memoji_3", backgroundColor: Color(hex: "FFFFBA")),
+        UserModel(familyMemberName: "Memoji 4", familyMemberImage: "memoji_4", backgroundColor: Color(hex: "BAFFC9")),
+        UserModel(familyMemberName: "Memoji 5", familyMemberImage: "memoji_5", backgroundColor: Color(hex: "BAE1FF")),
+        UserModel(familyMemberName: "Memoji 6", familyMemberImage: "memoji_6", backgroundColor: Color(hex: "E0BBE4")),
+        UserModel(familyMemberName: "Memoji 7", familyMemberImage: "memoji_7", backgroundColor: Color(hex: "FFCCCB")),
+        UserModel(familyMemberName: "Memoji 8", familyMemberImage: "memoji_8", backgroundColor: Color(hex: "B4E4FF")),
+        UserModel(familyMemberName: "Memoji 9", familyMemberImage: "memoji_9", backgroundColor: Color(hex: "C7CEEA")),
+        UserModel(familyMemberName: "Memoji 10", familyMemberImage: "memoji_10", backgroundColor: Color(hex: "F0E6FF")),
+        UserModel(familyMemberName: "Memoji 11", familyMemberImage: "memoji_11", backgroundColor: Color(hex: "FFE5B4")),
+        UserModel(familyMemberName: "Memoji 12", familyMemberImage: "memoji_12", backgroundColor: Color(hex: "E8F5E9")),
+        UserModel(familyMemberName: "Memoji 13", familyMemberImage: "memoji_13", backgroundColor: Color(hex: "FFF9C4")),
+        UserModel(familyMemberName: "Memoji 14", familyMemberImage: "memoji_14", backgroundColor: Color(hex: "F8BBD0"))
     ]
     @State private var selectedAvatar: UserModel? = nil
 
@@ -85,61 +94,70 @@ struct EditMember: View {
                         .foregroundStyle(.grayScale150)
                         .padding(.leading, 20)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12 ) {
-                            Button {
-                                // Track that we came from EditMember - need to get the actual route
-                                if case .editMember(let memberId, let isSelf) = coordinator.currentBottomSheetRoute {
-                                    memojiStore.previousRouteForGenerateAvatar = .editMember(memberId: memberId, isSelf: isSelf)
-                                } else {
-                                    // Fallback to addMoreMembersMinimal if we can't determine the route
-                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembersMinimal
-                                }
-                                coordinator.navigateInBottomSheet(.generateAvatar)
-                            } label: {
-                                ZStack {
-                                    Circle()
-                                        .stroke(lineWidth: 2)
-                                        .foregroundStyle(.grayScale60)
-                                        .frame(width: 48, height: 48)
-
-                                    Image(systemName: "plus")
-                                        .resizable()
-                                        .frame(width: 20, height: 20)
-                                        .foregroundStyle(.grayScale60)
-                                }
+                    HStack(spacing: 16) {
+                        // Fixed plus button (does not scroll)
+                        Button {
+                            // Track that we came from EditMember - need to get the actual route
+                            if case .editMember(let memberId, let isSelf) = coordinator.currentBottomSheetRoute {
+                                memojiStore.previousRouteForGenerateAvatar = .editMember(memberId: memberId, isSelf: isSelf)
+                            } else {
+                                // Fallback to addMoreMembersMinimal if we can't determine the route
+                                memojiStore.previousRouteForGenerateAvatar = .addMoreMembersMinimal
                             }
-                            .buttonStyle(.plain)
+                            coordinator.navigateInBottomSheet(.generateAvatar)
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .stroke(lineWidth: 2)
+                                    .foregroundStyle(.grayScale60)
+                                    .frame(width: 48, height: 48)
 
-                            ForEach(avatarChoices, id: \.id) { ele in
-                                ZStack(alignment: .topTrailing) {
-                                    Image(ele.image)
-                                        .resizable()
-                                        .frame(width: 50, height: 50)
+                                Image(systemName: "plus")
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                                    .foregroundStyle(.grayScale60)
+                            }
+                        }
+                        .buttonStyle(.plain)
 
-                                    if selectedAvatar?.id == ele.id {
-                                        Circle()
-                                            .fill(Color(hex: "2C9C3D"))
-                                            .frame(width: 16, height: 16)
-                                            .padding(.top, 1)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(.white)
-                                                    .padding(.top, 1)
-                                                    .overlay(
-                                                        Image("white-rounded-checkmark")
-                                                    )
-                                            )
+                        // Vertical divider
+                        Rectangle()
+                            .fill(.grayScale60)
+                            .frame(width: 1, height: 48)
+
+                        // Scrollable memojis list
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(avatarChoices, id: \.id) { ele in
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(ele.image)
+                                            .resizable()
+                                            .frame(width: 50, height: 50)
+
+                                        if selectedAvatar?.id == ele.id {
+                                            Circle()
+                                                .fill(Color(hex: "2C9C3D"))
+                                                .frame(width: 16, height: 16)
+                                                .padding(.top, 1)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(lineWidth: 1)
+                                                        .foregroundStyle(.white)
+                                                        .padding(.top, 1)
+                                                        .overlay(
+                                                            Image("white-rounded-checkmark")
+                                                        )
+                                                )
+                                        }
                                     }
-                                }
-                                .onTapGesture {
-                                    selectedAvatar = ele
+                                    .onTapGesture {
+                                        selectedAvatar = ele
+                                    }
                                 }
                             }
                         }
-                        .padding(.horizontal, 20)
-                                            }
+                    }
+                    .padding(.horizontal, 20)
                 }
             }
             .padding(.bottom, 40)
@@ -191,13 +209,28 @@ struct EditMember: View {
             familyStore.updatePendingSelfMemberName(trimmed)
             // Handle avatar assignment - upload in background without blocking UI
             // Priority:
-            // 1. Selected predefined avatar (upload to productimages)
+            // 1. Selected local memoji (use storagePath, no upload)
             // 2. Custom memoji (use memoji-images storage path, no re-upload)
-            if let selectedImageName = selectedAvatar?.image,
-               let assetImage = UIImage(named: selectedImageName) {
-                // Predefined avatar selected - upload it in background
-                Task {
-                    await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
+            if let selectedImageName = selectedAvatar?.image {
+                // Check if it's a local memoji (starts with "memoji_")
+                if selectedImageName.hasPrefix("memoji_") {
+                    // Local memoji selected - use storagePath, no upload needed
+                    Task {
+                        let colorHex = selectedAvatar?.backgroundColor?.toHex()
+                        await familyStore.setPendingSelfMemberAvatarFromMemoji(
+                            storagePath: selectedImageName,
+                            backgroundColorHex: colorHex
+                        )
+                    }
+                } else {
+                    // Legacy predefined avatar (shouldn't happen after migration, but handle gracefully)
+                    if let assetImage = UIImage(named: selectedImageName) {
+                        Task {
+                            await familyStore.setPendingSelfMemberAvatar(image: assetImage, webService: webService)
+                        }
+                    } else {
+                        familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
+                    }
                 }
             } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
                 // Custom avatar from memojiStore - use memoji storage path directly
@@ -207,21 +240,34 @@ struct EditMember: View {
                         backgroundColorHex: memojiStore.backgroundColorHex
                     )
                 }
-            } else if let selectedImageName = selectedAvatar?.image {
-                // Fallback to old method if image can't be loaded
-                familyStore.setPendingSelfMemberAvatar(imageName: selectedImageName)
             }
         } else {
             familyStore.updatePendingOtherMemberName(id: memberId, name: trimmed)
             // Handle avatar assignment - upload in background without blocking UI
             // Priority:
-            // 1. Selected predefined avatar (upload to productimages)
+            // 1. Selected local memoji (use storagePath, no upload)
             // 2. Custom memoji (use memoji-images storage path, no re-upload)
-            if let selectedImageName = selectedAvatar?.image,
-               let assetImage = UIImage(named: selectedImageName) {
-                // Predefined avatar selected - upload it in background
-                Task {
-                    await familyStore.setAvatarForPendingOtherMember(id: memberId, image: assetImage, webService: webService)
+            if let selectedImageName = selectedAvatar?.image {
+                // Check if it's a local memoji (starts with "memoji_")
+                if selectedImageName.hasPrefix("memoji_") {
+                    // Local memoji selected - use storagePath, no upload needed
+                    Task {
+                        let colorHex = selectedAvatar?.backgroundColor?.toHex()
+                        await familyStore.setAvatarForPendingOtherMemberFromMemoji(
+                            id: memberId,
+                            storagePath: selectedImageName,
+                            backgroundColorHex: colorHex
+                        )
+                    }
+                } else {
+                    // Legacy predefined avatar (shouldn't happen after migration, but handle gracefully)
+                    if let assetImage = UIImage(named: selectedImageName) {
+                        Task {
+                            await familyStore.setAvatarForPendingOtherMember(id: memberId, image: assetImage, webService: webService)
+                        }
+                    } else {
+                        familyStore.setAvatarForPendingOtherMember(id: memberId, imageName: selectedImageName)
+                    }
                 }
             } else if let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty {
                 // Custom avatar from memojiStore - use memoji storage path directly
@@ -232,9 +278,6 @@ struct EditMember: View {
                         backgroundColorHex: memojiStore.backgroundColorHex
                     )
                 }
-            } else if let selectedImageName = selectedAvatar?.image {
-                // Fallback to old method if image can't be loaded
-                familyStore.setAvatarForPendingOtherMember(id: memberId, imageName: selectedImageName)
             }
         }
         // Call onSave immediately so sheet closes

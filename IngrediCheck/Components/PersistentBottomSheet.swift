@@ -22,6 +22,11 @@ struct PersistentBottomSheet: View {
     @State private var tutorialData: TutorialData? 
     @State private var isAnimatingHand: Bool = false
     @State private var dragOffsetY: CGFloat = 0
+    @State private var isGeneratingInviteCode: Bool = false
+
+    // MARK: - CONSTANTS
+
+    private let appStoreURL = "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615"
     
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -532,32 +537,18 @@ struct PersistentBottomSheet: View {
             
         case .wouldYouLikeToInvite(let memberId, let name):
             let _ = print("[PersistentBottomSheet] Rendering .wouldYouLikeToInvite for \(name) (id: \(memberId))")
-            WouldYouLikeToInvite(name: name) {
-                // Invite button pressed - mark member as pending so the UI reflects it
-                familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
-                
-                // If this is a real family (not just pending onboarding members), call the invite API
-                if familyStore.family != nil {
-                    Task {
-                        if let code = await familyStore.invite(memberId: memberId) {
-                            print("--------------------------------------------------")
-                            print("[INVITE CODE] Successfully generated: \(code.lowercased())")
-                            print("--------------------------------------------------")
-                        }
-                    }
-                }
-                
-                // Return to previous screen or home depending on where we are
-                if case .home = coordinator.currentCanvasRoute {
-                    coordinator.navigateInBottomSheet(.homeDefault)
-                } else {
-                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+            WouldYouLikeToInvite(
+                name: name,
+                isLoading: isGeneratingInviteCode
+            ) {
+                Task { @MainActor in
+                    await handleInviteShare(memberId: memberId)
                 }
             } continuePressed: {
-                // Maybe later -> mark member as pending and go back to minimal add members screen
-                familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+                // Maybe later -> do NOT mark pending; only invited members should show "Pending"
                 // If this flow was started from Home/Manage Family, dismiss the sheet.
                 // Otherwise, keep onboarding behavior.
+                isGeneratingInviteCode = false
                 if case .home = coordinator.currentCanvasRoute {
                     coordinator.navigateInBottomSheet(.homeDefault)
                 } else {
@@ -621,9 +612,9 @@ struct PersistentBottomSheet: View {
                     
                     // Navigate back based on where we came from
                     if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
-                        // If we came from meetYourProfile, go back there
-                        if case .meetYourProfile = previousRoute {
-                            coordinator.navigateInBottomSheet(.meetYourProfile)
+                        // If we came from meetYourProfile, go back there with the same memberId
+                        if case .meetYourProfile(let memberId) = previousRoute {
+                            coordinator.navigateInBottomSheet(.meetYourProfile(memberId: memberId))
                             memojiStore.previousRouteForGenerateAvatar = nil
                         } else {
                             coordinator.navigateInBottomSheet(previousRoute)
@@ -755,11 +746,18 @@ struct PersistentBottomSheet: View {
         case .meetYourProfileIntro:
             MeetYourProfileIntroView()
             
-        case .meetYourProfile:
-            MeetYourProfileView {
-                // Check if family creation was initiated from Settings
-                if coordinator.isCreatingFamilyFromSettings {
-                    // Reset the flag
+        case .meetYourProfile(let memberId):
+            MeetYourProfileView(memberId: memberId) {
+                // Check if we're on the family overview screen
+                if coordinator.currentCanvasRoute == .letsMeetYourIngrediFam {
+                    // If on family overview, just go back to the family overview bottom sheet
+                    coordinator.navigateInBottomSheet(.letsMeetYourIngrediFam)
+                } else if coordinator.currentCanvasRoute == .home {
+                    // If on home screen, close the bottom sheet
+                    // If settings sheet was active, it will remain active (it's a separate sheet)
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else if coordinator.isCreatingFamilyFromSettings {
+                    // Check if family creation was initiated from Settings
                     coordinator.isCreatingFamilyFromSettings = false
                     // Navigate to home first
                     coordinator.showCanvas(.home)
@@ -769,7 +767,7 @@ struct PersistentBottomSheet: View {
                         appState.activeSheet = .settings
                     }
                 } else {
-                    // Normal flow - navigate to home
+                    // Normal onboarding flow - navigate to home
                     OnboardingPersistence.shared.markCompleted()
                     coordinator.showCanvas(.home)
                 }
@@ -787,7 +785,7 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                    coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
                 }
             }
         }
@@ -806,6 +804,70 @@ struct PersistentBottomSheet: View {
         }
         
         return .individual
+    }
+    
+    // MARK: - INVITES / SHARE
+
+    @MainActor
+    private func handleInviteShare(memberId: UUID) async {
+        guard !isGeneratingInviteCode else { return }
+
+        isGeneratingInviteCode = true
+        defer { isGeneratingInviteCode = false }
+
+        // Invite button pressed - mark member as pending so the UI reflects it
+        familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+
+        await ensureFamilyExistsForInvitesIfNeeded()
+
+        guard let code = await familyStore.invite(memberId: memberId) else {
+            return
+        }
+
+        let message = inviteShareMessage(inviteCode: code)
+        let items = inviteShareItems(message: message)
+        presentShareSheet(items: items)
+
+        routeAfterInviteShare()
+    }
+
+    @MainActor
+    private func ensureFamilyExistsForInvitesIfNeeded() async {
+        // Ensure the family exists before creating invite codes (needed for onboarding flows).
+        guard familyStore.family == nil else { return }
+
+        if coordinator.isCreatingFamilyFromSettings {
+            await familyStore.addPendingMembersToExistingFamily()
+        } else {
+            await familyStore.createFamilyFromPendingIfNeeded()
+        }
+    }
+
+    private func inviteShareMessage(inviteCode: String) -> String {
+        let formattedCode = formattedInviteCode(inviteCode)
+        return "You've been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
+    }
+
+    private func formattedInviteCode(_ inviteCode: String) -> String {
+        let spaced = inviteCode.map { String($0) }.joined(separator: " ")
+        return "**\(spaced)**"
+    }
+
+    private func inviteShareItems(message: String) -> [Any] {
+        // NOTE: Some share targets (WhatsApp/Instagram, etc.) will drop the text entirely
+        // if we include an image in the activity items. To make sure the invite code + link
+        // always show, we share the message only.
+        [message]
+    }
+
+    @MainActor
+    private func routeAfterInviteShare() {
+        // Return to previous screen or home depending on where we are
+        if case .home = coordinator.currentCanvasRoute {
+            coordinator.navigateInBottomSheet(.homeDefault)
+        } else {
+            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+        }
     }
     
     private func presentShareSheet(items: [Any]) {
@@ -870,8 +932,13 @@ private func handleAssignAvatar(
        let name = displayName,
         !name.isEmpty {
         
-        // If we came from MeetYourProfile, this is ALWAYS for the self member
-        let isFromProfile = memojiStore.previousRouteForGenerateAvatar == .meetYourProfile
+        // If we came from MeetYourProfile, check if it's for self member (memberId is nil)
+        let isFromProfile: Bool = {
+            if case .meetYourProfile(let memberId) = memojiStore.previousRouteForGenerateAvatar {
+                return memberId == nil
+            }
+            return false
+        }()
         
         if isFromProfile || currentPendingSelfMember == nil {
             // This is for the self member

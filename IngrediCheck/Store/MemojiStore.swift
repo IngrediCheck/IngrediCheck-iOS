@@ -21,7 +21,7 @@ final class MemojiStore {
     
     // Store avatar generation selections to preserve state when navigating back
     var selectedFamilyMemberName: String = "young-son"
-    var selectedFamilyMemberImage: String = "image-bg1"
+    var selectedFamilyMemberImage: String = "memoji_1"
     var selectedTool: String = "family-member"
     var selectedGestureIcon: String? = nil
     var selectedHairStyleIcon: String? = nil

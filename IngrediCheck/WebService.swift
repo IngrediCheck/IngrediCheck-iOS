@@ -555,6 +555,9 @@ struct ScanStreamError: Error, LocalizedError {
         
         print("[BARCODE_SCAN] 🔵 Starting barcode scan - barcode: \(barcode), request_id: \(requestId)")
         
+        // Wake up fly.io backend before scan
+        pingFlyIO()
+        
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             print("[BARCODE_SCAN] ❌ Auth error - no access token")
             throw NetworkError.authError
@@ -784,6 +787,9 @@ struct ScanStreamError: Error, LocalizedError {
         let imageSizeKB = imageData.count / 1024
         print("[PHOTO_SCAN] 📸 Submitting image - scan_id: \(scanId), image_size: \(imageSizeKB)KB")
         
+        // Wake up fly.io backend before scan
+        pingFlyIO()
+        
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             print("[PHOTO_SCAN] ❌ Auth error - no access token")
             throw NetworkError.authError
@@ -834,6 +840,9 @@ struct ScanStreamError: Error, LocalizedError {
     
     func reanalyzeScan(scanId: String) async throws -> DTO.Scan {
         print("[REANALYZE] 🔄 Reanalyzing scan - scan_id: \(scanId)")
+        
+        // Wake up fly.io backend before reanalyze
+        pingFlyIO()
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             print("[REANALYZE] ❌ Auth error - no access token")
@@ -1864,6 +1873,45 @@ struct ScanStreamError: Error, LocalizedError {
     }
     
     // MARK: - Ping API
+    
+    func pingFlyIO() {
+        Task.detached { [self] in
+            guard let token = try? await supabaseClient.auth.session.accessToken else {
+                return
+            }
+            
+            guard let url = URL(string: "\(Config.flyIOBaseURL)/ping") else {
+                return
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.timeoutInterval = 10 // Short timeout for wake-up call
+            
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let httpResponse = response as? HTTPURLResponse
+                
+                if httpResponse?.statusCode == 200 {
+                    // Parse response to verify it's working
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let status = json["status"] as? String {
+                        print("[FLY_IO_PING] ✅ Fly.io backend woken up - status: \(status)")
+                    } else {
+                        print("[FLY_IO_PING] ✅ Fly.io backend woken up (response received)")
+                    }
+                } else if httpResponse?.statusCode == 401 {
+                    print("[FLY_IO_PING] ⚠️ Unauthorized - token may be invalid")
+                } else {
+                    print("[FLY_IO_PING] ⚠️ Unexpected status code: \(httpResponse?.statusCode ?? -1)")
+                }
+            } catch {
+                print("[FLY_IO_PING] ⚠️ Ping failed (non-critical): \(error.localizedDescription)")
+            }
+        }
+    }
     
     func ping() {
         Task.detached { [self] in

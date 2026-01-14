@@ -108,8 +108,8 @@ struct MemberAvatar: View {
             }
         }
         
-        // 1) Try local asset first (for predefined avatars)
-        if hash.count < 20 && hash.contains("-") {
+        // 1) Try local asset first (for local memojis)
+        if hash.hasPrefix("memoji_") {
             if let local = UIImage(named: hash) {
                 let isValid = await MainActor.run {
                     let width = local.size.width
@@ -119,7 +119,7 @@ struct MemberAvatar: View {
                 if isValid {
                     avatarImage = local
                     loadedHash = hash
-                    print("[MemberAvatar] ✅ Loaded local avatar for \(member.name) (hash=\(hash))")
+                    print("[MemberAvatar] ✅ Loaded local memoji for \(member.name) (hash=\(hash))")
                     return
                 }
             }

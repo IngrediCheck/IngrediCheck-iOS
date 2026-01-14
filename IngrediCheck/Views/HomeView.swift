@@ -24,6 +24,8 @@ struct HomeView: View {
     @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
     @State private var stats: DTO.StatsResponse? = nil
     @State private var isLoadingStats: Bool = false
+    @State private var showScanCamera: Bool = false
+    @State private var hasCheckedAutoScan: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -491,6 +493,17 @@ struct HomeView: View {
                 )
             }
             
+            // ------------ SCAN CAMERA (Auto-open on app start) ------------
+            .fullScreenCover(isPresented: $showScanCamera, onDismiss: {
+                Task {
+                    await scanHistoryStore.loadHistory(forceRefresh: true)
+                    // Also refresh scan count since a new scan might have occurred
+                    userPreferences.refreshScanCount()
+                }
+            }) {
+                ScanCameraView()
+            }
+            
 
 
             // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
@@ -520,6 +533,18 @@ struct HomeView: View {
             }
             .task {
                 await loadStats()
+            }
+            .onAppear {
+                // Check if we should auto-open scan camera on app start
+                // Only trigger once when HomeView first appears
+                if !hasCheckedAutoScan && userPreferences.startScanningOnAppStart {
+                    hasCheckedAutoScan = true
+                    // Small delay to ensure view is fully loaded
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        showScanCamera = true
+                    }
+                }
             }
             
         }

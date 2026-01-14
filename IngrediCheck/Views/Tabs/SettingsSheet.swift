@@ -94,12 +94,8 @@ struct SettingsSheet: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            if let me = familyStore.family?.selfMember {
-                                familyStore.avatarTargetMemberId = me.id
-                                memojiStore.displayName = me.name
-                            }
-                            memojiStore.previousRouteForGenerateAvatar = .yourCurrentAvatar
-                            coordinator.navigateInBottomSheet(.yourCurrentAvatar)
+                            // Open MeetYourProfileView for self member profile editing
+                            coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
                         }
                     nameEditField()
                 }

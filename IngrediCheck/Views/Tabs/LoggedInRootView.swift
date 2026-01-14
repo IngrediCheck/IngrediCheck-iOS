@@ -135,11 +135,8 @@ struct ListsTabState {
         .environment(coordinator)
         .environmentObject(onboarding)
         .onAppear {
-            if userPreferences.startScanningOnAppStart
-               &&
-               !dietaryPreferences.preferences.isEmpty {
-                appState.activeSheet = .scan
-            }
+            // Note: Auto-scan on app start is now handled in HomeView
+            // to open ScanCameraView directly instead of CheckTab
             refreshHistory()
         }
         .sheet(item: $appState.activeSheet) { sheet in

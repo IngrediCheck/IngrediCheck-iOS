@@ -55,7 +55,7 @@ enum BottomSheetRoute: Hashable {
     // Onboarding completion flow
     case workingOnSummary
     case meetYourProfileIntro
-    case meetYourProfile
+    case meetYourProfile(memberId: UUID? = nil)
     case preferencesAddedSuccess
 }
 
