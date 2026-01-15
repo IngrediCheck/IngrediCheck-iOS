@@ -531,12 +531,17 @@ final class FamilyStore {
         selfMember: FamilyMember,
         otherMembers: [FamilyMember]
     ) async {
-        print("[FamilyStore] createOrUpdateFamily called with name=\(name), self=\(selfMember.name), others=\(otherMembers.map { $0.name })")
+        print("[FamilyStore] 🔵 createOrUpdateFamily called")
+        print("[FamilyStore] 📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer { 
+            isLoading = false
+            print("[FamilyStore] ✅ createOrUpdateFamily completed - isLoading: false")
+        }
         
         do {
+            print("[FamilyStore] ⏳ Calling service.createFamily...")
             family = try await service.createFamily(
                 name: name,
                 selfMember: selfMember,
@@ -546,10 +551,16 @@ final class FamilyStore {
             // Sync pending invite status after update
             syncPendingInviteStatus()
             
-            print("[FamilyStore] createOrUpdateFamily success, family name=\(family?.name ?? "nil")")
+            print("[FamilyStore] ✅ createOrUpdateFamily success - family name: \(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] createOrUpdateFamily error: \(error)")
+            print("[FamilyStore] ❌ createOrUpdateFamily error: \(error)")
+            print("[FamilyStore] ❌ Error message: \(errorMessage ?? "nil")")
+            if let networkError = error as? NetworkError {
+                print("[FamilyStore] ❌ NetworkError details: \(networkError)")
+            } else if let urlError = error as? URLError {
+                print("[FamilyStore] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+            }
         }
     }
     
@@ -685,6 +696,149 @@ final class FamilyStore {
             errorMessage = (error as NSError).localizedDescription
             print("[FamilyStore] createBiteBuddyFamily error: \(error)")
         }
+    }
+    
+    // MARK: - Immediate Actions (Throwing)
+    
+    /// Creates a family immediately with the given self name.
+    /// Throws error for UI handling (Toast/Navigation blocking).
+    func createFamilyImmediate(selfName: String) async throws {
+        print("[FamilyStore] 🔵 createFamilyImmediate called")
+        print("[FamilyStore] 📝 Parameter - selfName: \(selfName)")
+        isLoading = true
+        errorMessage = nil
+        defer { 
+            isLoading = false
+            print("[FamilyStore] ✅ createFamilyImmediate completed - isLoading: false")
+        }
+        
+        let trimmed = selfName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            print("[FamilyStore] ❌ Validation failed - name is empty after trimming")
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
+        }
+        
+        print("[FamilyStore] ✅ Name validation passed - trimmed name: \(trimmed)")
+        
+        // Check if we have a pending self member logic we should respect?
+        // Or just create fresh? The flow "WhatsYourName" usually sets pending self member.
+        // We will respect pending color/avatar if available, otherwise new.
+        
+        let selfMember: FamilyMember
+        if let pending = pendingSelfMember {
+            print("[FamilyStore] 📋 Using pending self member - id: \(pending.id), color: \(pending.color), hasImage: \(pending.imageFileHash != nil)")
+            selfMember = FamilyMember(
+                id: pending.id,
+                name: trimmed,
+                color: pending.color,
+                joined: true,
+                imageFileHash: pending.imageFileHash
+            )
+        } else {
+            let newColor = randomColor()
+            print("[FamilyStore] 🆕 Creating new self member - id: \(UUID()), color: \(newColor)")
+            selfMember = FamilyMember(
+                id: UUID(),
+                name: trimmed,
+                color: newColor,
+                joined: true,
+                imageFileHash: nil
+            )
+        }
+        
+        let familyName = "\(trimmed)'s Family"
+        print("[FamilyStore] 📝 Family name: \(familyName)")
+        
+        do {
+            print("[FamilyStore] ⏳ Calling service.createFamily...")
+            family = try await service.createFamily(
+                name: familyName,
+                selfMember: selfMember,
+                otherMembers: nil
+            )
+            
+            if let family = family {
+                print("[FamilyStore] ✅ Family created successfully - name: \(family.name)")
+                selectedMemberId = family.selfMember.id
+                print("[FamilyStore] ✅ Selected member ID set to: \(selectedMemberId?.uuidString)")
+                // Clear pending self member as it is now persisted
+                pendingSelfMember = nil
+                print("[FamilyStore] ✅ Cleared pending self member")
+            } else {
+                print("[FamilyStore] ⚠️ Family is nil after creation")
+            }
+        } catch {
+            print("[FamilyStore] ❌ createFamilyImmediate failed with error: \(error)")
+            if let networkError = error as? NetworkError {
+                print("[FamilyStore] ❌ NetworkError details: \(networkError)")
+            } else if let urlError = error as? URLError {
+                print("[FamilyStore] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+            }
+            throw error
+        }
+    }
+    
+    /// Adds a member immediately with the given name and optional avatar.
+    /// Uploads image if provided.
+    /// Throws error for UI handling.
+    /// Returns the added member.
+    @discardableResult
+    func addMemberImmediate(
+        name: String,
+        image: UIImage? = nil,
+        storagePath: String? = nil,
+        color: String? = nil,
+        webService: WebService
+    ) async throws -> FamilyMember {
+        print("[FamilyStore] addMemberImmediate called with name=\(name)")
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
+        }
+        
+        var avatarHash: String? = storagePath
+        
+        if let image = image {
+            pendingUploadCount += 1
+             // Using task priority to ensure upload logic runs
+            do {
+                print("[FamilyStore] addMemberImmediate: Uploading avatar image for \(trimmed)")
+                let hash = try await webService.uploadImage(image: image)
+                print("[FamilyStore] addMemberImmediate: ✅ Uploaded avatar hash=\(hash)")
+                avatarHash = hash
+                pendingUploadCount = max(0, pendingUploadCount - 1)
+            } catch {
+                pendingUploadCount = max(0, pendingUploadCount - 1)
+                print("[FamilyStore] addMemberImmediate: ❌ Failed to upload avatar: \(error.localizedDescription)")
+                // Fail soft: Proceed without avatar if upload fails, instead of blocking member creation
+                avatarHash = nil
+            }
+        }
+        
+        // Use provided color or generate random
+        let memberColor = color ?? randomColor()
+        
+        let member = FamilyMember(
+            id: UUID(),
+            name: trimmed,
+            color: memberColor,
+            joined: false, // Other members are not joined by default (requires invite)
+            imageFileHash: avatarHash
+        )
+        
+        family = try await service.addMember(member)
+        
+        // Update pending invite status
+        syncPendingInviteStatus()
+        
+        if let found = family?.otherMembers.first(where: { $0.id == member.id }) {
+            return found
+        }
+        return member
     }
 
     func resetLocalState() {

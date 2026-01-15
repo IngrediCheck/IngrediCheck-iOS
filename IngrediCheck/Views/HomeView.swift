@@ -14,14 +14,23 @@ struct HomeView: View {
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
-    @State private var scrollY: CGFloat = 0
-    @State private var prevValue: CGFloat = 0
-    @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
     @State private var navigationPath: [HistoryRouteItem] = []
     @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
+
+    private final class ScrollTrackingState {
+        var prevValue: CGFloat = 0
+        var maxScrollOffset: CGFloat = 0
+        var didInitialize: Bool = false
+    }
+
+    @State private var scrollTrackingState = ScrollTrackingState()
+    @State private var stats: DTO.StatsResponse? = nil
+    @State private var isLoadingStats: Bool = false
+    @State private var showScanCamera: Bool = false
+    @State private var hasCheckedAutoScan: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -74,7 +83,7 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView(showsIndicators: false) {
+            ScrollView(.vertical, showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 0) {
                     
@@ -114,7 +123,7 @@ struct HomeView: View {
                     .padding(.bottom, 28)
                     
                     // Food Notes & Allergy Summary...
-                    HStack {
+                    HStack(spacing: 12) {
                         VStack(alignment: .leading) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Food Notes")
@@ -122,7 +131,7 @@ struct HomeView: View {
                                     .foregroundStyle(.grayScale150)
                                     .frame(height: 15)
                                 
-                                Text("Here’s what your family avoids  or needs to watch out for.")
+                                Text("Here's what your family avoids  or needs to watch out for.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
                             }
@@ -135,22 +144,25 @@ struct HomeView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         
-                        Spacer()
                         AllergySummaryCard(onTap: {
                             editTargetSectionName = nil
                             showEditableCanvas = true
                         })
+                        .frame(maxWidth: .infinity)
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
                     
-                    // Lifestyle + Family + Average scans
-                    HStack {
-                        AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
+                    // Family + Average scans
+                    HStack(spacing: 12) {
+                        AverageScansCard(
+                            playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
+                            avgScans: stats?.avgScans ?? 0
+                        )
                             .onAppear {
                                 didPlayAverageScansLaunchAnimation = true
                             }
-                            .padding(.trailing, 15)
+                            .frame(maxWidth: .infinity)
                         
                         VStack {
                             VStack(alignment: .leading) {
@@ -200,22 +212,31 @@ struct HomeView: View {
                             }
                             .frame(height: 125)
                         }
+                        .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
                     Image(.homescreenbanner)
                         .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
                         .cornerRadius(20)
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .padding(.bottom, 20)
                     
-                    HStack {
-                        YourBarcodeScans()
+                    HStack(spacing: 12) {
+                        YourBarcodeScans(barcodeScansCount: stats?.barcodeScansCount ?? 0)
+                            .frame(maxWidth: .infinity)
                         UserFeedbackCard()
+                            .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
-                    MatchingRateCard()
+                    MatchingRateCard(
+                        matchedCount: stats?.matchingStats.matched ?? 0,
+                        uncertainCount: stats?.matchingStats.uncertain ?? 0,
+                        unmatchedCount: stats?.matchingStats.unmatched ?? 0
+                    )
                         .padding(.bottom, 20)
                     
                     CreateYourAvatarCard()
@@ -346,6 +367,7 @@ struct HomeView: View {
                         .padding(.bottom , 129)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 20)
                 .padding(.bottom , 30)
                 .padding(.top ,16)
@@ -355,45 +377,56 @@ struct HomeView: View {
                     GeometryReader { geo in
                         Color.clear
                             .onAppear {
-                                scrollY = geo.frame(in: .named("homeScroll")).minY
-                                prevValue = scrollY
-                                maxScrollOffset = scrollY < 0 ? scrollY : 0
+                                let value = geo.frame(in: .named("homeScroll")).minY
+                                scrollTrackingState.prevValue = value
+                                scrollTrackingState.maxScrollOffset = value < 0 ? value : 0
+                                scrollTrackingState.didInitialize = true
                             }
                             .onChange(of: geo.frame(in: .named("homeScroll")).minY) { newValue in
-                                scrollY = newValue
-                                
-                                // Only change state when scrolled past the top (scrollY < 0)
-                                if scrollY < 0 {
-                                    // Track the maximum (most negative) scroll offset reached
-                                    maxScrollOffset = min(maxScrollOffset, newValue)
-                                    
-                                    let scrollDelta = newValue - prevValue
-                                    let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
-                                    
+                                if !scrollTrackingState.didInitialize {
+                                    scrollTrackingState.prevValue = newValue
+                                    scrollTrackingState.maxScrollOffset = newValue < 0 ? newValue : 0
+                                    scrollTrackingState.didInitialize = true
+                                    return
+                                }
+
+                                // Track the maximum (most negative) scroll offset reached
+                                if newValue < 0 {
+                                    scrollTrackingState.maxScrollOffset = min(scrollTrackingState.maxScrollOffset, newValue)
+                                } else {
+                                    scrollTrackingState.maxScrollOffset = 0
+                                }
+
+                                let scrollDelta = newValue - scrollTrackingState.prevValue
+                                let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
+
+                                var nextExpanded = isTabBarExpanded
+
+                                // Only change expansion state when scrolled past the top (newValue < 0)
+                                if newValue < 0 {
                                     if scrollDelta < -minScrollDelta {
-                                        // Scrolling down significantly -> collapse
-                                        isTabBarExpanded = false
+                                        nextExpanded = false
                                     } else if scrollDelta > minScrollDelta {
-                                        // Only expand if scrolling up significantly AND not at the bottom
-                                        // Check if we're significantly above the maximum scroll offset
-                                        let bottomThreshold: CGFloat = 100 // Minimum distance from bottom to allow expansion
-                                        if newValue > (maxScrollOffset + bottomThreshold) {
-                                            isTabBarExpanded = true
+                                        let bottomThreshold: CGFloat = 100
+                                        if newValue > (scrollTrackingState.maxScrollOffset + bottomThreshold) {
+                                            nextExpanded = true
                                         }
                                     }
-                                    // If scrollDelta is too small (bounce/noise), don't change state
-                                } else {
-                                    // Reset max scroll offset when at the top
-                                    maxScrollOffset = 0
                                 }
-                                
-                                prevValue = newValue
+
+                                if nextExpanded != isTabBarExpanded {
+                                    isTabBarExpanded = nextExpanded
+                                }
+
+                                scrollTrackingState.prevValue = newValue
                             }
                     }
                 )
             }
             .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
+            .frame(maxWidth: .infinity)
+            .clipped()
             .overlay(
                 // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
                 LinearGradient(
@@ -411,9 +444,16 @@ struct HomeView: View {
             ).ignoresSafeArea(edges: .bottom)
             .overlay(
                 // TabBar in its original position (respects safe area)
-                TabBar(isExpanded: $isTabBarExpanded, onRecentScansTap: {
-                    navigationPath.append(.recentScansAll)
-                }),
+                TabBar(
+                    isExpanded: $isTabBarExpanded,
+                    onRecentScansTap: {
+                        navigationPath.append(.recentScansAll)
+                    },
+                    onChatBotTap: {
+                        selectedChatDetent = .medium
+                        isChatSheetPresented = true
+                    }
+                ),
                 alignment: .bottom
             )
             .background(Color.white)
@@ -436,8 +476,10 @@ struct HomeView: View {
             }
 
             // ------------ SETTINGS SCREEN ------------
+            // Use SettingsContentView (without NavigationStack) in navigationDestination
+            // to avoid nested NavigationStack issues that cause NavigationPath comparisonTypeMismatch errors
             .navigationDestination(isPresented: $isSettingsPresented) {
-                SettingsSheet()
+                SettingsContentView()
                     .environment(userPreferences)
                     .environment(coordinator)
                     .environment(memojiStore)
@@ -445,7 +487,12 @@ struct HomeView: View {
             
             // ------------ EDITABLE CANVAS ------------
             .navigationDestination(isPresented: $showEditableCanvas) {
-                EditableCanvasView(targetSectionName: editTargetSectionName)
+                EditableCanvasView(
+                    targetSectionName: editTargetSectionName,
+                    onBack: {
+                        showEditableCanvas = false
+                    }
+                )
                     .environmentObject(onboarding)
             }
             
@@ -472,6 +519,17 @@ struct HomeView: View {
                     isPlaceholderMode: false,
                     presentationSource: .homeView
                 )
+            }
+            
+            // ------------ SCAN CAMERA (Auto-open on app start) ------------
+            .fullScreenCover(isPresented: $showScanCamera, onDismiss: {
+                Task {
+                    await scanHistoryStore.loadHistory(forceRefresh: true)
+                    // Also refresh scan count since a new scan might have occurred
+                    userPreferences.refreshScanCount()
+                }
+            }) {
+                ScanCameraView()
             }
             
 
@@ -501,7 +559,37 @@ struct HomeView: View {
                      RecentScansPageView()
                 }
             }
+            .task {
+                await loadStats()
+            }
+            .onAppear {
+                // Check if we should auto-open scan camera on app start
+                // Only trigger once when HomeView first appears
+                if !hasCheckedAutoScan && userPreferences.startScanningOnAppStart {
+                    hasCheckedAutoScan = true
+                    // Small delay to ensure view is fully loaded
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        showScanCamera = true
+                    }
+                }
+            }
             
+        }
+    }
+    
+    private func loadStats() async {
+        guard !isLoadingStats else { return }
+        isLoadingStats = true
+        defer { isLoadingStats = false }
+        
+        do {
+            let fetchedStats = try await webService.fetchStats()
+            await MainActor.run {
+                stats = fetchedStats
+            }
+        } catch {
+            print("[HomeView] Failed to load stats: \(error.localizedDescription)")
         }
     }
     
@@ -517,6 +605,9 @@ struct HomeView: View {
         await MainActor.run {
             appState.listsTabState.scans = scanHistoryStore.scans
         }
+        
+        // Refresh stats
+        await loadStats()
     }
 }
 

@@ -249,6 +249,16 @@ class Onboarding: ObservableObject {
             accumulatedSteps += screenCount
         }
     }
+    
+    /// Set state to the very last step (used for restoration when user is at Fine Tune or Summary)
+    func restoreToLastStep() {
+        if !sections.isEmpty {
+            currentSectionIndex = sections.count - 1
+            if let lastSection = sections.last, !lastSection.screens.isEmpty {
+                currentScreenIndex = lastSection.screens.count - 1
+            }
+        }
+    }
 
     private static func readCachedPreferences() -> Preferences? {
         guard let rawValue = UserDefaults.standard.data(forKey: Onboarding.preferencesCacheKey),

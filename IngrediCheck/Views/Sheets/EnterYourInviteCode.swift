@@ -12,8 +12,23 @@ struct EnterYourInviteCode : View {
     @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
+    @State private var shouldFocus: Bool = false
+    @State private var shouldClear: Bool = false
     let yesPressed: (() -> Void)?
     let noPressed: (() -> Void)?
+    
+    // Computed property to check if all 6 characters are entered
+    private var isCodeComplete: Bool {
+        code.allSatisfy { !$0.isEmpty }
+    }
+    
+    // Computed property for button title
+    private var buttonTitle: String {
+        if isError && isCodeComplete {
+            return "Start Over"
+        }
+        return "Verify & Continue"
+    }
     
     init(yesPressed: (() -> Void)? = nil, noPressed: (() -> Void)? = nil) {
         self.yesPressed = yesPressed
@@ -50,7 +65,7 @@ struct EnterYourInviteCode : View {
             }
             .padding(.bottom, 24)
             
-            InviteTextField(code: $code, isError: $isError)
+            InviteTextField(code: $code, isError: $isError, shouldFocus: $shouldFocus, shouldClear: $shouldClear)
                 .padding(.bottom, 12)
             
             if isError {
@@ -66,19 +81,27 @@ struct EnterYourInviteCode : View {
             }
             
             HStack(spacing: 16) {
-                Button {
-                    noPressed?()
-                } label: {
-                    Text("No, continue")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(height: 52)
-                        .frame(minWidth: 152)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
-                }
+                
+                Spacer()
                 
                 Button {
+                    // If error occurred and button shows "Start Over", reset the form
+                    if isError && isCodeComplete {
+                        // Clear all code
+                        code = Array(repeating: "", count: 6)
+                        isError = false
+                        // Trigger clear and focus to first box and show keyboard
+                        shouldClear = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            shouldClear = false
+                            shouldFocus = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                shouldFocus = false
+                            }
+                        }
+                        return
+                    }
+                    
                     let entered = code.joined().trimmingCharacters(in: .whitespacesAndNewlines)
                     Task {
                         // Require a full 6-character code
@@ -110,15 +133,15 @@ struct EnterYourInviteCode : View {
                         }
                     }
                 } label: {
-                    ZStack {
-                        GreenCapsule(title: isVerifying ? "Verifying..." : "Verify & Continue")
-                        if isVerifying {
-                            ProgressView()
-                                .tint(.white)
-                        }
-                    }
+                    GreenCapsule(
+                        title: buttonTitle,
+                        isLoading: isVerifying,
+                        isDisabled: isVerifying || !isCodeComplete
+                    )
                 }
-                .disabled(isVerifying)
+                .disabled(isVerifying || !isCodeComplete)
+                
+                Spacer()
             }
             .padding(.bottom, 20)
             HStack{
@@ -144,6 +167,8 @@ struct EnterYourInviteCode : View {
     struct InviteTextField: View {
         @Binding var code: [String]
         @Binding var isError: Bool
+        @Binding var shouldFocus: Bool
+        @Binding var shouldClear: Bool
         @State private var input: String = ""
         @FocusState private var isFocused: Bool
 
@@ -154,12 +179,13 @@ struct EnterYourInviteCode : View {
             ZStack {
                 // Hidden TextField that captures all input and backspace behavior
                 TextField("", text: $input)
-                    .textInputAutocapitalization(.never)
+                    .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled(true)
+                    .keyboardType(.asciiCapable)
                     .focused($isFocused)
                     .onChange(of: input) { newValue in
-                        // Allow only A-Z and 0-9, uppercase, and limit to 6 chars
-                        let filtered = newValue.filter { $0.isLetter || $0.isNumber }
+                        // Allow only A-Z and 0-9, convert to uppercase, and limit to 6 chars
+                        let filtered = newValue.uppercased().filter { $0.isLetter || $0.isNumber }
                         let trimmed = String(filtered.prefix(6))
                         if trimmed != newValue { input = trimmed }
 
@@ -174,6 +200,16 @@ struct EnterYourInviteCode : View {
                     }
                     .frame(width: 1, height: 1)
                     .opacity(0.01)
+                    .onChange(of: shouldFocus) { newValue in
+                        if newValue {
+                            isFocused = true
+                        }
+                    }
+                    .onChange(of: shouldClear) { newValue in
+                        if newValue {
+                            input = ""
+                        }
+                    }
 
                 // Visual OTP boxes
                 HStack(spacing: 14) {
@@ -199,6 +235,12 @@ struct EnterYourInviteCode : View {
             .onAppear {
                 // Pre-fill input if parent provided existing code
                 input = code.joined().uppercased()
+            }
+            .onChange(of: isError) { newValue in
+                // When error is cleared, ensure focus is maintained
+                if !newValue && code.allSatisfy({ $0.isEmpty }) {
+                    isFocused = true
+                }
             }
         }
 

@@ -14,6 +14,15 @@ struct LetsMeetYourIngrediFamView: View {
     @Environment(WebService.self) private var webService
     
     @State private var showLeaveConfirm = false
+    @State private var shareItems: ShareItem?
+    @State private var isGeneratingInviteCode: Bool = false
+    
+    private let appStoreURL = "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615"
+    
+    struct ShareItem: Identifiable {
+        let id = UUID()
+        let items: [Any]
+    }
     
     private var shouldShowWelcomeFamily: Bool {
         switch coordinator.currentBottomSheetRoute {
@@ -54,7 +63,8 @@ struct LetsMeetYourIngrediFamView: View {
     }
     
     var body: some View {
-        if shouldShowWelcomeFamily {
+        Group {
+            if shouldShowWelcomeFamily {
             VStack {
                Text("Welcome to IngrediFam !")
                     .font(ManropeFont.bold.size(16))
@@ -77,13 +87,14 @@ struct LetsMeetYourIngrediFamView: View {
                 Spacer()
             }
             .navigationBarBackButtonHidden(true)
-        } else if let me = familyStore.pendingSelfMember {
+        } else if let me = familyStore.family?.selfMember ?? familyStore.pendingSelfMember {
             VStack(spacing: 0) {
                 Text("Your Family Overview")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
-                    .padding(.top, 32)
+//                    .padding(.top, 32)
                     .padding(.bottom, 12)
+                  
 
                 ScrollView {
                     VStack(spacing: 12) {
@@ -152,10 +163,15 @@ struct LetsMeetYourIngrediFamView: View {
                         .padding(.horizontal, 20)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            coordinator.navigateInBottomSheet(.editMember(memberId: me.id, isSelf: true))
+                            coordinator.navigateInBottomSheet(.meetYourProfile(memberId: me.id))
                         }
 
-                        ForEach(familyStore.pendingOtherMembers) { member in
+                        let others = (familyStore.family?.otherMembers ?? []) + familyStore.pendingOtherMembers
+                        // Remove duplicates if any (though pending should be cleared if family exists)
+                        // Actually, if family exists, pendingOtherMembers should be empty after create/add.
+                        // But if we are in AddMoreMembers flow, we might have added members to family immediately.
+                        
+                        ForEach(others) { member in
                             HStack(spacing: 12) {
                                 MemberAvatarView(member: member, initial: initial(from:))
 
@@ -163,7 +179,9 @@ struct LetsMeetYourIngrediFamView: View {
                                     Text(member.name)
                                         .font(NunitoFont.semiBold.size(18))
                                         .foregroundStyle(.grayScale150)
-                                    if member.invitePending == true {
+                                    if member.invitePending == true || (!member.joined && member.id != me.id) {
+                                        // Show pending for anyone not joined (except self which is assumed joined)
+                                        // or if explicitly invitePending
                                         HStack(spacing: 6) {
                                             Image(systemName: "exclamationmark.circle.fill")
                                                 .font(.system(size: 12, weight: .semibold))
@@ -188,7 +206,9 @@ struct LetsMeetYourIngrediFamView: View {
                                 Spacer()
 
                                 Button {
-                                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                                    Task { @MainActor in
+                                        await handleInviteShare(memberId: member.id)
+                                    }
                                 } label: {
                                     HStack(spacing: 10) {
                                         Image( "share")
@@ -225,7 +245,7 @@ struct LetsMeetYourIngrediFamView: View {
                             .padding(.horizontal, 20)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: false))
+                                coordinator.navigateInBottomSheet(.meetYourProfile(memberId: member.id))
                             }
                         }
                     }
@@ -258,6 +278,85 @@ struct LetsMeetYourIngrediFamView: View {
             }
             .navigationBarBackButtonHidden(true)
         }
+        }
+        .sheet(item: $shareItems) { shareItem in
+            ShareSheet(activityItems: shareItem.items)
+        }
+    }
+    
+    // MARK: - Invite Share Helper
+    
+    @MainActor
+    private func handleInviteShare(memberId: UUID) async {
+        guard !isGeneratingInviteCode else { return }
+        
+        isGeneratingInviteCode = true
+        defer { isGeneratingInviteCode = false }
+        
+        // Mark member as pending so the UI reflects it
+        familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+        
+        // Ensure family exists before creating invite codes
+        if familyStore.family == nil {
+            if coordinator.isCreatingFamilyFromSettings {
+                await familyStore.addPendingMembersToExistingFamily()
+            } else {
+                await familyStore.createFamilyFromPendingIfNeeded()
+            }
+        }
+        
+        guard let code = await familyStore.invite(memberId: memberId) else {
+            return
+        }
+        
+        let message = inviteShareMessage(inviteCode: code)
+        let items = [message]
+        shareItems = ShareItem(items: items)
+    }
+    
+    private func inviteShareMessage(inviteCode: String) -> String {
+        let formattedCode = formattedInviteCode(inviteCode)
+        return "You've been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
+    }
+    
+    private func formattedInviteCode(_ inviteCode: String) -> String {
+        let spaced = inviteCode.map { String($0) }.joined(separator: " ")
+        return "**\(spaced)**"
+    }
+}
+
+// MARK: - SwiftUI Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: applicationActivities
+        )
+        
+        // Configure for iPad
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+            popover.sourceRect = CGRect(
+                x: UIScreen.main.bounds.midX,
+                y: UIScreen.main.bounds.maxY,
+                width: 0,
+                height: 0
+            )
+            popover.permittedArrowDirections = []
+        }
+        
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
     }
 }
 

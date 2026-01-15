@@ -71,19 +71,39 @@ class AppNavigationCoordinator {
     var onNavigationChange: (() async -> Void)?
 
     init(initialRoute: CanvasRoute = .heyThere) {
-        self.currentCanvasRoute = initialRoute
-        if case .mainCanvas(let flow) = initialRoute {
-            self.onboardingFlow = flow
+        // PRIORITY: Check local persistence first.
+        // If the user has completed onboarding previously, FORCE start at .home
+        // regardless of what the caller passed (unless we want to support deep linking to specific onboarding steps, 
+        // but for app launch .heyThere is usually passed).
+        if OnboardingPersistence.shared.isLocallyCompleted {
+            self.currentCanvasRoute = .home
+            self.onboardingFlow = .individual // Default, will be updated if needed or doesn't matter for Home
+            self.currentBottomSheetRoute = .homeDefault
+        } else {
+            self.currentCanvasRoute = initialRoute
+            if case .mainCanvas(let flow) = initialRoute {
+                self.onboardingFlow = flow
+            }
+            self.currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: initialRoute)
         }
-        self.currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: initialRoute)
     }
     
     func setCanvasRoute(_ route: CanvasRoute) {
         withAnimation(.easeInOut) {
             currentCanvasRoute = route
-            if case .mainCanvas(let flow) = route {
+            
+            // Explicitly update onboardingFlow based on the route
+            switch route {
+            case .mainCanvas(let flow):
                 onboardingFlow = flow
+            case .letsMeetYourIngrediFam, .welcomeToYourFamily:
+                onboardingFlow = .family
+            case .dietaryPreferencesAndRestrictions(let isFamilyFlow):
+                onboardingFlow = isFamilyFlow ? .family : .individual
+            default:
+                break
             }
+            
             currentBottomSheetRoute = AppNavigationCoordinator.bottomSheetRoute(for: route)
         }
         
@@ -102,9 +122,11 @@ class AppNavigationCoordinator {
         withAnimation(.easeInOut) {
             // When navigating back to the early onboarding sheets that live on the HeyThere canvas,
             // ensure the canvas is reset to .heyThere so the correct background imagery shows.
+            // BUT: Only do this if onboarding is NOT completed, otherwise we'll reset users back to Get Started screen
             switch route {
             case .alreadyHaveAnAccount, .welcomeBack, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
-                if currentCanvasRoute != .heyThere {
+                // Only reset to .heyThere if onboarding is not completed
+                if !OnboardingPersistence.shared.isLocallyCompleted && currentCanvasRoute != .heyThere {
                     currentCanvasRoute = .heyThere
                 }
             default:
@@ -190,6 +212,12 @@ class AppNavigationCoordinator {
             return .preferencesAddedSuccess
         case .summaryAddFamily:
             return .allSetToJoinYourFamily
+        case .readyToScanFirstProduct:
+            return .readyToScanFirstProduct
+        case .seeHowScanningWorks:
+            return .seeHowScanningWorks
+        case .whyWeNeedThesePermissions:
+            return .quickAccessNeeded
         }
     }
     
@@ -226,7 +254,7 @@ class AppNavigationCoordinator {
             }
             return .dynamicOnboarding
             
-        case .home, .summaryJustMe, .summaryAddFamily:
+        case .home, .summaryJustMe, .summaryAddFamily, .readyToScanFirstProduct, .seeHowScanningWorks, .whyWeNeedThesePermissions:
             return .completed
         }
     }
@@ -294,10 +322,21 @@ class AppNavigationCoordinator {
             return (.workingOnSummary, nil)
         case .meetYourProfileIntro:
             return (.meetYourProfileIntro, nil)
-        case .meetYourProfile:
+        case .meetYourProfile(let memberId):
+            if let memberId = memberId {
+                return (.meetYourProfile, memberId.uuidString)
+            }
             return (.meetYourProfile, nil)
         case .preferencesAddedSuccess:
             return (.preferencesAddedSuccess, nil)
+        case .readyToScanFirstProduct:
+            return (.readyToScanFirstProduct, nil)
+        case .seeHowScanningWorks:
+            return (.seeHowScanningWorks, nil)
+        case .quickAccessNeeded:
+            return (.quickAccessNeeded, nil)
+        case .loginToContinue:
+            return (.loginToContinue, nil)
         }
     }
     
@@ -379,9 +418,20 @@ class AppNavigationCoordinator {
         case .meetYourProfileIntro:
             return .meetYourProfileIntro
         case .meetYourProfile:
-            return .meetYourProfile
+            if let param = param, let memberId = UUID(uuidString: param) {
+                return .meetYourProfile(memberId: memberId)
+            }
+            return .meetYourProfile(memberId: nil)
         case .preferencesAddedSuccess:
             return .preferencesAddedSuccess
+        case .readyToScanFirstProduct:
+            return .readyToScanFirstProduct
+        case .seeHowScanningWorks:
+            return .seeHowScanningWorks
+        case .quickAccessNeeded:
+            return .quickAccessNeeded
+        case .loginToContinue:
+            return .loginToContinue
         }
     }
     static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
@@ -435,6 +485,14 @@ class AppNavigationCoordinator {
              canvas = .home
         case .preferencesAddedSuccess:
              canvas = .summaryJustMe
+        case .readyToScanFirstProduct:
+             canvas = .readyToScanFirstProduct
+        case .seeHowScanningWorks:
+             canvas = .seeHowScanningWorks
+        case .quickAccessNeeded:
+             canvas = .whyWeNeedThesePermissions
+        case .loginToContinue:
+             canvas = .whyWeNeedThesePermissions
         default:
              break
         }

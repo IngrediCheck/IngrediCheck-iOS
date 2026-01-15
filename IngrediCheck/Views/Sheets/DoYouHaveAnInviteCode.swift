@@ -46,22 +46,13 @@ struct DoYouHaveAnInviteCode: View {
             .padding(.bottom, 24)
 
             HStack(spacing: 16) {
-               
-               Button {
-                    yesPressed?()
+                SecondaryButton(
+                    title: "Enter invite code",
+                    width: 152,
+                    takeFullWidth: true,
+                    action: { yesPressed?() }
+                )
                 
-                    } label: {
-                    Text("Enter invite code")
-                                        .font(NunitoFont.semiBold.size(16))
-                                        .foregroundStyle(.grayScale110)
-                                        .frame(height: 52)
-                                        .frame(minWidth: 152)
-                                        .frame(maxWidth: .infinity)
-                                        .background(
-                                            Capsule()
-                                                .foregroundStyle(.grayScale40)
-                                        )
-                                }
                 Button {
                     noPressed?()
                 } label: {

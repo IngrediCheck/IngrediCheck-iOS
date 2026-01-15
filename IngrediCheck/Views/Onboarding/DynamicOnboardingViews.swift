@@ -76,7 +76,7 @@ struct DynamicOptionsQuestionView: View {
     private func toggleSelection(for name: String) {
         var values = valuesForCurrentStep()
         let lowerName = name.lowercased()
-        let isExclusive = (lowerName == "other" || lowerName == "none of these apply")
+        let isExclusive = (lowerName == "none of these apply")
         
         if isExclusive {
             // If Exclusive option is selected:
@@ -88,9 +88,9 @@ struct DynamicOptionsQuestionView: View {
                 values = [name]
             }
         } else {
-            // Normal option selected
-            // 1. Remove any exclusive options ("Other", "None of these apply")
-            values.removeAll { $0.lowercased() == "other" || $0.lowercased() == "none of these apply" }
+            // Normal option selected (including "Other")
+            // 1. Remove any exclusive options ("None of these apply")
+            values.removeAll { $0.lowercased() == "none of these apply" }
             
             // 2. Toggle the selected option
             if let index = values.firstIndex(of: name) {
@@ -216,7 +216,7 @@ struct DynamicSubStepsQuestionView: View {
     private func toggleSelection(cardTitle: String, chipName: String) {
         var set = selections(for: cardTitle)
         let lowerName = chipName.lowercased()
-        let isExclusive = (lowerName == "other" || lowerName == "none of these apply")
+        let isExclusive = (lowerName == "none of these apply")
         
         if isExclusive {
             if set.contains(chipName) {
@@ -225,11 +225,14 @@ struct DynamicSubStepsQuestionView: View {
                 set = [chipName]
             }
         } else {
-            let exclusives = set.filter { $0.lowercased() == "other" || $0.lowercased() == "none of these apply" }
+            // Normal option selected (including "Other")
+            // Remove any exclusive options ("None of these apply")
+            let exclusives = set.filter { $0.lowercased() == "none of these apply" }
             for exclusive in exclusives {
                 set.remove(exclusive)
             }
             
+            // Toggle the selected option
             if set.contains(chipName) {
                 set.remove(chipName)
             } else {
@@ -385,19 +388,13 @@ struct DynamicRegionsQuestionView: View {
     
     private func toggleSelection(sectionTitle: String, chipName: String) {
         let lowerChipName = chipName.lowercased()
-        let lowerSectionTitle = sectionTitle.lowercased()
         
         // "None of these apply" is ALWAYS Global Exclusive.
-        // "Other" is Global Exclusive ONLY if it is in a top-level section named "Other" (The "Outer Other").
-        // Otherwise, "Other" is just Local Exclusive (e.g. "Asian" -> "Other").
+        // "Other" is now inclusive and behaves like a normal option.
         
         let isNone = (lowerChipName == "none of these apply")
-        let isOuterOther = (lowerChipName == "other" && lowerSectionTitle == "other")
         
-        let isGlobalExclusive = isNone || isOuterOther
-        let isLocalExclusive = (lowerChipName == "other" && !isOuterOther)
-        
-        if isGlobalExclusive {
+        if isNone {
             // GLOBAL EXCLUSIVE LOGIC
             // 1. Clear ALL other sections
             clearAllSections()
@@ -412,39 +409,27 @@ struct DynamicRegionsQuestionView: View {
             syncRegionPreferences(from: set, for: sectionTitle)
             
         } else {
-            // NORMAL or LOCAL EXCLUSIVE LOGIC
+            // NORMAL OPTION LOGIC (including "Other")
             
             // 1. Check if we need to clear any Global Exclusives from OTHER sections
-            // (e.g. if "None of these apply" or "Outer Other" was selected, clear it)
+            // (e.g. if "None of these apply" was selected, clear it)
             clearGlobalExclusivesFromOtherSections(currentSectionTitle: sectionTitle)
             
             var set = selections(for: sectionTitle)
             
-            if isLocalExclusive {
-                // Local Exclusive: Clear other chips in THIS section
-                if set.contains(chipName) {
-                    set.remove(chipName)
-                } else {
-                    set = [chipName]
-                }
-            } else {
-                // Normal Option
-                // 1. Remove Local Exclusives ("Other") in THIS section
-                if let other = set.first(where: { $0.lowercased() == "other" }) {
-                    set.remove(other)
-                }
-                // 2. Remove Global Exclusives ("None of these apply") in THIS section
-                if let none = set.first(where: { $0.lowercased() == "none of these apply" }) {
-                    set.remove(none)
-                }
-                
-                // 3. Toggle
-                if set.contains(chipName) {
-                    set.remove(chipName)
-                } else {
-                    set.insert(chipName)
-                }
+            // Normal Option (including "Other")
+            // 1. Remove Global Exclusives ("None of these apply") in THIS section
+            if let none = set.first(where: { $0.lowercased() == "none of these apply" }) {
+                set.remove(none)
             }
+            
+            // 2. Toggle
+            if set.contains(chipName) {
+                set.remove(chipName)
+            } else {
+                set.insert(chipName)
+            }
+            
             syncRegionPreferences(from: set, for: sectionTitle)
         }
     }
@@ -465,24 +450,16 @@ struct DynamicRegionsQuestionView: View {
             // Skip the current section (we handle it separately)
             if key == currentSectionTitle { continue }
             
-            // Check if this section has "None of these apply" OR is an "Outer Other" section
+            // Check if this section has "None of these apply"
             let hasNone = items.contains(where: { $0.lowercased() == "none of these apply" })
-            let isOuterOtherSection = (key.lowercased() == "other" && items.contains(where: { $0.lowercased() == "other" }))
             
-            if hasNone || isOuterOtherSection {
-                // Remove the global exclusive item(s)
-                // For Outer Other, we clear the whole section since "Other" is likely the only item
-                // For None, we filter it out
-                
-                if isOuterOtherSection {
+            if hasNone {
+                // Remove the global exclusive item
+                let newItems = items.filter { $0.lowercased() != "none of these apply" }
+                if newItems.isEmpty {
                     nestedDict[key] = nil
                 } else {
-                    let newItems = items.filter { $0.lowercased() != "none of these apply" }
-                    if newItems.isEmpty {
-                        nestedDict[key] = nil
-                    } else {
-                        nestedDict[key] = newItems
-                    }
+                    nestedDict[key] = newItems
                 }
                 changed = true
             }
@@ -625,231 +602,6 @@ struct DynamicOnboardingStepView: View {
     return DynamicOnboardingStepView(step: step, flowType: .individual, preferences: .constant(Preferences()))
 }
 
-// MARK: - Meet Your Profile View
-
-struct MeetYourProfileView: View {
-    var onContinue: () -> Void
-    @Environment(FamilyStore.self) var familyStore
-    @Environment(MemojiStore.self) var memojiStore
-    @Environment(AppNavigationCoordinator.self) var coordinator
-    @State private var primaryMemberName: String = ""
-    @FocusState private var isEditingPrimaryName: Bool
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Avatar Section
-            VStack(spacing: 8) {
-                ZStack(alignment: .bottomTrailing) {
-                    Group {
-                        if let image = memojiStore.image {
-                            // 1. Show the image that was JUST generated
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 80, height: 80)
-                                .background(Color(hex: memojiStore.backgroundColorHex ?? "#E0BBE4"))
-                                .clipShape(Circle())
-                        } else if let me = (familyStore.family?.selfMember ?? familyStore.pendingSelfMember),
-                                  let hash = me.imageFileHash, !hash.isEmpty {
-                            // 2. Show the avatar from the member's data (saved or pending)
-                            MemberAvatar.custom(member: me, size: 80, imagePadding: 0)
-                        } else {
-                            // 3. Default placeholder with curly-lady
-                            ZStack {
-                                Circle()
-                                    .fill(Color(hex: (familyStore.family?.selfMember.color ?? familyStore.pendingSelfMember?.color) ?? memojiStore.backgroundColorHex ?? "#E0BBE4"))
-                                    .frame(width: 80, height: 80)
-                                
-                                Image("curly-lady")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(Circle())
-                            }
-                        }
-                    }
-                    
-                    Button {
-                         // Sync current name to store before generating
-                         commitPrimaryName()
-                         
-                         // Navigation to avatar generation
-                         memojiStore.displayName = primaryMemberName
-                         
-                         // Set the target member ID so handleAssignAvatar knows who to update
-                         if let me = familyStore.family?.selfMember {
-                             familyStore.avatarTargetMemberId = me.id
-                         } else if let me = familyStore.pendingSelfMember {
-                             familyStore.avatarTargetMemberId = me.id
-                         } else {
-                             // Create pending self member if none exists
-                             familyStore.setPendingSelfMember(name: primaryMemberName)
-                             familyStore.avatarTargetMemberId = familyStore.pendingSelfMember?.id
-                         }
-                         
-                         memojiStore.previousRouteForGenerateAvatar = .meetYourProfile
-                         coordinator.navigateInBottomSheet(.generateAvatar)
-                    } label: {
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 28, height: 28)
-                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
-                            .overlay(
-                                Image("pen-line")
-                                    .resizable()
-                                    .frame(width: 14, height: 14)
-                                    .foregroundStyle(.grayScale100)
-                            )
-                    }
-                    .offset(x: 4, y: 4)
-                }
-            }
-            .padding(.top, 16)
-
-            // Greeting Title
-            HStack(spacing: 8) {
-                Text("Hello,")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                
-                HStack(spacing: 8) {
-                    TextField("", text: $primaryMemberName)
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(Color(hex: "#303030"))
-                        .disableAutocorrection(true)
-                        .focused($isEditingPrimaryName)
-                        .submitLabel(.done)
-                        .onSubmit { commitPrimaryName() }
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Image("pen-line")
-                        .resizable()
-                        .frame(width: 12, height: 12)
-                        .foregroundStyle(.grayScale100)
-                        .onTapGesture { isEditingPrimaryName = true }
-                }
-                .padding(.leading, 8)
-                .padding(.trailing, 5)
-                .frame(height: 35)
-                .frame(maxWidth: 250)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(isEditingPrimaryName ? Color(hex: "#EEF5E3") : .white)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
-                )
-                .contentShape(Rectangle())
-                .fixedSize(horizontal: true, vertical: false)
-                .onTapGesture { isEditingPrimaryName = true }
-                
-                Text("!")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-            }
-            .padding(.top, 24)
-            .padding(.bottom, 16)
-            
-            // Description
-            Text("We’ve created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
-                .font(ManropeFont.medium.size(12))
-                .foregroundStyle(.grayScale100)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 40)
-            
-            // Continue Button
-            Button(action: {
-                commitPrimaryName()
-                onContinue()
-            }) {
-                GreenCapsule(title: "Continue", width: 159)
-                    .frame(width: 159)
-            }
-            .padding(.bottom, 24)
-        }
-        .frame(maxWidth: .infinity)
-        .onAppear {
-            if let family = familyStore.family {
-                // If it's the "Just Me" flow, backend defaults the member name to "Me"
-                // but the family name to "Bite Buddy". We should show "Bite Buddy" here.
-                if family.selfMember.name == "Me" && !family.name.isEmpty {
-                    primaryMemberName = family.name
-                } else {
-                    primaryMemberName = family.selfMember.name
-                }
-            } else if let pending = familyStore.pendingSelfMember {
-                primaryMemberName = pending.name
-            } else {
-                primaryMemberName = "Bite Buddy"
-            }
-        }
-        .onChange(of: isEditingPrimaryName) { _, editing in
-            if !editing {
-                commitPrimaryName()
-            }
-        }
-        .onChange(of: primaryMemberName) { oldValue, newValue in
-            // Filter to letters and spaces only
-            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
-            var finalized = filtered
-            
-            // Limit to 25 characters
-            if finalized.count > 25 {
-                finalized = String(finalized.prefix(25))
-            }
-            
-            // Limit to max 3 words (max 2 spaces)
-            let components = finalized.components(separatedBy: .whitespaces)
-            if components.count > 3 {
-                finalized = components.prefix(3).joined(separator: " ")
-            }
-            
-            if finalized != newValue {
-                primaryMemberName = finalized
-            }
-        }
-    }
-    
-    private func commitPrimaryName() {
-        let trimmed = primaryMemberName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        
-        Task { @MainActor in
-            if let family = familyStore.family {
-                var me = family.selfMember
-                guard me.name != trimmed else { return }
-                me.name = trimmed
-                await familyStore.editMember(me)
-            } else if let pending = familyStore.pendingSelfMember {
-                if pending.name != trimmed {
-                    familyStore.updatePendingSelfMemberName(trimmed)
-                }
-            } else {
-                // If neither exists, create pending self member
-                familyStore.setPendingSelfMember(name: trimmed)
-            }
-        }
-    }
-}
-
-#Preview("Meet Your Profile View") {
-    let familyStore = FamilyStore()
-    let memojiStore = MemojiStore()
-    
-    // Set up mock memoji data for preview
-    memojiStore.backgroundColorHex = "#E0BBE4"
-    memojiStore.image = UIImage(systemName: "person.circle.fill")
-    
-    return MeetYourProfileView(onContinue: {})
-        .environment(familyStore)
-        .environment(memojiStore)
-}
-
 // MARK: - Meet Your Profile Intro View
 
 struct MeetYourProfileIntroView: View {
@@ -860,7 +612,7 @@ struct MeetYourProfileIntroView: View {
             Spacer()
             
             Button(action: {
-                coordinator.navigateInBottomSheet(.meetYourProfile)
+                coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
             }) {
                 GreenCapsule(title: "Continue", width: 159)
                     .frame(width: 159)
@@ -877,6 +629,7 @@ struct PreferencesAddedSuccessSheet: View {
     
     var body: some View {
         VStack(spacing: 0) {
+          
             VStack(spacing: 12) {
                 Text("Preferences added successfully!")
                     .font(NunitoFont.bold.size(22))
@@ -891,14 +644,17 @@ struct PreferencesAddedSuccessSheet: View {
                   
                     .padding(.horizontal, 24)
             }
-            
-            Spacer()
+            .padding(.bottom , 40)
+        
+           
             
             Button(action: onContinue) {
                 GreenCapsule(title: "Continue")
                     .frame(width : 152 , height : 52)
             }
+            
             .buttonStyle(.plain)
+            .padding(.bottom ,32)
          
            
         }
@@ -908,6 +664,8 @@ struct PreferencesAddedSuccessSheet: View {
         .padding(.bottom, 24)
     }
 }
+
+
 struct EditSectionBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(FamilyStore.self) private var familyStore

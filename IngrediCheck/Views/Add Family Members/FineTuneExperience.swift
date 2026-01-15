@@ -37,29 +37,18 @@ struct FineTuneExperience: View {
             .padding(.bottom, 40)
             
             HStack(spacing: 16) {
-                Button {
-                    Task {
-                        await handleAllSet()
+                SecondaryButton(
+                    title: "All Set!",
+                    width: 160,
+                    takeFullWidth: false,
+                    isLoading: isWaitingForUploads || familyStore.pendingUploadCount > 0,
+                    isDisabled: isWaitingForUploads || familyStore.pendingUploadCount > 0,
+                    action: {
+                        Task {
+                            await handleAllSet()
+                        }
                     }
-                } label: {
-                    if isWaitingForUploads || familyStore.pendingUploadCount > 0 {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .grayScale110))
-                            .frame(width: 160, height: 52)
-                            .background(
-                                .grayScale40, in: RoundedRectangle(cornerRadius: 28)
-                            )
-                    } else {
-                        Text("All Set!")
-                            .font(NunitoFont.semiBold.size(16))
-                            .foregroundStyle(.grayScale110)
-                            .frame(width: 160, height: 52)
-                            .background(
-                                .grayScale40, in: RoundedRectangle(cornerRadius: 28)
-                            )
-                    }
-                }
-                .disabled(isWaitingForUploads || familyStore.pendingUploadCount > 0)
+                )
 
                 
                 Button {

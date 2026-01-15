@@ -14,15 +14,26 @@ struct AddMoreMembers: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""
     @State var showError: Bool = false
+    @State var isLoading: Bool = false
     @State var familyMembersList: [UserModel] = [
-        UserModel(familyMemberName: "Neha", familyMemberImage: "image-bg5", backgroundColor: Color(hex: "F9C6D0")),
-        UserModel(familyMemberName: "Aarnav", familyMemberImage: "image-bg4", backgroundColor: Color(hex: "FFF6B3")),
-        UserModel(familyMemberName: "Harsh", familyMemberImage: "image-bg1", backgroundColor: Color(hex: "FFD9B5")),
-        UserModel(familyMemberName: "Grandpa", familyMemberImage: "image-bg3", backgroundColor: Color(hex: "BFF0D4")),
-        UserModel(familyMemberName: "Grandma", familyMemberImage: "image-bg2", backgroundColor: Color(hex: "A7D8F0"))
+        UserModel(familyMemberName: "Memoji 1", familyMemberImage: "memoji_1", backgroundColor: Color(hex: "FFB3BA")),
+        UserModel(familyMemberName: "Memoji 2", familyMemberImage: "memoji_2", backgroundColor: Color(hex: "FFDFBA")),
+        UserModel(familyMemberName: "Memoji 3", familyMemberImage: "memoji_3", backgroundColor: Color(hex: "FFFFBA")),
+        UserModel(familyMemberName: "Memoji 4", familyMemberImage: "memoji_4", backgroundColor: Color(hex: "BAFFC9")),
+        UserModel(familyMemberName: "Memoji 5", familyMemberImage: "memoji_5", backgroundColor: Color(hex: "BAE1FF")),
+        UserModel(familyMemberName: "Memoji 6", familyMemberImage: "memoji_6", backgroundColor: Color(hex: "E0BBE4")),
+        UserModel(familyMemberName: "Memoji 7", familyMemberImage: "memoji_7", backgroundColor: Color(hex: "FFCCCB")),
+        UserModel(familyMemberName: "Memoji 8", familyMemberImage: "memoji_8", backgroundColor: Color(hex: "B4E4FF")),
+        UserModel(familyMemberName: "Memoji 9", familyMemberImage: "memoji_9", backgroundColor: Color(hex: "C7CEEA")),
+        UserModel(familyMemberName: "Memoji 10", familyMemberImage: "memoji_10", backgroundColor: Color(hex: "F0E6FF")),
+        UserModel(familyMemberName: "Memoji 11", familyMemberImage: "memoji_11", backgroundColor: Color(hex: "FFE5B4")),
+        UserModel(familyMemberName: "Memoji 12", familyMemberImage: "memoji_12", backgroundColor: Color(hex: "E8F5E9")),
+        UserModel(familyMemberName: "Memoji 13", familyMemberImage: "memoji_13", backgroundColor: Color(hex: "FFF9C4")),
+        UserModel(familyMemberName: "Memoji 14", familyMemberImage: "memoji_14", backgroundColor: Color(hex: "F8BBD0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
-    @State var continuePressed: (String) -> Void = { _ in }
+    @State var continuePressed: (String, UIImage?, String?, String?) async throws -> Void = { _, _, _, _ in }
+    
     var body: some View {
         VStack {
             
@@ -120,65 +131,74 @@ struct AddMoreMembers: View {
                         .foregroundStyle(.grayScale150)
                         .padding(.leading, 20)
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            Button {
-                                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                                if trimmed.isEmpty {
-                                    // Show error if textfield is empty
-                                    showError = true
-                                } else {
-                                    // Set display name before navigating
-                                    memojiStore.displayName = trimmed
-                                    // Ensure GenerateAvatar back button returns to AddMoreMembers, not onboarding
-                                    memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
-                                    // Proceed to generate avatar
-                                    coordinator.navigateInBottomSheet(.generateAvatar)
-                                }
-                            } label: {
-                                ZStack {
-                                    Circle()
-                                        .stroke(lineWidth: 2)
-                                        .foregroundStyle(.grayScale60)
-                                        .frame(width: 48, height: 48)
-                                    
-                                    Image(systemName: "plus")
-                                        .resizable()
-                                        .frame(width: 20, height: 20)
-                                        .foregroundStyle(.grayScale60)
-                                }
+                    HStack(spacing: 16) {
+                        // Fixed plus button (does not scroll)
+                        Button {
+                            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if trimmed.isEmpty {
+                                // Show error if textfield is empty
+                                showError = true
+                            } else {
+                                // Set display name before navigating
+                                memojiStore.displayName = trimmed
+                                // Ensure GenerateAvatar back button returns to AddMoreMembers, not onboarding
+                                memojiStore.previousRouteForGenerateAvatar = .addMoreMembers
+                                // Proceed to generate avatar
+                                coordinator.navigateInBottomSheet(.generateAvatar)
                             }
-                            .buttonStyle(.plain)
-                            
-                            ForEach(familyMembersList, id: \.id) { ele in
-                                ZStack(alignment: .topTrailing) {
-                                    Image(ele.image)
-                                        .resizable()
-                                        .frame(width: 50, height: 50)
-                                    
-                                    if selectedFamilyMember?.id == ele.id {
-                                        Circle()
-                                            .fill(Color(hex: "2C9C3D"))
-                                            .frame(width: 16, height: 16)
-                                            .padding(.top, 1)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(lineWidth: 1)
-                                                    .foregroundStyle(.white)
-                                                    .padding(.top, 1)
-                                                    .overlay(
-                                                        Image("white-rounded-checkmark")
-                                                    )
-                                            )
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .stroke(lineWidth: 2)
+                                    .foregroundStyle(.grayScale60)
+                                    .frame(width: 48, height: 48)
+                                
+                                Image(systemName: "plus")
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                                    .foregroundStyle(.grayScale60)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // Vertical divider
+                        Rectangle()
+                            .fill(.grayScale60)
+                            .frame(width: 1, height: 48)
+                        
+                        // Scrollable memojis list
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(familyMembersList, id: \.id) { ele in
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(ele.image)
+                                            .resizable()
+                                            .frame(width: 50, height: 50)
+                                        
+                                        if selectedFamilyMember?.id == ele.id {
+                                            Circle()
+                                                .fill(Color(hex: "2C9C3D"))
+                                                .frame(width: 16, height: 16)
+                                                .padding(.top, 1)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(lineWidth: 1)
+                                                        .foregroundStyle(.white)
+                                                        .padding(.top, 1)
+                                                        .overlay(
+                                                            Image("white-rounded-checkmark")
+                                                        )
+                                                )
+                                        }
                                     }
-                                }
-                                .onTapGesture {
-                                    selectedFamilyMember = ele
+                                    .onTapGesture {
+                                        selectedFamilyMember = ele
+                                    }
                                 }
                             }
                         }
-                        .padding(.horizontal, 20)
                     }
+                    .padding(.horizontal, 20)
                 }
             }
             .padding(.bottom, 40)
@@ -188,13 +208,19 @@ struct AddMoreMembers: View {
                 if trimmed.isEmpty {
                     showError = true
                 } else {
-                    handleAddMember(trimmed: trimmed)
+                    Task {
+                        await handleAddMember(trimmed: trimmed)
+                    }
                 }
             } label: {
-                GreenCapsule(title: "Add Member")
-                    .frame(width: 159)
-                    .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
+                GreenCapsule(
+                    title: "Add Member",
+                    width: 159,
+                    isLoading: isLoading,
+                    isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
             }
+            .disabled(isLoading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -229,36 +255,81 @@ struct AddMoreMembers: View {
         memojiStore.previousRouteForGenerateAvatar = nil
     }
     
-    private func handleAddMember(trimmed: String) {
+    @MainActor
+    private func handleAddMember(trimmed: String) async {
         print("[AddMoreMembers] Continue tapped with name=\(trimmed)")
-        familyStore.addPendingOtherMember(name: trimmed)
+        isLoading = true
+        defer { isLoading = false }
         
-        // Handle avatar assignment - upload in background without blocking UI
-        // Priority: selected predefined avatar > custom avatar from memojiStore
-        if let selectedImageName = selectedFamilyMember?.image,
-           let assetImage = UIImage(named: selectedImageName) {
-            // Predefined avatar selected - upload it in background
-            Task {
-                await familyStore.setAvatarForLastPendingOtherMember(image: assetImage, webService: webService)
+        var uploadImage: UIImage? = nil
+        var storagePath: String? = nil
+        var colorHex: String? = nil
+        
+        // Handle avatar selection
+        if let selectedImageName = selectedFamilyMember?.image {
+            // Check if it's a local memoji (starts with "memoji_")
+            if selectedImageName.hasPrefix("memoji_") {
+                // Local memoji selected - use storagePath, no upload needed
+                storagePath = selectedImageName
+                uploadImage = nil
+                // Extract background color if available
+                if let color = selectedFamilyMember?.backgroundColor {
+                    colorHex = color.toHex()
+                }
+            } else {
+                // Legacy predefined avatar (shouldn't happen after migration, but handle gracefully)
+                if let assetImage = UIImage(named: selectedImageName) {
+                    uploadImage = assetImage
+                    if let color = selectedFamilyMember?.backgroundColor {
+                        colorHex = color.toHex()
+                    }
+                } else {
+                    // Fallback
+                    storagePath = selectedImageName
+                }
             }
         } else if let customImage = memojiStore.image {
-            // Custom avatar from memojiStore - upload it in background with memoji background color
-            Task {
-                await familyStore.setAvatarForLastPendingOtherMember(
-                    image: customImage,
-                    webService: webService,
-                    backgroundColorHex: memojiStore.backgroundColorHex
-                )
-            }
-        } else if let selectedImageName = selectedFamilyMember?.image {
-            // Fallback to old method if image can't be loaded
-            familyStore.setAvatarForLastPendingOtherMember(imageName: selectedImageName)
+            // Custom avatar from memojiStore (user-generated memoji)
+            uploadImage = customImage
+            colorHex = memojiStore.backgroundColorHex
         }
         
-        let memberName = trimmed
-        name = ""
-        showError = false
-        // Call continuePressed immediately so sheet closes
-        continuePressed(memberName)
+        // Call continue callback with all data
+        do {
+            try await continuePressed(trimmed, uploadImage, storagePath, colorHex)
+            
+            // On success, clean up UI state
+            name = ""
+            showError = false
+        } catch {
+             print("[AddMoreMembers] Error adding member: \(error)")
+             ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+        }
+    }
+}
+
+extension Color {
+    func toHex() -> String? {
+        // Platform agnostic way to get hex from SwiftUI Color
+        // Convert to UIColor/NSColor first
+        let uiColor = UIColor(self)
+        guard let components = uiColor.cgColor.components, components.count >= 3 else {
+            return nil
+        }
+        
+        let r = Float(components[0])
+        let g = Float(components[1])
+        let b = Float(components[2])
+        var a = Float(1.0)
+        
+        if components.count >= 4 {
+            a = Float(components[3])
+        }
+        
+        if a != 1.0 {
+            return String(format: "#%02lX%02lX%02lX%02lX", lroundf(r * 255), lroundf(g * 255), lroundf(b * 255), lroundf(a * 255))
+        } else {
+            return String(format: "#%02lX%02lX%02lX", lroundf(r * 255), lroundf(g * 255), lroundf(b * 255))
+        }
     }
 }

@@ -1,6 +1,6 @@
 //
-//  GetStarted.swift
-//  IngrediCheckPreview
+//  PrimaryButton.swift
+//  IngrediCheck
 //
 //  Created by Gunjan Haldar   on 09/10/25.
 //
@@ -14,9 +14,10 @@ struct GreenCapsule: View {
     var iconHeight: CGFloat = 20
     var width: CGFloat = 152
     var height: CGFloat = 52
-    var takeFullWidth: Bool = true
+    var takeFullWidth: Bool = false
     var isLoading: Bool = false
     var labelFont: Font = NunitoFont.semiBold.size(16)
+    var isDisabled: Bool = false
     
     init(
         title: String,
@@ -27,6 +28,7 @@ struct GreenCapsule: View {
         height: CGFloat = 52,
         takeFullWidth: Bool = true,
         isLoading: Bool = false,
+        isDisabled: Bool = false,
         labelFont: Font = NunitoFont.semiBold.size(16)
     ) {
         self.title = title
@@ -37,6 +39,7 @@ struct GreenCapsule: View {
         self.height = height
         self.takeFullWidth = takeFullWidth
         self.isLoading = isLoading
+        self.isDisabled = isDisabled
         self.labelFont = labelFont
     }
     
@@ -57,14 +60,31 @@ struct GreenCapsule: View {
                 
                 Text(title)
                     .font(labelFont)
-                    .foregroundStyle(.grayScale10)
+                    .foregroundStyle(isDisabled ? .grayScale110 : .grayScale10)
             }
         }
         // Respect explicit width/height when takeFullWidth is false, otherwise fill horizontally with a sensible min width
         .frame(width: takeFullWidth ? nil : width, height: height)
-        .frame(minWidth: takeFullWidth ? 152 : 0)
+        .frame(minWidth: takeFullWidth ? 152 : 152)
         .frame(maxWidth: takeFullWidth ? .infinity : nil)
-        .background(
+        .background(backgroundView)
+        .overlay(
+            Capsule()
+                .stroke(lineWidth: 1)
+                .foregroundStyle(isDisabled ? .grayScale40 : .grayScale10)
+            
+        )
+//        .opacity(isDisabled ? 0.6 : 1.0)
+    }
+    
+    @ViewBuilder
+    private var backgroundView: some View {
+        if isDisabled {
+            Capsule()
+                .fill(
+                    Color.grayScale40
+                )
+        } else {
             Capsule()
                 .fill(
                     LinearGradient(
@@ -78,19 +98,19 @@ struct GreenCapsule: View {
                         .drop(color: Color(hex: "C5C5C5").opacity(0.57), radius: 11, x: 0, y: 4)
                     )
                 )
-        )
-        .overlay(
-            Capsule()
-                .stroke(lineWidth: 1)
-                .foregroundStyle(.grayScale10)
-            
-        )
+        }
     }
 }
 
 #Preview {
     ZStack {
-        Color.gray.opacity(0.1).ignoresSafeArea()
-        GreenCapsule(title: "Get Started")
+//        Color.gray.opacity(0.1).ignoresSafeArea()
+        VStack(spacing: 20) {
+            GreenCapsule(title: "Get Started")
+            GreenCapsule(title: "Continue", isLoading: true)
+            GreenCapsule(title: "Disabled", isDisabled: true)
+            GreenCapsule(title: "With Icon", icon: "share", iconWidth: 12, iconHeight: 12)
+        }
+        .padding()
     }
 }

@@ -27,17 +27,13 @@ struct WouldYouLikeToInvite: View {
             .padding(.horizontal, 20)
             
             HStack(spacing: 16) {
-                Button {
-                    continuePressed()
-                } label: {
-                    Text("Maybe later")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .padding(.vertical, 17)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
-                }
-                .disabled(isLoading)
+                SecondaryButton(
+                    title: "Maybe later",
+                    takeFullWidth: true,
+                    isDisabled: isLoading,
+                    action: continuePressed
+                )
+                
                 Button {
                     invitePressed()
                 } label: {

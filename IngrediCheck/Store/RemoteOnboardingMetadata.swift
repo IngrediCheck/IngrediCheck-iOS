@@ -48,6 +48,10 @@ enum BottomSheetRouteIdentifier: String, Codable {
     case meetYourProfileIntro
     case meetYourProfile
     case preferencesAddedSuccess
+    case readyToScanFirstProduct
+    case seeHowScanningWorks
+    case quickAccessNeeded
+    case loginToContinue
 }
 
 /// Full snapshot of onboarding position stored in raw_user_meta_data

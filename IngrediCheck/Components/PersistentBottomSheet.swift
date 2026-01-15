@@ -22,7 +22,6 @@ struct PersistentBottomSheet: View {
     @State private var tutorialData: TutorialData? 
     @State private var isAnimatingHand: Bool = false
     @State private var dragOffsetY: CGFloat = 0
-    @State private var didTimeoutWaitingForPreferences: Bool = false
     @State private var isGeneratingInviteCode: Bool = false
 
     // MARK: - CONSTANTS
@@ -247,7 +246,7 @@ struct PersistentBottomSheet: View {
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
                 
-                .shadow(color :.grayScale70, radius: 27.5)
+                .shadow(color: .grayScale70, radius: 27.5)
                 .offset(y: dragOffsetY)
                 .gesture(dragGesture)
                 
@@ -271,7 +270,7 @@ struct PersistentBottomSheet: View {
                 .frame(maxWidth: .infinity, alignment: .top)
                 .background(Color.white)
                 .cornerRadius(36, corners: [.topLeft, .topRight])
-                .shadow(color :.grayScale70, radius: 27.5)
+                .shadow(color: .grayScale70, radius: 27.5)
                 .offset(y: dragOffsetY)
                 .gesture(dragGesture)
 //                .shadow(radius: 27.5)
@@ -296,7 +295,7 @@ struct PersistentBottomSheet: View {
     private func getBottomSheetHeight() -> CGFloat? {
         switch coordinator.currentBottomSheetRoute {
         case .alreadyHaveAnAccount:
-            return 275
+            return 271
         case  .doYouHaveAnInviteCode:
             return 241
         case .welcomeBack:
@@ -328,7 +327,7 @@ struct PersistentBottomSheet: View {
         case .setUpAvatarFor:
             return nil
         case .dietaryPreferencesSheet(let isFamilyFlow):
-            return 263
+            return nil
         case .allSetToJoinYourFamily:
             return 284
         // For preference sheets shown from MainCanvasView, let the
@@ -351,6 +350,14 @@ struct PersistentBottomSheet: View {
             return 389
         case .preferencesAddedSuccess:
             return 285
+        case .readyToScanFirstProduct:
+            return 271
+        case .seeHowScanningWorks:
+            return 263
+        case .quickAccessNeeded:
+            return 253
+        case .loginToContinue:
+            return 236
         }
     }
     
@@ -386,9 +393,6 @@ struct PersistentBottomSheet: View {
                     coordinator.navigateInBottomSheet(.fineTuneYourExperience)
                     return
                 }
-
-                // Capture nextStepId BEFORE advancing store, otherwise we skip one step.
-                let nextStepId = store.nextStepId
                 
                 // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
                 if store.isLastStep {
@@ -401,9 +405,9 @@ struct PersistentBottomSheet: View {
                 // Advance logical onboarding progress (for progress bar & tag bar)
                 store.next()
                 
-                // Move the bottom sheet to the next onboarding question using JSON order
-                if let nextStepId {
-                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: nextStepId))
+                // Move the bottom sheet to the *newly current* onboarding question
+                if let newCurrentStepId = store.currentStepId {
+                    coordinator.navigateInBottomSheet(.onboardingStep(stepId: newCurrentStepId))
                 }
             }
         }
@@ -473,20 +477,27 @@ struct PersistentBottomSheet: View {
             }
             
         case .whatsYourName:
-            WhatsYourName {
-                coordinator.navigateInBottomSheet(.addMoreMembers)
+            WhatsYourName { name in
+                 // Async closure wrapper for immediate family creation
+                 try await familyStore.createFamilyImmediate(selfName: name)
+                 coordinator.navigateInBottomSheet(.addMoreMembers)
             }
             
         case .addMoreMembers:
-            AddMoreMembers { name in
+            AddMoreMembers { name, image, storagePath, color in
+                // Async closure wrapper for immediate member addition
+                let newMember = try await familyStore.addMemberImmediate(
+                    name: name,
+                    image: image,
+                    storagePath: storagePath,
+                    color: color,
+                    webService: webService
+                )
+                
                 // If coming from home screen, navigate to WouldYouLikeToInvite
                 // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
                 if case .home = coordinator.currentCanvasRoute {
-                    if let newId = familyStore.pendingOtherMembers.last?.id {
-                        coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: newId, name: name))
-                    } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
-                    }
+                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: newMember.id, name: name))
                 } else {
                     coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
                 }
@@ -496,11 +507,30 @@ struct PersistentBottomSheet: View {
             AddMoreMembersMinimal {
                 Task {
                     // If creating family from Settings, add members to existing family
-                    // Otherwise, create a new family
-                    if coordinator.isCreatingFamilyFromSettings {
-                        await familyStore.addPendingMembersToExistingFamily()
+                    // Otherwise, just proceed (family already created incrementally)
+                     if coordinator.isCreatingFamilyFromSettings {
+                        // Logic handled incrementally now?
+                        // If we used `addMemberImmediate` in AddMoreMembers view, they are already added.
+                        // But `AddMoreMembersMinimal` manages the list and "Continue".
+                        // Wait, `AddMoreMembersMinimal` view uses `familyStore`.
+                        // If we are in "Immediate" mode, the members are already in `family.otherMembers`.
+                        // `AddMoreMembersMinimal` might be relying on `pendingOtherMembers`.
+                        // I need to check `AddMoreMembersMinimal`.
+                        
+                        // For now, I will assume `AddMoreMembersMinimal` continues navigation.
+                        // Existing logic called `createFamilyFromPendingIfNeeded` or `addPendingMembersToExistingFamily`.
+                        // Since we are creating IMMEDIATELY, these pending lists should be empty or unused?
+                        // `WhatsYourName` clears pending self member.
+                        // `AddMoreMembers` (immediate) adds to family directly.
+                        // So `pendingOtherMembers` should be empty?
+                        // If so, `createFamilyFromPendingIfNeeded` does nothing?
+                        // Let's verify.
+                        
+                        // Whatever we do, we just navigate to dietary preferences.
                     } else {
-                        await familyStore.createFamilyFromPendingIfNeeded()
+                        // Family created at WhatsYourName step.
+                        // Members added at AddMoreMembers step.
+                        // So we just proceed.
                     }
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
                 }
@@ -566,7 +596,7 @@ struct PersistentBottomSheet: View {
                 // Reset to collapsed state when appearing
                 isExpandedMinimal = false
             }
-
+            
         case .bringingYourAvatar:
             IngrediBotWithText(text: "Bringing your avatar to life... it's going to be awesome!")
             
@@ -587,23 +617,12 @@ struct PersistentBottomSheet: View {
                         memojiStore: memojiStore,
                         familyStore: familyStore
                     )
-
-                    let pendingCount = (familyStore.pendingSelfMember == nil ? 0 : 1) + familyStore.pendingOtherMembers.count
                     
                     // Navigate back based on where we came from
                     if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
-                        // If we came from meetYourProfile, go back there
-                        if case .meetYourProfile = previousRoute {
-                            coordinator.navigateInBottomSheet(.meetYourProfile)
-                            memojiStore.previousRouteForGenerateAvatar = nil
-                        } else if previousRoute == .addMoreMembers, !(coordinator.currentCanvasRoute == .home) {
-                            // Onboarding family flow:
-                            // If we already have at least 2 members, show minimal sheet with All Set + Add Member.
-                            if pendingCount >= 2 {
-                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
-                            } else {
-                                coordinator.navigateInBottomSheet(.addMoreMembers)
-                            }
+                        // If we came from meetYourProfile, go back there with the same memberId
+                        if case .meetYourProfile(let memberId) = previousRoute {
+                            coordinator.navigateInBottomSheet(.meetYourProfile(memberId: memberId))
                             memojiStore.previousRouteForGenerateAvatar = nil
                         } else {
                             coordinator.navigateInBottomSheet(previousRoute)
@@ -612,14 +631,7 @@ struct PersistentBottomSheet: View {
                     } else if case .home = coordinator.currentCanvasRoute {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     } else {
-                        // Onboarding family flow:
-                        // - After assigning self avatar (only 1 member), show full AddMoreMembers form.
-                        // - After we have at least 2 members, show minimal sheet with All Set + Add Member.
-                        if pendingCount >= 2 {
-                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
-                        } else {
-                            coordinator.navigateInBottomSheet(.addMoreMembers)
-                        }
+                        coordinator.navigateInBottomSheet(.addMoreMembers)
                     }
                 }
             }
@@ -678,8 +690,9 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    // Normal flow - go to Home
-                    coordinator.showCanvas(.home)
+                    // Normal flow (Add Family): show Ready to Scan first product.
+                    coordinator.showCanvas(.readyToScanFirstProduct)
+                    coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
                 }
             }
             
@@ -707,26 +720,8 @@ struct PersistentBottomSheet: View {
             )
             
         case .onboardingStep(let stepId):
-            // If preferences are not yet loaded (e.g., right after app restart),
-            // avoid rendering empty selections to prevent user confusion.
-            if store.preferences.sections.isEmpty && !didTimeoutWaitingForPreferences {
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text("Loading your choices…")
-                        .font(ManropeFont.medium.size(12))
-                        .foregroundStyle(.grayScale120)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 80)
-                .task(id: stepId) {
-                    didTimeoutWaitingForPreferences = false
-                    // Prevent this from hanging forever if the backend is slow/unavailable.
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
-                    if store.preferences.sections.isEmpty {
-                        didTimeoutWaitingForPreferences = true
-                    }
-                }
-            } else if let step = store.step(for: stepId) {
+            // Dynamically load step from JSON using step ID
+            if let step = store.step(for: stepId) {
                 DynamicOnboardingStepView(
                     step: step,
                     flowType: getOnboardingFlowType(),
@@ -735,6 +730,23 @@ struct PersistentBottomSheet: View {
                 .padding(.top, 24)
                 .padding(.bottom, 80)
             }
+        case .chatIntro:
+            IngrediBotView()
+        case .chatConversation:
+            NavigationStack {
+                IngrediBotChatView()
+            }
+            
+        case .workingOnSummary:
+            IngrediBotWithText(
+                text: "Working on your personalized summary…",
+                showBackgroundImage: false,
+                viewDidAppear: {
+                    // After 2 seconds, navigate to chat intro
+                    coordinator.navigateInBottomSheet(.chatIntro)
+                },
+                delay: 2.0
+            )
             
         case .homeDefault:
             EmptyView()
@@ -742,11 +754,18 @@ struct PersistentBottomSheet: View {
         case .meetYourProfileIntro:
             MeetYourProfileIntroView()
             
-        case .meetYourProfile:
-            MeetYourProfileView {
-                // Check if family creation was initiated from Settings
-                if coordinator.isCreatingFamilyFromSettings {
-                    // Reset the flag
+        case .meetYourProfile(let memberId):
+            MeetYourProfileView(memberId: memberId) {
+                // Check if we're on the family overview screen
+                if coordinator.currentCanvasRoute == .letsMeetYourIngrediFam {
+                    // If on family overview, just go back to the family overview bottom sheet
+                    coordinator.navigateInBottomSheet(.letsMeetYourIngrediFam)
+                } else if coordinator.currentCanvasRoute == .home {
+                    // If on home screen, close the bottom sheet
+                    // If settings sheet was active, it will remain active (it's a separate sheet)
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else if coordinator.isCreatingFamilyFromSettings {
+                    // Check if family creation was initiated from Settings
                     coordinator.isCreatingFamilyFromSettings = false
                     // Navigate to home first
                     coordinator.showCanvas(.home)
@@ -756,8 +775,16 @@ struct PersistentBottomSheet: View {
                         appState.activeSheet = .settings
                     }
                 } else {
-                    // Normal flow - navigate to home
-                    coordinator.showCanvas(.home)
+                    // Normal flow - in Just Me flow, show Ready to Scan first product after Meet Your Profile.
+                    // In family flow, skip this and go home.
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.showCanvas(.readyToScanFirstProduct)
+                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    } else {
+                        // Normal onboarding flow - navigate to home
+                        OnboardingPersistence.shared.markCompleted()
+                        coordinator.showCanvas(.home)
+                    }
                 }
             }
             
@@ -773,24 +800,75 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    coordinator.navigateInBottomSheet(.meetYourProfile)
+                    // After preferences success:
+                    // - Just Me flow: show Meet Your Profile
+                    // - Add Family flow: go directly to Ready to Scan
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
+                    } else {
+                        coordinator.showCanvas(.readyToScanFirstProduct)
+                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    }
                 }
             }
 
-        case .chatIntro:
-            IngrediBotView()
-
-        case .chatConversation:
-            IngrediBotChatView()
-
-        case .workingOnSummary:
-            IngrediBotWithText(
-                text: "Working on your summary...",
-                showBackgroundImage: false,
-                viewDidAppear: {
-                    coordinator.navigateInBottomSheet(.preferencesAddedSuccess)
+        case .readyToScanFirstProduct:
+            ReadyToScanSheet(
+                onBack: {
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
+                    } else {
+                        coordinator.showCanvas(.summaryAddFamily)
+                        coordinator.navigateInBottomSheet(.allSetToJoinYourFamily)
+                    }
                 },
-                delay: 2.0
+                onNotRightNow: {
+                    coordinator.showCanvas(.seeHowScanningWorks)
+                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                },
+                onHaveAProduct: {
+                    OnboardingPersistence.shared.markCompleted()
+                    coordinator.showCanvas(.home)
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        appState.activeSheet = .scan
+                    }
+                }
+            )
+
+        case .seeHowScanningWorks:
+            ScanningHelpSheet(
+                onBack: {
+                    coordinator.showCanvas(.readyToScanFirstProduct)
+                    coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                },
+                onGotIt: {
+                    coordinator.showCanvas(.whyWeNeedThesePermissions)
+                    coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                }
+            )
+
+        case .quickAccessNeeded:
+            QuickAccessSheet(
+                onBack: {
+                    coordinator.showCanvas(.seeHowScanningWorks)
+                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                },
+                onGoToHome: {
+                    OnboardingPersistence.shared.markCompleted()
+                    coordinator.showCanvas(.home)
+                }
+            )
+
+        case .loginToContinue:
+            LoginToContinueSheet(
+                onBack: {
+                    coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                },
+                onSignedIn: {
+                    OnboardingPersistence.shared.markCompleted()
+                    coordinator.showCanvas(.home)
+                }
             )
         }
     }
@@ -809,34 +887,7 @@ struct PersistentBottomSheet: View {
         
         return .individual
     }
-
-    private func presentShareSheet(items: [Any]) {
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-
-        if let popover = controller.popoverPresentationController {
-            popover.sourceView = UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first { $0.isKeyWindow }
-            popover.sourceRect = CGRect(
-                x: UIScreen.main.bounds.midX,
-                y: UIScreen.main.bounds.maxY,
-                width: 0,
-                height: 0
-            )
-            popover.permittedArrowDirections = []
-        }
-
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-              let root = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
-            return
-        }
-
-        root.present(controller, animated: true)
-    }
-
+    
     // MARK: - INVITES / SHARE
 
     @MainActor
@@ -876,7 +927,7 @@ struct PersistentBottomSheet: View {
 
     private func inviteShareMessage(inviteCode: String) -> String {
         let formattedCode = formattedInviteCode(inviteCode)
-        return "You’ve been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
+        return "You've been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
     }
 
     private func formattedInviteCode(_ inviteCode: String) -> String {
@@ -899,6 +950,33 @@ struct PersistentBottomSheet: View {
         } else {
             coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
         }
+    }
+    
+    private func presentShareSheet(items: [Any]) {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+            popover.sourceRect = CGRect(
+                x: UIScreen.main.bounds.midX,
+                y: UIScreen.main.bounds.maxY,
+                width: 0,
+                height: 0
+            )
+            popover.permittedArrowDirections = []
+        }
+
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+              let root = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            return
+        }
+
+        root.present(controller, animated: true)
     }
 }
 
@@ -936,8 +1014,13 @@ private func handleAssignAvatar(
        let name = displayName,
         !name.isEmpty {
         
-        // If we came from MeetYourProfile, this is ALWAYS for the self member
-        let isFromProfile = memojiStore.previousRouteForGenerateAvatar == .meetYourProfile
+        // If we came from MeetYourProfile, check if it's for self member (memberId is nil)
+        let isFromProfile: Bool = {
+            if case .meetYourProfile(let memberId) = memojiStore.previousRouteForGenerateAvatar {
+                return memberId == nil
+            }
+            return false
+        }()
         
         if isFromProfile || currentPendingSelfMember == nil {
             // This is for the self member

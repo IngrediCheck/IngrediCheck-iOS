@@ -74,64 +74,21 @@ struct HeyThereScreen: View {
                 .navigationBarBackButtonHidden(true)
                 .toolbar(.hidden, for: .navigationBar)
             } else {
-                VStack {
-                    Image("Ingredicheck-logo")
-                        .frame(width : 107.3 ,height: 36)
-                        .padding(.top,44)
-                        .padding(.bottom,33)
-
-                    ZStack {
-                        Image("Iphone-image")
-                            .resizable()
-                            .frame(width: 238 ,height: 460)
-                    }
-                    Spacer()
-                }
-
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            Color(
-                                hex: "#FFFFFF"
-                            ),
-                            Color(
-                                hex: "#F7F7F7"
-                            )
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .overlay(
-                    LinearGradient(
-                        colors: [
-
-                            Color.white.opacity(0.1),
-                            Color.white,
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 150)
-                    .frame(maxWidth: .infinity)
-                    .offset(y: 75)
-                )
-                .navigationBarBackButtonHidden(true)
-                .toolbar(.hidden, for: .navigationBar)
+                OnboardingPhoneCanvas(phoneImageName: "Iphone-image")
             }
         }
-        .task {
-            // Trigger anonymous sign-in when .heyThere screen appears
-            // This ensures all navigation after this point can sync to Supabase
-            if authController.session == nil {
-                print("[OnboardingMeta] Auto-triggering guest login on .heyThere screen")
-                await authController.signIn()
+        .task(id: coordinator.currentBottomSheetRoute) {
+            // Trigger anonymous sign-in only when explicitly asking "Who's this for?"
+            // This prevents "Get Started" or other pre-onboarding states from creating sessions.
+            if coordinator.currentBottomSheetRoute == .whosThisFor {
+                if authController.session == nil {
+                    print("[OnboardingMeta] Auto-triggering guest login on .whosThisFor screen")
+                    await authController.signIn()
 
-                // Sync initial state to Supabase immediately after session is created
-                // This ensures if user kills app right away, they can resume from this screen
-                print("[OnboardingMeta] Syncing initial state after guest login")
-                await authController.syncRemoteOnboardingMetadata(from: coordinator)
+                    // Sync initial state to Supabase immediately after session is created
+                    print("[OnboardingMeta] Syncing initial state after guest login")
+                    await OnboardingPersistence.shared.sync(from: coordinator)
+                }
             }
         }
     }

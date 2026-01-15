@@ -71,33 +71,99 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
         }
     }
 
-    let request = SupabaseRequestBuilder(endpoint: .memoji)
+    var request = SupabaseRequestBuilder(endpoint: .memoji)
         .setAuthorization(with: token)
         .setMethod(to: "POST")
         .setJsonBody(to: bodyData)
         .build()
+    
+    // Configure timeout to prevent connection loss
+    request.timeoutInterval = 60.0 // 60 seconds for memoji generation (longer than family API)
+    
+    print("[AIMemojiService] 🔵 Sending memoji generation request...")
+    
+    // Retry logic for connection loss errors
+    var lastError: Error?
+    let maxRetries = 3
+    var data: Data?
+    var response: URLResponse?
+    
+    for attempt in 1...maxRetries {
+        do {
+            print("[AIMemojiService] ⏳ Request attempt \(attempt)/\(maxRetries)...")
+            let result = try await URLSession.shared.data(for: request)
+            data = result.0
+            response = result.1
+            lastError = nil // Clear error on success
+            break // Exit retry loop on success
+        } catch {
+            lastError = error
+            print("[AIMemojiService] ❌ Network error on attempt \(attempt): \(error.localizedDescription)")
+            
+            if let urlError = error as? URLError {
+                print("[AIMemojiService] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                
+                // Retry on connection loss errors (-1005, -1001 timeout, -1009 no internet)
+                let retryableErrors: [URLError.Code] = [.networkConnectionLost, .timedOut, .notConnectedToInternet]
+                
+                if retryableErrors.contains(urlError.code) && attempt < maxRetries {
+                    let delay = UInt64(1_000_000_000 * UInt64(attempt)) // 1s, 2s, 3s
+                    print("[AIMemojiService] 🔄 Retrying after \(attempt) second(s)...")
+                    try? await Task.sleep(nanoseconds: delay)
+                    continue // Retry the request
+                }
+            }
+            
+            // If not retryable or max retries reached, throw the error
+            if attempt == maxRetries {
+                print("[AIMemojiService] ❌ Max retries reached, throwing error")
+                throw error
+            }
+        }
+    }
+    
+    // Ensure we have data and response
+    guard let responseData = data, let urlResponse = response else {
+        if let error = lastError {
+            throw error
+        }
+        print("[AIMemojiService] ❌ No data or response received")
+        throw AIMemojiError.invalidResponse("No response received.")
+    }
 
-    let (data, response) = try await URLSession.shared.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
+    guard let httpResponse = urlResponse as? HTTPURLResponse else {
         print("[AIMemojiService] ❌ No HTTP Response received")
         throw AIMemojiError.invalidResponse("No HTTP response.")
     }
 
-    print("[AIMemojiService] ℹ️ Response Status Code: \(httpResponse.statusCode)")
+    print("[AIMemojiService] ✅ Response received - Status: \(httpResponse.statusCode), Body length: \(responseData.count) bytes")
 
     guard httpResponse.statusCode == 200 else {
-        let message = String(data: data, encoding: .utf8) ?? "status \(httpResponse.statusCode)"
+        let message = String(data: responseData, encoding: .utf8) ?? "status \(httpResponse.statusCode)"
         print("[AIMemojiService] ❌ Request failed with message: \(message)")
+        
+        // Try to parse error details from backend response
+        if let errorData = try? JSONDecoder().decode(MemojiErrorResponse.self, from: responseData) {
+            let errorMessage = errorData.error.message
+            let errorDetails = errorData.error.details ?? ""
+            print("[AIMemojiService] ❌ Backend error message: \(errorMessage)")
+            if !errorDetails.isEmpty {
+                print("[AIMemojiService] ❌ Backend error details: \(errorDetails)")
+            }
+            // Use the detailed error message if available
+            let fullMessage = errorDetails.isEmpty ? errorMessage : "\(errorMessage): \(errorDetails)"
+            throw AIMemojiError.invalidResponse(fullMessage)
+        }
+        
         throw AIMemojiError.invalidResponse(message)
     }
 
     let decoded: MemojiResponse
     do {
-        decoded = try JSONDecoder().decode(MemojiResponse.self, from: data)
+        decoded = try JSONDecoder().decode(MemojiResponse.self, from: responseData)
         print("[AIMemojiService] ✅ Successfully decoded MemojiResponse")
     } catch {
-        let rawDataString = String(data: data, encoding: .utf8) ?? "Unable to convert data to string"
+        let rawDataString = String(data: responseData, encoding: .utf8) ?? "Unable to convert data to string"
         print("[AIMemojiService] ❌ Decoding failed: \(error.localizedDescription)")
         print("[AIMemojiService] ❌ Raw Data that failed to decode: \(rawDataString)")
         throw error
@@ -110,8 +176,13 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
 
     print("[AIMemojiService] ℹ️ Image URL: \(urlString)")
 
-    let (pngData, _) = try await URLSession.shared.data(from: url)
-    print("[AIMemojiService] ℹ️ Downloaded PNG Data size: \(pngData.count) bytes")
+    // Download image with timeout configuration
+    var imageRequest = URLRequest(url: url)
+    imageRequest.timeoutInterval = 30.0 // 30 seconds for image download
+    print("[AIMemojiService] 🔵 Downloading memoji image...")
+    
+    let (pngData, _) = try await URLSession.shared.data(for: imageRequest)
+    print("[AIMemojiService] ✅ Downloaded PNG Data size: \(pngData.count) bytes")
     print("[AIMemojiService] generateMemojiImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
     // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
     let image = await MainActor.run {

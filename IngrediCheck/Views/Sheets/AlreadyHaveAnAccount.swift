@@ -36,20 +36,12 @@ struct AlreadyHaveAnAccount: View {
             .padding(.bottom, 40)
 
             HStack(spacing: 16) {
-                Button {
-                    yesPressed()
-                } label: {
-                    Text("Yes, continue")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame(height: 52)
-                        .frame(minWidth: 152)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Capsule()
-                                .foregroundStyle(.grayScale40)
-                        )
-                }
+                SecondaryButton(
+                    title: "Yes, continue",
+                    width: 152,
+                    takeFullWidth: true,
+                    action: yesPressed
+                )
 
                 Button {
                     noPressed()

@@ -211,6 +211,42 @@ import SimpleToast
             }
         }
     }
+
+    private var header: some View {
+        HStack(spacing: 0) {
+            Image(systemName: "chevron.left")
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    dismiss()
+                }
+                .accessibilityAddTraits(.isButton)
+
+           
+
+            Text("Recent Scans")
+                .font(ManropeFont.semiBold.size(18))
+                .foregroundStyle(.grayScale150)
+                .padding(.leading , 12)
+
+            Spacer()
+
+            Image("filter")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 24, height: 24)
+                .padding(.trailing, 2)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isShowingFilterMenu.toggle()
+                }
+                .accessibilityAddTraits(.isButton)
+        }
+//        .padding(.horizontal, 20)
+     
+        .background(Color.white)
+    }
     
     var defaultView: some View {
         Group {
@@ -252,10 +288,13 @@ import SimpleToast
                 .frame(maxWidth: .infinity)
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            header
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Recent Scans")
         .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             // Load scan history when view appears if not already loaded
             if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {
@@ -272,29 +311,6 @@ import SimpleToast
                 await MainActor.run {
                     appState.listsTabState.scans = scanHistoryStore.scans
                 }
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image("back-arrow1")
-                        .resizable()
-                        .frame(width: 20, height: 20)
-                }
-                .padding(.leading, 5)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isShowingFilterMenu.toggle()
-                } label: {
-                    Image("filter")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.plain)
             }
         }
         .overlay(alignment: .topTrailing) {
