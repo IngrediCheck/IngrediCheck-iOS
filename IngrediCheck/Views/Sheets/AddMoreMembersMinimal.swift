@@ -30,16 +30,11 @@ struct AddMoreMembersMinimal: View {
             .padding(.horizontal, 20)
             
             HStack(spacing: 16) {
-                Button {
-                    allSetPressed()
-                } label: {
-                    Text("All Set!")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .padding(.vertical, 17)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
-                }
+                SecondaryButton(
+                    title: "All Set!",
+                    takeFullWidth: true,
+                    action: allSetPressed
+                )
                 
                 Button {
                     addMorePressed()

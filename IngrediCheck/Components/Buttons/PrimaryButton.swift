@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct GreenCapsule: View {
+struct PrimaryButton: View {
     let title: String
     let icon: String?
     var iconWidth: CGFloat = 20
     var iconHeight: CGFloat = 20
     var width: CGFloat = 152
     var height: CGFloat = 52
-    var takeFullWidth: Bool = false
+    var takeFullWidth: Bool = true
     var isLoading: Bool = false
     var labelFont: Font = NunitoFont.semiBold.size(16)
     var isDisabled: Bool = false
@@ -65,7 +65,7 @@ struct GreenCapsule: View {
         }
         // Respect explicit width/height when takeFullWidth is false, otherwise fill horizontally with a sensible min width
         .frame(width: takeFullWidth ? nil : width, height: height)
-        .frame(minWidth: takeFullWidth ? 152 : 152)
+        .frame(minWidth: takeFullWidth ? 152 : 0)
         .frame(maxWidth: takeFullWidth ? .infinity : nil)
         .background(backgroundView)
         .overlay(
@@ -74,7 +74,7 @@ struct GreenCapsule: View {
                 .foregroundStyle(isDisabled ? .grayScale40 : .grayScale10)
             
         )
-//        .opacity(isDisabled ? 0.6 : 1.0)
+//        .opacity(isDisabled ? 1.0 : 1.0)
     }
     
     @ViewBuilder
@@ -104,12 +104,12 @@ struct GreenCapsule: View {
 
 #Preview {
     ZStack {
-//        Color.gray.opacity(0.1).ignoresSafeArea()
+        Color.gray.opacity(0.1).ignoresSafeArea()
         VStack(spacing: 20) {
-            GreenCapsule(title: "Get Started")
-            GreenCapsule(title: "Continue", isLoading: true)
-            GreenCapsule(title: "Disabled", isDisabled: true)
-            GreenCapsule(title: "With Icon", icon: "share", iconWidth: 12, iconHeight: 12)
+            PrimaryButton(title: "Get Started")
+            PrimaryButton(title: "Continue", isLoading: true)
+            PrimaryButton(title: "Disabled", isDisabled: true)
+            PrimaryButton(title: "With Icon", icon: "share", iconWidth: 12, iconHeight: 12)
         }
         .padding()
     }

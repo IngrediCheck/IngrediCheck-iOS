@@ -46,18 +46,17 @@ struct WhosThisFor: View {
             .padding(.bottom, 40)
 
             HStack(spacing: 16) {
+                SecondaryButton(
+                    title: "Just Me",
+                    takeFullWidth: true,
+                    action: { justmePressed?() }
+                )
 
-                Button {
-                    justmePressed?()
-                } label: {
-                    GreenOutlinedCapsule(title: "Just Me")
-                }
-
-                Button {
-                    addFamilyPressed?()
-                } label: {
-                    GreenOutlinedCapsule(title: "Add Family")
-                }
+                SecondaryButton(
+                    title: "Add Family",
+                    takeFullWidth: true,
+                    action: { addFamilyPressed?() }
+                )
                 
             }
             .padding(.bottom, 20)

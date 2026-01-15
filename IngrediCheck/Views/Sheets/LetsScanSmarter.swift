@@ -21,16 +21,11 @@ struct LetsScanSmarter: View {
             }
             
             HStack(spacing: 16) {
-                Button {
-                    
-                } label: {
-                    Text("Later")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .padding(.vertical, 17)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
-                }
+                SecondaryButton(
+                    title: "Later",
+                    takeFullWidth: true,
+                    action: {}
+                )
 
                 
                 
