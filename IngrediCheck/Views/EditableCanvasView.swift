@@ -17,6 +17,7 @@ struct EditableCanvasView: View {
     
     // Optional: center a specific section when arriving here (e.g., Lifestyle/Nutrition)
     let targetSectionName: String?
+    let onBack: (() -> Void)?
     
     @State private var foodNotesStore: FoodNotesStore?
     @State private var didFinishInitialLoad: Bool = false
@@ -35,10 +36,11 @@ struct EditableCanvasView: View {
     @State private var headroomCollapsed: Bool = false
     @State private var selectedMemberId: UUID? = nil // Track selected family member for filtering
     
-    init(targetSectionName: String? = nil, titleOverride: String? = nil, showBackButton: Bool = true) {
+    init(targetSectionName: String? = nil, titleOverride: String? = nil, showBackButton: Bool = true, onBack: (() -> Void)? = nil) {
         self.targetSectionName = targetSectionName
         self.titleOverride = titleOverride
         self.showBackButton = showBackButton
+        self.onBack = onBack
     }
     
     private var shouldCenterLifestyleNutrition: Bool {
@@ -52,11 +54,15 @@ struct EditableCanvasView: View {
             mainContent
         }
         .overlay(bottomGradientOverlay, alignment: .bottom)
-        .ignoresSafeArea(edges: .bottom)
-        .overlay(tabBarOverlay, alignment: .bottom)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            tabBarOverlay
+        }
         .background(Color.white)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .onDisappear {
+            onBack?()
+        }
         .onAppear {
             // Initialize FoodNotesStore with environment values
             if foodNotesStore == nil {
@@ -495,6 +501,7 @@ private extension EditableCanvasView {
     var mainContent: some View {
         VStack(spacing: 0) {
             customNavigationBar
+                .zIndex(10)
             
             // Family member selector capsules (only if user has a family)
             if let family = familyStore.family, !family.otherMembers.isEmpty {
@@ -534,7 +541,7 @@ private extension EditableCanvasView {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.black)
-                                .frame(width: 24, height: 24)
+                                .padding(8)
                                 .contentShape(Rectangle())
                         }
                     }
@@ -544,6 +551,7 @@ private extension EditableCanvasView {
                 Text(titleOverride ?? "Food Notes")
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
+                    .allowsHitTesting(false)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -763,6 +771,7 @@ private extension EditableCanvasView {
     var tabBarOverlay: some View {
         if !navCoordinator.isEditSheetPresented {
             TabBar(isExpanded: $isTabBarExpanded)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

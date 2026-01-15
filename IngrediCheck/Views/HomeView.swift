@@ -14,14 +14,19 @@ struct HomeView: View {
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
-    @State private var scrollY: CGFloat = 0
-    @State private var prevValue: CGFloat = 0
-    @State private var maxScrollOffset: CGFloat = 0
     @State private var isRefreshingHistory: Bool = false
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
     @State private var navigationPath: [HistoryRouteItem] = []
     @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
+
+    private final class ScrollTrackingState {
+        var prevValue: CGFloat = 0
+        var maxScrollOffset: CGFloat = 0
+        var didInitialize: Bool = false
+    }
+
+    @State private var scrollTrackingState = ScrollTrackingState()
     @State private var stats: DTO.StatsResponse? = nil
     @State private var isLoadingStats: Bool = false
     @State private var showScanCamera: Bool = false
@@ -362,7 +367,7 @@ struct HomeView: View {
                         .padding(.bottom , 129)
                     }
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 20)
                 .padding(.bottom , 30)
                 .padding(.top ,16)
@@ -372,39 +377,48 @@ struct HomeView: View {
                     GeometryReader { geo in
                         Color.clear
                             .onAppear {
-                                scrollY = geo.frame(in: .named("homeScroll")).minY
-                                prevValue = scrollY
-                                maxScrollOffset = scrollY < 0 ? scrollY : 0
+                                let value = geo.frame(in: .named("homeScroll")).minY
+                                scrollTrackingState.prevValue = value
+                                scrollTrackingState.maxScrollOffset = value < 0 ? value : 0
+                                scrollTrackingState.didInitialize = true
                             }
                             .onChange(of: geo.frame(in: .named("homeScroll")).minY) { newValue in
-                                scrollY = newValue
-                                
-                                // Only change state when scrolled past the top (scrollY < 0)
-                                if scrollY < 0 {
-                                    // Track the maximum (most negative) scroll offset reached
-                                    maxScrollOffset = min(maxScrollOffset, newValue)
-                                    
-                                    let scrollDelta = newValue - prevValue
-                                    let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
-                                    
+                                if !scrollTrackingState.didInitialize {
+                                    scrollTrackingState.prevValue = newValue
+                                    scrollTrackingState.maxScrollOffset = newValue < 0 ? newValue : 0
+                                    scrollTrackingState.didInitialize = true
+                                    return
+                                }
+
+                                // Track the maximum (most negative) scroll offset reached
+                                if newValue < 0 {
+                                    scrollTrackingState.maxScrollOffset = min(scrollTrackingState.maxScrollOffset, newValue)
+                                } else {
+                                    scrollTrackingState.maxScrollOffset = 0
+                                }
+
+                                let scrollDelta = newValue - scrollTrackingState.prevValue
+                                let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
+
+                                var nextExpanded = isTabBarExpanded
+
+                                // Only change expansion state when scrolled past the top (newValue < 0)
+                                if newValue < 0 {
                                     if scrollDelta < -minScrollDelta {
-                                        // Scrolling down significantly -> collapse
-                                        isTabBarExpanded = false
+                                        nextExpanded = false
                                     } else if scrollDelta > minScrollDelta {
-                                        // Only expand if scrolling up significantly AND not at the bottom
-                                        // Check if we're significantly above the maximum scroll offset
-                                        let bottomThreshold: CGFloat = 100 // Minimum distance from bottom to allow expansion
-                                        if newValue > (maxScrollOffset + bottomThreshold) {
-                                            isTabBarExpanded = true
+                                        let bottomThreshold: CGFloat = 100
+                                        if newValue > (scrollTrackingState.maxScrollOffset + bottomThreshold) {
+                                            nextExpanded = true
                                         }
                                     }
-                                    // If scrollDelta is too small (bounce/noise), don't change state
-                                } else {
-                                    // Reset max scroll offset when at the top
-                                    maxScrollOffset = 0
                                 }
-                                
-                                prevValue = newValue
+
+                                if nextExpanded != isTabBarExpanded {
+                                    isTabBarExpanded = nextExpanded
+                                }
+
+                                scrollTrackingState.prevValue = newValue
                             }
                     }
                 )
@@ -430,9 +444,16 @@ struct HomeView: View {
             ).ignoresSafeArea(edges: .bottom)
             .overlay(
                 // TabBar in its original position (respects safe area)
-                TabBar(isExpanded: $isTabBarExpanded, onRecentScansTap: {
-                    navigationPath.append(.recentScansAll)
-                }),
+                TabBar(
+                    isExpanded: $isTabBarExpanded,
+                    onRecentScansTap: {
+                        navigationPath.append(.recentScansAll)
+                    },
+                    onChatBotTap: {
+                        selectedChatDetent = .medium
+                        isChatSheetPresented = true
+                    }
+                ),
                 alignment: .bottom
             )
             .background(Color.white)
@@ -455,8 +476,10 @@ struct HomeView: View {
             }
 
             // ------------ SETTINGS SCREEN ------------
+            // Use SettingsContentView (without NavigationStack) in navigationDestination
+            // to avoid nested NavigationStack issues that cause NavigationPath comparisonTypeMismatch errors
             .navigationDestination(isPresented: $isSettingsPresented) {
-                SettingsSheet()
+                SettingsContentView()
                     .environment(userPreferences)
                     .environment(coordinator)
                     .environment(memojiStore)
@@ -464,7 +487,12 @@ struct HomeView: View {
             
             // ------------ EDITABLE CANVAS ------------
             .navigationDestination(isPresented: $showEditableCanvas) {
-                EditableCanvasView(targetSectionName: editTargetSectionName)
+                EditableCanvasView(
+                    targetSectionName: editTargetSectionName,
+                    onBack: {
+                        showEditableCanvas = false
+                    }
+                )
                     .environmentObject(onboarding)
             }
             

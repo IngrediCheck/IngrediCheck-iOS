@@ -13,6 +13,7 @@ struct Card: Identifiable, Equatable {
     var subTitle: String
     var color: Color
     var chips: [ChipsModel]
+    var isFallback: Bool = false
 }
 
 struct StackedCards: View {
@@ -22,9 +23,14 @@ struct StackedCards: View {
     var onSwipe: (() -> Void)? = nil
     
     @State private var cards: [Card]
+    @State private var currentIndex: Int = 0
+    private let totalCardCount: Int
     @State var dragOffset: CGSize = .zero
     @State var dragValue: CGFloat = 0
     @State var tempCard: Card = Card(title: "", subTitle: "", color: .black, chips: [])
+    private var progressText: String {
+        totalCardCount > 0 ? "\(currentIndex)/\(totalCardCount)" : ""
+    }
     
     init(
         cards: [Card],
@@ -32,7 +38,19 @@ struct StackedCards: View {
         onChipTap: @escaping (Card, ChipsModel) -> Void = { _, _ in },
         onSwipe: (() -> Void)? = nil
     ) {
-        self._cards = State(initialValue: cards)
+        var augmentedCards = cards
+        let fallbackCard = Card(
+            title: "Did we miss something?",
+            subTitle: "No worries! You can share any preferences later, we’ve got you covered.",
+            color: Color(hex: "#D7EEB2"),
+            chips: [],
+            isFallback: true
+        )
+        augmentedCards.append(fallbackCard)
+
+        self._cards = State(initialValue: augmentedCards)
+        self._currentIndex = State(initialValue: augmentedCards.isEmpty ? 0 : 1)
+        self.totalCardCount = augmentedCards.count
         self.isChipSelected = isChipSelected
         self.onChipTap = onChipTap
         self.onSwipe = onSwipe
@@ -45,50 +63,135 @@ struct StackedCards: View {
                 card in
                 ZStack {
                     VStack(alignment: .leading, spacing: 20) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(card.title)
-                                .font(.system(size: 20, weight: .regular))
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(nil)
-                                .fixedSize(horizontal: false, vertical: true)
-                            
-                            Text(card.subTitle)
-                                .font(.system(size: 12, weight: .regular))
-                                .opacity(0.8)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(nil)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .opacity((idx == 0) ? 1 : 0)
-                        
-                        FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
-                            ForEach(card.chips, id: \.id) { chip in
-                                IngredientsChipsForStackedCards(
-                                    title: chip.name,
-                                    bgColor: nil,
-                                    fontColor: "303030",
-                                    image: chip.icon ?? "",
-                                    onClick: {
-                                        onChipTap(card, chip)
-                                    },
-                                    isSelected: isChipSelected(card, chip),
-                                    outlined: false
-                                )
+                        if card.isFallback {
+                            ZStack {
+                                VStack(spacing: 6) {
+                                    Image("Questionmark-bot")
+                                    
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 110, height: 107)
+
+                                    Text(card.title)
+                                        .font(ManropeFont.extraBold.size(18))
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
+
+                                    Text(card.subTitle)
+                                        .font(ManropeFont.regular.size(12))
+                                        .opacity(0.8)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+
+                                VStack {
+                                    HStack {
+                                        Spacer()
+                                        Text(progressText)
+                                            .font(ManropeFont.regular.size(14))
+                                            .foregroundColor(.grayScale140)
+                                    }
+                                    Spacer()
+                                }
                             }
+                            .opacity((idx == 0) ? 1 : 0)
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(){
+                                    Text(card.title)
+                                        .font(.system(size: 20, weight: .regular))
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Spacer()
+                                    Text(progressText)
+                                        .font(ManropeFont.regular.size(14))
+                                        .foregroundColor(.grayScale140)
+                                }
+                                
+                                Text(card.subTitle)
+                                    .font(.system(size: 12, weight: .regular))
+                                    .opacity(0.8)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .opacity((idx == 0) ? 1 : 0)
+                            
+                            FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
+                                ForEach(card.chips, id: \.id) { chip in
+                                    IngredientsChipsForStackedCards(
+                                        title: chip.name,
+                                        bgColor: nil,
+                                        fontColor: "303030",
+                                        image: chip.icon ?? "",
+                                        onClick: {
+                                            onChipTap(card, chip)
+                                        },
+                                        isSelected: isChipSelected(card, chip),
+                                        outlined: false
+                                    )
+                                }
+                            }
+                            .opacity((idx == 0) ? 1 : 0)
                         }
-                        .opacity((idx == 0) ? 1 : 0)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 20)
                     .frame(height: UIScreen.main.bounds.height * 0.33, alignment: .topLeading)
                     .background(
-                        ZStack(alignment: .bottomTrailing) {
+                        ZStack {
                             (idx == 0 ? card.color : tempCard.color)
-                            
-                            Image("leaf-recycle")
-                                .padding(.trailing, 10)
-                                .offset(y: 17)
-                                .opacity(idx == 0 ? 0.5 : 0)
+
+                            if idx == 0 {
+                                if card.isFallback {
+                                    VStack {
+                                        HStack {
+                                            Image("circle-cards")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 183, height: 248)
+                                                .opacity(0.85)
+                                                .offset(x: -51 , y: -77)
+                                            
+                                            Spacer()
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.leading, 0)
+                                    .padding(.top, 0)
+
+                                    VStack {
+                                        Spacer()
+                                        HStack {
+                                            Spacer()
+                                            Image("circle-cards")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 197, height: 241)
+                                                .opacity(0.55)
+                                                .offset(x: 77, y: 51)
+                                              
+                                        }
+                                    }
+                                    .padding(.trailing, 0)
+                                    .padding(.bottom, 0)
+                                } else {
+                                    VStack {
+                                        Spacer()
+                                        HStack {
+                                            Spacer()
+                                            Image("leaf-recycle")
+                                                .opacity(0.5)
+                                        }
+                                    }
+                                    .padding(.trailing, 10)
+                                    .offset(y: 17)
+                                }
+                            }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 24))
                     )
@@ -131,12 +234,15 @@ struct StackedCards: View {
             }
         }
         .onAppear() {
-            tempCard = cards[1]
-            
-            cards[1].title = cards[0].title
-            cards[1].subTitle = cards[0].subTitle
-            cards[1].chips = cards[0].chips
-            cards[1].color = cards[0].color
+            guard cards.indices.contains(1) else { return }
+            if cards.indices.contains(1) {
+                tempCard = cards[1]
+
+                cards[1].title = cards[0].title
+                cards[1].subTitle = cards[0].subTitle
+                cards[1].chips = cards[0].chips
+                cards[1].color = cards[0].color
+            }
         }
     }
     
@@ -164,7 +270,10 @@ struct StackedCards: View {
         withAnimation(.smooth) {
             dragOffset = .zero
             addToLast()
-            
+            if totalCardCount > 0 {
+                currentIndex = (currentIndex % totalCardCount) + 1
+            }
+
             cards[0].title = tempCard.title
             cards[0].subTitle = tempCard.subTitle
             cards[0].chips = tempCard.chips
@@ -183,8 +292,8 @@ struct StackedCards: View {
     }
     
     func addToLast() {
-        let temp = cards[0]
-        cards.removeFirst()
+        guard !cards.isEmpty else { return }
+        let temp = cards.removeFirst()
         cards.append(temp)
     }
 }

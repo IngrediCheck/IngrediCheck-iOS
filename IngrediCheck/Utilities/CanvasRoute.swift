@@ -18,6 +18,9 @@ enum CanvasRoute: Hashable {
     case home
     case summaryJustMe
     case summaryAddFamily
+    case readyToScanFirstProduct
+    case seeHowScanningWorks
+    case whyWeNeedThesePermissions
 }
 
 

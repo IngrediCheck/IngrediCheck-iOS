@@ -57,6 +57,10 @@ enum BottomSheetRoute: Hashable {
     case meetYourProfileIntro
     case meetYourProfile(memberId: UUID? = nil)
     case preferencesAddedSuccess
+    case readyToScanFirstProduct
+    case seeHowScanningWorks
+    case quickAccessNeeded
+    case loginToContinue
 }
 
 

@@ -212,6 +212,12 @@ class AppNavigationCoordinator {
             return .preferencesAddedSuccess
         case .summaryAddFamily:
             return .allSetToJoinYourFamily
+        case .readyToScanFirstProduct:
+            return .readyToScanFirstProduct
+        case .seeHowScanningWorks:
+            return .seeHowScanningWorks
+        case .whyWeNeedThesePermissions:
+            return .quickAccessNeeded
         }
     }
     
@@ -248,7 +254,7 @@ class AppNavigationCoordinator {
             }
             return .dynamicOnboarding
             
-        case .home, .summaryJustMe, .summaryAddFamily:
+        case .home, .summaryJustMe, .summaryAddFamily, .readyToScanFirstProduct, .seeHowScanningWorks, .whyWeNeedThesePermissions:
             return .completed
         }
     }
@@ -323,6 +329,14 @@ class AppNavigationCoordinator {
             return (.meetYourProfile, nil)
         case .preferencesAddedSuccess:
             return (.preferencesAddedSuccess, nil)
+        case .readyToScanFirstProduct:
+            return (.readyToScanFirstProduct, nil)
+        case .seeHowScanningWorks:
+            return (.seeHowScanningWorks, nil)
+        case .quickAccessNeeded:
+            return (.quickAccessNeeded, nil)
+        case .loginToContinue:
+            return (.loginToContinue, nil)
         }
     }
     
@@ -410,6 +424,14 @@ class AppNavigationCoordinator {
             return .meetYourProfile(memberId: nil)
         case .preferencesAddedSuccess:
             return .preferencesAddedSuccess
+        case .readyToScanFirstProduct:
+            return .readyToScanFirstProduct
+        case .seeHowScanningWorks:
+            return .seeHowScanningWorks
+        case .quickAccessNeeded:
+            return .quickAccessNeeded
+        case .loginToContinue:
+            return .loginToContinue
         }
     }
     static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {
@@ -463,6 +485,14 @@ class AppNavigationCoordinator {
              canvas = .home
         case .preferencesAddedSuccess:
              canvas = .summaryJustMe
+        case .readyToScanFirstProduct:
+             canvas = .readyToScanFirstProduct
+        case .seeHowScanningWorks:
+             canvas = .seeHowScanningWorks
+        case .quickAccessNeeded:
+             canvas = .whyWeNeedThesePermissions
+        case .loginToContinue:
+             canvas = .whyWeNeedThesePermissions
         default:
              break
         }

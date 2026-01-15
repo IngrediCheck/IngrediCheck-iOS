@@ -16,6 +16,7 @@ struct TabBar: View {
     @State private var isCameraPresented = false
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     var onRecentScansTap: (() -> Void)? = nil
+    var onChatBotTap: (() -> Void)? = nil
 
     
     var body: some View {
@@ -36,7 +37,11 @@ struct TabBar: View {
                     Spacer()
                     
                     Button {
-                        coordinator.presentChatBot(startAtConversation: true)
+                        if let onChatBotTap {
+                            onChatBotTap()
+                        } else {
+                            coordinator.presentChatBot(startAtConversation: true)
+                        }
                     } label: {
                         Image("tabBar-ingredibot")
                             .renderingMode(.template)

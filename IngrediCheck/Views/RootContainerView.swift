@@ -190,11 +190,13 @@ struct RootContainerView: View {
         // upgrading a guest account), refresh the family from the backend so
         // the home screen immediately reflects the latest household state
         // without requiring an app restart.
+        // Only navigate to home if we're not already on home canvas to avoid
+        // disrupting navigation when Settings or other views are presented
         .onChange(of: authController.signInState) { _, newValue in
             if newValue == .signedIn {
                 Task {
                     await familyStore.loadCurrentFamily()
-                    if !authController.signedInAsGuest {
+                    if !authController.signedInAsGuest && coordinator.currentCanvasRoute != .home {
                         await MainActor.run {
                             coordinator.showCanvas(.home)
                         }
@@ -236,6 +238,12 @@ struct RootContainerView: View {
             NavigationStack {
                 EditableCanvasView(titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
             }
+        case .readyToScanFirstProduct:
+            ReadyToScanCanvas()
+        case .seeHowScanningWorks:
+            ScanningHelpCanvas()
+        case .whyWeNeedThesePermissions:
+            PermissionsCanvas()
         }
     }
 
