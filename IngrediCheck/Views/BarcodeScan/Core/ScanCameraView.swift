@@ -5,6 +5,11 @@ import Combine
 import PhotosUI
 import CryptoKit
 
+enum CameraPresentationSource {
+    case homeView
+    case productDetailView
+}
+
 struct ScanCameraView: View {
 
     @StateObject var camera = BarcodeCameraManager()
@@ -45,6 +50,11 @@ struct ScanCameraView: View {
     @State private var capturedImagesPerScanId: [String: [(image: UIImage, hash: String)]] = [:]  // Track captured images per scanId with hash
     @State private var submittingScanIds: Set<String> = []  // Track scanIds currently submitting images (prevents premature getScan)
     private let skeletonCardId = "skeleton"  // Constant ID for skeleton card
+    
+    // MARK: - Presentation Source Tracking
+    @State private var presentationSource: CameraPresentationSource = .homeView
+    @State private var isProgrammaticModeChange: Bool = false
+    @State private var targetScanIdFromProductDetail: String? = nil
     
     // MARK: - Image Hash Helper
     private func calculateImageHash(image: UIImage) -> String {
@@ -377,6 +387,52 @@ struct ScanCameraView: View {
             print("[SCAN_HISTORY] ✅ CameraScreen: Synced \(historyIds.count) history scan IDs from store")
         }
     }
+    
+    /// Handles initial scroll to scanId when opened from ProductDetailView
+    /// Does NOT move the scanId from its original position - just scrolls to it
+    private func handleInitialScrollToScanId(_ targetId: String) async {
+        await MainActor.run {
+            print("[SCAN_SCROLL] 🔵 CameraScreen: Handling initial scroll to scanId: \(targetId)")
+            
+            // Update scanId state to match target (for photo capture association)
+            scanId = targetId
+            
+            // Wait for the carousel items to update and ensure targetId is in allCarouselItems
+            // Use a polling approach to wait for the item to appear in the carousel
+            Task { @MainActor in
+                var attempts = 0
+                let maxAttempts = 20  // Wait up to 2 seconds (20 * 0.1s)
+                
+                while attempts < maxAttempts {
+                    // Check if targetId is in allCarouselItems
+                    if allCarouselItems.contains(targetId) {
+                        print("[SCAN_SCROLL] ✅ CameraScreen: Target scanId found in carousel items, scrolling...")
+                        
+                        // Clear scrollTargetScanId first to ensure onChange fires
+                        scrollTargetScanId = nil
+                        
+                        // Wait a frame to ensure the clear is processed
+                        try? await Task.sleep(nanoseconds: 16_666_666)  // ~1 frame at 60fps
+                        
+                        // Now set it to trigger the scroll
+                        scrollTargetScanId = targetId
+                        print("[SCAN_SCROLL] ✅ CameraScreen: Set scrollTargetScanId to: \(targetId)")
+                        return
+                    }
+                    
+                    // Wait a bit before checking again
+                    try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 seconds
+                    attempts += 1
+                }
+                
+                // Fallback: set it anyway after max attempts
+                print("[SCAN_SCROLL] ⚠️ CameraScreen: Target scanId not found in carousel after \(maxAttempts) attempts, setting scroll target anyway")
+                scrollTargetScanId = nil
+                try? await Task.sleep(nanoseconds: 16_666_666)
+                scrollTargetScanId = targetId
+            }
+        }
+    }
 
     
     // Computed property to combine active scans and history
@@ -516,6 +572,18 @@ struct ScanCameraView: View {
                     // Fetch scan history on appear
                     Task {
                         await loadScanHistory()
+                        
+                        // If opened from ProductDetailView with initial scroll target, handle scrolling
+                        // This handles the case when view is opened directly from ProductDetailView
+                        if presentationSource == .productDetailView {
+                            // Check if we have an initial scroll target from the initializer
+                            // Store it before it might get cleared
+                            let initialTarget = scrollTargetScanId
+                            if let target = initialTarget, !target.isEmpty, target != skeletonCardId {
+                                print("[SCAN_SCROLL] 🔵 CameraScreen: onAppear - Found initial scroll target: \(target)")
+                                await handleInitialScrollToScanId(target)
+                            }
+                        }
                     }
                 }
                 .onDisappear { camera.stopSession() }
@@ -537,19 +605,36 @@ struct ScanCameraView: View {
                         }
                     }
                     
-                    // When toggling between scanner/photo, start a fresh session with a new skeleton card
-                    // at the front of the carousel and scroll to it.
-                    scanId = nil
-                    pendingBarcodes.removeAll()
-                    // Clear target first so ScanCardsCarousel's onChange(of:scrollTargetId) always fires
-                    scrollTargetScanId = nil
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        scanIds = [skeletonCardId]
+                    // Only reset scan state when:
+                    // 1. Opened from HomeView (presentationSource == .homeView), OR
+                    // 2. Manual toggle (isProgrammaticModeChange == false)
+                    // Do NOT reset when programmatically returning from ProductDetailView
+                    let shouldReset = presentationSource == .homeView || !isProgrammaticModeChange
+                    
+                    if shouldReset {
+                        // When toggling between scanner/photo from HomeView or manual toggle, start a fresh session
+                        scanId = nil
+                        pendingBarcodes.removeAll()
+                        // Clear target first so ScanCardsCarousel's onChange(of:scrollTargetId) always fires
+                        scrollTargetScanId = nil
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            scanIds = [skeletonCardId]
+                        }
+                        // Set scroll target on next runloop tick to ensure items are updated
+                        DispatchQueue.main.async {
+                            scrollTargetScanId = skeletonCardId
+                        }
+                    } else if isProgrammaticModeChange, let targetId = targetScanIdFromProductDetail {
+                        // Returning from ProductDetailView - preserve state and scroll to target
+                        // Use the helper function to handle scrolling
+                        Task {
+                            await handleInitialScrollToScanId(targetId)
+                        }
                     }
-                    // Set scroll target on next runloop tick to ensure items are updated
-                    DispatchQueue.main.async {
-                        scrollTargetScanId = skeletonCardId
-                    }
+                    
+                    // Reset flags after handling
+                    isProgrammaticModeChange = false
+                    targetScanIdFromProductDetail = nil
                     
                     updateToastState()
                     
@@ -1081,9 +1166,12 @@ struct ScanCameraView: View {
                     presentationSource: .cameraView,
                     onRequestCameraWithScan: { requestedScanId in
                         // Handle camera request from ProductDetail
-                        // Switch to photo mode and scroll to the requested scan
+                        // Mark that we're returning from ProductDetailView programmatically
+                        isProgrammaticModeChange = true
+                        targetScanIdFromProductDetail = requestedScanId
+                        
+                        // Switch to photo mode (this will trigger onChange handler)
                         mode = .photo
-                        scrollTargetScanId = requestedScanId
                     }
                 )
             } else {
@@ -1104,11 +1192,13 @@ struct ScanCameraView: View {
 struct ScanCameraViewWithInitialState: View {
     let initialScanId: String?
     let initialMode: CameraMode
+    let presentationSource: CameraPresentationSource
 
     var body: some View {
         ScanCameraViewInternal(
             initialScanId: initialScanId,
-            initialMode: initialMode
+            initialMode: initialMode,
+            presentationSource: presentationSource
         )
     }
 }
@@ -1117,11 +1207,13 @@ struct ScanCameraViewWithInitialState: View {
 private struct ScanCameraViewInternal: View {
     let initialScanId: String?
     let initialMode: CameraMode
+    let presentationSource: CameraPresentationSource
 
     var body: some View {
         ScanCameraView(
             initialMode: initialMode,
-            initialScrollTarget: initialScanId
+            initialScrollTarget: initialScanId,
+            presentationSource: presentationSource
         )
     }
 }
@@ -1130,7 +1222,7 @@ extension ScanCameraView {
 
     // MARK: - Initializer with initial state
 
-    init(initialMode: CameraMode? = nil, initialScrollTarget: String? = nil) {
+    init(initialMode: CameraMode? = nil, initialScrollTarget: String? = nil, presentationSource: CameraPresentationSource = .homeView) {
         // Set initial mode if provided
         if let initialMode = initialMode {
             self._mode = State(initialValue: initialMode)
@@ -1140,6 +1232,9 @@ extension ScanCameraView {
         if let initialScrollTarget = initialScrollTarget {
             self._scrollTargetScanId = State(initialValue: initialScrollTarget)
         }
+        
+        // Set presentation source
+        self._presentationSource = State(initialValue: presentationSource)
     }
 
 

@@ -1,6 +1,6 @@
 //
-//  GetStarted.swift
-//  IngrediCheckPreview
+//  PrimaryButton.swift
+//  IngrediCheck
 //
 //  Created by Gunjan Haldar   on 09/10/25.
 //
@@ -14,7 +14,7 @@ struct GreenCapsule: View {
     var iconHeight: CGFloat = 20
     var width: CGFloat = 152
     var height: CGFloat = 52
-    var takeFullWidth: Bool = true
+    var takeFullWidth: Bool = false
     var isLoading: Bool = false
     var labelFont: Font = NunitoFont.semiBold.size(16)
     var isDisabled: Bool = false
@@ -65,7 +65,7 @@ struct GreenCapsule: View {
         }
         // Respect explicit width/height when takeFullWidth is false, otherwise fill horizontally with a sensible min width
         .frame(width: takeFullWidth ? nil : width, height: height)
-        .frame(minWidth: takeFullWidth ? 152 : 0)
+        .frame(minWidth: takeFullWidth ? 152 : 152)
         .frame(maxWidth: takeFullWidth ? .infinity : nil)
         .background(backgroundView)
         .overlay(
@@ -74,7 +74,7 @@ struct GreenCapsule: View {
                 .foregroundStyle(isDisabled ? .grayScale40 : .grayScale10)
             
         )
-        .opacity(isDisabled ? 0.6 : 1.0)
+//        .opacity(isDisabled ? 0.6 : 1.0)
     }
     
     @ViewBuilder
@@ -104,7 +104,13 @@ struct GreenCapsule: View {
 
 #Preview {
     ZStack {
-        Color.gray.opacity(0.1).ignoresSafeArea()
-        GreenCapsule(title: "Get Started")
+//        Color.gray.opacity(0.1).ignoresSafeArea()
+        VStack(spacing: 20) {
+            GreenCapsule(title: "Get Started")
+            GreenCapsule(title: "Continue", isLoading: true)
+            GreenCapsule(title: "Disabled", isDisabled: true)
+            GreenCapsule(title: "With Icon", icon: "share", iconWidth: 12, iconHeight: 12)
+        }
+        .padding()
     }
 }

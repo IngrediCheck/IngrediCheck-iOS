@@ -322,7 +322,10 @@ class AppNavigationCoordinator {
             return (.workingOnSummary, nil)
         case .meetYourProfileIntro:
             return (.meetYourProfileIntro, nil)
-        case .meetYourProfile:
+        case .meetYourProfile(let memberId):
+            if let memberId = memberId {
+                return (.meetYourProfile, memberId.uuidString)
+            }
             return (.meetYourProfile, nil)
         case .preferencesAddedSuccess:
             return (.preferencesAddedSuccess, nil)
@@ -415,7 +418,10 @@ class AppNavigationCoordinator {
         case .meetYourProfileIntro:
             return .meetYourProfileIntro
         case .meetYourProfile:
-            return .meetYourProfile
+            if let param = param, let memberId = UUID(uuidString: param) {
+                return .meetYourProfile(memberId: memberId)
+            }
+            return .meetYourProfile(memberId: nil)
         case .preferencesAddedSuccess:
             return .preferencesAddedSuccess
         case .readyToScanFirstProduct:

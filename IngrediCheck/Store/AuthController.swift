@@ -647,8 +647,9 @@ private enum AuthFlowMode {
         }
         Self.hasPinged = true
         
-        // Fire-and-forget ping call
-        WebService().ping()
+        // Fire-and-forget ping calls to wake up both backends
+        WebService().ping() // Supabase
+        WebService().pingFlyIO() // Fly.io
     }
     
     @MainActor

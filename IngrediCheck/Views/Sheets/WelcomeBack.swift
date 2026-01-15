@@ -46,9 +46,23 @@ struct WelcomeBack: View {
                     authController.signInWithGoogle { result in
                         switch result {
                         case .success:
-                            OnboardingPersistence.shared.markCompleted()
-                            coordinator.showCanvas(.home)
-                            isSigningIn = false
+                            Task {
+                                // Fetch remote metadata to check onboarding stage
+                                let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
+                                
+                                await MainActor.run {
+                                    if let stage = metadata?.stage, stage == .completed {
+                                        // User has completed onboarding (including food notes), go to home
+                                        OnboardingPersistence.shared.markCompleted()
+                                        coordinator.showCanvas(.home)
+                                    } else {
+                                        // User hasn't completed food notes, show "Personalize your Choices"
+                                        coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
+                                        coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                                    }
+                                    isSigningIn = false
+                                }
+                            }
                         case .failure(let error):
                             print("Google Sign-In failed: \\(error.localizedDescription)")
                             isSigningIn = false
@@ -78,9 +92,23 @@ struct WelcomeBack: View {
                     authController.signInWithApple { result in
                         switch result {
                         case .success:
-                            OnboardingPersistence.shared.markCompleted()
-                            coordinator.showCanvas(.home)
-                            isSigningIn = false
+                            Task {
+                                // Fetch remote metadata to check onboarding stage
+                                let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
+                                
+                                await MainActor.run {
+                                    if let stage = metadata?.stage, stage == .completed {
+                                        // User has completed onboarding (including food notes), go to home
+                                        OnboardingPersistence.shared.markCompleted()
+                                        coordinator.showCanvas(.home)
+                                    } else {
+                                        // User hasn't completed food notes, show "Personalize your Choices"
+                                        coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
+                                        coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                                    }
+                                    isSigningIn = false
+                                }
+                            }
                         case .failure(let error):
                             print("Apple Sign-In failed: \\(error.localizedDescription)")
                             isSigningIn = false

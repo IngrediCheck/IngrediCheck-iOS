@@ -52,8 +52,14 @@ public struct ToastData: Equatable {
 @Observable
 @MainActor
 final class ToastManager {
+    // Singleton instance
+    static let shared = ToastManager()
+    
     var toast: ToastData?
     var isPresented: Bool = false
+    
+    // Private initializer to prevent external instantiation
+    private init() {}
     
     func show(message: String, type: ToastType = .info, duration: TimeInterval = 3.0) {
         self.toast = ToastData(message: message, type: type, duration: duration)
@@ -62,7 +68,7 @@ final class ToastManager {
         }
         
         if duration > 0 {
-            Task {
+            Task { @MainActor in
                 try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 dismiss()
             }
@@ -74,7 +80,7 @@ final class ToastManager {
             self.isPresented = false
         }
         // Small delay to allow animation to finish before clearing data
-        Task {
+        Task { @MainActor in
             try? await Task.sleep(nanoseconds: 300_000_000)
             self.toast = nil
         }

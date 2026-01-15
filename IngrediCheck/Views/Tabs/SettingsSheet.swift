@@ -1,7 +1,8 @@
 import SwiftUI
 import SimpleToast
 
-struct SettingsSheet: View {
+// Content view without NavigationStack - can be used in navigationDestination
+struct SettingsContentView: View {
     
     @Environment(UserPreferences.self) var userPreferences
     @Environment(\.dismiss) var dismiss
@@ -57,7 +58,6 @@ struct SettingsSheet: View {
     }
     
     var body: some View {
-        NavigationStack {
             VStack(spacing: 0) {
                 // Sticky Header Section
                 VStack(spacing: 24) {
@@ -314,7 +314,6 @@ struct SettingsSheet: View {
                     }
                 )
             }
-        }
         .background(Color(hex: "#F7F7F7"))
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
@@ -534,14 +533,12 @@ struct SettingsSheet: View {
                             .background(Color.grayScale10)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
+                    }
                 }
             }
-        }
     }
-        
     
-        
-        // MARK: - Header name edit
+    // MARK: - Header name edit
         @ViewBuilder
         private func nameEditField() -> some View {
             HStack(spacing: 12) {
@@ -998,6 +995,16 @@ struct SettingsSheet: View {
     }
 }
 
+// SettingsSheet wraps SettingsContentView in NavigationStack for sheet presentation
+struct SettingsSheet: View {
+    var body: some View {
+        NavigationStack {
+            SettingsContentView()
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+    }
+}
 
 @MainActor struct SettingsTabContainer: View {
     @State private var userPreferences = UserPreferences()

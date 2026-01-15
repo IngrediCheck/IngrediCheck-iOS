@@ -27,6 +27,10 @@ struct HomeView: View {
     }
 
     @State private var scrollTrackingState = ScrollTrackingState()
+    @State private var stats: DTO.StatsResponse? = nil
+    @State private var isLoadingStats: Bool = false
+    @State private var showScanCamera: Bool = false
+    @State private var hasCheckedAutoScan: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -79,7 +83,7 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView(showsIndicators: false) {
+            ScrollView(.vertical, showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 0) {
                     
@@ -119,7 +123,7 @@ struct HomeView: View {
                     .padding(.bottom, 28)
                     
                     // Food Notes & Allergy Summary...
-                    HStack {
+                    HStack(spacing: 12) {
                         VStack(alignment: .leading) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Food Notes")
@@ -127,7 +131,7 @@ struct HomeView: View {
                                     .foregroundStyle(.grayScale150)
                                     .frame(height: 15)
                                 
-                                Text("Here’s what your family avoids  or needs to watch out for.")
+                                Text("Here's what your family avoids  or needs to watch out for.")
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
                             }
@@ -140,22 +144,25 @@ struct HomeView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         
-                        Spacer()
                         AllergySummaryCard(onTap: {
                             editTargetSectionName = nil
                             showEditableCanvas = true
                         })
+                        .frame(maxWidth: .infinity)
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)
                     
-                    // Lifestyle + Family + Average scans
-                    HStack {
-                        AverageScansCard(playsLaunchAnimation: !didPlayAverageScansLaunchAnimation)
+                    // Family + Average scans
+                    HStack(spacing: 12) {
+                        AverageScansCard(
+                            playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
+                            avgScans: stats?.avgScans ?? 0
+                        )
                             .onAppear {
                                 didPlayAverageScansLaunchAnimation = true
                             }
-                            .padding(.trailing, 15)
+                            .frame(maxWidth: .infinity)
                         
                         VStack {
                             VStack(alignment: .leading) {
@@ -205,22 +212,31 @@ struct HomeView: View {
                             }
                             .frame(height: 125)
                         }
+                        .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
                     Image(.homescreenbanner)
                         .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
                         .cornerRadius(20)
                         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .padding(.bottom, 20)
                     
-                    HStack {
-                        YourBarcodeScans()
+                    HStack(spacing: 12) {
+                        YourBarcodeScans(barcodeScansCount: stats?.barcodeScansCount ?? 0)
+                            .frame(maxWidth: .infinity)
                         UserFeedbackCard()
+                            .frame(maxWidth: .infinity)
                     }
                     .padding(.bottom, 20)
                     
-                    MatchingRateCard()
+                    MatchingRateCard(
+                        matchedCount: stats?.matchingStats.matched ?? 0,
+                        uncertainCount: stats?.matchingStats.uncertain ?? 0,
+                        unmatchedCount: stats?.matchingStats.unmatched ?? 0
+                    )
                         .padding(.bottom, 20)
                     
                     CreateYourAvatarCard()
@@ -409,6 +425,8 @@ struct HomeView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .coordinateSpace(name: "homeScroll")
+            .frame(maxWidth: .infinity)
+            .clipped()
             .overlay(
                 // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
                 LinearGradient(
@@ -458,8 +476,10 @@ struct HomeView: View {
             }
 
             // ------------ SETTINGS SCREEN ------------
+            // Use SettingsContentView (without NavigationStack) in navigationDestination
+            // to avoid nested NavigationStack issues that cause NavigationPath comparisonTypeMismatch errors
             .navigationDestination(isPresented: $isSettingsPresented) {
-                SettingsSheet()
+                SettingsContentView()
                     .environment(userPreferences)
                     .environment(coordinator)
                     .environment(memojiStore)
@@ -501,6 +521,17 @@ struct HomeView: View {
                 )
             }
             
+            // ------------ SCAN CAMERA (Auto-open on app start) ------------
+            .fullScreenCover(isPresented: $showScanCamera, onDismiss: {
+                Task {
+                    await scanHistoryStore.loadHistory(forceRefresh: true)
+                    // Also refresh scan count since a new scan might have occurred
+                    userPreferences.refreshScanCount()
+                }
+            }) {
+                ScanCameraView()
+            }
+            
 
 
             // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
@@ -528,7 +559,37 @@ struct HomeView: View {
                      RecentScansPageView()
                 }
             }
+            .task {
+                await loadStats()
+            }
+            .onAppear {
+                // Check if we should auto-open scan camera on app start
+                // Only trigger once when HomeView first appears
+                if !hasCheckedAutoScan && userPreferences.startScanningOnAppStart {
+                    hasCheckedAutoScan = true
+                    // Small delay to ensure view is fully loaded
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                        showScanCamera = true
+                    }
+                }
+            }
             
+        }
+    }
+    
+    private func loadStats() async {
+        guard !isLoadingStats else { return }
+        isLoadingStats = true
+        defer { isLoadingStats = false }
+        
+        do {
+            let fetchedStats = try await webService.fetchStats()
+            await MainActor.run {
+                stats = fetchedStats
+            }
+        } catch {
+            print("[HomeView] Failed to load stats: \(error.localizedDescription)")
         }
     }
     
@@ -544,6 +605,9 @@ struct HomeView: View {
         await MainActor.run {
             appState.listsTabState.scans = scanHistoryStore.scans
         }
+        
+        // Refresh stats
+        await loadStats()
     }
 }
 

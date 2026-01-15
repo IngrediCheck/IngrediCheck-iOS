@@ -1134,7 +1134,8 @@ struct ScanCameraViewWrapper: View {
     var body: some View {
         ScanCameraViewWithInitialState(
             initialScanId: initialScanId,
-            initialMode: initialMode
+            initialMode: initialMode,
+            presentationSource: .productDetailView
         )
     }
 }

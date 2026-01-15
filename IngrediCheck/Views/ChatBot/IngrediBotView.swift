@@ -70,29 +70,24 @@ struct IngrediBotView: View {
 
             // Action buttons
             HStack(spacing: 12) {
-                Button {
-                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
-                    
-                    if isOnboarding {
-                        if coordinator.onboardingFlow == .individual {
-                            coordinator.showCanvas(.summaryJustMe)
+                SecondaryButton(
+                    title: "Maybe later",
+                    width: 159,
+                    takeFullWidth: false,
+                    action: {
+                        let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
+                        
+                        if isOnboarding {
+                            if coordinator.onboardingFlow == .individual {
+                                coordinator.showCanvas(.summaryJustMe)
+                            } else {
+                                coordinator.showCanvas(.summaryAddFamily)
+                            }
                         } else {
-                            coordinator.showCanvas(.summaryAddFamily)
+                            coordinator.navigateInBottomSheet(.homeDefault)
                         }
-                    } else {
-                        coordinator.navigateInBottomSheet(.homeDefault)
                     }
-                } label: {
-                    Text("Maybe later")
-                        .lineLimit(1)
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .padding(.horizontal, 36)
-                        .padding(.vertical, 17)
-                        .frame(width: 159, height: 52)
-                        .background(.grayScale40, in: .capsule)
-                }
-                
+                )
 
                 Button {
                     coordinator.navigateInBottomSheet(.chatConversation)

@@ -531,12 +531,17 @@ final class FamilyStore {
         selfMember: FamilyMember,
         otherMembers: [FamilyMember]
     ) async {
-        print("[FamilyStore] createOrUpdateFamily called with name=\(name), self=\(selfMember.name), others=\(otherMembers.map { $0.name })")
+        print("[FamilyStore] 🔵 createOrUpdateFamily called")
+        print("[FamilyStore] 📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer { 
+            isLoading = false
+            print("[FamilyStore] ✅ createOrUpdateFamily completed - isLoading: false")
+        }
         
         do {
+            print("[FamilyStore] ⏳ Calling service.createFamily...")
             family = try await service.createFamily(
                 name: name,
                 selfMember: selfMember,
@@ -546,10 +551,16 @@ final class FamilyStore {
             // Sync pending invite status after update
             syncPendingInviteStatus()
             
-            print("[FamilyStore] createOrUpdateFamily success, family name=\(family?.name ?? "nil")")
+            print("[FamilyStore] ✅ createOrUpdateFamily success - family name: \(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] createOrUpdateFamily error: \(error)")
+            print("[FamilyStore] ❌ createOrUpdateFamily error: \(error)")
+            print("[FamilyStore] ❌ Error message: \(errorMessage ?? "nil")")
+            if let networkError = error as? NetworkError {
+                print("[FamilyStore] ❌ NetworkError details: \(networkError)")
+            } else if let urlError = error as? URLError {
+                print("[FamilyStore] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+            }
         }
     }
     
@@ -692,15 +703,22 @@ final class FamilyStore {
     /// Creates a family immediately with the given self name.
     /// Throws error for UI handling (Toast/Navigation blocking).
     func createFamilyImmediate(selfName: String) async throws {
-        print("[FamilyStore] createFamilyImmediate called with selfName=\(selfName)")
+        print("[FamilyStore] 🔵 createFamilyImmediate called")
+        print("[FamilyStore] 📝 Parameter - selfName: \(selfName)")
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer { 
+            isLoading = false
+            print("[FamilyStore] ✅ createFamilyImmediate completed - isLoading: false")
+        }
         
         let trimmed = selfName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
+            print("[FamilyStore] ❌ Validation failed - name is empty after trimming")
             throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
         }
+        
+        print("[FamilyStore] ✅ Name validation passed - trimmed name: \(trimmed)")
         
         // Check if we have a pending self member logic we should respect?
         // Or just create fresh? The flow "WhatsYourName" usually sets pending self member.
@@ -708,6 +726,7 @@ final class FamilyStore {
         
         let selfMember: FamilyMember
         if let pending = pendingSelfMember {
+            print("[FamilyStore] 📋 Using pending self member - id: \(pending.id), color: \(pending.color), hasImage: \(pending.imageFileHash != nil)")
             selfMember = FamilyMember(
                 id: pending.id,
                 name: trimmed,
@@ -716,27 +735,46 @@ final class FamilyStore {
                 imageFileHash: pending.imageFileHash
             )
         } else {
-             selfMember = FamilyMember(
+            let newColor = randomColor()
+            print("[FamilyStore] 🆕 Creating new self member - id: \(UUID()), color: \(newColor)")
+            selfMember = FamilyMember(
                 id: UUID(),
                 name: trimmed,
-                color: randomColor(),
+                color: newColor,
                 joined: true,
                 imageFileHash: nil
             )
         }
         
         let familyName = "\(trimmed)'s Family"
+        print("[FamilyStore] 📝 Family name: \(familyName)")
         
-        family = try await service.createFamily(
-            name: familyName,
-            selfMember: selfMember,
-            otherMembers: nil
-        )
-        
-        if let family = family {
-            selectedMemberId = family.selfMember.id
-            // Clear pending self member as it is now persisted
-            pendingSelfMember = nil
+        do {
+            print("[FamilyStore] ⏳ Calling service.createFamily...")
+            family = try await service.createFamily(
+                name: familyName,
+                selfMember: selfMember,
+                otherMembers: nil
+            )
+            
+            if let family = family {
+                print("[FamilyStore] ✅ Family created successfully - name: \(family.name)")
+                selectedMemberId = family.selfMember.id
+                print("[FamilyStore] ✅ Selected member ID set to: \(selectedMemberId?.uuidString)")
+                // Clear pending self member as it is now persisted
+                pendingSelfMember = nil
+                print("[FamilyStore] ✅ Cleared pending self member")
+            } else {
+                print("[FamilyStore] ⚠️ Family is nil after creation")
+            }
+        } catch {
+            print("[FamilyStore] ❌ createFamilyImmediate failed with error: \(error)")
+            if let networkError = error as? NetworkError {
+                print("[FamilyStore] ❌ NetworkError details: \(networkError)")
+            } else if let urlError = error as? URLError {
+                print("[FamilyStore] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+            }
+            throw error
         }
     }
     

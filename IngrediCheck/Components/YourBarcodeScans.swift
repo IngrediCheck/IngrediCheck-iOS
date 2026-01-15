@@ -11,6 +11,11 @@ struct YourBarcodeScans: View {
     @Environment(UserPreferences.self) var userPreferences
     @State private var isCameraPresented = false
     @Environment(ScanHistoryStore.self) var scanHistoryStore
+    var barcodeScansCount: Int? = nil
+    
+    private var displayCount: Int {
+        barcodeScansCount ?? userPreferences.totalScanCount
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -19,7 +24,7 @@ struct YourBarcodeScans: View {
                     .font(ManropeFont.regular.size(14))
                     .foregroundStyle(.grayScale110)
                 
-                Text("\(userPreferences.totalScanCount)")
+                Text("\(displayCount)")
                     .font(.system(size: 52, weight: .bold))
                     .foregroundStyle(.grayScale150)
                     .frame(height: 40)

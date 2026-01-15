@@ -22,16 +22,11 @@ struct StayUpdated: View {
             }
 
             HStack(spacing: 16) {
-                Button {
-                    
-                } label: {
-                    Text("Remind me Later")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .padding(.vertical, 17)
-                        .frame(maxWidth: .infinity)
-                        .background(.grayScale40, in: .capsule)
-                }
+                SecondaryButton(
+                    title: "Remind me Later",
+                    takeFullWidth: true,
+                    action: {}
+                )
 
                 GreenCapsule(title: "Allow")
             }

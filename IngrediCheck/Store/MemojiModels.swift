@@ -11,7 +11,28 @@ struct MemojiRequest: Encodable {
     let model: String
     let subscriptionTier: String
     let colorTheme: String? // Color theme for clothing and background style
-    let mood: String? // Visual description of facial expression and body language
+    let mood: String? // Visual description of facial expression and body language - TODO: Re-enable when backend supports it
+    
+    // Custom encoding to omit mood field when nil (not ready on backend yet)
+    enum CodingKeys: String, CodingKey {
+        case familyType, gesture, hair, skinTone, accessories, background, size, model, subscriptionTier, colorTheme, mood
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(familyType, forKey: .familyType)
+        try container.encode(gesture, forKey: .gesture)
+        try container.encode(hair, forKey: .hair)
+        try container.encode(skinTone, forKey: .skinTone)
+        try container.encode(accessories, forKey: .accessories)
+        try container.encode(background, forKey: .background)
+        try container.encode(size, forKey: .size)
+        try container.encode(model, forKey: .model)
+        try container.encode(subscriptionTier, forKey: .subscriptionTier)
+        try container.encodeIfPresent(colorTheme, forKey: .colorTheme)
+        // Omit mood field when nil - will re-enable when backend is ready
+        // try container.encodeIfPresent(mood, forKey: .mood)
+    }
 }
 
 struct MemojiResponse: Decodable {
@@ -34,6 +55,15 @@ struct MemojiResponse: Decodable {
         imageUrl =
             (try? container.decodeIfPresent(String.self, forKey: .imageUrl)) ??
             (try? container.decodeIfPresent(String.self, forKey: .image_url))
+    }
+}
+
+struct MemojiErrorResponse: Decodable {
+    let error: MemojiError
+    
+    struct MemojiError: Decodable {
+        let message: String
+        let details: String?
     }
 }
 
@@ -189,7 +219,9 @@ struct MemojiSelection {
             model: "gpt-image-1",
             subscriptionTier: "monthly_basic",
             colorTheme: mapColorThemeToAPIFormat(colorThemeIcon),
-            mood: generateVisualMood()
+            // TODO: Re-enable when backend supports mood field
+            // mood: generateVisualMood()
+            mood: nil // Temporarily disabled - backend not ready yet
         )
     }
     

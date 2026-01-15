@@ -88,11 +88,13 @@ struct MeetYourAvatar: View {
                     .multilineTextAlignment(.center)
                 
                 HStack(spacing: 12) {
-                    Button {
-                        regeneratePressed()
-                    } label: {
-                        GreenOutlinedCapsule(image: "stars-generate", title: "Regenerate")
-                    }
+                    SecondaryButton(
+                        title: "Regenerate",
+                        icon: "stars-generate",
+                        iconWidth: 20,
+                        iconHeight: 20,
+                        action: regeneratePressed
+                    )
                     
                     Button {
                         assignedPressed()

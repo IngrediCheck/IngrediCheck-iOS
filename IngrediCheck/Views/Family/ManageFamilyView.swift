@@ -7,6 +7,23 @@ struct ManageFamilyView: View {
     @Environment(WebService.self) private var webService
     @State private var selfMemberName: String = ""
     @FocusState private var isEditingFamilyName: Bool
+    @State private var nameFieldWidth: CGFloat = 0
+    @State private var shareItems: ShareItem?
+    @State private var isGeneratingInviteCode: Bool = false
+    
+    private let appStoreURL = "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615"
+    
+    struct ShareItem: Identifiable {
+        let id = UUID()
+        let items: [Any]
+    }
+
+    private struct NameWidthPreferenceKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = nextValue()
+        }
+    }
 
     private var members: [FamilyMember] {
         if let family = familyStore.family {
@@ -35,7 +52,7 @@ struct ManageFamilyView: View {
                 }
                 Section {
                     ForEach(members) { member in
-                        MemberRow(member: member)
+                        MemberRow(member: member, onInvite: handleInviteShare)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 0, trailing: 20))
                             .listRowBackground(Color.clear)
@@ -128,6 +145,49 @@ struct ManageFamilyView: View {
                 await familyStore.loadCurrentFamily()
             }
         }
+        .sheet(item: $shareItems) { shareItem in
+            ShareSheet(activityItems: shareItem.items)
+        }
+    }
+    
+    // MARK: - Invite Share Helper
+    
+    @MainActor
+    private func handleInviteShare(memberId: UUID) async {
+        guard !isGeneratingInviteCode else { return }
+        
+        isGeneratingInviteCode = true
+        defer { isGeneratingInviteCode = false }
+        
+        // Mark member as pending so the UI reflects it
+        familyStore.setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+        
+        // Ensure family exists before creating invite codes
+        if familyStore.family == nil {
+            if coordinator.isCreatingFamilyFromSettings {
+                await familyStore.addPendingMembersToExistingFamily()
+            } else {
+                await familyStore.createFamilyFromPendingIfNeeded()
+            }
+        }
+        
+        guard let code = await familyStore.invite(memberId: memberId) else {
+            return
+        }
+        
+        let message = inviteShareMessage(inviteCode: code)
+        let items = [message]
+        shareItems = ShareItem(items: items)
+    }
+    
+    private func inviteShareMessage(inviteCode: String) -> String {
+        let formattedCode = formattedInviteCode(inviteCode)
+        return "You've been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
+    }
+    
+    private func formattedInviteCode(_ inviteCode: String) -> String {
+        let spaced = inviteCode.map { String($0) }.joined(separator: " ")
+        return "**\(spaced)**"
     }
 
     private func commitSelfName() {
@@ -217,7 +277,7 @@ struct ManageFamilyView: View {
                 }
                 
             }
-
+            
             HStack(spacing: -8) {
                 ForEach(Array(members.prefix(6)), id: \.id) { member in
                     MemberAvatar.custom(member: member, size: 32, imagePadding: 0)
@@ -268,6 +328,7 @@ struct ManageFamilyView: View {
 
     struct MemberRow: View {
         let member: FamilyMember
+        let onInvite: (UUID) async -> Void
         @Environment(FamilyStore.self) private var familyStore
         @Environment(AppNavigationCoordinator.self) private var coordinator
         @State private var showLeaveConfirm = false
@@ -311,7 +372,8 @@ struct ManageFamilyView: View {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     print("[ManageFamilyView] Info area tapped for \(member.name), navigating to edit")
-                    coordinator.navigateInBottomSheet(.editMember(memberId: member.id, isSelf: isSelf))
+                    // All members use MeetYourProfileView for consistency
+                    coordinator.navigateInBottomSheet(.meetYourProfile(memberId: member.id))
                 }
 
                 // Action Area: Invite or Leave (Independent tap target)
@@ -391,7 +453,9 @@ struct ManageFamilyView: View {
             } else {
                 Button {
                     print("[ManageFamilyView] Invite button tapped for \(member.name)")
-                    coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: member.id, name: member.name))
+                    Task { @MainActor in
+                        await onInvite(member.id)
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image("share")

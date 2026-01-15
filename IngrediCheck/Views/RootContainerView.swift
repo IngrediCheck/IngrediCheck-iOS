@@ -42,22 +42,39 @@ struct RootContainerView: View {
     @Environment(AuthController.self) private var authController
     @Environment(\.dismiss) private var dismiss
 
-    @State private var toastManager = ToastManager()
 
     var body: some View {
         @Bindable var coordinator = coordinator
         @Bindable var appState = appState
-        @Bindable var toastManagerBindable = toastManager
+        @Bindable var toastManager = ToastManager.shared
 
         ZStack(alignment: .bottom) {
             // Show custom background when meetYourProfileIntro or meetYourProfile bottom sheet is active
-            if coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
-               coordinator.currentBottomSheetRoute == .meetYourProfile ||
+            // BUT only if we're NOT on the family overview screen (letsMeetYourIngrediFam) or home screen
+            // (where SettingsSheet might be shown)
+            let isOnFamilyOverview = coordinator.currentCanvasRoute == .letsMeetYourIngrediFam
+            let isOnHomeScreen = coordinator.currentCanvasRoute == .home
+            let isFromMeetYourProfile: Bool = {
+                if case .meetYourProfile = memojiStore.previousRouteForGenerateAvatar {
+                    return true
+                }
+                return false
+            }()
+            let isMeetYourProfileRoute: Bool = {
+                if case .meetYourProfile = coordinator.currentBottomSheetRoute {
+                    return true
+                }
+                return false
+            }()
+            let shouldShowCustomBackground = (coordinator.currentBottomSheetRoute == .meetYourProfileIntro || 
+               isMeetYourProfileRoute ||
                ((coordinator.currentBottomSheetRoute == .generateAvatar || 
                  coordinator.currentBottomSheetRoute == .yourCurrentAvatar ||
                  coordinator.currentBottomSheetRoute == .bringingYourAvatar ||
                  coordinator.currentBottomSheetRoute == .meetYourAvatar) && 
-                (memojiStore.previousRouteForGenerateAvatar == .meetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro)) {
+                (isFromMeetYourProfile || memojiStore.previousRouteForGenerateAvatar == .meetYourProfileIntro))) && !isOnFamilyOverview && !isOnHomeScreen
+            
+            if shouldShowCustomBackground {
                 VStack {
                     Text("Meet your profile")
                         .font(ManropeFont.bold.size(16))
@@ -123,7 +140,6 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
-        .environment(toastManager)
         // Allow presenting SettingsSheet from anywhere in this container
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {
@@ -174,11 +190,13 @@ struct RootContainerView: View {
         // upgrading a guest account), refresh the family from the backend so
         // the home screen immediately reflects the latest household state
         // without requiring an app restart.
+        // Only navigate to home if we're not already on home canvas to avoid
+        // disrupting navigation when Settings or other views are presented
         .onChange(of: authController.signInState) { _, newValue in
             if newValue == .signedIn {
                 Task {
                     await familyStore.loadCurrentFamily()
-                    if !authController.signedInAsGuest {
+                    if !authController.signedInAsGuest && coordinator.currentCanvasRoute != .home {
                         await MainActor.run {
                             coordinator.showCanvas(.home)
                         }
