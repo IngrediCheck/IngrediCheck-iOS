@@ -132,7 +132,6 @@ private enum AuthFlowMode {
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
-    private static var hasPinged = false
     
     @MainActor init() {
         authChangeWatcher()
@@ -291,7 +290,6 @@ private enum AuthFlowMode {
             OnboardingPersistence.shared.reset()
             clearAnonymousCredentials()
             Self.hasRegisteredDevice = false
-            Self.hasPinged = false
         }
     }
 
@@ -606,7 +604,6 @@ private enum AuthFlowMode {
             print("[AUTH] ✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
             
             registerDeviceAfterLogin(session: session)
-            pingAfterLogin()
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
             signInState = .signedOut
@@ -614,8 +611,6 @@ private enum AuthFlowMode {
             if shouldReset {
                 print("[AUTH] 🔴 User signed out")
                 AnalyticsService.shared.resetAnalytics()
-                // Reset ping flag on sign out so it can run again on next login
-                Self.hasPinged = false
             }
         }
     }
@@ -639,19 +634,7 @@ private enum AuthFlowMode {
             }
         }
     }
-    
-    @MainActor
-    private func pingAfterLogin() {
-        guard !Self.hasPinged else {
-            return
-        }
-        Self.hasPinged = true
-        
-        // Fire-and-forget ping calls to wake up both backends
-        WebService().ping() // Supabase
-        WebService().pingFlyIO() // Fly.io
-    }
-    
+
     @MainActor
     func setInternalUser(_ value: Bool) {
         guard value != isInternalUser else { return }

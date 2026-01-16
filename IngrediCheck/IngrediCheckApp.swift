@@ -54,4 +54,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         AnalyticsService.shared.configure()
         return true
     }
+
+    func applicationDidBecomeActive(_: UIApplication) {
+        // Wake up backends on app start and foreground
+        WebService().pingFlyIO()
+        WebService().ping()
+    }
 }
