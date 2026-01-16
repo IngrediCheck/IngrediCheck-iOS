@@ -1875,40 +1875,35 @@ struct ScanStreamError: Error, LocalizedError {
     // MARK: - Ping API
     
     func pingFlyIO() {
-        Task.detached { [self] in
-            guard let token = try? await supabaseClient.auth.session.accessToken else {
-                return
-            }
-            
+        Task.detached {
             guard let url = URL(string: "\(Config.flyIOBaseURL)/ping") else {
                 return
             }
-            
+
+            let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+            let deviceModel = await UIDevice.current.model
+
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            request.timeoutInterval = 10 // Short timeout for wake-up call
-            
+            request.timeoutInterval = 30 // Allow time for Fly.io cold start
+
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let startTime = Date().timeIntervalSince1970
+                let (_, response) = try await URLSession.shared.data(for: request)
+                let endTime = Date().timeIntervalSince1970
+                let clientLatencyMs = (endTime - startTime) * 1000
+
                 let httpResponse = response as? HTTPURLResponse
-                
-                if httpResponse?.statusCode == 200 {
-                    // Parse response to verify it's working
-                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let status = json["status"] as? String {
-                        print("[FLY_IO_PING] ✅ Fly.io backend woken up - status: \(status)")
-                    } else {
-                        print("[FLY_IO_PING] ✅ Fly.io backend woken up (response received)")
-                    }
-                } else if httpResponse?.statusCode == 401 {
-                    print("[FLY_IO_PING] ⚠️ Unauthorized - token may be invalid")
-                } else {
-                    print("[FLY_IO_PING] ⚠️ Unexpected status code: \(httpResponse?.statusCode ?? -1)")
+                if httpResponse?.statusCode == 204 {
+                    let properties: [String: Any] = [
+                        "client_latency_ms": clientLatencyMs,
+                        "app_version": appVersion,
+                        "device_model": deviceModel
+                    ]
+                    PostHogSDK.shared.capture("ai_ping", properties: properties)
                 }
             } catch {
-                print("[FLY_IO_PING] ⚠️ Ping failed (non-critical): \(error.localizedDescription)")
+                // Non-critical, silently ignore
             }
         }
     }
@@ -1920,13 +1915,8 @@ struct ScanStreamError: Error, LocalizedError {
             let networkType = self.getNetworkType()
             let cellularGeneration = networkType == "cellular" ? self.getCellularGeneration() : "none"
             let carrier = networkType == "cellular" ? self.getCarrier() : nil
-            
-            guard let token = try? await supabaseClient.auth.session.accessToken else {
-                return
-            }
-            
+
             let request = SupabaseRequestBuilder(endpoint: .ingredicheck_ping)
-                .setAuthorization(with: token)
                 .setMethod(to: "GET")
                 .build()
 
@@ -1945,16 +1935,15 @@ struct ScanStreamError: Error, LocalizedError {
                         "network_type": networkType,
                         "cellular_generation": cellularGeneration
                     ]
-                    
+
                     if let carrier = carrier, !carrier.isEmpty {
                         properties["carrier"] = carrier
                     }
-                    
-                    print("edge_ping properties: \(properties)")
+
                     PostHogSDK.shared.capture("edge_ping", properties: properties)
                 }
             } catch {
-                print("Ping API call failed: \(error.localizedDescription)")
+                // Non-critical, silently ignore
             }
         }
     }
