@@ -22,12 +22,12 @@ enum SafeEatsEndpoint: String {
     case family_member_food_notes = "family/members/%@/food-notes"
     
     // Scan API endpoints
-    case scan_barcode = "scan/barcode"
-    case scan_image = "scan/%@/image"
+    case scan_barcode = "v2/scan/barcode"
+    case scan_image = "v2/scan/%@/image"
     case scan_get = "v2/scan/%@"
     case scan_history = "v2/scan/history"
     case scan_favorite = "v2/scan/%@/favorite"  // POST to toggle favorite
-    case scan_reanalyze = "scan/%@/reanalyze"   // POST to re-analyze scan
+    case scan_reanalyze = "v2/scan/%@/reanalyze"   // POST to re-analyze scan
     case scan_feedback = "v2/scan/feedback"        // POST to submit feedback
     case scan_feedback_update = "v2/scan/feedback/%@" // PATCH to update feedback
     case stats_v2 = "v2/stats"                // GET to fetch stats
@@ -45,7 +45,7 @@ class SupabaseRequestBuilder {
     private static func baseURL(for endpoint: SafeEatsEndpoint) -> String {
         switch endpoint {
         case .scan_barcode, .scan_image, .scan_reanalyze:
-            return Config.flyDevAPIBase
+            return Config.flyIOBaseURL + "/"
         case .scan_history, .scan_get, .scan_favorite, .scan_feedback, .scan_feedback_update, .stats_v2:
             return Config.supabaseFunctionsURLBase
         default:

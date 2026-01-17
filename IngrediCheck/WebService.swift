@@ -564,7 +564,7 @@ struct ScanStreamError: Error, LocalizedError {
         }
         
         let requestBody = try JSONEncoder().encode(["barcode": barcode])
-        let endpoint = Config.flyDevAPIBase + SafeEatsEndpoint.scan_barcode.rawValue
+        let endpoint = Config.flyIOBaseURL + "/" + SafeEatsEndpoint.scan_barcode.rawValue
         
         var request = SupabaseRequestBuilder(endpoint: .scan_barcode)
             .setAuthorization(with: token)
@@ -795,7 +795,7 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.authError
         }
         
-        let endpoint = Config.flyDevAPIBase + String(format: SafeEatsEndpoint.scan_image.rawValue, scanId)
+        let endpoint = Config.flyIOBaseURL + "/" + String(format: SafeEatsEndpoint.scan_image.rawValue, scanId)
         let request = SupabaseRequestBuilder(endpoint: .scan_image, itemId: scanId)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
@@ -855,7 +855,7 @@ struct ScanStreamError: Error, LocalizedError {
         // if it handles single parameter correctly for scan/%@/reanalyze
         // endpoint.rawValue is scan/%@/reanalyze. formatting with scanId should work.
         
-        let endpoint = Config.flyDevAPIBase + String(format: SafeEatsEndpoint.scan_reanalyze.rawValue, scanId)
+        let endpoint = Config.flyIOBaseURL + "/" + String(format: SafeEatsEndpoint.scan_reanalyze.rawValue, scanId)
         let request = SupabaseRequestBuilder(endpoint: .scan_reanalyze, itemId: scanId)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
