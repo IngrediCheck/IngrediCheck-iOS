@@ -1,6 +1,7 @@
 import AVFoundation
 import UIKit
 import Combine
+import os
 
 
 class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate, AVCapturePhotoCaptureDelegate {
@@ -57,7 +58,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
         let completion = self.photoCaptureCompletion
         self.photoCaptureCompletion = nil
         guard error == nil else {
-            print("[BarcodeCameraManager] photoOutput error: \(error!)")
+            Log.debug("BarcodeCameraManager", "photoOutput error: \(error!)")
             DispatchQueue.main.async { completion?(nil) }
             return
         }
@@ -83,7 +84,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
         guard let device = selectBackCamera(),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
-            print("Camera input error")
+            Log.error("CameraManager", "Camera input error")
             return
         }
         session.addInput(input)
@@ -102,7 +103,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
             }
             device.unlockForConfiguration()
         } catch {
-            print("[BarcodeCameraManager] Could not lock device for configuration: \(error)")
+            Log.debug("BarcodeCameraManager", "Could not lock device for configuration: \(error)")
         }
         // Provide active capture device + queue to FlashManager for safe torch control
         FlashManager.shared.configure(with: device, queue: sessionQueue)
@@ -130,7 +131,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
             session.addOutput(photoOutput)
             photoOutput.isHighResolutionCaptureEnabled = true
         }
-        print("[BarcodeCameraManager] Before commit: inputs=\(session.inputs.count) outputs=\(session.outputs.count)")
+        Log.debug("BarcodeCameraManager", "Before commit: inputs=\(session.inputs.count) outputs=\(session.outputs.count)")
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         preview.needsDisplayOnBoundsChange = true
@@ -143,7 +144,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
             self.session.beginConfiguration()
             self.session.sessionPreset = .high
             self.session.commitConfiguration()
-            print("[BarcodeCameraManager] Bumped session preset to .high")
+            Log.debug("BarcodeCameraManager", "Bumped session preset to .high")
         }
     }
     
@@ -151,7 +152,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
         // Use full-frame recognition so barcodes can be detected anywhere
         sessionQueue.async {
             self.metadataOutput.rectOfInterest = CGRect(x: 0, y: 0, width: 1, height: 1)
-            print("[BarcodeCameraManager] rectOfInterest=full")
+            Log.debug("BarcodeCameraManager", "rectOfInterest=full")
         }
     }
     
@@ -173,8 +174,8 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
                     self.previewLayer?.videoGravity = .resizeAspectFill
                     let info = "inputs=\(self.session.inputs.count) outputs=\(self.session.outputs.count) running=\(running)"
                     self.debugInfo = info
-                    print("[BarcodeCameraManager] \(info)")
-                    if !running { print("[BarcodeCameraManager] Session failed to start (timeout)") }
+                    Log.debug("BarcodeCameraManager", "\(info)")
+                    if !running { Log.debug("BarcodeCameraManager", "Session failed to start (timeout)") }
                 }
             }
         }
@@ -246,9 +247,9 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
 
     @objc private func handleRuntimeError(_ notification: Notification) {
         if let error = notification.userInfo?[AVCaptureSessionErrorKey] as? AVError {
-            print("AVCaptureSessionRuntimeError: \(error)")
+            Log.error("CameraManager", "AVCaptureSessionRuntimeError: \(error)")
         } else {
-            print("AVCaptureSessionRuntimeError occurred")
+            Log.error("CameraManager", "AVCaptureSessionRuntimeError occurred")
         }
     }
 
@@ -258,7 +259,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
             let info = "inputs=\(self.session.inputs.count) outputs=\(self.session.outputs.count) running=true"
             self.debugInfo = info
         }
-        print("[BarcodeCameraManager] Session did start running")
+        Log.debug("BarcodeCameraManager", "Session did start running")
         bumpPresetToHighIfPossible()
     }
 
@@ -266,15 +267,15 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
         DispatchQueue.main.async {
             self.isSessionRunning = false
         }
-        print("[BarcodeCameraManager] Session did stop running")
+        Log.debug("BarcodeCameraManager", "Session did stop running")
     }
 
     @objc private func handleSessionWasInterrupted(_ notification: Notification) {
-        print("[BarcodeCameraManager] Session was interrupted: \(notification.userInfo ?? [:])")
+        Log.debug("BarcodeCameraManager", "Session was interrupted: \(notification.userInfo ?? [:])")
     }
 
     @objc private func handleSessionInterruptionEnded(_ notification: Notification) {
-        print("[BarcodeCameraManager] Session interruption ended")
+        Log.debug("BarcodeCameraManager", "Session interruption ended")
     }
 
     deinit {
@@ -305,7 +306,7 @@ class FlashManager {
                 }
                 dev.unlockForConfiguration()
             } catch {
-                print("Flash toggle failed: \(error)")
+                Log.error("CameraManager", "Flash toggle failed: \(error)")
             }
         }
         if let dev = device, let q = queue {

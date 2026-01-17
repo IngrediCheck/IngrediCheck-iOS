@@ -24,25 +24,25 @@ final class FamilyService {
     
     private func decodeFamily(from body: String) throws -> Family {
         guard let data = body.data(using: .utf8) else {
-            print("[FamilyService] decodeFamily error: cannot convert body to UTF-8 data")
+            Log.debug("FamilyService", "decodeFamily error: cannot convert body to UTF-8 data")
             throw NetworkError.decodingError
         }
         do {
             return try JSONDecoder().decode(Family.self, from: data)
         } catch {
-            print("[FamilyService] decodeFamily JSON error: \(error)")
+            Log.debug("FamilyService", "decodeFamily JSON error: \(error)")
             if let decodingError = error as? DecodingError {
                 switch decodingError {
                 case .dataCorrupted(let context):
-                    print("[FamilyService] decodeFamily dataCorrupted: \(context.debugDescription)")
+                    Log.debug("FamilyService", "decodeFamily dataCorrupted: \(context.debugDescription)")
                 case .keyNotFound(let key, let context):
-                    print("[FamilyService] decodeFamily keyNotFound: \(key.stringValue) in \(context.debugDescription)")
+                    Log.debug("FamilyService", "decodeFamily keyNotFound: \(key.stringValue) in \(context.debugDescription)")
                 case .typeMismatch(let type, let context):
-                    print("[FamilyService] decodeFamily typeMismatch: \(type) in \(context.debugDescription)")
+                    Log.debug("FamilyService", "decodeFamily typeMismatch: \(type) in \(context.debugDescription)")
                 case .valueNotFound(let type, let context):
-                    print("[FamilyService] decodeFamily valueNotFound: \(type) in \(context.debugDescription)")
+                    Log.debug("FamilyService", "decodeFamily valueNotFound: \(type) in \(context.debugDescription)")
                 @unknown default:
-                    print("[FamilyService] decodeFamily unknown decoding error")
+                    Log.debug("FamilyService", "decodeFamily unknown decoding error")
                 }
             }
             throw error
@@ -65,12 +65,12 @@ final class FamilyService {
         otherMembers: [FamilyMember]?
     ) async throws -> Family {
         let otherNames = otherMembers?.map { $0.name } ?? []
-        print("[FamilyService] 🔵 createFamily called")
-        print("[FamilyService] 📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherNames)")
+        Log.debug("FamilyService", "🔵 createFamily called")
+        Log.debug("FamilyService", "📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherNames)")
         
         do {
             let jwt = try await currentJWT()
-            print("[FamilyService] ✅ JWT obtained (length: \(jwt.count) chars)")
+            Log.debug("FamilyService", "✅ JWT obtained (length: \(jwt.count) chars)")
             
             func memberDict(_ member: FamilyMember) -> [String: Any] {
                 var dict: [String: Any] = [
@@ -80,7 +80,7 @@ final class FamilyService {
                 ]
                 if let imageFileHash = member.imageFileHash {
                     dict["imageFileHash"] = imageFileHash
-                    print("[FamilyService] 📸 Member \(member.name) has imageFileHash: \(imageFileHash)")
+                    Log.debug("FamilyService", "📸 Member \(member.name) has imageFileHash: \(imageFileHash)")
                 }
                 return dict
             }
@@ -88,8 +88,8 @@ final class FamilyService {
             let selfMemberDict = memberDict(selfMember)
             let otherMembersDict = otherMembers?.map(memberDict)
             
-            print("[FamilyService] 📡 API Configuration - baseURL: \(baseURL), full path: \(baseURL)family")
-            print("[FamilyService] 📦 Request - name: \(name), selfMember keys: \(selfMemberDict.keys), otherMembers count: \(otherMembersDict?.count ?? 0)")
+            Log.debug("FamilyService", "📡 API Configuration - baseURL: \(baseURL), full path: \(baseURL)family")
+            Log.debug("FamilyService", "📦 Request - name: \(name), selfMember keys: \(selfMemberDict.keys), otherMembers count: \(otherMembersDict?.count ?? 0)")
             
             let result = try await FamilyAPI.createFamily(
                 baseURL: baseURL,
@@ -100,26 +100,26 @@ final class FamilyService {
                 otherMembers: otherMembersDict
             )
             
-            print("[FamilyService] 📥 Response received - status: \(result.statusCode), body length: \(result.body.count) chars")
+            Log.debug("FamilyService", "📥 Response received - status: \(result.statusCode), body length: \(result.body.count) chars")
             
             if !result.body.isEmpty {
-                print("[FamilyService] 📄 Response body (first 1000 chars): \(String(result.body.prefix(1000)))")
+                Log.debug("FamilyService", "📄 Response body (first 1000 chars): \(String(result.body.prefix(1000)))")
             } else {
-                print("[FamilyService] ⚠️ Response body is empty")
+                Log.debug("FamilyService", "⚠️ Response body is empty")
             }
             
             guard (200 ..< 300).contains(result.statusCode) else {
-                print("[FamilyService] ❌ Error response - status: \(result.statusCode)")
-                print("[FamilyService] 📄 Error body: \(result.body)")
+                Log.debug("FamilyService", "❌ Error response - status: \(result.statusCode)")
+                Log.debug("FamilyService", "📄 Error body: \(result.body)")
                 throw NetworkError.invalidResponse(result.statusCode)
             }
             
             // Some endpoints might return 204 No Content, but createFamily should return the created family
             guard !result.body.isEmpty else {
-                print("[FamilyService] ⚠️ Empty response body for status \(result.statusCode)")
+                Log.debug("FamilyService", "⚠️ Empty response body for status \(result.statusCode)")
                 // If we got 201/200 but empty body, try fetching the family instead
                 if result.statusCode == 200 || result.statusCode == 201 {
-                    print("[FamilyService] 🔄 Attempting to fetch family after empty response")
+                    Log.debug("FamilyService", "🔄 Attempting to fetch family after empty response")
                     // Add a small delay to ensure backend has finished processing
                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                     
@@ -127,13 +127,13 @@ final class FamilyService {
                     var lastError: Error?
                     for attempt in 1...3 {
                         do {
-                            print("[FamilyService] 🔄 Fetch attempt \(attempt)/3")
+                            Log.debug("FamilyService", "🔄 Fetch attempt \(attempt)/3")
                             let family = try await fetchFamily()
-                            print("[FamilyService] ✅ Successfully fetched family after creation")
+                            Log.debug("FamilyService", "✅ Successfully fetched family after creation")
                             return family
                         } catch {
                             lastError = error
-                            print("[FamilyService] ⚠️ Fetch attempt \(attempt) failed: \(error.localizedDescription)")
+                            Log.debug("FamilyService", "⚠️ Fetch attempt \(attempt) failed: \(error.localizedDescription)")
                             if attempt < 3 {
                                 // Exponential backoff: 0.5s, 1s, 2s
                                 let delay = UInt64(500_000_000 * UInt64(pow(2.0, Double(attempt - 1))))
@@ -144,39 +144,39 @@ final class FamilyService {
                     
                     // If all retries failed, throw the last error
                     if let error = lastError {
-                        print("[FamilyService] ❌ All fetch attempts failed, throwing last error")
+                        Log.debug("FamilyService", "❌ All fetch attempts failed, throwing last error")
                         throw error
                     }
                     
-                    print("[FamilyService] ❌ All fetch attempts failed with no error")
+                    Log.debug("FamilyService", "❌ All fetch attempts failed with no error")
                     throw NetworkError.decodingError
                 }
-                print("[FamilyService] ❌ Cannot proceed with empty body and status \(result.statusCode)")
+                Log.debug("FamilyService", "❌ Cannot proceed with empty body and status \(result.statusCode)")
                 throw NetworkError.decodingError
             }
             
             do {
                 let family = try decodeFamily(from: result.body)
-                print("[FamilyService] ✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
+                Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
                 return family
             } catch {
-                print("[FamilyService] ❌ Failed to decode family response: \(error)")
-                print("[FamilyService] 📄 Response body that failed to decode: \(result.body)")
+                Log.debug("FamilyService", "❌ Failed to decode family response: \(error)")
+                Log.debug("FamilyService", "📄 Response body that failed to decode: \(result.body)")
                 throw error
             }
         } catch {
-            print("[FamilyService] ❌ createFamily failed with error: \(error)")
+            Log.debug("FamilyService", "❌ createFamily failed with error: \(error)")
             if let networkError = error as? NetworkError {
-                print("[FamilyService] ❌ NetworkError type: \(networkError)")
+                Log.debug("FamilyService", "❌ NetworkError type: \(networkError)")
             } else if let urlError = error as? URLError {
-                print("[FamilyService] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                Log.debug("FamilyService", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
             }
             throw error
         }
     }
     
     func fetchFamily() async throws -> Family {
-        print("[FamilyService] fetchFamily request")
+        Log.debug("FamilyService", "fetchFamily request")
         let jwt = try await currentJWT()
         
         let result = try await FamilyAPI.getFamily(
@@ -186,21 +186,21 @@ final class FamilyService {
         )
         
         guard result.statusCode == 200 else {
-            print("[FamilyService] fetchFamily bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "fetchFamily bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let family = try decodeFamily(from: result.body)
-        print("[FamilyService] fetchFamily decoded family name=\(family.name)")
-        print("[FamilyService] fetchFamily selfMember.imageFileHash=\(family.selfMember.imageFileHash ?? "nil")")
+        Log.debug("FamilyService", "fetchFamily decoded family name=\(family.name)")
+        Log.debug("FamilyService", "fetchFamily selfMember.imageFileHash=\(family.selfMember.imageFileHash ?? "nil")")
         for (index, member) in family.otherMembers.enumerated() {
-            print("[FamilyService] fetchFamily otherMembers[\(index)].imageFileHash=\(member.imageFileHash ?? "nil")")
+            Log.debug("FamilyService", "fetchFamily otherMembers[\(index)].imageFileHash=\(member.imageFileHash ?? "nil")")
         }
         return family
     }
     
     func createInvite(for memberId: UUID) async throws -> String {
-        print("[FamilyService] createInvite for memberId=\(memberId)")
+        Log.debug("FamilyService", "createInvite for memberId=\(memberId)")
         let jwt = try await currentJWT()
         
         let result = try await FamilyAPI.createInvite(
@@ -211,17 +211,17 @@ final class FamilyService {
         )
         
         guard result.statusCode == 201 else {
-            print("[FamilyService] createInvite bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "createInvite bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let code = try decodeInviteCode(from: result.body)
-        print("[FamilyService] createInvite decoded code=\(code)")
+        Log.debug("FamilyService", "createInvite decoded code=\(code)")
         return code
     }
     
     func joinFamily(inviteCode: String) async throws -> Family {
-        print("[FamilyService] joinFamily request code=\(inviteCode)")
+        Log.debug("FamilyService", "joinFamily request code=\(inviteCode)")
         let jwt = try await currentJWT()
         
         let result = try await FamilyAPI.joinFamily(
@@ -232,17 +232,17 @@ final class FamilyService {
         )
         
         guard result.statusCode == 201 else {
-            print("[FamilyService] joinFamily bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "joinFamily bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let family = try decodeFamily(from: result.body)
-        print("[FamilyService] joinFamily decoded family name=\(family.name)")
+        Log.debug("FamilyService", "joinFamily decoded family name=\(family.name)")
         return family
     }
     
     func leaveFamily() async throws {
-        print("[FamilyService] leaveFamily request")
+        Log.debug("FamilyService", "leaveFamily request")
         let jwt = try await currentJWT()
         
         let result = try await FamilyAPI.leaveFamily(
@@ -252,13 +252,13 @@ final class FamilyService {
         )
         
         guard result.statusCode == 200 else {
-            print("[FamilyService] leaveFamily bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "leaveFamily bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
     }
     
     func addMember(_ member: FamilyMember) async throws -> Family {
-        print("[FamilyService] addMember request id=\(member.id)")
+        Log.debug("FamilyService", "addMember request id=\(member.id)")
         let jwt = try await currentJWT()
         
         var body: [String: Any] = [
@@ -278,17 +278,17 @@ final class FamilyService {
         )
         
         guard result.statusCode == 201 else {
-            print("[FamilyService] addMember bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "addMember bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let family = try decodeFamily(from: result.body)
-        print("[FamilyService] addMember decoded family name=\(family.name)")
+        Log.debug("FamilyService", "addMember decoded family name=\(family.name)")
         return family
     }
     
     func editMember(_ member: FamilyMember) async throws -> Family {
-        print("[FamilyService] editMember request id=\(member.id)")
+        Log.debug("FamilyService", "editMember request id=\(member.id)")
         let jwt = try await currentJWT()
         
         var body: [String: Any] = [
@@ -308,21 +308,21 @@ final class FamilyService {
         )
         
         guard result.statusCode == 200 else {
-            print("[FamilyService] editMember bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "editMember bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let family = try decodeFamily(from: result.body)
-        print("[FamilyService] editMember decoded family name=\(family.name)")
-        print("[FamilyService] editMember selfMember.imageFileHash=\(family.selfMember.imageFileHash ?? "nil")")
+        Log.debug("FamilyService", "editMember decoded family name=\(family.name)")
+        Log.debug("FamilyService", "editMember selfMember.imageFileHash=\(family.selfMember.imageFileHash ?? "nil")")
         for (index, member) in family.otherMembers.enumerated() {
-            print("[FamilyService] editMember otherMembers[\(index)].name=\(member.name), imageFileHash=\(member.imageFileHash ?? "nil")")
+            Log.debug("FamilyService", "editMember otherMembers[\(index)].name=\(member.name), imageFileHash=\(member.imageFileHash ?? "nil")")
         }
         return family
     }
     
     func deleteMember(id: UUID) async throws -> Family {
-        print("[FamilyService] deleteMember request id=\(id)")
+        Log.debug("FamilyService", "deleteMember request id=\(id)")
         let jwt = try await currentJWT()
         
         let result = try await FamilyAPI.deleteMember(
@@ -333,17 +333,17 @@ final class FamilyService {
         )
         
         guard result.statusCode == 200 else {
-            print("[FamilyService] deleteMember bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "deleteMember bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let family = try decodeFamily(from: result.body)
-        print("[FamilyService] deleteMember decoded family name=\(family.name)")
+        Log.debug("FamilyService", "deleteMember decoded family name=\(family.name)")
         return family
     }
 
     func createPersonalFamily(name: String, memberID: String) async throws -> Family {
-        print("[FamilyService] createPersonalFamily request name=\(name), memberID=\(memberID)")
+        Log.debug("FamilyService", "createPersonalFamily request name=\(name), memberID=\(memberID)")
         let jwt = try await currentJWT()
         
         let result = try await FamilyAPI.createPersonalFamily(
@@ -355,12 +355,12 @@ final class FamilyService {
         )
         
         guard (200 ..< 300).contains(result.statusCode) else {
-            print("[FamilyService] createPersonalFamily bad status: \(result.statusCode), body=\(result.body)")
+            Log.debug("FamilyService", "createPersonalFamily bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
         let family = try decodeFamily(from: result.body)
-        print("[FamilyService] createPersonalFamily decoded family name=\(family.name)")
+        Log.debug("FamilyService", "createPersonalFamily decoded family name=\(family.name)")
         return family
     }
 }

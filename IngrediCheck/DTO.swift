@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import os
 
 class DTO {
 
@@ -170,7 +171,7 @@ class DTO {
             isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
             guard let date = isoFormatter.date(from: created_at) else {
-                print("Invalid date string")
+                Log.debug("DTO", "Invalid date string")
                 return nil
             }
             
@@ -227,7 +228,7 @@ class DTO {
             isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
             guard let date = isoFormatter.date(from: created_at) else {
-                print("Invalid date string")
+                Log.debug("DTO", "Invalid date string")
                 return nil
             }
             
@@ -714,7 +715,7 @@ class DTO {
                 product_info = try ScanProductInfo(from: productInfoDecoder)
             } catch let error {
                 // If decoding fails (empty object or malformed), create empty ScanProductInfo
-                print("[SCAN_DECODE] ⚠️ Failed to decode product_info, using empty: \(error)")
+                Log.error("SCAN_DECODE", "⚠️ Failed to decode product_info, using empty: \(error)")
                 // Create empty ScanProductInfo using the convenience initializer
                 product_info = ScanProductInfo(
                     name: nil,
@@ -833,7 +834,7 @@ extension DTO.ScanAnalysisResult {
             }
             
             // Log raw members_affected data for debugging
-//            print("[INGREDIENT_ANALYSIS] ingredient: \(analysis.ingredient), match: \(analysis.match), members_affected: \(analysis.members_affected)")
+//            Log.debug("INGREDIENT_ANALYSIS", "ingredient: \(analysis.ingredient), match: \(analysis.match), members_affected: \(analysis.members_affected)")
             
             return DTO.IngredientRecommendation(
                 ingredientName: analysis.ingredient,

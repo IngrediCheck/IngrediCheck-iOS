@@ -51,7 +51,7 @@ import SwiftUI
     @MainActor
     func loadHistory(limit: Int = 20, offset: Int = 0, forceRefresh: Bool = false) async {
         guard !isLoading || forceRefresh else {
-            print("[ScanHistoryStore] ⏸️ Already loading, skipping")
+            Log.debug("ScanHistoryStore", "⏸️ Already loading, skipping")
             return
         }
 
@@ -59,7 +59,7 @@ import SwiftUI
         lastError = nil
         defer { isLoading = false }
 
-        print("[ScanHistoryStore] 🔵 Loading scan history - limit: \(limit), offset: \(offset)")
+        Log.debug("ScanHistoryStore", "🔵 Loading scan history - limit: \(limit), offset: \(offset)")
 
         do {
             let response = try await webService.fetchScanHistory(limit: limit, offset: offset)
@@ -71,14 +71,14 @@ import SwiftUI
             if offset == 0 {
                 // Fresh load - replace all scans
                 scans = response.scans
-                print("[ScanHistoryStore] ✅ Loaded \(response.scans.count) scans (fresh)")
+                Log.debug("ScanHistoryStore", "✅ Loaded \(response.scans.count) scans (fresh)")
             } else {
                 // Pagination - append new scans (filtering duplicates just in case)
                 let newScans = response.scans.filter { newScan in
                     !scans.contains(where: { $0.id == newScan.id })
                 }
                 scans.append(contentsOf: newScans)
-                print("[ScanHistoryStore] ✅ Loaded \(newScans.count) new scans (pagination)")
+                Log.debug("ScanHistoryStore", "✅ Loaded \(newScans.count) new scans (pagination)")
             }
 
             // Update caches
@@ -91,10 +91,10 @@ import SwiftUI
                 }
             }
 
-            print("[ScanHistoryStore] 💾 Cache updated - total scans: \(scans.count), cache size: \(scanCache.count), barcode mappings: \(barcodeToScanIdMap.count)")
+            Log.debug("ScanHistoryStore", "💾 Cache updated - total scans: \(scans.count), cache size: \(scanCache.count), barcode mappings: \(barcodeToScanIdMap.count)")
 
         } catch {
-            print("[ScanHistoryStore] ❌ Failed to load scan history - error: \(error.localizedDescription)")
+            Log.debug("ScanHistoryStore", "❌ Failed to load scan history - error: \(error.localizedDescription)")
             lastError = error
         }
     }
@@ -120,15 +120,15 @@ import SwiftUI
     /// - Parameter scan: The scan to add/update
     @MainActor
     func upsertScan(_ scan: DTO.Scan) {
-        print("[ScanHistoryStore] 🔄 Upserting scan - scanId: \(scan.id)")
+        Log.debug("ScanHistoryStore", "🔄 Upserting scan - scanId: \(scan.id)")
 
         // Update or add to scans array
         if let existingIndex = scans.firstIndex(where: { $0.id == scan.id }) {
             scans[existingIndex] = scan
-            print("[ScanHistoryStore] ✅ Updated existing scan at index \(existingIndex)")
+            Log.debug("ScanHistoryStore", "✅ Updated existing scan at index \(existingIndex)")
         } else {
             scans.insert(scan, at: 0)  // Add to front (most recent)
-            print("[ScanHistoryStore] ✅ Added new scan to front")
+            Log.debug("ScanHistoryStore", "✅ Added new scan to front")
         }
 
         // Update cache
@@ -146,7 +146,7 @@ import SwiftUI
     ///   - isFavorited: New favorite status
     @MainActor
     func updateFavoriteStatus(scanId: String, isFavorited: Bool) {
-        print("[ScanHistoryStore] ⭐️ Updating favorite status - scanId: \(scanId), isFavorited: \(isFavorited)")
+        Log.debug("ScanHistoryStore", "⭐️ Updating favorite status - scanId: \(scanId), isFavorited: \(isFavorited)")
 
         // Update in scans array
         if let index = scans.firstIndex(where: { $0.id == scanId }) {
@@ -175,7 +175,7 @@ import SwiftUI
     /// - Parameter scanId: The scan ID to remove
     @MainActor
     func removeScan(scanId: String) {
-        print("[ScanHistoryStore] 🗑️ Removing scan - scanId: \(scanId)")
+        Log.debug("ScanHistoryStore", "🗑️ Removing scan - scanId: \(scanId)")
 
         // Remove from scans array
         scans.removeAll { $0.id == scanId }
@@ -194,7 +194,7 @@ import SwiftUI
     /// Clear all cached data
     @MainActor
     func clearAll() {
-        print("[ScanHistoryStore] 🧹 Clearing all data")
+        Log.debug("ScanHistoryStore", "🧹 Clearing all data")
         scans.removeAll()
         scanCache.removeAll()
         barcodeToScanIdMap.removeAll()

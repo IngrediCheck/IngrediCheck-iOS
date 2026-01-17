@@ -4,6 +4,7 @@ import UIKit
 import Combine
 import PhotosUI
 import CryptoKit
+import os
 
 enum CameraPresentationSource {
     case homeView
@@ -152,7 +153,7 @@ struct ScanCameraView: View {
     
     // MARK: - Barcode Scan
     private func startBarcodeScan(barcode: String) async {
-        print("[BARCODE_SCAN] 🔵 CameraScreen: Starting barcode scan - barcode: \(barcode)")
+        Log.debug("BARCODE_SCAN", "🔵 CameraScreen: Starting barcode scan - barcode: \(barcode)")
         
         let placeholderScanId = "pending_\(barcode)"
         
@@ -208,7 +209,7 @@ struct ScanCameraView: View {
                         // Store in cache AND store
                         scanDataCache[scanId] = partialScan
                         scanHistoryStore.upsertScan(partialScan)
-                        print("[BARCODE_SCAN] 💾 CameraScreen: Stored partial scan in cache and store - scanId: \(scanId), product_name: \(productInfo.name ?? "nil")")
+                        Log.debug("BARCODE_SCAN", "💾 CameraScreen: Stored partial scan in cache and store - scanId: \(scanId), product_name: \(productInfo.name ?? ")nil")")
                         
                         // Add real scanId at the beginning (newest first)
                         if !scanIds.contains(scanId) {
@@ -218,7 +219,7 @@ struct ScanCameraView: View {
                             }
                             barcodeToScanIdMap[barcode] = scanId
                             pendingBarcodes.remove(barcode)
-                            print("[BARCODE_SCAN] ✅ CameraScreen: scanId received - barcode: \(barcode), scanId: \(scanId), replaced placeholder/skeleton")
+                            Log.debug("BARCODE_SCAN", "✅ CameraScreen: scanId received - barcode: \(barcode), scanId: \(scanId), replaced placeholder/skeleton")
                         }
                         updateToastState()
                     }
@@ -248,19 +249,19 @@ struct ScanCameraView: View {
                             // Update cache AND store
                             scanDataCache[scanId] = updatedScan
                             scanHistoryStore.upsertScan(updatedScan)
-                            print("[BARCODE_SCAN] 💾 CameraScreen: Updated scan in cache and store with analysis - scanId: \(scanId), overall_match: \(analysisResult.overall_match ?? "nil")")
+                            Log.debug("BARCODE_SCAN", "💾 CameraScreen: Updated scan in cache and store with analysis - scanId: \(scanId), overall_match: \(analysisResult.overall_match ?? ")nil")")
                             
                             // Trigger UI update (ScanDataCard will refresh via scanDataCache)
                             updateToastState()
                         } else {
-                            print("[BARCODE_SCAN] ⚠️ CameraScreen: Received analysis but scanId not found in cache - barcode: \(barcode)")
+                            Log.warning("BARCODE_SCAN", "⚠️ CameraScreen: Received analysis but scanId not found in cache - barcode: \(barcode)")
                         }
                     }
                 },
                 onError: { error, scanId in
                     // Remove placeholder on error
                     Task { @MainActor in
-                        print("[BARCODE_SCAN] ❌ CameraScreen: Barcode scan error - barcode: \(barcode), error: \(error.localizedDescription), scanId: \(scanId ?? "nil")")
+                        Log.error("BARCODE_SCAN", "❌ CameraScreen: Barcode scan error - barcode: \(barcode), error: \(error.localizedDescription), scanId: \(scanId ?? ")nil")")
 
                         if let placeholderIndex = scanIds.firstIndex(of: placeholderScanId) {
                             scanIds.remove(at: placeholderIndex)
@@ -297,7 +298,7 @@ struct ScanCameraView: View {
                             // Store error scan in cache AND store
                             scanDataCache[scanId] = errorScan
                             scanHistoryStore.upsertScan(errorScan)
-                            print("[BARCODE_SCAN] 💾 CameraScreen: Stored error scan in cache and store - scanId: \(scanId)")
+                            Log.debug("BARCODE_SCAN", "💾 CameraScreen: Stored error scan in cache and store - scanId: \(scanId)")
 
                             // Remove skeleton if adding error scan
                             if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
@@ -311,7 +312,7 @@ struct ScanCameraView: View {
                                     scrollTargetScanId = scanId
                                 }
                                 barcodeToScanIdMap[barcode] = scanId
-                                print("[BARCODE_SCAN] ✅ CameraScreen: Added error scanId to scanIds - scanId: \(scanId)")
+                                Log.debug("BARCODE_SCAN", "✅ CameraScreen: Added error scanId to scanIds - scanId: \(scanId)")
                             }
                         } else {
                             // No scanId from error - keep skeleton card if no active scans remain
@@ -325,7 +326,7 @@ struct ScanCameraView: View {
                 }
             )
         } catch {
-            print("[BARCODE_SCAN] ❌ CameraScreen: Barcode scan failed - barcode: \(barcode), error: \(error.localizedDescription)")
+            Log.error("BARCODE_SCAN", "❌ CameraScreen: Barcode scan failed - barcode: \(barcode), error: \(error.localizedDescription)")
             // Remove placeholder on error
             await MainActor.run {
                 if let placeholderIndex = scanIds.firstIndex(of: placeholderScanId) {
@@ -345,22 +346,22 @@ struct ScanCameraView: View {
     
     // MARK: - Scan History
     private func loadScanHistory() async {
-        print("[SCAN_HISTORY] 🔵 CameraScreen: Loading scan history from store")
+        Log.debug("SCAN_HISTORY", "🔵 CameraScreen: Loading scan history from store")
 
         // If store is currently loading, wait for it to complete
         // If store already has data (loaded by HomeView), skip the API call
         if scanHistoryStore.isLoading {
-            print("[SCAN_HISTORY] ⏳ CameraScreen: Store is loading, waiting...")
+            Log.debug("SCAN_HISTORY", "⏳ CameraScreen: Store is loading, waiting...")
             // Wait for loading to complete (poll with short delay)
             while scanHistoryStore.isLoading {
                 try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
             }
-            print("[SCAN_HISTORY] ✅ CameraScreen: Store finished loading")
+            Log.debug("SCAN_HISTORY", "✅ CameraScreen: Store finished loading")
         } else if scanHistoryStore.scans.isEmpty {
             // Only load from API if store has no data
             await scanHistoryStore.loadHistory(limit: 20, offset: 0)
         } else {
-            print("[SCAN_HISTORY] 📦 CameraScreen: Using existing store data (\(scanHistoryStore.scans.count) scans)")
+            Log.debug("SCAN_HISTORY", "📦 CameraScreen: Using existing store data (\(scanHistoryStore.scans.count) scans)")
         }
 
         await syncHistoryFromStore()
@@ -384,7 +385,7 @@ struct ScanCameraView: View {
                 .filter { !activeScanIdsSet.contains($0) }  // Don't duplicate active scans
 
             historyScanIds = historyIds
-            print("[SCAN_HISTORY] ✅ CameraScreen: Synced \(historyIds.count) history scan IDs from store")
+            Log.debug("SCAN_HISTORY", "✅ CameraScreen: Synced \(historyIds.count) history scan IDs from store")
         }
     }
     
@@ -392,7 +393,7 @@ struct ScanCameraView: View {
     /// Does NOT move the scanId from its original position - just scrolls to it
     private func handleInitialScrollToScanId(_ targetId: String) async {
         await MainActor.run {
-            print("[SCAN_SCROLL] 🔵 CameraScreen: Handling initial scroll to scanId: \(targetId)")
+            Log.debug("SCAN_SCROLL", "🔵 CameraScreen: Handling initial scroll to scanId: \(targetId)")
             
             // Update scanId state to match target (for photo capture association)
             scanId = targetId
@@ -406,7 +407,7 @@ struct ScanCameraView: View {
                 while attempts < maxAttempts {
                     // Check if targetId is in allCarouselItems
                     if allCarouselItems.contains(targetId) {
-                        print("[SCAN_SCROLL] ✅ CameraScreen: Target scanId found in carousel items, scrolling...")
+                        Log.debug("SCAN_SCROLL", "✅ CameraScreen: Target scanId found in carousel items, scrolling...")
                         
                         // Clear scrollTargetScanId first to ensure onChange fires
                         scrollTargetScanId = nil
@@ -416,7 +417,7 @@ struct ScanCameraView: View {
                         
                         // Now set it to trigger the scroll
                         scrollTargetScanId = targetId
-                        print("[SCAN_SCROLL] ✅ CameraScreen: Set scrollTargetScanId to: \(targetId)")
+                        Log.debug("SCAN_SCROLL", "✅ CameraScreen: Set scrollTargetScanId to: \(targetId)")
                         return
                     }
                     
@@ -426,7 +427,7 @@ struct ScanCameraView: View {
                 }
                 
                 // Fallback: set it anyway after max attempts
-                print("[SCAN_SCROLL] ⚠️ CameraScreen: Target scanId not found in carousel after \(maxAttempts) attempts, setting scroll target anyway")
+                Log.warning("SCAN_SCROLL", "⚠️ CameraScreen: Target scanId not found in carousel after \(maxAttempts) attempts, setting scroll target anyway")
                 scrollTargetScanId = nil
                 try? await Task.sleep(nanoseconds: 16_666_666)
                 scrollTargetScanId = targetId
@@ -466,12 +467,12 @@ struct ScanCameraView: View {
     
     // MARK: - New Product Session (Photo Mode)
     private func addNewProductScanSession() {
-        print("[PHOTO_SCAN] ➕ CameraScreen: Adding new product scan session")
+        Log.debug("PHOTO_SCAN", "➕ CameraScreen: Adding new product scan session")
         
         // Clear capturedImagesPerScanId for old scanId if it exists
         if let oldScanId = scanId {
             capturedImagesPerScanId[oldScanId] = nil
-            print("[PHOTO_SCAN] 🗑️ CameraScreen: Cleared capturedImagesPerScanId for old scanId: \(oldScanId)")
+            Log.debug("PHOTO_SCAN", "🗑️ CameraScreen: Cleared capturedImagesPerScanId for old scanId: \(oldScanId)")
         }
         
         // Reset scanId for new product session
@@ -491,32 +492,32 @@ struct ScanCameraView: View {
             scrollTargetScanId = skeletonCardId
         }
         
-        print("[PHOTO_SCAN] ✅ CameraScreen: New product session started - skeleton card added")
+        Log.debug("PHOTO_SCAN", "✅ CameraScreen: New product session started - skeleton card added")
     }
     
     // MARK: - Photo Image Submission
     private func submitImage(image: UIImage, scanId: String, imageIndex: Int) async {
-        print("[PHOTO_SCAN] 🔵 CameraScreen: submitImage() called - scanId: \(scanId), imageIndex: \(imageIndex)")
+        Log.debug("PHOTO_SCAN", "🔵 CameraScreen: submitImage() called - scanId: \(scanId), imageIndex: \(imageIndex)")
         
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            print("[PHOTO_SCAN] ❌ CameraScreen: Failed to convert image to JPEG data - image_index: \(imageIndex)")
+            Log.error("PHOTO_SCAN", "❌ CameraScreen: Failed to convert image to JPEG data - image_index: \(imageIndex)")
             return
         }
         
         let imageSizeKB = imageData.count / 1024
-        print("[PHOTO_SCAN] 📤 CameraScreen: Submitting image - scan_id: \(scanId), image_index: \(imageIndex), image_size: \(imageSizeKB)KB")
+        Log.debug("PHOTO_SCAN", "📤 CameraScreen: Submitting image - scan_id: \(scanId), image_index: \(imageIndex), image_size: \(imageSizeKB)KB")
         do {
             let response = try await webService.submitScanImage(scanId: scanId, imageData: imageData)
-            print("[PHOTO_SCAN] ✅ CameraScreen: Image submitted successfully - scan_id: \(scanId), image_index: \(imageIndex), queued: \(response.queued), queue_position: \(response.queue_position)")
+            Log.debug("PHOTO_SCAN", "✅ CameraScreen: Image submitted successfully - scan_id: \(scanId), image_index: \(imageIndex), queued: \(response.queued), queue_position: \(response.queue_position)")
 
             // Remove from submitting set after successful submission
             // This allows ScanDataCard to start polling
             await MainActor.run {
                 submittingScanIds.remove(scanId)
-                print("[PHOTO_SCAN] ✅ CameraScreen: Removed scanId from submittingScanIds - scanId: \(scanId)")
+                Log.debug("PHOTO_SCAN", "✅ CameraScreen: Removed scanId from submittingScanIds - scanId: \(scanId)")
             }
         } catch {
-            print("[PHOTO_SCAN] ❌ CameraScreen: Failed to submit image - scan_id: \(scanId), image_index: \(imageIndex), error: \(error.localizedDescription)")
+            Log.error("PHOTO_SCAN", "❌ CameraScreen: Failed to submit image - scan_id: \(scanId), image_index: \(imageIndex), error: \(error.localizedDescription)")
 
             // Remove from submitting set on error too
             await MainActor.run {
@@ -580,7 +581,7 @@ struct ScanCameraView: View {
                             // Store it before it might get cleared
                             let initialTarget = scrollTargetScanId
                             if let target = initialTarget, !target.isEmpty, target != skeletonCardId {
-                                print("[SCAN_SCROLL] 🔵 CameraScreen: onAppear - Found initial scroll target: \(target)")
+                                Log.debug("SCAN_SCROLL", "🔵 CameraScreen: onAppear - Found initial scroll target: \(target)")
                                 await handleInitialScrollToScanId(target)
                             }
                         }
@@ -653,7 +654,7 @@ struct ScanCameraView: View {
                     // Only scroll to existing card if it's in the current session, not from history
                     if let existingScanId = barcodeToScanIdMap[code], scanIds.contains(existingScanId) {
                         // Barcode already scanned in this session - scroll to existing card
-                        print("[BARCODE_SCAN] 🔄 CameraScreen: Barcode already scanned in this session - scrolling to existing card - barcode: \(code), scanId: \(existingScanId)")
+                        Log.debug("BARCODE_SCAN", "🔄 CameraScreen: Barcode already scanned in this session - scrolling to existing card - barcode: \(code), scanId: \(existingScanId)")
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                             scrollTargetScanId = existingScanId
                         }
@@ -664,7 +665,7 @@ struct ScanCameraView: View {
                     // Check if this barcode is already being scanned (pending)
                     let placeholderScanId = "pending_\(code)"
                     if pendingBarcodes.contains(code) {
-                        print("[BARCODE_SCAN] ⏳ CameraScreen: Barcode already being scanned - barcode: \(code)")
+                        Log.debug("BARCODE_SCAN", "⏳ CameraScreen: Barcode already being scanned - barcode: \(code)")
                         // Scroll to the pending card if it exists
                         if scanIds.contains(placeholderScanId) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
@@ -693,7 +694,7 @@ struct ScanCameraView: View {
                             scanIds.insert(placeholderScanId, at: 0)
                             scrollTargetScanId = placeholderScanId
                         }
-                        print("[BARCODE_SCAN] 📋 CameraScreen: Added placeholder card for barcode - barcode: \(code), placeholderScanId: \(placeholderScanId)")
+                        Log.debug("BARCODE_SCAN", "📋 CameraScreen: Added placeholder card for barcode - barcode: \(code), placeholderScanId: \(placeholderScanId)")
                     }
                     
                     // Start barcode scan and get scanId (will replace placeholder when received)
@@ -770,10 +771,10 @@ struct ScanCameraView: View {
                         // MARK: - Image Capturing Button
                         // Center: Capture photo button - captures a photo from the camera and adds it to the photo history
                         Button(action: {
-                            print("[PHOTO_SCAN] 🔵 CameraScreen: capturePhoto button tapped")
+                            Log.debug("PHOTO_SCAN", "🔵 CameraScreen: capturePhoto button tapped")
                             camera.capturePhoto(useFlash: photoFlashEnabled) { image in
                                 if let image = image {
-                                    print("[PHOTO_SCAN] 📸 CameraScreen: Camera callback received - hasImage: true")
+                                    Log.debug("PHOTO_SCAN", "📸 CameraScreen: Camera callback received - hasImage: true")
                                     
                                     // Update UI and submit image on MainActor
                                     Task { @MainActor in
@@ -789,14 +790,14 @@ struct ScanCameraView: View {
                                             scanIdToUse = centeredId
                                             scanId = centeredId  // Update state to match
                                             isUsingCenteredCard = true
-                                            print("[PHOTO_SCAN] 🎯 CameraScreen: Using centered card's scanId - scanId: \(scanIdToUse)")
+                                            Log.debug("PHOTO_SCAN", "🎯 CameraScreen: Using centered card's scanId - scanId: \(scanIdToUse)")
                                         } else {
                                             // Generate new scanId or reuse existing one for new scan
                                             if scanId == nil {
                                                 scanId = UUID().uuidString
-                                                print("[PHOTO_SCAN] 🆔 CameraScreen: Generated new scan_id: \(scanId!)")
+                                                Log.debug("PHOTO_SCAN", "🆔 CameraScreen: Generated new scan_id: \(scanId!)")
                                             } else {
-                                                print("[PHOTO_SCAN] 🆔 CameraScreen: Using existing scan_id: \(scanId!)")
+                                                Log.debug("PHOTO_SCAN", "🆔 CameraScreen: Using existing scan_id: \(scanId!)")
                                             }
                                             scanIdToUse = scanId!
                                             isUsingCenteredCard = false
@@ -804,18 +805,18 @@ struct ScanCameraView: View {
                                         
                                         // Calculate image hash
                                         let imageHash = calculateImageHash(image: image)
-                                        print("[PHOTO_SCAN] 🔐 CameraScreen: Calculated image hash - hash: \(imageHash)")
+                                        Log.debug("PHOTO_SCAN", "🔐 CameraScreen: Calculated image hash - hash: \(imageHash)")
 
                                         // Calculate image index BEFORE appending (0-based index)
                                         let imageIndex = capturedImagesPerScanId[scanIdToUse]?.count ?? 0
-                                        print("[PHOTO_SCAN] 📸 CameraScreen: Photo captured - imageIndex: \(imageIndex)")
+                                        Log.debug("PHOTO_SCAN", "📸 CameraScreen: Photo captured - imageIndex: \(imageIndex)")
 
                                         // Store image and hash in capturedImagesPerScanId
                                         if capturedImagesPerScanId[scanIdToUse] == nil {
                                             capturedImagesPerScanId[scanIdToUse] = []
                                         }
                                         capturedImagesPerScanId[scanIdToUse]?.append((image: image, hash: imageHash))
-                                        print("[PHOTO_SCAN] 💾 CameraScreen: Stored image in capturedImagesPerScanId - scanId: \(scanIdToUse), imageIndex: \(imageIndex), totalImages: \(capturedImagesPerScanId[scanIdToUse]?.count ?? 0)")
+                                        Log.debug("PHOTO_SCAN", "💾 CameraScreen: Stored image in capturedImagesPerScanId - scanId: \(scanIdToUse), imageIndex: \(imageIndex), totalImages: \(capturedImagesPerScanId[scanIdToUse]?.count ?? 0)")
                                         
                                         capturedPhoto = image
                                         capturedPhotoHistory.insert(image, at: 0)
@@ -851,30 +852,30 @@ struct ScanCameraView: View {
                                             }
 
                                             if isUsingCenteredCard {
-                                                print("[PHOTO_SCAN] ✅ CameraScreen: Added centered card to active scans (no scroll) - scanId: \(scanIdToUse)")
+                                                Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added centered card to active scans (no scroll) - scanId: \(scanIdToUse)")
                                             } else {
-                                                print("[PHOTO_SCAN] ✅ CameraScreen: Added scanId to scanIds immediately (first photo) - scanId: \(scanIdToUse)")
+                                                Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added scanId to scanIds immediately (first photo) - scanId: \(scanIdToUse)")
                                             }
                                         } else {
-                                            print("[PHOTO_SCAN] 🔄 CameraScreen: Reusing existing scanId (subsequent photo) - scanId: \(scanIdToUse)")
+                                            Log.debug("PHOTO_SCAN", "🔄 CameraScreen: Reusing existing scanId (subsequent photo) - scanId: \(scanIdToUse)")
                                         }
 
                                         // Mark as submitting for EVERY photo (not just first)
                                         // This ensures we re-poll after each new image is submitted
                                         // because each new photo may reveal additional product information
                                         submittingScanIds.insert(scanIdToUse)
-                                        print("[PHOTO_SCAN] 📝 CameraScreen: Marked scanId as submitting - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
+                                        Log.debug("PHOTO_SCAN", "📝 CameraScreen: Marked scanId as submitting - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
 
                                         // Submit image to scan API
                                         // After 200 response, scanId will be removed from submittingScanIds
                                         // This triggers task(id: isSubmitting) in ScanDataCard to re-fetch and re-poll
-                                        print("[PHOTO_SCAN] 🚀 CameraScreen: Starting Task to submit image - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
+                                        Log.debug("PHOTO_SCAN", "🚀 CameraScreen: Starting Task to submit image - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
                                         Task {
                                             await submitImage(image: image, scanId: scanIdToUse, imageIndex: imageIndex)
                                         }
                                     }
                                 } else {
-                                    print("[PHOTO_SCAN] ❌ CameraScreen: Camera callback returned nil image")
+                                    Log.error("PHOTO_SCAN", "❌ CameraScreen: Camera callback returned nil image")
                                 }
                             }
                         }) {
@@ -956,7 +957,7 @@ struct ScanCameraView: View {
                                         do {
                                             // Use new toggleFavorite API which returns actual state
                                             let newFavoriteState = try await webService.toggleFavorite(scanId: scanId)
-                                            print("[FAVORITE] ✅ Toggled favorite - scanId: \(scanId), is_favorited: \(newFavoriteState)")
+                                            Log.debug("FAVORITE", "✅ Toggled favorite - scanId: \(scanId), is_favorited: \(newFavoriteState)")
 
                                             // Update cache with new favorite status from API response
                                             if let cachedScan = scanDataCache[scanId] {
@@ -984,7 +985,7 @@ struct ScanCameraView: View {
                                                 }
                                             }
                                         } catch {
-                                            print("[FAVORITE] ❌ Failed to toggle favorite - scanId: \(scanId), error: \(error.localizedDescription)")
+                                            Log.error("FAVORITE", "❌ Failed to toggle favorite - scanId: \(scanId), error: \(error.localizedDescription)")
                                         }
                                     }
                                 },
@@ -1009,7 +1010,7 @@ struct ScanCameraView: View {
                                index >= allCarouselItems.count - 3 {
                                 Task {
                                     if scanHistoryStore.hasMore && !scanHistoryStore.isLoading {
-                                        print("[SCAN_HISTORY] 🔄 CameraScreen: Reached end of carousel, loading more history...")
+                                        Log.debug("SCAN_HISTORY", "🔄 CameraScreen: Reached end of carousel, loading more history...")
                                         await scanHistoryStore.loadMore()
                                         await syncHistoryFromStore()
                                     }

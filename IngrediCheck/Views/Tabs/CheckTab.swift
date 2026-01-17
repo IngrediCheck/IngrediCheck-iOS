@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 struct ProductImage: Hashable {
     let image: UIImage
@@ -39,7 +40,7 @@ struct CheckTab: View {
                 Spacer()
             }
             .sheet(item: $checkTabState.feedbackConfig) { feedbackConfig in
-                let _ = print("Activating feedback sheet")
+                let _ = Log.debug("CheckTab", "Activating feedback sheet")
                 FeedbackView(
                     feedbackData: feedbackConfig.feedbackData,
                     feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,

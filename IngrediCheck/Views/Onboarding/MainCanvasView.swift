@@ -92,13 +92,13 @@ struct MainCanvasView: View {
             // If we were loading member/family preferences, this change came from a backend load.
             // DO NOT save.
             if isLoadingMemberPreferences {
-                print("[MainCanvasView] Preferences updated during load, skipping save")
+                Log.debug("MainCanvasView", "Preferences updated during load, skipping save")
                 return
             }
             
             // Don't save if preferences are empty (user hasn't made any selections yet)
             guard !store.preferences.sections.isEmpty else {
-                print("[MainCanvasView] Skipping save - preferences are empty")
+                Log.debug("MainCanvasView", "Skipping save - preferences are empty")
                 return
             }
             
@@ -107,11 +107,11 @@ struct MainCanvasView: View {
             let changedSectionName = store.currentSection.name
             
             // Call API immediately when preferences change
-            print("[MainCanvasView] Preferences changed, saving section \(changedSectionName)")
+            Log.debug("MainCanvasView", "Preferences changed, saving section \(changedSectionName)")
             Task {
                 // Double-check we're not loading and preferences aren't empty before saving
                 guard !isLoadingMemberPreferences, !store.preferences.sections.isEmpty else {
-                    print("[MainCanvasView] Skipping save - loading state or empty preferences")
+                    Log.debug("MainCanvasView", "Skipping save - loading state or empty preferences")
                     return
                 }
                 
@@ -126,7 +126,7 @@ struct MainCanvasView: View {
         }
         .onChange(of: familyStore.selectedMemberId) { newValue in
             // When switching members, prepare preferences locally from associations.
-            print("[MainCanvasView] Member switched to \(newValue?.uuidString ?? "Everyone"), preparing local preferences")
+            Log.debug("MainCanvasView", "Member switched to \(newValue?.uuidString ?? "Everyone"), preparing local preferences")
             
             // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
             // for the newly loaded member's existing state.

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import UIKit
+import os
 
 @Observable
 @MainActor
@@ -81,11 +82,11 @@ final class FamilyStore {
     func setPendingSelfMember(name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            print("[FamilyStore] Ignoring empty self member name")
+            Log.debug("FamilyStore", "Ignoring empty self member name")
             return
         }
         let color = randomColor()
-        print("[FamilyStore] Setting pending self member name: \(trimmed), color: \(color)")
+        Log.debug("FamilyStore", "Setting pending self member name: \(trimmed), color: \(color)")
         
         pendingSelfMember = FamilyMember(
             id: UUID(),
@@ -98,7 +99,7 @@ final class FamilyStore {
     
     /// Set the pending self member from an existing FamilyMember (used when creating family from Settings)
     func setPendingSelfMemberFromExisting(_ member: FamilyMember) {
-        print("[FamilyStore] Setting pending self member from existing: \(member.name)")
+        Log.debug("FamilyStore", "Setting pending self member from existing: \(member.name)")
         pendingSelfMember = member
     }
     
@@ -117,11 +118,11 @@ final class FamilyStore {
     /// updates the member color to match the memoji background if provided.
     func setPendingSelfMemberAvatarFromMemoji(storagePath: String, backgroundColorHex: String? = nil) async {
         guard !storagePath.isEmpty else {
-            print("[FamilyStore] setPendingSelfMemberAvatarFromMemoji: Empty storagePath, skipping")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatarFromMemoji: Empty storagePath, skipping")
             return
         }
         guard var member = pendingSelfMember else {
-            print("[FamilyStore] setPendingSelfMemberAvatarFromMemoji: No pending self member, skipping")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatarFromMemoji: No pending self member, skipping")
             return
         }
 
@@ -133,7 +134,7 @@ final class FamilyStore {
         }
 
         pendingSelfMember = member
-        print("[FamilyStore] setPendingSelfMemberAvatarFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending self member \(member.name)")
+        Log.debug("FamilyStore", "setPendingSelfMemberAvatarFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending self member \(member.name)")
     }
     
     /// Upload and set the avatar image for the pending self member immediately.
@@ -146,7 +147,7 @@ final class FamilyStore {
     func setPendingSelfMemberAvatar(image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         // CRITICAL: Capture member data immediately to prevent accessing deallocated objects
         guard var member = pendingSelfMember else {
-            print("[FamilyStore] setPendingSelfMemberAvatar: No pending self member, skipping upload")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatar: No pending self member, skipping upload")
             return
         }
         
@@ -154,18 +155,18 @@ final class FamilyStore {
         let memberName = member.name
         
         // CRITICAL: UIImage.size access must be on main thread - wrap in MainActor.run
-        print("[FamilyStore] setPendingSelfMemberAvatar: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
+        Log.debug("FamilyStore", "setPendingSelfMemberAvatar: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
         let isValid = await MainActor.run {
             let isMainThread = Thread.isMainThread
-            print("[FamilyStore] setPendingSelfMemberAvatar: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatar: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
             let width = image.size.width
             let height = image.size.height
-            print("[FamilyStore] setPendingSelfMemberAvatar: image.size accessed - width=\(width), height=\(height)")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatar: image.size accessed - width=\(width), height=\(height)")
             return width > 0 && height > 0 && width.isFinite && height.isFinite
         }
-        print("[FamilyStore] setPendingSelfMemberAvatar: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
+        Log.debug("FamilyStore", "setPendingSelfMemberAvatar: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
         guard isValid else {
-            print("[FamilyStore] setPendingSelfMemberAvatar: Image is invalid, skipping upload")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatar: Image is invalid, skipping upload")
             return
         }
         
@@ -173,10 +174,10 @@ final class FamilyStore {
         defer { pendingUploadCount = max(0, pendingUploadCount - 1) }
         
         do {
-            print("[FamilyStore] setPendingSelfMemberAvatar: Uploading avatar image for \(memberName)")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatar: Uploading avatar image for \(memberName)")
             // Upload transparent PNG image directly (no compositing needed)
             let imageFileHash = try await webService.uploadImage(image: image)
-            print("[FamilyStore] setPendingSelfMemberAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+            Log.debug("FamilyStore", "setPendingSelfMemberAvatar: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             member.imageFileHash = imageFileHash
             
             // Update member color if provided
@@ -187,7 +188,7 @@ final class FamilyStore {
             
             pendingSelfMember = member
         } catch {
-            print("[FamilyStore] setPendingSelfMemberAvatar: ❌ Failed to upload avatar: \(error.localizedDescription)")
+            Log.error("FamilyStore", "setPendingSelfMemberAvatar: ❌ Failed to upload avatar: \(error.localizedDescription)")
             // Don't set imageFileHash if upload fails - user can retry later
         }
     }
@@ -205,11 +206,11 @@ final class FamilyStore {
     func addPendingOtherMember(name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            print("[FamilyStore] Ignoring empty other member name")
+            Log.debug("FamilyStore", "Ignoring empty other member name")
             return
         }
         let color = randomColor()
-        print("[FamilyStore] Adding pending other member: \(trimmed), color: \(color)")
+        Log.debug("FamilyStore", "Adding pending other member: \(trimmed), color: \(color)")
         
         let member = FamilyMember(
             id: UUID(),
@@ -237,11 +238,11 @@ final class FamilyStore {
     /// the member color to match the memoji background if provided.
     func setAvatarForLastPendingOtherMemberFromMemoji(storagePath: String, backgroundColorHex: String? = nil) async {
         guard !pendingOtherMembers.isEmpty else {
-            print("[FamilyStore] setAvatarForLastPendingOtherMemberFromMemoji: No pending other members, skipping")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMemberFromMemoji: No pending other members, skipping")
             return
         }
         guard !storagePath.isEmpty else {
-            print("[FamilyStore] setAvatarForLastPendingOtherMemberFromMemoji: Empty storagePath, skipping")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMemberFromMemoji: Empty storagePath, skipping")
             return
         }
 
@@ -254,7 +255,7 @@ final class FamilyStore {
         }
 
         pendingOtherMembers.append(last)
-        print("[FamilyStore] setAvatarForLastPendingOtherMemberFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending other member \(last.name)")
+        Log.debug("FamilyStore", "setAvatarForLastPendingOtherMemberFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending other member \(last.name)")
     }
     
     /// Upload and set the avatar image for the last pending other member immediately.
@@ -266,25 +267,25 @@ final class FamilyStore {
     ///   - backgroundColorHex: Optional background color hex. If provided, updates member.color
     func setAvatarForLastPendingOtherMember(image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         guard !pendingOtherMembers.isEmpty else {
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: No pending other members, skipping upload")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: No pending other members, skipping upload")
             return
         }
         
         var last = pendingOtherMembers.removeLast()
         
         // CRITICAL: UIImage.size access must be on main thread - wrap in MainActor.run
-        print("[FamilyStore] setAvatarForLastPendingOtherMember: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
+        Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
         let isValid = await MainActor.run {
             let isMainThread = Thread.isMainThread
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
             let width = image.size.width
             let height = image.size.height
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: image.size accessed - width=\(width), height=\(height)")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: image.size accessed - width=\(width), height=\(height)")
             return width > 0 && height > 0 && width.isFinite && height.isFinite
         }
-        print("[FamilyStore] setAvatarForLastPendingOtherMember: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
+        Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
         guard isValid else {
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: Image is invalid, skipping upload")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: Image is invalid, skipping upload")
             pendingOtherMembers.append(last)
             return
         }
@@ -293,10 +294,10 @@ final class FamilyStore {
         defer { pendingUploadCount = max(0, pendingUploadCount - 1) }
         
         do {
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: Uploading avatar image for \(last.name)")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: Uploading avatar image for \(last.name)")
             // Upload transparent PNG image directly (no compositing needed)
             let imageFileHash = try await webService.uploadImage(image: image)
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+            Log.debug("FamilyStore", "setAvatarForLastPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             last.imageFileHash = imageFileHash
             
             // Update member color if provided
@@ -307,7 +308,7 @@ final class FamilyStore {
             
             pendingOtherMembers.append(last)
         } catch {
-            print("[FamilyStore] setAvatarForLastPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
+            Log.error("FamilyStore", "setAvatarForLastPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
             // Restore member without imageFileHash if upload fails
             pendingOtherMembers.append(last)
         }
@@ -336,12 +337,12 @@ final class FamilyStore {
     /// updates the member color to match the memoji background if provided.
     func setAvatarForPendingOtherMemberFromMemoji(id: UUID, storagePath: String, backgroundColorHex: String? = nil) async {
         guard !storagePath.isEmpty else {
-            print("[FamilyStore] setAvatarForPendingOtherMemberFromMemoji: Empty storagePath, skipping")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMemberFromMemoji: Empty storagePath, skipping")
             return
         }
 
         guard let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) else {
-            print("[FamilyStore] setAvatarForPendingOtherMemberFromMemoji: Member not found for id=\(id), skipping")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMemberFromMemoji: Member not found for id=\(id), skipping")
             return
         }
 
@@ -352,7 +353,7 @@ final class FamilyStore {
             pendingOtherMembers[idx].color = normalizedColor
         }
 
-        print("[FamilyStore] setAvatarForPendingOtherMemberFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending member \(pendingOtherMembers[idx].name)")
+        Log.debug("FamilyStore", "setAvatarForPendingOtherMemberFromMemoji: ✅ Assigned memoji path=\(storagePath) to pending member \(pendingOtherMembers[idx].name)")
     }
     
     /// Upload and set the avatar image for a specific pending other member immediately.
@@ -366,7 +367,7 @@ final class FamilyStore {
     func setAvatarForPendingOtherMember(id: UUID, image: UIImage, webService: WebService, backgroundColorHex: String? = nil) async {
         // CRITICAL: Capture member data immediately to prevent accessing deallocated objects
         guard let idx = pendingOtherMembers.firstIndex(where: { $0.id == id }) else {
-            print("[FamilyStore] setAvatarForPendingOtherMember: Member not found for id=\(id), skipping upload")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMember: Member not found for id=\(id), skipping upload")
             return
         }
         
@@ -374,18 +375,18 @@ final class FamilyStore {
         let memberName = pendingOtherMembers[idx].name
         
         // CRITICAL: UIImage.size access must be on main thread - wrap in MainActor.run
-        print("[FamilyStore] setAvatarForPendingOtherMember: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
+        Log.debug("FamilyStore", "setAvatarForPendingOtherMember: Before image.size access - Thread.isMainThread=\(Thread.isMainThread)")
         let isValid = await MainActor.run {
             let isMainThread = Thread.isMainThread
-            print("[FamilyStore] setAvatarForPendingOtherMember: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMember: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
             let width = image.size.width
             let height = image.size.height
-            print("[FamilyStore] setAvatarForPendingOtherMember: image.size accessed - width=\(width), height=\(height)")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMember: image.size accessed - width=\(width), height=\(height)")
             return width > 0 && height > 0 && width.isFinite && height.isFinite
         }
-        print("[FamilyStore] setAvatarForPendingOtherMember: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
+        Log.debug("FamilyStore", "setAvatarForPendingOtherMember: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread), isValid=\(isValid)")
         guard isValid else {
-            print("[FamilyStore] setAvatarForPendingOtherMember: Image is invalid, skipping upload")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMember: Image is invalid, skipping upload")
             return
         }
         
@@ -393,10 +394,10 @@ final class FamilyStore {
         defer { pendingUploadCount = max(0, pendingUploadCount - 1) }
         
         do {
-            print("[FamilyStore] setAvatarForPendingOtherMember: Uploading avatar image for \(memberName)")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMember: Uploading avatar image for \(memberName)")
             // Upload transparent PNG image directly (no compositing needed)
             let imageFileHash = try await webService.uploadImage(image: image)
-            print("[FamilyStore] setAvatarForPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
+            Log.debug("FamilyStore", "setAvatarForPendingOtherMember: ✅ Uploaded avatar, imageFileHash=\(imageFileHash)")
             pendingOtherMembers[idx].imageFileHash = imageFileHash
             
             // Update member color if provided
@@ -405,7 +406,7 @@ final class FamilyStore {
                 pendingOtherMembers[idx].color = normalizedColor
             }
         } catch {
-            print("[FamilyStore] setAvatarForPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
+            Log.error("FamilyStore", "setAvatarForPendingOtherMember: ❌ Failed to upload avatar: \(error.localizedDescription)")
             // Don't set imageFileHash if upload fails - user can retry later
         }
     }
@@ -441,13 +442,13 @@ final class FamilyStore {
     /// Creates the family on the backend using any pending members, if present.
     func createFamilyFromPendingIfNeeded() async {
         guard let selfMember = pendingSelfMember else {
-            print("[FamilyStore] createFamilyFromPendingIfNeeded: no pending self member, skipping")
+            Log.debug("FamilyStore", "createFamilyFromPendingIfNeeded: no pending self member, skipping")
             return
         }
         
         let others = pendingOtherMembers
         let familyName = "\(selfMember.name)'s Family"
-        print("[FamilyStore] Creating family from pending. name=\(familyName), self=\(selfMember.name), others=\(others.map { $0.name })")
+        Log.debug("FamilyStore", "Creating family from pending. name=\(familyName), self=\(selfMember.name), others=\(others.map { $0.name })")
         
         await createOrUpdateFamily(
             name: familyName,
@@ -465,13 +466,13 @@ final class FamilyStore {
     /// Adds pending other members to the existing family (used when creating family from Settings)
     func addPendingMembersToExistingFamily() async {
         guard family != nil else {
-            print("[FamilyStore] addPendingMembersToExistingFamily: no existing family, falling back to createFamilyFromPendingIfNeeded")
+            Log.debug("FamilyStore", "addPendingMembersToExistingFamily: no existing family, falling back to createFamilyFromPendingIfNeeded")
             await createFamilyFromPendingIfNeeded()
             return
         }
         
         let others = pendingOtherMembers
-        print("[FamilyStore] Adding pending members to existing family: \(others.map { $0.name })")
+        Log.debug("FamilyStore", "Adding pending members to existing family: \(others.map { $0.name })")
         
         // Add each pending member individually
         for member in others {
@@ -492,13 +493,13 @@ final class FamilyStore {
             // Poll every 100ms to check if uploads are complete
             try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
         }
-        print("[FamilyStore] waitForPendingUploads: All uploads completed")
+        Log.debug("FamilyStore", "waitForPendingUploads: All uploads completed")
     }
     
     // MARK: - Loading
     
     func loadCurrentFamily() async {
-        print("[FamilyStore] loadCurrentFamily() called")
+        Log.debug("FamilyStore", "loadCurrentFamily() called")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -513,14 +514,14 @@ final class FamilyStore {
             // auto-select the self member so preferences load correctly.
             if let family = family, family.otherMembers.isEmpty, selectedMemberId == nil {
                 selectedMemberId = family.selfMember.id
-                print("[FamilyStore] loadCurrentFamily: Auto-selected self member for single-member family")
+                Log.debug("FamilyStore", "loadCurrentFamily: Auto-selected self member for single-member family")
             }
             
-            print("[FamilyStore] loadCurrentFamily success: family=\(String(describing: family))")
+            Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
         } catch {
             // Not being in a family is a valid state; treat errors as UI feedback only.
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] loadCurrentFamily error: \(error)")
+            Log.error("FamilyStore", "loadCurrentFamily error: \(error)")
         }
     }
     
@@ -531,17 +532,17 @@ final class FamilyStore {
         selfMember: FamilyMember,
         otherMembers: [FamilyMember]
     ) async {
-        print("[FamilyStore] 🔵 createOrUpdateFamily called")
-        print("[FamilyStore] 📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
+        Log.debug("FamilyStore", "🔵 createOrUpdateFamily called")
+        Log.debug("FamilyStore", "📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
         isLoading = true
         errorMessage = nil
         defer { 
             isLoading = false
-            print("[FamilyStore] ✅ createOrUpdateFamily completed - isLoading: false")
+            Log.debug("FamilyStore", "✅ createOrUpdateFamily completed - isLoading: false")
         }
         
         do {
-            print("[FamilyStore] ⏳ Calling service.createFamily...")
+            Log.debug("FamilyStore", "⏳ Calling service.createFamily...")
             family = try await service.createFamily(
                 name: name,
                 selfMember: selfMember,
@@ -551,15 +552,15 @@ final class FamilyStore {
             // Sync pending invite status after update
             syncPendingInviteStatus()
             
-            print("[FamilyStore] ✅ createOrUpdateFamily success - family name: \(family?.name ?? "nil")")
+            Log.debug("FamilyStore", "✅ createOrUpdateFamily success - family name: \(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] ❌ createOrUpdateFamily error: \(error)")
-            print("[FamilyStore] ❌ Error message: \(errorMessage ?? "nil")")
+            Log.error("FamilyStore", "❌ createOrUpdateFamily error: \(error)")
+            Log.error("FamilyStore", "❌ Error message: \(errorMessage ?? "nil")")
             if let networkError = error as? NetworkError {
-                print("[FamilyStore] ❌ NetworkError details: \(networkError)")
+                Log.error("FamilyStore", "❌ NetworkError details: \(networkError)")
             } else if let urlError = error as? URLError {
-                print("[FamilyStore] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                Log.error("FamilyStore", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
             }
         }
     }
@@ -567,7 +568,7 @@ final class FamilyStore {
     // MARK: - Members
     
     func addMember(_ member: FamilyMember) async {
-        print("[FamilyStore] addMember called for \(member.name)")
+        Log.debug("FamilyStore", "addMember called for \(member.name)")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -575,15 +576,15 @@ final class FamilyStore {
         do {
             family = try await service.addMember(member)
             syncPendingInviteStatus()
-            print("[FamilyStore] addMember success, family name=\(family?.name ?? "nil")")
+            Log.debug("FamilyStore", "addMember success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] addMember error: \(error)")
+            Log.error("FamilyStore", "addMember error: \(error)")
         }
     }
     
     func editMember(_ member: FamilyMember) async {
-        print("[FamilyStore] editMember called for \(member.id)")
+        Log.debug("FamilyStore", "editMember called for \(member.id)")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -591,68 +592,68 @@ final class FamilyStore {
         do {
             let updatedFamily = try await service.editMember(member)
             family = updatedFamily
-            print("[FamilyStore] editMember success for \(member.id)")
+            Log.debug("FamilyStore", "editMember success for \(member.id)")
             if let updatedMember = ([updatedFamily.selfMember] + updatedFamily.otherMembers).first(where: { $0.id == member.id }) {
-                print("[FamilyStore] editMember updated member \(updatedMember.name) has imageFileHash=\(updatedMember.imageFileHash ?? "nil")")
+                Log.debug("FamilyStore", "editMember updated member \(updatedMember.name) has imageFileHash=\(updatedMember.imageFileHash ?? "nil")")
             }
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] editMember error: \(error)")
+            Log.error("FamilyStore", "editMember error: \(error)")
         }
     }
     
     func deleteMember(id: UUID) async {
-        print("[FamilyStore] deleteMember called for id=\(id)")
+        Log.debug("FamilyStore", "deleteMember called for id=\(id)")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         
         do {
             family = try await service.deleteMember(id: id)
-            print("[FamilyStore] deleteMember success, family name=\(family?.name ?? "nil")")
+            Log.debug("FamilyStore", "deleteMember success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] deleteMember error: \(error)")
+            Log.error("FamilyStore", "deleteMember error: \(error)")
         }
     }
     
     // MARK: - Invites
     
     func invite(memberId: UUID) async -> String? {
-        print("[FamilyStore] invite called for memberId=\(memberId)")
+        Log.debug("FamilyStore", "invite called for memberId=\(memberId)")
         isInviting = true
         errorMessage = nil
         defer { isInviting = false }
         
         do {
             let code = try await service.createInvite(for: memberId)
-            print("[FamilyStore] invite success, code=\(code)")
+            Log.debug("FamilyStore", "invite success, code=\(code)")
             setInvitePendingForPendingOtherMember(id: memberId, pending: true)
             return code
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] invite error: \(error)")
+            Log.error("FamilyStore", "invite error: \(error)")
             return nil
         }
     }
     
     func join(inviteCode: String) async {
-        print("[FamilyStore] join called with code=\(inviteCode)")
+        Log.debug("FamilyStore", "join called with code=\(inviteCode)")
         isJoining = true
         errorMessage = nil
         defer { isJoining = false }
         
         do {
             family = try await service.joinFamily(inviteCode: inviteCode)
-            print("[FamilyStore] join success, family name=\(family?.name ?? "nil")")
+            Log.debug("FamilyStore", "join success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] join error: \(error)")
+            Log.error("FamilyStore", "join error: \(error)")
         }
     }
     
     func leave() async {
-        print("[FamilyStore] leave called")
+        Log.debug("FamilyStore", "leave called")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -660,16 +661,16 @@ final class FamilyStore {
         do {
             try await service.leaveFamily()
             family = nil
-            print("[FamilyStore] leave success, family cleared")
+            Log.debug("FamilyStore", "leave success, family cleared")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] leave error: \(error)")
+            Log.error("FamilyStore", "leave error: \(error)")
         }
     }
 
     /// Creates a default family named "Bite Buddy" for the "Just Me" flow using the standard family endpoint.
     func createBiteBuddyFamily() async {
-        print("[FamilyStore] createBiteBuddyFamily called")
+        Log.debug("FamilyStore", "createBiteBuddyFamily called")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -691,10 +692,10 @@ final class FamilyStore {
             if let family = family {
                 selectedMemberId = family.selfMember.id
             }
-            print("[FamilyStore] createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
+            Log.debug("FamilyStore", "createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[FamilyStore] createBiteBuddyFamily error: \(error)")
+            Log.error("FamilyStore", "createBiteBuddyFamily error: \(error)")
         }
     }
     
@@ -703,22 +704,22 @@ final class FamilyStore {
     /// Creates a family immediately with the given self name.
     /// Throws error for UI handling (Toast/Navigation blocking).
     func createFamilyImmediate(selfName: String) async throws {
-        print("[FamilyStore] 🔵 createFamilyImmediate called")
-        print("[FamilyStore] 📝 Parameter - selfName: \(selfName)")
+        Log.debug("FamilyStore", "🔵 createFamilyImmediate called")
+        Log.debug("FamilyStore", "📝 Parameter - selfName: \(selfName)")
         isLoading = true
         errorMessage = nil
         defer { 
             isLoading = false
-            print("[FamilyStore] ✅ createFamilyImmediate completed - isLoading: false")
+            Log.debug("FamilyStore", "✅ createFamilyImmediate completed - isLoading: false")
         }
         
         let trimmed = selfName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            print("[FamilyStore] ❌ Validation failed - name is empty after trimming")
+            Log.error("FamilyStore", "❌ Validation failed - name is empty after trimming")
             throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
         }
         
-        print("[FamilyStore] ✅ Name validation passed - trimmed name: \(trimmed)")
+        Log.debug("FamilyStore", "✅ Name validation passed - trimmed name: \(trimmed)")
         
         // Check if we have a pending self member logic we should respect?
         // Or just create fresh? The flow "WhatsYourName" usually sets pending self member.
@@ -726,7 +727,7 @@ final class FamilyStore {
         
         let selfMember: FamilyMember
         if let pending = pendingSelfMember {
-            print("[FamilyStore] 📋 Using pending self member - id: \(pending.id), color: \(pending.color), hasImage: \(pending.imageFileHash != nil)")
+            Log.debug("FamilyStore", "📋 Using pending self member - id: \(pending.id), color: \(pending.color), hasImage: \(pending.imageFileHash != nil)")
             selfMember = FamilyMember(
                 id: pending.id,
                 name: trimmed,
@@ -736,7 +737,7 @@ final class FamilyStore {
             )
         } else {
             let newColor = randomColor()
-            print("[FamilyStore] 🆕 Creating new self member - id: \(UUID()), color: \(newColor)")
+            Log.debug("FamilyStore", "🆕 Creating new self member - id: \(UUID()), color: \(newColor)")
             selfMember = FamilyMember(
                 id: UUID(),
                 name: trimmed,
@@ -747,10 +748,10 @@ final class FamilyStore {
         }
         
         let familyName = "\(trimmed)'s Family"
-        print("[FamilyStore] 📝 Family name: \(familyName)")
+        Log.debug("FamilyStore", "📝 Family name: \(familyName)")
         
         do {
-            print("[FamilyStore] ⏳ Calling service.createFamily...")
+            Log.debug("FamilyStore", "⏳ Calling service.createFamily...")
             family = try await service.createFamily(
                 name: familyName,
                 selfMember: selfMember,
@@ -758,21 +759,21 @@ final class FamilyStore {
             )
             
             if let family = family {
-                print("[FamilyStore] ✅ Family created successfully - name: \(family.name)")
+                Log.debug("FamilyStore", "✅ Family created successfully - name: \(family.name)")
                 selectedMemberId = family.selfMember.id
-                print("[FamilyStore] ✅ Selected member ID set to: \(selectedMemberId?.uuidString)")
+                Log.debug("FamilyStore", "✅ Selected member ID set to: \(selectedMemberId?.uuidString)")
                 // Clear pending self member as it is now persisted
                 pendingSelfMember = nil
-                print("[FamilyStore] ✅ Cleared pending self member")
+                Log.debug("FamilyStore", "✅ Cleared pending self member")
             } else {
-                print("[FamilyStore] ⚠️ Family is nil after creation")
+                Log.debug("FamilyStore", "⚠️ Family is nil after creation")
             }
         } catch {
-            print("[FamilyStore] ❌ createFamilyImmediate failed with error: \(error)")
+            Log.error("FamilyStore", "❌ createFamilyImmediate failed with error: \(error)")
             if let networkError = error as? NetworkError {
-                print("[FamilyStore] ❌ NetworkError details: \(networkError)")
+                Log.error("FamilyStore", "❌ NetworkError details: \(networkError)")
             } else if let urlError = error as? URLError {
-                print("[FamilyStore] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                Log.error("FamilyStore", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
             }
             throw error
         }
@@ -790,7 +791,7 @@ final class FamilyStore {
         color: String? = nil,
         webService: WebService
     ) async throws -> FamilyMember {
-        print("[FamilyStore] addMemberImmediate called with name=\(name)")
+        Log.debug("FamilyStore", "addMemberImmediate called with name=\(name)")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -806,14 +807,14 @@ final class FamilyStore {
             pendingUploadCount += 1
              // Using task priority to ensure upload logic runs
             do {
-                print("[FamilyStore] addMemberImmediate: Uploading avatar image for \(trimmed)")
+                Log.debug("FamilyStore", "addMemberImmediate: Uploading avatar image for \(trimmed)")
                 let hash = try await webService.uploadImage(image: image)
-                print("[FamilyStore] addMemberImmediate: ✅ Uploaded avatar hash=\(hash)")
+                Log.debug("FamilyStore", "addMemberImmediate: ✅ Uploaded avatar hash=\(hash)")
                 avatarHash = hash
                 pendingUploadCount = max(0, pendingUploadCount - 1)
             } catch {
                 pendingUploadCount = max(0, pendingUploadCount - 1)
-                print("[FamilyStore] addMemberImmediate: ❌ Failed to upload avatar: \(error.localizedDescription)")
+                Log.error("FamilyStore", "addMemberImmediate: ❌ Failed to upload avatar: \(error.localizedDescription)")
                 // Fail soft: Proceed without avatar if upload fails, instead of blocking member creation
                 avatarHash = nil
             }

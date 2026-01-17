@@ -100,7 +100,7 @@ struct FamilyCarouselView: View {
     
     @MainActor
     func selectFamilyMember(ele: UserModel) async {
-        print("[FamilyCarouselView] selectFamilyMember: Tapped member name=\(ele.name), id=\(ele.id)")
+        Log.debug("FamilyCarouselView", "selectFamilyMember: Tapped member name=\(ele.name), id=\(ele.id)")
         selectedFamilyMember = ele
         
         // "everyone" is our sentinel ID for the family-level note
@@ -109,10 +109,10 @@ struct FamilyCarouselView: View {
         // Keep FamilyStore in sync so other components (like EditableCanvasView)
         // know whether we are editing at family level or for a specific member.
         if let memberId, let uuid = UUID(uuidString: memberId) {
-            print("[FamilyCarouselView] selectFamilyMember: Setting FamilyStore.selectedMemberId=\(uuid)")
+            Log.debug("FamilyCarouselView", "selectFamilyMember: Setting FamilyStore.selectedMemberId=\(uuid)")
             familyStore.selectedMemberId = uuid
         } else {
-            print("[FamilyCarouselView] selectFamilyMember: Setting FamilyStore.selectedMemberId=nil (Everyone)")
+            Log.debug("FamilyCarouselView", "selectFamilyMember: Setting FamilyStore.selectedMemberId=nil (Everyone)")
             familyStore.selectedMemberId = nil
         }
         

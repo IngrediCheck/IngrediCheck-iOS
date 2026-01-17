@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import os
 
 @Observable class OnboardingState {
 
@@ -21,7 +22,7 @@ import Foundation
                 disclaimerShown: false
             )
         }
-        print("On Start OnboardingState: \(data)")
+        Log.debug("OnboardingState", "On Start OnboardingState: \(data)")
         return data
     }
 

@@ -6,6 +6,7 @@ import Supabase
 import PostHog
 import Network
 import CoreTelephony
+import os
 
 enum NetworkError: Error {
     case invalidResponse(Int)
@@ -104,7 +105,7 @@ struct ScanStreamError: Error, LocalizedError {
                 let publicUrlString = "\(Config.supabaseURL.absoluteString)/storage/v1/object/public/memoji-images/\(encodedPath)"
                 
                 guard let publicUrl = URL(string: publicUrlString) else {
-                    print("[WebService] fetchImage: ❌ Failed to construct URL for memoji path: \(imageFileHash)")
+                    Log.error("WebService", "fetchImage: ❌ Failed to construct URL for memoji path: \(imageFileHash)")
                     throw NetworkError.badUrl
                 }
                 fileLocation = FileLocation.url(publicUrl)
@@ -390,7 +391,7 @@ struct ScanStreamError: Error, LocalizedError {
                     errorProps["decode_stage"] = "scan"
                     errorProps["raw_payload"] = payloadString
                     PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
-                    print("[SSE] Failed to decode scan payload: \(error)")
+                    Log.error("SSE", "Failed to decode scan payload: \(error)")
                 }
 
             case "product":
@@ -553,13 +554,13 @@ struct ScanStreamError: Error, LocalizedError {
         var scanId: String?
         var hasReportedError = false
         
-        print("[BARCODE_SCAN] 🔵 Starting barcode scan - barcode: \(barcode), request_id: \(requestId)")
+        Log.debug("BARCODE_SCAN", "🔵 Starting barcode scan - barcode: \(barcode), request_id: \(requestId)")
         
         // Wake up fly.io backend before scan
         pingFlyIO()
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
-            print("[BARCODE_SCAN] ❌ Auth error - no access token")
+            Log.error("BARCODE_SCAN", "❌ Auth error - no access token")
             throw NetworkError.authError
         }
         
@@ -575,8 +576,8 @@ struct ScanStreamError: Error, LocalizedError {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 60
         
-        print("[BARCODE_SCAN] 📡 API Call: POST \(endpoint)")
-        print("[BARCODE_SCAN] 📡 Request body: barcode=\(barcode)")
+        Log.debug("BARCODE_SCAN", "📡 API Call: POST \(endpoint)")
+        Log.debug("BARCODE_SCAN", "📡 Request body: barcode=\(barcode)")
         
         PostHogSDK.shared.capture("Barcode Scan Started", properties: [
             "request_id": requestId,
@@ -588,7 +589,7 @@ struct ScanStreamError: Error, LocalizedError {
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            print("[BARCODE_SCAN] ❌ HTTP Error - Status: \(statusCode)")
+            Log.error("BARCODE_SCAN", "❌ HTTP Error - Status: \(statusCode)")
             PostHogSDK.shared.capture("Barcode Scan Failed - HTTP", properties: [
                 "request_id": requestId,
                 "status_code": statusCode
@@ -596,8 +597,8 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.invalidResponse(statusCode)
         }
         
-        print("[BARCODE_SCAN] ✅ Connected to SSE stream - Status: 200, starting to receive events...")
-        print("[BARCODE_SCAN] ⏳ Polling: NO (using Server-Sent Events stream)")
+        Log.debug("BARCODE_SCAN", "✅ Connected to SSE stream - Status: 200, starting to receive events...")
+        Log.debug("BARCODE_SCAN", "⏳ Polling: NO (using Server-Sent Events stream)")
         
         var buffer = ""
         let doubleNewline = "\n\n"
@@ -624,7 +625,7 @@ struct ScanStreamError: Error, LocalizedError {
             switch resolvedEventType {
             case "scan":
                 // Log raw payload before decoding
-                print("[BARCODE_SCAN] 📄 Raw SSE Event (scan):")
+                Log.debug("BARCODE_SCAN", "📄 Raw SSE Event (scan):")
                 print(payloadString)
                 
                 do {
@@ -632,13 +633,13 @@ struct ScanStreamError: Error, LocalizedError {
                     scanId = scan.id
                     
                     let latency = (Date().timeIntervalSince1970 - startTime) * 1000
-                    print("[BARCODE_SCAN] 📦 Event: scan - scan_id: \(scan.id), state: \(scan.state), latency: \(Int(latency))ms")
+                    Log.debug("BARCODE_SCAN", "📦 Event: scan - scan_id: \(scan.id), state: \(scan.state), latency: \(Int(latency))ms")
                     
                     switch scan.state {
                     case "fetching_product_info":
                         // Initial state - product info is being fetched
                         // product_info may be empty at this stage
-                        print("[BARCODE_SCAN] ⏳ State: fetching_product_info - waiting for product info...")
+                        Log.debug("BARCODE_SCAN", "⏳ State: fetching_product_info - waiting for product info...")
                         PostHogSDK.shared.capture("Barcode Scan State", properties: [
                             "request_id": requestId,
                             "scan_id": scan.id,
@@ -649,7 +650,7 @@ struct ScanStreamError: Error, LocalizedError {
                         
                     case "processing_images":
                         // Images are being processed
-                        print("[BARCODE_SCAN] 🖼️ State: processing_images - processing uploaded images...")
+                        Log.debug("BARCODE_SCAN", "🖼️ State: processing_images - processing uploaded images...")
                         PostHogSDK.shared.capture("Barcode Scan State", properties: [
                             "request_id": requestId,
                             "scan_id": scan.id,
@@ -660,7 +661,7 @@ struct ScanStreamError: Error, LocalizedError {
                         
                     case "analyzing":
                         // Product info is available, analysis is in progress
-                        print("[BARCODE_SCAN] 🔍 State: analyzing - product info available, analyzing ingredients...")
+                        Log.debug("BARCODE_SCAN", "🔍 State: analyzing - product info available, analyzing ingredients...")
                         
                         // Convert ScanProductInfo to the format expected by onProductInfo callback
                         let productInfo = scan.product_info
@@ -679,16 +680,16 @@ struct ScanStreamError: Error, LocalizedError {
                         
                     case "done":
                         // Scan complete with analysis result
-                        print("[BARCODE_SCAN] ✅ State: done - scan complete")
+                        Log.debug("BARCODE_SCAN", "✅ State: done - scan complete")
                         
                         if let analysisResult = scan.analysis_result {
                             // Log raw ingredient_analysis data including members_affected
-                            print("[BARCODE_SCAN] 📊 Raw analysis_result - ingredient_analysis count: \(analysisResult.ingredient_analysis.count)")
+                            Log.debug("BARCODE_SCAN", "📊 Raw analysis_result - ingredient_analysis count: \(analysisResult.ingredient_analysis.count)")
                             for (index, analysis) in analysisResult.ingredient_analysis.enumerated() {
-                                print("[BARCODE_SCAN] 📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
+                                Log.debug("BARCODE_SCAN", "📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
                             }
                             
-                            print("[BARCODE_SCAN] 🎯 Scan complete - no polling needed (SSE stream)")
+                            Log.debug("BARCODE_SCAN", "🎯 Scan complete - no polling needed (SSE stream)")
                             
                             PostHogSDK.shared.capture("Barcode Scan Analysis", properties: [
                                 "request_id": requestId,
@@ -699,7 +700,7 @@ struct ScanStreamError: Error, LocalizedError {
                                 onAnalysis(analysisResult)
                             }
                         } else {
-                            print("[BARCODE_SCAN] ⚠️ Scan done but analysis_result is nil")
+                            Log.warning("BARCODE_SCAN", "⚠️ Scan done but analysis_result is nil")
                         }
                         
                     case "error":
@@ -707,7 +708,7 @@ struct ScanStreamError: Error, LocalizedError {
                         hasReportedError = true
                         let errorMessage = scan.error ?? "Unknown scan error"
                         
-                        print("[BARCODE_SCAN] ❌ State: error - scan_id: \(scan.id), error: \(errorMessage)")
+                        Log.error("BARCODE_SCAN", "❌ State: error - scan_id: \(scan.id), error: \(errorMessage)")
                         
                         PostHogSDK.shared.capture("Barcode Scan Error", properties: [
                             "request_id": requestId,
@@ -720,14 +721,14 @@ struct ScanStreamError: Error, LocalizedError {
                         }
                         
                     default:
-                        print("[BARCODE_SCAN] ⚠️ Unknown state: \(scan.state)")
+                        Log.warning("BARCODE_SCAN", "⚠️ Unknown state: \(scan.state)")
                         break
                     }
                 } catch {
-                    print("[BARCODE_SCAN] ❌ Failed to decode scan payload: \(error)")
+                    Log.error("BARCODE_SCAN", "❌ Failed to decode scan payload: \(error)")
                     // Log the raw payload for debugging
                     if let payloadString = String(data: payloadData, encoding: .utf8) {
-                        print("[BARCODE_SCAN] 📄 Raw scan payload: \(payloadString.prefix(1000))")
+                        Log.debug("BARCODE_SCAN", "📄 Raw scan payload: \(payloadString.prefix(1000))")
                     }
                     
                     // Try to extract scan_id and error from raw JSON if decoding fails
@@ -745,7 +746,7 @@ struct ScanStreamError: Error, LocalizedError {
                 }
                 
             default:
-                print("[BARCODE_SCAN] ⚠️ Unknown event type: \(resolvedEventType)")
+                Log.warning("BARCODE_SCAN", "⚠️ Unknown event type: \(resolvedEventType)")
                 break
             }
         }
@@ -767,7 +768,7 @@ struct ScanStreamError: Error, LocalizedError {
             }
         } catch {
             if !hasReportedError && !(error is CancellationError) {
-                print("[BARCODE_SCAN] ❌ Stream error: \(error.localizedDescription)")
+                Log.error("BARCODE_SCAN", "❌ Stream error: \(error.localizedDescription)")
                 await MainActor.run {
                     onError(ScanStreamError(message: error.localizedDescription, statusCode: nil), scanId)
                 }
@@ -776,7 +777,7 @@ struct ScanStreamError: Error, LocalizedError {
         }
         
         let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
-        print("[BARCODE_SCAN] ✅ Barcode scan completed - total latency: \(Int(totalLatency))ms")
+        Log.debug("BARCODE_SCAN", "✅ Barcode scan completed - total latency: \(Int(totalLatency))ms")
     }
     
     func submitScanImage(
@@ -785,13 +786,13 @@ struct ScanStreamError: Error, LocalizedError {
     ) async throws -> DTO.SubmitImageResponse {
         
         let imageSizeKB = imageData.count / 1024
-        print("[PHOTO_SCAN] 📸 Submitting image - scan_id: \(scanId), image_size: \(imageSizeKB)KB")
+        Log.debug("PHOTO_SCAN", "📸 Submitting image - scan_id: \(scanId), image_size: \(imageSizeKB)KB")
         
         // Wake up fly.io backend before scan
         pingFlyIO()
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
-            print("[PHOTO_SCAN] ❌ Auth error - no access token")
+            Log.error("PHOTO_SCAN", "❌ Auth error - no access token")
             throw NetworkError.authError
         }
         
@@ -802,7 +803,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setFormData(name: "image", value: imageData, contentType: "image/jpeg")
             .build()
         
-        print("[PHOTO_SCAN] 📡 API Call: POST \(endpoint)")
+        Log.debug("PHOTO_SCAN", "📡 API Call: POST \(endpoint)")
         
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
@@ -810,42 +811,42 @@ struct ScanStreamError: Error, LocalizedError {
         switch httpResponse.statusCode {
         case 200:
             let submitResponse = try JSONDecoder().decode(DTO.SubmitImageResponse.self, from: data)
-            print("[PHOTO_SCAN] ✅ Image submitted successfully - scan_id: \(scanId), queued: \(submitResponse.queued), queue_position: \(submitResponse.queue_position)")
+            Log.debug("PHOTO_SCAN", "✅ Image submitted successfully - scan_id: \(scanId), queued: \(submitResponse.queued), queue_position: \(submitResponse.queue_position)")
             return submitResponse
         case 401:
-            print("[PHOTO_SCAN] ❌ Status 401 - Unauthorized")
+            Log.error("PHOTO_SCAN", "❌ Status 401 - Unauthorized")
             throw NetworkError.authError
         case 403:
-            print("[PHOTO_SCAN] ❌ Status 403 - Scan belongs to another user")
+            Log.error("PHOTO_SCAN", "❌ Status 403 - Scan belongs to another user")
             throw NetworkError.notFound("Scan belongs to another user")
         case 413:
-            print("[PHOTO_SCAN] ❌ Status 413 - Image too large (>10MB)")
+            Log.error("PHOTO_SCAN", "❌ Status 413 - Image too large (>10MB)")
             throw NetworkError.invalidResponse(413)  // Image too large (>10MB)
         case 400:
-            print("[PHOTO_SCAN] ❌ Status 400 - Max images reached (20)")
+            Log.error("PHOTO_SCAN", "❌ Status 400 - Max images reached (20)")
             throw NetworkError.invalidResponse(400)  // Max images reached (20)
         case 502, 503, 504:
             // Server-side errors - gateway/proxy/upstream issues
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
-            print("[PHOTO_SCAN] ❌ Status \(httpResponse.statusCode) - Server error (likely server-side issue)")
-            print("[PHOTO_SCAN] 📄 Response body: \(responseBody.prefix(500))")
+            Log.error("PHOTO_SCAN", "❌ Status \(httpResponse.statusCode) - Server error (likely server-side issue)")
+            Log.debug("PHOTO_SCAN", "📄 Response body: \(responseBody.prefix(500))")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         default:
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
-            print("[PHOTO_SCAN] ❌ Status \(httpResponse.statusCode) - Unexpected error")
-            print("[PHOTO_SCAN] 📄 Response body: \(responseBody.prefix(500))")
+            Log.error("PHOTO_SCAN", "❌ Status \(httpResponse.statusCode) - Unexpected error")
+            Log.debug("PHOTO_SCAN", "📄 Response body: \(responseBody.prefix(500))")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
     
     func reanalyzeScan(scanId: String) async throws -> DTO.Scan {
-        print("[REANALYZE] 🔄 Reanalyzing scan - scan_id: \(scanId)")
+        Log.debug("REANALYZE", "🔄 Reanalyzing scan - scan_id: \(scanId)")
         
         // Wake up fly.io backend before reanalyze
         pingFlyIO()
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
-            print("[REANALYZE] ❌ Auth error - no access token")
+            Log.error("REANALYZE", "❌ Auth error - no access token")
             throw NetworkError.authError
         }
         
@@ -861,15 +862,15 @@ struct ScanStreamError: Error, LocalizedError {
             .setMethod(to: "POST")
             .build()
         
-        print("[REANALYZE] 📡 API Call: POST \(endpoint)")
+        Log.debug("REANALYZE", "📡 API Call: POST \(endpoint)")
         
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
-            print("[REANALYZE] ❌ HTTP Error - Status: \(httpResponse.statusCode)")
-            print("[REANALYZE] 📄 Response body: \(responseBody)")
+            Log.error("REANALYZE", "❌ HTTP Error - Status: \(httpResponse.statusCode)")
+            Log.debug("REANALYZE", "📄 Response body: \(responseBody)")
             
             if httpResponse.statusCode == 400 {
                 // Cannot reanalyze (e.g. no ingredients)
@@ -883,10 +884,10 @@ struct ScanStreamError: Error, LocalizedError {
         
         do {
             let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
-            print("[REANALYZE] ✅ Reanalysis complete - scan_id: \(scan.id)")
+            Log.debug("REANALYZE", "✅ Reanalysis complete - scan_id: \(scan.id)")
             return scan
         } catch {
-            print("[REANALYZE] ❌ Failed to decode reanalysis response: \(error)")
+            Log.error("REANALYZE", "❌ Failed to decode reanalysis response: \(error)")
             throw NetworkError.decodingError
         }
     }
@@ -894,7 +895,7 @@ struct ScanStreamError: Error, LocalizedError {
     func getScan(scanId: String) async throws -> DTO.Scan {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
-            print("[PHOTO_SCAN] ❌ Auth error - no access token for polling")
+            Log.error("PHOTO_SCAN", "❌ Auth error - no access token for polling")
             throw NetworkError.authError
         }
         
@@ -904,7 +905,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
         
-        print("[PHOTO_SCAN] 🔄 Polling: GET \(endpoint)")
+        Log.debug("PHOTO_SCAN", "🔄 Polling: GET \(endpoint)")
         
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
@@ -913,55 +914,55 @@ struct ScanStreamError: Error, LocalizedError {
         case 200:
             // Log raw response for debugging
             if let rawResponse = String(data: data, encoding: .utf8) {
-                print("[PHOTO_SCAN] 📄 Raw response: \(rawResponse)")
+                Log.debug("PHOTO_SCAN", "📄 Raw response: \(rawResponse)")
             }
             
             do {
                 let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
-            print("[PHOTO_SCAN] ✅ Poll response - scan_id: \(scanId), state: \(scan.state)")
+            Log.debug("PHOTO_SCAN", "✅ Poll response - scan_id: \(scanId), state: \(scan.state)")
             
                 // Log raw ingredient_analysis data including members_affected if available
                 if let analysisResult = scan.analysis_result {
-                    print("[PHOTO_SCAN] 📊 Raw analysis_result - ingredient_analysis count: \(analysisResult.ingredient_analysis.count)")
+                    Log.debug("PHOTO_SCAN", "📊 Raw analysis_result - ingredient_analysis count: \(analysisResult.ingredient_analysis.count)")
                     for (index, analysis) in analysisResult.ingredient_analysis.enumerated() {
-                        print("[PHOTO_SCAN] 📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
+                        Log.debug("PHOTO_SCAN", "📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
                     }
                 }
                 
                 return scan
             } catch let error {
                 // Log detailed decoding error
-                print("[PHOTO_SCAN] ❌ Failed to decode Scan: \(error)")
+                Log.error("PHOTO_SCAN", "❌ Failed to decode Scan: \(error)")
                 if let rawResponse = String(data: data, encoding: .utf8) {
-                    print("[PHOTO_SCAN] 📄 Raw response that failed to decode: \(rawResponse)")
+                    Log.error("PHOTO_SCAN", "📄 Raw response that failed to decode: \(rawResponse)")
                 }
                 if let decodingError = error as? DecodingError {
                     switch decodingError {
                     case .keyNotFound(let key, let context):
-                        print("[PHOTO_SCAN] ❌ Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        Log.error("PHOTO_SCAN", "❌ Missing key: \(key.stringValue) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: ")."))")
                     case .typeMismatch(let type, let context):
-                        print("[PHOTO_SCAN] ❌ Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        Log.error("PHOTO_SCAN", "❌ Type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: ")."))")
                     case .valueNotFound(let type, let context):
-                        print("[PHOTO_SCAN] ❌ Value not found: \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                        Log.error("PHOTO_SCAN", "❌ Value not found: \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: ")."))")
                     case .dataCorrupted(let context):
-                        print("[PHOTO_SCAN] ❌ Data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: ".")), \(context.debugDescription)")
+                        Log.error("PHOTO_SCAN", "❌ Data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: ").")), \(context.debugDescription)")
                     @unknown default:
-                        print("[PHOTO_SCAN] ❌ Unknown decoding error: \(decodingError)")
+                        Log.error("PHOTO_SCAN", "❌ Unknown decoding error: \(decodingError)")
                     }
                 }
                 throw error
             }
         case 401:
-            print("[PHOTO_SCAN] ❌ Poll Status 401 - Unauthorized")
+            Log.error("PHOTO_SCAN", "❌ Poll Status 401 - Unauthorized")
             throw NetworkError.authError
         case 403:
-            print("[PHOTO_SCAN] ❌ Poll Status 403 - Scan belongs to another user")
+            Log.error("PHOTO_SCAN", "❌ Poll Status 403 - Scan belongs to another user")
             throw NetworkError.notFound("Scan belongs to another user")
         case 404:
-            print("[PHOTO_SCAN] ❌ Poll Status 404 - Scan not found")
+            Log.error("PHOTO_SCAN", "❌ Poll Status 404 - Scan not found")
             throw NetworkError.notFound("Scan not found")
         default:
-            print("[PHOTO_SCAN] ❌ Poll Status \(httpResponse.statusCode) - Unexpected error")
+            Log.error("PHOTO_SCAN", "❌ Poll Status \(httpResponse.statusCode) - Unexpected error")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
@@ -992,10 +993,10 @@ struct ScanStreamError: Error, LocalizedError {
         
         // Log raw response
         if let rawResponse = String(data: data, encoding: .utf8) {
-            print("[SCAN_HISTORY] 📄 Raw API Response:")
+            Log.debug("SCAN_HISTORY", "📄 Raw API Response:")
             print(rawResponse)
         } else {
-            print("[SCAN_HISTORY] ⚠️ Could not convert response data to string")
+            Log.warning("SCAN_HISTORY", "⚠️ Could not convert response data to string")
         }
         
         guard httpResponse.statusCode == 200 else {
@@ -1209,7 +1210,7 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.authError
         }
 
-        print("[WebService] toggleScanFavorite: start scanId=\(scanId)")
+        Log.debug("WebService", "toggleScanFavorite: start scanId=\(scanId)")
 
         let request = SupabaseRequestBuilder(endpoint: .scan_favorite, itemId: scanId)
             .setAuthorization(with: token)
@@ -1219,17 +1220,17 @@ struct ScanStreamError: Error, LocalizedError {
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
 
-        print("[WebService] toggleScanFavorite: status=\(httpResponse.statusCode), bytes=\(data.count)")
+        Log.debug("WebService", "toggleScanFavorite: status=\(httpResponse.statusCode), bytes=\(data.count)")
 
         guard httpResponse.statusCode == 200 else {
             let responseText = String(data: data, encoding: .utf8) ?? ""
-            print("[WebService] toggleScanFavorite: non-200 response body=\(responseText)")
+            Log.debug("WebService", "toggleScanFavorite: non-200 response body=\(responseText)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
         // Some backends return the updated scan record; others return a small payload.
         if let decoded = try? JSONDecoder().decode(DTO.HistoryItem.self, from: data) {
-            print("[WebService] toggleScanFavorite: decoded HistoryItem favorited=\(decoded.favorited)")
+            Log.debug("WebService", "toggleScanFavorite: decoded HistoryItem favorited=\(decoded.favorited)")
             return decoded.favorited
         }
 
@@ -1239,53 +1240,53 @@ struct ScanStreamError: Error, LocalizedError {
         }
 
         if let decoded = try? JSONDecoder().decode(ToggleFavoriteResponse.self, from: data) {
-            print("[WebService] toggleScanFavorite: decoded ToggleFavoriteResponse favorited=\(String(describing: decoded.favorited)) favorite=\(String(describing: decoded.favorite))")
+            Log.debug("WebService", "toggleScanFavorite: decoded ToggleFavoriteResponse favorited=\(String(describing: decoded.favorited)) favorite=\(String(describing: decoded.favorite))")
             if let favorited = decoded.favorited { return favorited }
             if let favorite = decoded.favorite { return favorite }
         }
 
         if let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
-            print("[WebService] toggleScanFavorite: decoded JSON keys=\(Array(json.keys))")
+            Log.debug("WebService", "toggleScanFavorite: decoded JSON keys=\(Array(json.keys))")
             if let favorited = json["favorited"] as? Bool { return favorited }
             if let favorite = json["favorite"] as? Bool { return favorite }
         }
 
         let responseText = String(data: data, encoding: .utf8) ?? ""
-        print("[WebService] toggleScanFavorite: failed to decode response body=\(responseText)")
+        Log.error("WebService", "toggleScanFavorite: failed to decode response body=\(responseText)")
         throw NetworkError.decodingError
     }
 
     func setHistoryFavorite(clientActivityId: String, favorited: Bool) async throws -> Bool {
-        print("[WebService] setHistoryFavorite: start clientActivityId=\(clientActivityId), favorited=\(favorited)")
+        Log.debug("WebService", "setHistoryFavorite: start clientActivityId=\(clientActivityId), favorited=\(favorited)")
         do {
             if favorited {
                 try await addToFavorites(clientActivityId: clientActivityId)
-                print("[WebService] setHistoryFavorite: addToFavorites ✅ clientActivityId=\(clientActivityId)")
+                Log.debug("WebService", "setHistoryFavorite: addToFavorites ✅ clientActivityId=\(clientActivityId)")
             } else {
                 try await removeFromFavorites(clientActivityId: clientActivityId)
-                print("[WebService] setHistoryFavorite: removeFromFavorites ✅ clientActivityId=\(clientActivityId)")
+                Log.debug("WebService", "setHistoryFavorite: removeFromFavorites ✅ clientActivityId=\(clientActivityId)")
             }
             return favorited
         } catch {
-            print("[WebService] setHistoryFavorite: ❌ clientActivityId=\(clientActivityId), error=\(error.localizedDescription)")
+            Log.error("WebService", "setHistoryFavorite: ❌ clientActivityId=\(clientActivityId), error=\(error.localizedDescription)")
             throw error
         }
     }
 
     func uploadImage(image: UIImage) async throws -> String {
-        print("[WebService] uploadImage: Before pngData() - Thread.isMainThread=\(Thread.isMainThread)")
+        Log.debug("WebService", "uploadImage: Before pngData() - Thread.isMainThread=\(Thread.isMainThread)")
         // CRITICAL: pngData() must be called on main thread - UIImage operations are not thread-safe
         let imageData = await MainActor.run {
             let isMainThread = Thread.isMainThread
-            print("[WebService] uploadImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+            Log.debug("WebService", "uploadImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
             let data = image.pngData()!
-            print("[WebService] uploadImage: pngData() completed - data size=\(data.count) bytes")
+            Log.debug("WebService", "uploadImage: pngData() completed - data size=\(data.count) bytes")
             return data
         }
-        print("[WebService] uploadImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
+        Log.debug("WebService", "uploadImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
         let imageFileName = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
         
-        print("[WebService] uploadImage: Uploading image to storage with key=\(imageFileName)")
+        Log.debug("WebService", "uploadImage: Uploading image to storage with key=\(imageFileName)")
         
         do {
             try await supabaseClient.storage.from("productimages").upload(
@@ -1293,7 +1294,7 @@ struct ScanStreamError: Error, LocalizedError {
                 file: imageData,
                 options: FileOptions(contentType: "image/png")
             )
-            print("[WebService] uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
+            Log.debug("WebService", "uploadImage: ✅ Upload succeeded for key=\(imageFileName)")
         } catch {
             let message = String(describing: error)
             // Supabase storage returns "The resource already exists" when the same
@@ -1301,9 +1302,9 @@ struct ScanStreamError: Error, LocalizedError {
             // of the image bytes, so if the content is identical we can safely
             // treat this as a success and reuse the existing object.
             if message.contains("resource already exists") {
-                print("[WebService] uploadImage: ℹ️ Resource already exists for key=\(imageFileName), reusing existing file")
+                Log.debug("WebService", "uploadImage: ℹ️ Resource already exists for key=\(imageFileName), reusing existing file")
             } else {
-                print("[WebService] uploadImage: ❌ Upload failed for key=\(imageFileName): \(error.localizedDescription)")
+                Log.error("WebService", "uploadImage: ❌ Upload failed for key=\(imageFileName): \(error.localizedDescription)")
                 throw error
             }
         }
@@ -1321,7 +1322,7 @@ struct ScanStreamError: Error, LocalizedError {
     func toggleFavorite(scanId: String) async throws -> Bool {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
-            print("[FAVORITE] ❌ Auth error - no access token")
+            Log.error("FAVORITE", "❌ Auth error - no access token")
             throw NetworkError.authError
         }
         
@@ -1331,7 +1332,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setMethod(to: "PATCH")
             .build()
         
-        print("[FAVORITE] 📡 API Call: POST \(endpoint)")
+        Log.debug("FAVORITE", "📡 API Call: POST \(endpoint)")
         
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
@@ -1345,25 +1346,25 @@ struct ScanStreamError: Error, LocalizedError {
             
             do {
                 let favoriteResponse = try JSONDecoder().decode(FavoriteResponse.self, from: data)
-                print("[FAVORITE] ✅ Toggle successful - scanId: \(scanId), is_favorited: \(favoriteResponse.is_favorited)")
+                Log.debug("FAVORITE", "✅ Toggle successful - scanId: \(scanId), is_favorited: \(favoriteResponse.is_favorited)")
                 return favoriteResponse.is_favorited
             } catch {
-                print("[FAVORITE] ❌ Failed to decode response: \(error)")
+                Log.error("FAVORITE", "❌ Failed to decode response: \(error)")
                 if let rawResponse = String(data: data, encoding: .utf8) {
-                    print("[FAVORITE] 📄 Raw response: \(rawResponse)")
+                    Log.debug("FAVORITE", "📄 Raw response: \(rawResponse)")
                 }
                 throw NetworkError.decodingError
             }
         case 401:
-            print("[FAVORITE] ❌ Status 401 - Unauthorized")
+            Log.error("FAVORITE", "❌ Status 401 - Unauthorized")
             throw NetworkError.authError
         case 404:
-            print("[FAVORITE] ❌ Status 404 - Scan not found")
+            Log.error("FAVORITE", "❌ Status 404 - Scan not found")
             throw NetworkError.notFound("Scan not found")
         default:
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
-            print("[FAVORITE] ❌ Status \(httpResponse.statusCode) - Unexpected error")
-            print("[FAVORITE] 📄 Response body: \(responseBody.prefix(500))")
+            Log.error("FAVORITE", "❌ Status \(httpResponse.statusCode) - Unexpected error")
+            Log.debug("FAVORITE", "📄 Response body: \(responseBody.prefix(500))")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
@@ -1986,7 +1987,7 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.authError
         }
         
-        print("[WebService] fetchFoodNotes: Starting GET request to /family/food-notes")
+        Log.debug("WebService", "fetchFoodNotes: Starting GET request to /family/food-notes")
         
         let request = SupabaseRequestBuilder(endpoint: .family_food_notes)
             .setAuthorization(with: token)
@@ -1995,24 +1996,24 @@ struct ScanStreamError: Error, LocalizedError {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        print("[WebService] fetchFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        Log.debug("WebService", "fetchFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             // 404 means no food notes exist yet, which is fine
             if httpResponse.statusCode == 404 {
-                print("[WebService] fetchFoodNotes: No food notes found (404), returning nil")
+                Log.debug("WebService", "fetchFoodNotes: No food notes found (404), returning nil")
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            print("[WebService] fetchFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            Log.error("WebService", "fetchFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
         // Backend returns null if no food notes exist (status 200 with null body)
         let responseString = String(data: data, encoding: .utf8) ?? ""
         if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
-            print("[WebService] fetchFoodNotes: No food notes found (null response), returning nil")
+            Log.debug("WebService", "fetchFoodNotes: No food notes found (null response), returning nil")
             return nil
         }
         
@@ -2021,12 +2022,12 @@ struct ScanStreamError: Error, LocalizedError {
               let version = jsonObject["version"] as? Int,
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
-            print("[WebService] fetchFoodNotes: ❌ Failed to parse response")
-            print("[WebService] fetchFoodNotes: Response body: \(responseString)")
+            Log.error("WebService", "fetchFoodNotes: ❌ Failed to parse response")
+            Log.debug("WebService", "fetchFoodNotes: Response body: \(responseString)")
             throw NetworkError.decodingError
         }
         
-        print("[WebService] fetchFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: ", "))")
+        Log.debug("WebService", "fetchFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: "), "))")
         
         return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
     }
@@ -2036,7 +2037,7 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.authError
         }
         
-        print("[WebService] fetchFoodNotesAll: Starting GET request to /family/food-notes/all")
+        Log.debug("WebService", "fetchFoodNotesAll: Starting GET request to /family/food-notes/all")
         
         let request = SupabaseRequestBuilder(endpoint: .family_food_notes_all)
             .setAuthorization(with: token)
@@ -2045,31 +2046,31 @@ struct ScanStreamError: Error, LocalizedError {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        print("[WebService] fetchFoodNotesAll: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        Log.debug("WebService", "fetchFoodNotesAll: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             // 404 means no food notes exist yet, which is fine
             if httpResponse.statusCode == 404 {
-                print("[WebService] fetchFoodNotesAll: No food notes found (404), returning nil")
+                Log.debug("WebService", "fetchFoodNotesAll: No food notes found (404), returning nil")
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            print("[WebService] fetchFoodNotesAll: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            Log.error("WebService", "fetchFoodNotesAll: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
         // Backend returns null if no food notes exist (status 200 with null body)
         let responseString = String(data: data, encoding: .utf8) ?? ""
         if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
-            print("[WebService] fetchFoodNotesAll: No food notes found (null response), returning nil")
+            Log.debug("WebService", "fetchFoodNotesAll: No food notes found (null response), returning nil")
             return nil
         }
         
         // Parse response - includes familyNote and memberNotes
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            print("[WebService] fetchFoodNotesAll: ❌ Failed to parse response")
-            print("[WebService] fetchFoodNotesAll: Response body: \(responseString)")
+            Log.error("WebService", "fetchFoodNotesAll: ❌ Failed to parse response")
+            Log.debug("WebService", "fetchFoodNotesAll: Response body: \(responseString)")
             throw NetworkError.decodingError
         }
         
@@ -2094,7 +2095,7 @@ struct ScanStreamError: Error, LocalizedError {
             }
         }
         
-        print("[WebService] fetchFoodNotesAll: ✅ Success! Family note: \(familyNote != nil ? "present" : "null"), Member notes: \(memberNotes.count)")
+        Log.debug("WebService", "fetchFoodNotesAll: ✅ Success! Family note: \(familyNote != nil ? ")present" : "null"), Member notes: \(memberNotes.count)")
         
         return FoodNotesAllResponse(familyNote: familyNote, memberNotes: memberNotes)
     }
@@ -2120,12 +2121,12 @@ struct ScanStreamError: Error, LocalizedError {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        print("[WebService] updateFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        Log.debug("WebService", "updateFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            print("[WebService] updateFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
+            Log.error("WebService", "updateFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
             
             // Handle version mismatch (409 Conflict) - backend now returns currentNote in response.
             // For family notes, currentNote may be null when there is no existing note yet.
@@ -2140,12 +2141,12 @@ struct ScanStreamError: Error, LocalizedError {
                             version: currentVersion,
                             updatedAt: currentUpdatedAt
                         )
-                        print("[WebService] updateFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
+                        Log.debug("WebService", "updateFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
                         throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
                     } else {
                         // currentNote is null or missing: treat this as "no existing note",
                         // so retry once with version=0 to create the family note.
-                        print("[WebService] updateFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
+                        Log.debug("WebService", "updateFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
                         return try await updateFoodNotes(content: content, version: 0)
                     }
                 }
@@ -2159,7 +2160,7 @@ struct ScanStreamError: Error, LocalizedError {
               let version = jsonObject["version"] as? Int,
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
-            print("[WebService] updateFoodNotes: Failed to parse response")
+            Log.error("WebService", "updateFoodNotes: Failed to parse response")
             throw NetworkError.decodingError
         }
         
@@ -2174,7 +2175,7 @@ struct ScanStreamError: Error, LocalizedError {
             throw NetworkError.authError
         }
         
-        print("[WebService] fetchMemberFoodNotes: Starting GET request to /family/members/\(memberId)/food-notes")
+        Log.debug("WebService", "fetchMemberFoodNotes: Starting GET request to /family/members/\(memberId)/food-notes")
         
         let request = SupabaseRequestBuilder(endpoint: .family_member_food_notes, itemId: memberId)
             .setAuthorization(with: token)
@@ -2183,24 +2184,24 @@ struct ScanStreamError: Error, LocalizedError {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        print("[WebService] fetchMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        Log.debug("WebService", "fetchMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             // 404 means no food notes exist yet for this member, which is fine
             if httpResponse.statusCode == 404 {
-                print("[WebService] fetchMemberFoodNotes: No member food notes found (404), returning nil")
+                Log.debug("WebService", "fetchMemberFoodNotes: No member food notes found (404), returning nil")
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            print("[WebService] fetchMemberFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            Log.error("WebService", "fetchMemberFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
         // Backend returns null if no food notes exist (status 200 with null body)
         let responseString = String(data: data, encoding: .utf8) ?? ""
         if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
-            print("[WebService] fetchMemberFoodNotes: No food notes found (null response), returning nil")
+            Log.debug("WebService", "fetchMemberFoodNotes: No food notes found (null response), returning nil")
             return nil
         }
         
@@ -2209,12 +2210,12 @@ struct ScanStreamError: Error, LocalizedError {
               let version = jsonObject["version"] as? Int,
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
-            print("[WebService] fetchMemberFoodNotes: ❌ Failed to parse response")
-            print("[WebService] fetchMemberFoodNotes: Response body: \(responseString)")
+            Log.error("WebService", "fetchMemberFoodNotes: ❌ Failed to parse response")
+            Log.debug("WebService", "fetchMemberFoodNotes: Response body: \(responseString)")
             throw NetworkError.decodingError
         }
         
-        print("[WebService] fetchMemberFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: ", "))")
+        Log.debug("WebService", "fetchMemberFoodNotes: ✅ Success! Version: \(version), Content keys: \(content.keys.joined(separator: "), "))")
         
         return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
     }
@@ -2241,12 +2242,12 @@ struct ScanStreamError: Error, LocalizedError {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        print("[WebService] updateMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
+        Log.debug("WebService", "updateMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
         
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            print("[WebService] updateMemberFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
+            Log.error("WebService", "updateMemberFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
             
             // Handle version mismatch (409 Conflict).
             // For member notes, the backend may return { "error": "version_mismatch", "currentNote": null }
@@ -2262,12 +2263,12 @@ struct ScanStreamError: Error, LocalizedError {
                             version: currentVersion,
                             updatedAt: currentUpdatedAt
                         )
-                        print("[WebService] updateMemberFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
+                        Log.debug("WebService", "updateMemberFoodNotes: Version mismatch with existing note - current version: \(currentVersion), expected: \(version)")
                         throw VersionMismatchError(currentNote: currentNote, expectedVersion: version)
                     } else {
                         // currentNote is null or missing: treat this as "no existing note",
                         // so retry once with version=0 to create the member note.
-                        print("[WebService] updateMemberFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
+                        Log.debug("WebService", "updateMemberFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
                         return try await updateMemberFoodNotes(memberId: memberId, content: content, version: 0)
                     }
                 }
@@ -2281,8 +2282,8 @@ struct ScanStreamError: Error, LocalizedError {
               let version = jsonObject["version"] as? Int,
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
-            print("[WebService] updateMemberFoodNotes: Failed to parse response")
-            print("[WebService] updateMemberFoodNotes: Response body: \(String(data: data, encoding: .utf8) ?? "")")
+            Log.error("WebService", "updateMemberFoodNotes: Failed to parse response")
+            Log.debug("WebService", "updateMemberFoodNotes: Response body: \(String(data: data, encoding: .utf8) ?? ")")")
             throw NetworkError.decodingError
         }
         
@@ -2297,7 +2298,7 @@ struct ScanStreamError: Error, LocalizedError {
         
         let requestBody = try JSONEncoder().encode(request)
         if let jsonString = String(data: requestBody, encoding: .utf8) {
-            print("[WebService] submitFeedback Request Body: \(jsonString)")
+            Log.debug("WebService", "submitFeedback Request Body: \(jsonString)")
         }
         
         let urlRequest = SupabaseRequestBuilder(endpoint: .scan_feedback)
@@ -2306,7 +2307,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBody)
             .build()
         
-        print("[WebService] submitFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
+        Log.debug("WebService", "submitFeedback URL: \(urlRequest.url?.absoluteString ?? ")nil")")
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
@@ -2316,7 +2317,7 @@ struct ScanStreamError: Error, LocalizedError {
         
         if httpResponse.statusCode == 200 {
             if let responseString = String(data: data, encoding: .utf8) {
-                print("[WebService] submitFeedback Response Body: \(responseString)")
+                Log.debug("WebService", "submitFeedback Response Body: \(responseString)")
             }
             do {
                 let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
@@ -2339,7 +2340,7 @@ struct ScanStreamError: Error, LocalizedError {
         let updateRequest = DTO.FeedbackUpdateRequest(vote: vote)
         let requestBody = try JSONEncoder().encode(updateRequest)
         if let jsonString = String(data: requestBody, encoding: .utf8) {
-            print("[WebService] updateFeedback Request Body: \(jsonString)")
+            Log.debug("WebService", "updateFeedback Request Body: \(jsonString)")
         }
         
         let urlRequest = SupabaseRequestBuilder(endpoint: .scan_feedback_update, itemId: feedbackId)
@@ -2348,7 +2349,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBody)
             .build()
         
-        print("[WebService] updateFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
+        Log.debug("WebService", "updateFeedback URL: \(urlRequest.url?.absoluteString ?? ")nil")")
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
@@ -2358,7 +2359,7 @@ struct ScanStreamError: Error, LocalizedError {
          
         if httpResponse.statusCode == 200 {
              if let responseString = String(data: data, encoding: .utf8) {
-                 print("[WebService] updateFeedback Response Body: \(responseString)")
+                 Log.debug("WebService", "updateFeedback Response Body: \(responseString)")
              }
              do {
                  let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)

@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 import GoogleSignIn
 import GoogleSignInSwift
+import os
 
 struct UseCasesView: View {
 
@@ -57,7 +58,7 @@ struct UseCasesView: View {
                             onboardingState.useCasesShown = true
                         case .failure(let error):
                             // TODO: Show an alert to the user
-                            print("Google Sign-In failed: \(error.localizedDescription)")
+                            Log.error("UseCasesView", "Google Sign-In failed: \(error.localizedDescription)")
                         }
                     }
                 }) {

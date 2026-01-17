@@ -12,8 +12,8 @@ struct FamilyAPI {
         let urlString = baseURL.hasSuffix("/") ? baseURL + path : baseURL + "/" + path
         let url = urlString.hasPrefix("http") ? URL(string: urlString)! : URL(string: "http://\(urlString)")!
         
-        print("[FamilyAPI] 🔵 makeRequest - Method: \(method), Path: \(path)")
-        print("[FamilyAPI] 📡 URL: \(url.absoluteString)")
+        Log.debug("FamilyAPI", "🔵 makeRequest - Method: \(method), Path: \(path)")
+        Log.debug("FamilyAPI", "📡 URL: \(url.absoluteString)")
         
         var request = URLRequest(url: url)
         request.httpMethod = method
@@ -28,14 +28,14 @@ struct FamilyAPI {
             do {
                 let bodyData = try JSONSerialization.data(withJSONObject: body)
                 request.httpBody = bodyData
-                print("[FamilyAPI] 📦 Request body size: \(bodyData.count) bytes")
+                Log.debug("FamilyAPI", "📦 Request body size: \(bodyData.count) bytes")
             } catch {
-                print("[FamilyAPI] ❌ Failed to serialize request body: \(error)")
+                Log.debug("FamilyAPI", "❌ Failed to serialize request body: \(error)")
                 throw error
             }
         }
         
-        print("[FamilyAPI] 🔑 Headers - apikey: \(apiKey.prefix(10))..., Authorization: Bearer \(jwt.prefix(20))...")
+        Log.debug("FamilyAPI", "🔑 Headers - apikey: \(apiKey.prefix(10))..., Authorization: Bearer \(jwt.prefix(20))...")
         
         // Retry logic for connection loss errors
         var lastError: Error?
@@ -43,42 +43,42 @@ struct FamilyAPI {
         
         for attempt in 1...maxRetries {
             do {
-                print("[FamilyAPI] ⏳ Sending request (attempt \(attempt)/\(maxRetries))...")
+                Log.debug("FamilyAPI", "⏳ Sending request (attempt \(attempt)/\(maxRetries))...")
                 let (data, response) = try await URLSession.shared.data(for: request)
                 lastError = nil // Clear error on success
             
             guard let http = response as? HTTPURLResponse else {
-                print("[FamilyAPI] ❌ Invalid response type: \(type(of: response))")
+                Log.debug("FamilyAPI", "❌ Invalid response type: \(type(of: response))")
                 throw URLError(.badServerResponse)
             }
             
             let bodyString = String(data: data, encoding: .utf8) ?? ""
-            print("[FamilyAPI] ✅ Response received - Status: \(http.statusCode), Body length: \(bodyString.count) chars")
+            Log.debug("FamilyAPI", "✅ Response received - Status: \(http.statusCode), Body length: \(bodyString.count) chars")
             
             if http.statusCode >= 400 {
-                print("[FamilyAPI] ❌ Error response - Status: \(http.statusCode)")
-                print("[FamilyAPI] 📄 Error body: \(bodyString.prefix(500))")
+                Log.debug("FamilyAPI", "❌ Error response - Status: \(http.statusCode)")
+                Log.debug("FamilyAPI", "📄 Error body: \(bodyString.prefix(500))")
             } else {
-                print("[FamilyAPI] ✅ Success response - Status: \(http.statusCode)")
+                Log.debug("FamilyAPI", "✅ Success response - Status: \(http.statusCode)")
                 if !bodyString.isEmpty {
-                    print("[FamilyAPI] 📄 Response body (first 500 chars): \(bodyString.prefix(500))")
+                    Log.debug("FamilyAPI", "📄 Response body (first 500 chars): \(bodyString.prefix(500))")
                 }
             }
             
                 return (http.statusCode, bodyString)
             } catch {
                 lastError = error
-                print("[FamilyAPI] ❌ Network error on attempt \(attempt): \(error.localizedDescription)")
+                Log.debug("FamilyAPI", "❌ Network error on attempt \(attempt): \(error.localizedDescription)")
                 
                 if let urlError = error as? URLError {
-                    print("[FamilyAPI] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                    Log.debug("FamilyAPI", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
                     
                     // Retry on connection loss errors (-1005, -1001 timeout, -1009 no internet)
                     let retryableErrors: [URLError.Code] = [.networkConnectionLost, .timedOut, .notConnectedToInternet]
                     
                     if retryableErrors.contains(urlError.code) && attempt < maxRetries {
                         let delay = UInt64(1_000_000_000 * UInt64(attempt)) // 1s, 2s, 3s
-                        print("[FamilyAPI] 🔄 Retrying after \(attempt) second(s)...")
+                        Log.debug("FamilyAPI", "🔄 Retrying after \(attempt) second(s)...")
                         try? await Task.sleep(nanoseconds: delay)
                         continue // Retry the request
                     }
@@ -86,7 +86,7 @@ struct FamilyAPI {
                 
                 // If not retryable or max retries reached, throw the error
                 if attempt == maxRetries {
-                    print("[FamilyAPI] ❌ Max retries reached, throwing error")
+                    Log.debug("FamilyAPI", "❌ Max retries reached, throwing error")
                     throw error
                 }
             }
@@ -109,8 +109,8 @@ struct FamilyAPI {
         selfMember: [String: Any],
         otherMembers: [[String: Any]]? = nil
     ) async throws -> (statusCode: Int, body: String) {
-        print("[FamilyAPI] 🔵 createFamily called")
-        print("[FamilyAPI] 📝 Parameters - name: \(name), selfMember: \(selfMember), otherMembers count: \(otherMembers?.count ?? 0)")
+        Log.debug("FamilyAPI", "🔵 createFamily called")
+        Log.debug("FamilyAPI", "📝 Parameters - name: \(name), selfMember: \(selfMember), otherMembers count: \(otherMembers?.count ?? 0)")
         
         var body: [String: Any] = [
             "name": name,
@@ -123,9 +123,9 @@ struct FamilyAPI {
         // Log request body for debugging
         if let jsonData = try? JSONSerialization.data(withJSONObject: body, options: .prettyPrinted),
            let jsonString = String(data: jsonData, encoding: .utf8) {
-            print("[FamilyAPI] 📦 createFamily request body: \(jsonString)")
+            Log.debug("FamilyAPI", "📦 createFamily request body: \(jsonString)")
         } else {
-            print("[FamilyAPI] ⚠️ Failed to serialize request body to JSON string")
+            Log.debug("FamilyAPI", "⚠️ Failed to serialize request body to JSON string")
         }
         
         return try await makeRequest(

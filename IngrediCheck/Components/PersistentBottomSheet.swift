@@ -76,7 +76,7 @@ struct PersistentBottomSheet: View {
             
             // Only cancel if we're leaving the avatar flow entirely
             if wasInAvatarFlow && !isInAvatarFlow {
-                print("[PersistentBottomSheet] Leaving avatar flow, cancelling generation task")
+                Log.debug("PersistentBottomSheet", "Leaving avatar flow, cancelling generation task")
                 generationTask?.cancel()
                 generationTask = nil
             }
@@ -208,7 +208,7 @@ struct PersistentBottomSheet: View {
             }
 
         let sheet = ZStack(alignment: .bottomTrailing) {
-            let _ = print("[PersistentBottomSheet] currentCanvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
+            let _ = Log.debug("PersistentBottomSheet", "currentCanvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
             bottomSheetContent(for: coordinator.currentBottomSheetRoute)
                 .frame(maxWidth: .infinity, alignment: .top)
             
@@ -544,7 +544,7 @@ struct PersistentBottomSheet: View {
             }
             
         case .wouldYouLikeToInvite(let memberId, let name):
-            let _ = print("[PersistentBottomSheet] Rendering .wouldYouLikeToInvite for \(name) (id: \(memberId))")
+            let _ = Log.debug("PersistentBottomSheet", "Rendering .wouldYouLikeToInvite for \(name) (id: \(memberId))")
             WouldYouLikeToInvite(
                 name: name,
                 isLoading: isGeneratingInviteCode
@@ -991,7 +991,7 @@ private func handleAssignAvatar(
     // We no longer re-upload the PNG; instead we use the storage path inside the
     // `memoji-images` bucket returned by the backend.
     guard let storagePath = memojiStore.imageStoragePath, !storagePath.isEmpty else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No memoji storage path available, skipping")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No memoji storage path available, skipping")
         return
     }
     
@@ -1025,7 +1025,7 @@ private func handleAssignAvatar(
         if isFromProfile || currentPendingSelfMember == nil {
             // This is for the self member
             if familyStore.pendingSelfMember == nil {
-                print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
                 familyStore.setPendingSelfMember(name: name)
             }
             // Re-capture after modification
@@ -1034,7 +1034,7 @@ private func handleAssignAvatar(
             }
         } else {
             // This is for an other member
-            print("[PersistentBottomSheet] handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
             familyStore.addPendingOtherMember(name: name)
             // Re-capture after modification
             let updatedPendingMembers = familyStore.pendingOtherMembers
@@ -1045,11 +1045,11 @@ private func handleAssignAvatar(
     }
     
     guard let targetMemberId = targetMemberId else {
-        print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
         return
     }
     
-    print("[PersistentBottomSheet] handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
+    Log.debug("PersistentBottomSheet", "handleAssignAvatar: Starting avatar upload for memberId=\(targetMemberId)")
     
     // CRITICAL: Re-check pending members AFTER potentially adding a new member
     // We need to check the current state because we may have just added a member
@@ -1060,13 +1060,13 @@ private func handleAssignAvatar(
     if let pendingSelf = familyStore.pendingSelfMember ?? currentPendingSelfMember,
        pendingSelf.id == targetMemberId {
         // This is the pending self member - use setPendingSelfMemberAvatar
-        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending self member: \(pendingSelf.name)")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: Assigning to pending self member: \(pendingSelf.name)")
         // Set the memoji storage path as imageFileHash and update color to match memoji background.
         await familyStore.setPendingSelfMemberAvatarFromMemoji(
             storagePath: storagePath,
             backgroundColorHex: backgroundColorHex
         )
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending self member")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned to pending self member")
         return
     }
     
@@ -1076,13 +1076,13 @@ private func handleAssignAvatar(
     let pendingOthersToCheck = !currentPendingOthers.isEmpty ? currentPendingOthers : currentPendingOtherMembers
     if let pendingOther = pendingOthersToCheck.first(where: { $0.id == targetMemberId }) {
         // This is a pending other member - use setAvatarForPendingOtherMember
-        print("[PersistentBottomSheet] handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
         await familyStore.setAvatarForPendingOtherMemberFromMemoji(
             id: targetMemberId,
             storagePath: storagePath,
             backgroundColorHex: backgroundColorHex
         )
-        print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned to pending other member")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned to pending other member")
         return
     }
     
@@ -1090,22 +1090,22 @@ private func handleAssignAvatar(
     do {
         // 1. Get the member first to access their color for compositing - use captured data
         guard let family = currentFamily else {
-            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ No family loaded, cannot update member")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No family loaded, cannot update member")
             return
         }
         
         let allMembers = [family.selfMember] + family.otherMembers
         guard let member = allMembers.first(where: { $0.id == targetMemberId }) else {
-            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Member \(targetMemberId) not found in family")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Member \(targetMemberId) not found in family")
             return
         }
 
-        print("[PersistentBottomSheet] handleAssignAvatar: Updating existing member \(member.name) with new avatar...")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: Updating existing member \(member.name) with new avatar...")
         
         // 2. Upload transparent PNG image directly (no compositing - background color stored separately in member.color)
         // Use captured background color if available, otherwise member's existing color
         let bgColor = backgroundColorHex ?? member.color
-        print("[PersistentBottomSheet] handleAssignAvatar: Assigning memoji from storagePath=\(storagePath) with background color: \(bgColor)")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: Assigning memoji from storagePath=\(storagePath) with background color: \(bgColor)")
 
         var updatedMember = member
         // Use the memoji storage path as imageFileHash so we can load directly from
@@ -1119,24 +1119,24 @@ private func handleAssignAvatar(
         if let bgHex = backgroundColorHex, !bgHex.isEmpty {
             // Ensure color has a # prefix (backend check constraint requires it)
             let normalizedColor = bgHex.hasPrefix("#") ? bgHex : "#\(bgHex)"
-            print("[PersistentBottomSheet] handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: Updating member color to memoji background \(normalizedColor) (from \(bgHex))")
             updatedMember.color = normalizedColor
         }
         
-        print("[PersistentBottomSheet] handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(storagePath) and color=\(updatedMember.color)")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: Updating member \(member.name) with imageFileHash=\(storagePath) and color=\(updatedMember.color)")
         
         // 4. Persist the updated member via FamilyStore
         await familyStore.editMember(updatedMember)
         
         // Check if editMember succeeded (it doesn't throw, but sets errorMessage on failure)
         if let errorMsg = familyStore.errorMessage {
-            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Failed to update member in backend: \(errorMsg)")
-            print("[PersistentBottomSheet] handleAssignAvatar: ⚠️ Avatar uploaded but member update failed - imageFileHash may not be persisted")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Failed to update member in backend: \(errorMsg)")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Avatar uploaded but member update failed - imageFileHash may not be persisted")
         } else {
-            print("[PersistentBottomSheet] handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
         }
     } catch {
-        print("[PersistentBottomSheet] handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
+        Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
     }
     
 }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import os
 
 struct TempStore: View {
     @StateObject var store = Onboarding(onboardingFlowtype: .individual)
@@ -14,7 +15,7 @@ struct TempStore: View {
         VStack {
 //            store.currentScreen.buildView(store.onboardingFlowtype, $preferences)
 //            
-//            let _ = print("render")
+//            let _ = Log.debug("TempStore", "render")
 //            
 //            Text("Progress: \(store.progress * 100)")
 //            Text("Tag: \(store.currentScreen.screenId.rawValue)")

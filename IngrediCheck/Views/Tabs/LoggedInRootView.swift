@@ -1,5 +1,6 @@
 
 import SwiftUI
+import os
 
 enum TabScreen {
     case home
@@ -152,7 +153,7 @@ struct ListsTabState {
             }
         }
         .sheet(item: $appState.feedbackConfig) { feedbackConfig in
-            let _ = print("Activating feedback sheet")
+            let _ = Log.debug("LoggedInRootView", "Activating feedback sheet")
             FeedbackView(
                 feedbackData: feedbackConfig.feedbackData,
                 feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,

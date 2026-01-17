@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -56,14 +57,14 @@ final class FoodNotesStore {
     
     /// Loads the union view (family + all members) from GET /ingredicheck/family/food-notes/all.
     func loadFoodNotesAll() async {
-        print("[FoodNotesStore] loadFoodNotesAll: Starting to load food notes from backend")
+        Log.debug("FoodNotesStore", "loadFoodNotesAll: Starting to load food notes from backend")
         
         isLoadingFoodNotes = true
         defer { isLoadingFoodNotes = false }
         
         do {
             if let response = try await webService.fetchFoodNotesAll() {
-                print("[FoodNotesStore] loadFoodNotesAll: ✅ Received food notes data")
+                Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Received food notes data")
                 
                 // 1. Parse Family Note ("Everyone")
                 if let familyNote = response.familyNote {
@@ -85,7 +86,7 @@ final class FoodNotesStore {
                 // 3. Rebuild Associations and Canvas from the cache
                 rebuildAssociationsAndCanvasFromCache()
                 
-                print("[FoodNotesStore] loadFoodNotesAll: ✅ Successfully loaded and cached data")
+                Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Successfully loaded and cached data")
             } else {
                 // No data, init empty
                 familyVersion = 0
@@ -95,7 +96,7 @@ final class FoodNotesStore {
                 canvasPreferences = Preferences()
             }
         } catch {
-            print("[FoodNotesStore] loadFoodNotesAll: ❌ Failed to load food notes: \(error.localizedDescription)")
+            Log.debug("FoodNotesStore", "loadFoodNotesAll: ❌ Failed to load food notes: \(error.localizedDescription)")
             // Init empty on error to prevent crash
             memberPreferencesCache = [:]
             itemMemberAssociations = [:]
@@ -112,12 +113,12 @@ final class FoodNotesStore {
         
         // 1. Save current preferences to cache for the OLD member
         if let currentKey = currentPreferencesOwnerKey {
-            print("[FoodNotesStore] preparePreferencesForMember: Caching preferences for \(currentKey)")
+            Log.debug("FoodNotesStore", "preparePreferencesForMember: Caching preferences for \(currentKey)")
             memberPreferencesCache[currentKey] = onboardingStore.preferences
         }
         
         // 2. Load preferences from cache for the NEW member
-        print("[FoodNotesStore] preparePreferencesForMember: Switching to \(newMemberKey)")
+        Log.debug("FoodNotesStore", "preparePreferencesForMember: Switching to \(newMemberKey)")
         if let cachedPrefs = memberPreferencesCache[newMemberKey] {
             onboardingStore.preferences = cachedPrefs
         } else {
@@ -137,7 +138,7 @@ final class FoodNotesStore {
     func handleLocalPreferenceChange() {
         guard let currentKey = currentPreferencesOwnerKey else { return }
         
-        print("[FoodNotesStore] handleLocalPreferenceChange: Updating for \(currentKey)")
+        Log.debug("FoodNotesStore", "handleLocalPreferenceChange: Updating for \(currentKey)")
         
         // 1. Update Cache
         memberPreferencesCache[currentKey] = onboardingStore.preferences
@@ -304,7 +305,7 @@ final class FoodNotesStore {
     private func syncMember(_ memberKey: String) async {
         guard let prefs = memberPreferencesCache[memberKey] else { return }
         
-        print("📤 [FoodNotesStore] syncMember: Syncing \(memberKey)")
+        Log.debug("FoodNotesStore", "📤 [FoodNotesStore] syncMember: Syncing \(memberKey)")
         
         let content = buildContentFromPreferences(preferences: prefs, dynamicSteps: onboardingStore.dynamicSteps)
         let isEveryone = (memberKey == "Everyone")
@@ -323,14 +324,14 @@ final class FoodNotesStore {
                 response = try await webService.updateFoodNotes(content: content, version: version)
                 familyVersion = response.version
             }
-            print("✅ [FoodNotesStore] syncMember: Success \(memberKey) v\(response.version)")
+            Log.debug("FoodNotesStore", "✅ [FoodNotesStore] syncMember: Success \(memberKey) v\(response.version)")
         } catch let error as WebService.VersionMismatchError {
-            print("⚠️ [FoodNotesStore] syncMember: Version mismatch \(memberKey)")
+            Log.warning("FoodNotesStore", "⚠️ [FoodNotesStore] syncMember: Version mismatch \(memberKey)")
             if isEveryone { familyVersion = error.currentNote.version }
             else { memberVersions[memberKey] = error.currentNote.version }
             await syncMember(memberKey) // Retry
         } catch {
-            print("❌ [FoodNotesStore] syncMember: Failed \(error)")
+            Log.error("FoodNotesStore", "❌ [FoodNotesStore] syncMember: Failed \(error)")
         }
     }
     

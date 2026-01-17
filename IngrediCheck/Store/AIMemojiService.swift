@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import os
 
 /// Container for a generated memoji image and its storage location.
 struct GeneratedMemoji {
@@ -61,13 +62,13 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     
     // DEBUG: Print the JSON being sent to API
     if let jsonString = String(data: bodyData, encoding: .utf8) {
-        print("[Memoji API] Request JSON: \(jsonString)")
+        Log.debug("Memoji API", "Request JSON: \(jsonString)")
         
         // Also pretty print for better readability
         if let jsonObject = try? JSONSerialization.jsonObject(with: bodyData, options: []),
            let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
            let prettyString = String(data: prettyData, encoding: .utf8) {
-            print("[Memoji API] Request JSON (pretty):\n\(prettyString)")
+            Log.debug("Memoji API", "Request JSON (pretty):\n\(prettyString)")
         }
     }
 
@@ -80,7 +81,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     // Configure timeout to prevent connection loss
     request.timeoutInterval = 60.0 // 60 seconds for memoji generation (longer than family API)
     
-    print("[AIMemojiService] 🔵 Sending memoji generation request...")
+    Log.debug("AIMemojiService", "🔵 Sending memoji generation request...")
     
     // Retry logic for connection loss errors
     var lastError: Error?
@@ -90,7 +91,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     
     for attempt in 1...maxRetries {
         do {
-            print("[AIMemojiService] ⏳ Request attempt \(attempt)/\(maxRetries)...")
+            Log.debug("AIMemojiService", "⏳ Request attempt \(attempt)/\(maxRetries)...")
             let result = try await URLSession.shared.data(for: request)
             data = result.0
             response = result.1
@@ -98,17 +99,17 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
             break // Exit retry loop on success
         } catch {
             lastError = error
-            print("[AIMemojiService] ❌ Network error on attempt \(attempt): \(error.localizedDescription)")
+            Log.error("AIMemojiService", "❌ Network error on attempt \(attempt): \(error.localizedDescription)")
             
             if let urlError = error as? URLError {
-                print("[AIMemojiService] ❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+                Log.error("AIMemojiService", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
                 
                 // Retry on connection loss errors (-1005, -1001 timeout, -1009 no internet)
                 let retryableErrors: [URLError.Code] = [.networkConnectionLost, .timedOut, .notConnectedToInternet]
                 
                 if retryableErrors.contains(urlError.code) && attempt < maxRetries {
                     let delay = UInt64(1_000_000_000 * UInt64(attempt)) // 1s, 2s, 3s
-                    print("[AIMemojiService] 🔄 Retrying after \(attempt) second(s)...")
+                    Log.debug("AIMemojiService", "🔄 Retrying after \(attempt) second(s)...")
                     try? await Task.sleep(nanoseconds: delay)
                     continue // Retry the request
                 }
@@ -116,7 +117,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
             
             // If not retryable or max retries reached, throw the error
             if attempt == maxRetries {
-                print("[AIMemojiService] ❌ Max retries reached, throwing error")
+                Log.error("AIMemojiService", "❌ Max retries reached, throwing error")
                 throw error
             }
         }
@@ -127,28 +128,28 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
         if let error = lastError {
             throw error
         }
-        print("[AIMemojiService] ❌ No data or response received")
+        Log.error("AIMemojiService", "❌ No data or response received")
         throw AIMemojiError.invalidResponse("No response received.")
     }
 
     guard let httpResponse = urlResponse as? HTTPURLResponse else {
-        print("[AIMemojiService] ❌ No HTTP Response received")
+        Log.error("AIMemojiService", "❌ No HTTP Response received")
         throw AIMemojiError.invalidResponse("No HTTP response.")
     }
 
-    print("[AIMemojiService] ✅ Response received - Status: \(httpResponse.statusCode), Body length: \(responseData.count) bytes")
+    Log.debug("AIMemojiService", "✅ Response received - Status: \(httpResponse.statusCode), Body length: \(responseData.count) bytes")
 
     guard httpResponse.statusCode == 200 else {
         let message = String(data: responseData, encoding: .utf8) ?? "status \(httpResponse.statusCode)"
-        print("[AIMemojiService] ❌ Request failed with message: \(message)")
+        Log.error("AIMemojiService", "❌ Request failed with message: \(message)")
         
         // Try to parse error details from backend response
         if let errorData = try? JSONDecoder().decode(MemojiErrorResponse.self, from: responseData) {
             let errorMessage = errorData.error.message
             let errorDetails = errorData.error.details ?? ""
-            print("[AIMemojiService] ❌ Backend error message: \(errorMessage)")
+            Log.error("AIMemojiService", "❌ Backend error message: \(errorMessage)")
             if !errorDetails.isEmpty {
-                print("[AIMemojiService] ❌ Backend error details: \(errorDetails)")
+                Log.error("AIMemojiService", "❌ Backend error details: \(errorDetails)")
             }
             // Use the detailed error message if available
             let fullMessage = errorDetails.isEmpty ? errorMessage : "\(errorMessage): \(errorDetails)"
@@ -161,44 +162,44 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     let decoded: MemojiResponse
     do {
         decoded = try JSONDecoder().decode(MemojiResponse.self, from: responseData)
-        print("[AIMemojiService] ✅ Successfully decoded MemojiResponse")
+        Log.debug("AIMemojiService", "✅ Successfully decoded MemojiResponse")
     } catch {
         let rawDataString = String(data: responseData, encoding: .utf8) ?? "Unable to convert data to string"
-        print("[AIMemojiService] ❌ Decoding failed: \(error.localizedDescription)")
-        print("[AIMemojiService] ❌ Raw Data that failed to decode: \(rawDataString)")
+        Log.error("AIMemojiService", "❌ Decoding failed: \(error.localizedDescription)")
+        Log.error("AIMemojiService", "❌ Raw Data that failed to decode: \(rawDataString)")
         throw error
     }
 
     guard let urlString = decoded.imageUrl, let url = URL(string: urlString) else {
-        print("[AIMemojiService] ❌ decoded.imageUrl is NIL or invalid")
+        Log.error("AIMemojiService", "❌ decoded.imageUrl is NIL or invalid")
         throw AIMemojiError.missingImage
     }
 
-    print("[AIMemojiService] ℹ️ Image URL: \(urlString)")
+    Log.debug("AIMemojiService", "ℹ️ Image URL: \(urlString)")
 
     // Download image with timeout configuration
     var imageRequest = URLRequest(url: url)
     imageRequest.timeoutInterval = 30.0 // 30 seconds for image download
-    print("[AIMemojiService] 🔵 Downloading memoji image...")
+    Log.debug("AIMemojiService", "🔵 Downloading memoji image...")
     
     let (pngData, _) = try await URLSession.shared.data(for: imageRequest)
-    print("[AIMemojiService] ✅ Downloaded PNG Data size: \(pngData.count) bytes")
-    print("[AIMemojiService] generateMemojiImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
+    Log.debug("AIMemojiService", "✅ Downloaded PNG Data size: \(pngData.count) bytes")
+    Log.debug("AIMemojiService", "generateMemojiImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
     // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
     let image = await MainActor.run {
         let isMainThread = Thread.isMainThread
-        print("[AIMemojiService] generateMemojiImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
+        Log.debug("AIMemojiService", "generateMemojiImage: Inside MainActor.run - Thread.isMainThread=\(isMainThread)")
         let img = UIImage(data: pngData)
-        print("[AIMemojiService] generateMemojiImage: UIImage(data:) created - image=\(img != nil ? "✅" : "❌")")
+        Log.debug("AIMemojiService", "generateMemojiImage: UIImage(data:) created - image=\(img != nil ? ")✅" : "❌")")
         return img
     }
-    print("[AIMemojiService] generateMemojiImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
+    Log.debug("AIMemojiService", "generateMemojiImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
     guard let image = image else {
         throw AIMemojiError.missingImage
     }
 
     let storagePath = extractMemojiStoragePath(from: urlString)
-    print("[AIMemojiService] generateMemojiImage: Using storagePath=\(storagePath)")
+    Log.debug("AIMemojiService", "generateMemojiImage: Using storagePath=\(storagePath)")
 
     return GeneratedMemoji(image: image, storagePath: storagePath)
 }

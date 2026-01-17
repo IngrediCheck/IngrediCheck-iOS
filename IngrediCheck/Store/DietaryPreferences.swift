@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import os
 
 fileprivate let DietaryPreferencesKey = "DietaryPreferences"
 
@@ -195,7 +196,7 @@ extension UserDefaults {
             }
         } catch {
             if error is CancellationError {
-                print("Task was cancelled")
+                Log.debug("DietaryPreferences", "Task was cancelled")
             } else {
                 DispatchQueue.main.async {
                     withAnimation {
