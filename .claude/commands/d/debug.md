@@ -15,10 +15,14 @@ User's issue description: $ARGUMENTS
 ### 2. Retrieve Logs
 
 **For physical device (idevicesyslog):**
-- Read the log file (e.g., `/tmp/ingredicheck-logs.txt`) using the Read tool
-- The log file contains continuous output from idevicesyslog filtered for "ingredicheck"
-- After reading, truncate the file for the next debug session: `> /tmp/ingredicheck-logs.txt`
-- **The app keeps running - no restart needed!**
+1. Check if idevicesyslog is still running: `ps aux | grep idevicesyslog | grep -v grep`
+2. If not running, restart it:
+   ```bash
+   idevicesyslog -u <UDID> -m "IngrediCheck" 2>/dev/null >> /tmp/ingredicheck-logs.txt &
+   ```
+3. Read the log file (e.g., `/tmp/ingredicheck-logs.txt`) using the Read tool
+4. After reading, truncate for next session: `> /tmp/ingredicheck-logs.txt`
+5. **The app keeps running - no restart needed!**
 
 **For simulator (XcodeBuildMCP):**
 - `stop_sim_log_cap` with sessionId to get logs
@@ -26,11 +30,26 @@ User's issue description: $ARGUMENTS
 - After analysis, spawn a background Task to restart log capture
 
 ### 3. Analyze Logs
-Look for:
-- Errors: `❌`, `error`, `Error`, `failed`, `Failed`
-- Network: HTTP status codes, `NetworkError`, timeouts
+
+**Log format for custom app logs:**
+```
+Jan 17 16:09:04.087254 IngrediCheck(Foundation)[1181] <Notice>: [Category] message
+```
+
+**Look for:**
+- Custom app logs with categories: `[FamilyStore]`, `[WebService]`, `[AUTH]`, `[FamilyAPI]`, `[ScanHistoryStore]`, `[OnboardingPersistence]`, etc.
+- Error indicators: `❌`, `error`, `Error`, `failed`, `Failed`
+- Network issues: HTTP status codes, `NetworkError`, timeouts, QUIC errors
 - Crashes or exceptions
-- Log categories: `[BARCODE_SCAN]`, `[SCAN_HISTORY]`, `[FamilyStore]`, `[WebService]`, `[AUTH]`, `[PHOTO_SCAN]`, `[FAVORITE]`, etc.
+
+**Filter commands:**
+```bash
+# Show only custom app logs (with categories)
+grep -E "\[FamilyStore\]|\[WebService\]|\[AUTH\]|\[FamilyAPI\]" /tmp/ingredicheck-logs.txt
+
+# Show errors
+grep -i "error\|failed\|❌" /tmp/ingredicheck-logs.txt
+```
 
 ### 4. Summarize Findings
 
@@ -47,6 +66,18 @@ Look for:
 - Bundle ID: `llc.fungee.ingredicheck`
 - Log file (device): `/tmp/ingredicheck-logs.txt`
 
-## Key Benefit
+## Technical Notes
 
+### Log Utility Architecture
+The app uses `Log.debug/info/warning/error()` which internally calls NSLog:
+- Located in: `IngrediCheck/Utilities/OnboardingPersistence.swift`
+- **Why NSLog?** Apple's os_log/Logger does NOT appear in idevicesyslog due to privacy restrictions
+- NSLog output format: `IngrediCheck(Foundation)[PID] <Notice>: [Category] message`
+
+### Key Benefit
 For physical devices, the app **continues running** during debug analysis - no restart, no lost state!
+
+### Troubleshooting
+- **No logs appearing?** Check if idevicesyslog is running
+- **Only system logs?** Custom Log calls use NSLog; if you see `<private>` that's os_log (shouldn't happen)
+- **Process died?** Restart with `idevicesyslog -u <UDID> -m "IngrediCheck" >> /tmp/ingredicheck-logs.txt &`
