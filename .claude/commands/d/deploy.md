@@ -20,12 +20,12 @@ Target: $ARGUMENTS
 
 **If target not found:** Ask user which target to use
 
-### Pre-Build: Config.swift Check
+### Pre-Build Setup (PARALLEL)
 
-Before building, check if `IngrediCheck/Config.swift` exists in this worktree:
-1. If missing, find the main worktree via `git worktree list`
-2. Copy `Config.swift` from the main worktree's `IngrediCheck/` folder
-3. If main worktree also lacks it, warn user and stop
+Run these in parallel to save time:
+- **Bash**: `ls IngrediCheck/Config.swift` - verify exists, if missing copy from main worktree
+- **Bash**: `idevice_id -l` - get real device UDID for later log capture
+- **Bash**: `pkill -f idevicesyslog 2>/dev/null || true` - clean up any existing log process
 
 ### Build & Deploy (XcodeBuildMCP)
 
@@ -34,23 +34,20 @@ Before building, check if `IngrediCheck/Config.swift` exists in this worktree:
 2. `build_device` → if fails, stop and report error
 3. `get_device_app_path` → get the .app path
 4. `install_app_device` with appPath
-5. Get real device UDID via `idevice_id -l` (libimobiledevice)
-6. Kill any existing idevicesyslog process: `pkill -f idevicesyslog 2>/dev/null || true`
-7. Clear and start log capture (all in ONE bash call with timeout ~15s):
+5. Start log capture (all in ONE bash call with timeout ~10s):
    ```bash
    > /tmp/ingredicheck-logs.txt
    idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
-   sleep 5
-   ls -lh /tmp/ingredicheck-logs.txt  # Should be >0 bytes and growing
-   head -3 /tmp/ingredicheck-logs.txt  # Verify logs flowing
+   sleep 2
+   ls -lh /tmp/ingredicheck-logs.txt
+   head -2 /tmp/ingredicheck-logs.txt
    ```
    **IMPORTANT:** Do NOT use `run_in_background: true` parameter - it breaks redirects.
-   Use inline `&` with verification commands in same bash call.
    Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages.
-8. If log file empty or not growing, warn user to check device connection/trust.
-   **Known issue:** Background processes may die between commands. `/d:debug` will restart if needed.
-9. `launch_app_device` with bundleId to launch the app
-10. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
+6. `launch_app_device` with bundleId to launch the app
+7. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
+
+**Note:** If log capture fails, `/d:debug` will restart it. Don't block deploy on log issues.
 
 **For simulator:**
 1. `session-set-defaults` with projectPath, simulatorId, **and scheme**
