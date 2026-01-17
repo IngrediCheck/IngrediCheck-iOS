@@ -209,7 +209,7 @@ struct ScanCameraView: View {
                         // Store in cache AND store
                         scanDataCache[scanId] = partialScan
                         scanHistoryStore.upsertScan(partialScan)
-                        Log.debug("BARCODE_SCAN", "💾 CameraScreen: Stored partial scan in cache and store - scanId: \(scanId), product_name: \(productInfo.name ?? ")nil")")
+                        Log.debug("BARCODE_SCAN", "💾 CameraScreen: Stored partial scan in cache and store - scanId: \(scanId), product_name: \(productInfo.name ?? "nil")")
                         
                         // Add real scanId at the beginning (newest first)
                         if !scanIds.contains(scanId) {
@@ -249,7 +249,7 @@ struct ScanCameraView: View {
                             // Update cache AND store
                             scanDataCache[scanId] = updatedScan
                             scanHistoryStore.upsertScan(updatedScan)
-                            Log.debug("BARCODE_SCAN", "💾 CameraScreen: Updated scan in cache and store with analysis - scanId: \(scanId), overall_match: \(analysisResult.overall_match ?? ")nil")")
+                            Log.debug("BARCODE_SCAN", "💾 CameraScreen: Updated scan in cache and store with analysis - scanId: \(scanId), overall_match: \(analysisResult.overall_match ?? "nil")")
                             
                             // Trigger UI update (ScanDataCard will refresh via scanDataCache)
                             updateToastState()
@@ -261,7 +261,7 @@ struct ScanCameraView: View {
                 onError: { error, scanId in
                     // Remove placeholder on error
                     Task { @MainActor in
-                        Log.error("BARCODE_SCAN", "❌ CameraScreen: Barcode scan error - barcode: \(barcode), error: \(error.localizedDescription), scanId: \(scanId ?? ")nil")")
+                        Log.error("BARCODE_SCAN", "❌ CameraScreen: Barcode scan error - barcode: \(barcode), error: \(error.localizedDescription), scanId: \(scanId ?? "nil")")
 
                         if let placeholderIndex = scanIds.firstIndex(of: placeholderScanId) {
                             scanIds.remove(at: placeholderIndex)

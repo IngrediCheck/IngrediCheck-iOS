@@ -971,14 +971,17 @@ struct ScanStreamError: Error, LocalizedError {
         limit: Int = 20,
         offset: Int = 0
     ) async throws -> DTO.ScanHistoryResponse {
-        
+
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
-        
+
+        Log.debug("SCAN_HISTORY", "🔵 fetchScanHistory called - limit: \(limit), offset: \(offset), requestId: \(requestId)")
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
+            Log.error("SCAN_HISTORY", "❌ Auth error - no access token")
             throw NetworkError.authError
         }
-        
+
         let request = SupabaseRequestBuilder(endpoint: .scan_history)
             .setAuthorization(with: token)
             .setMethod(to: "GET")
@@ -987,7 +990,8 @@ struct ScanStreamError: Error, LocalizedError {
                 URLQueryItem(name: "offset", value: String(offset))
             ])
             .build()
-        
+
+        Log.debug("SCAN_HISTORY", "📡 Sending request to scan_history API...")
         let (data, response) = try await URLSession.shared.data(for: request)
         let httpResponse = response as! HTTPURLResponse
         
@@ -1010,18 +1014,22 @@ struct ScanStreamError: Error, LocalizedError {
         
         do {
             let historyResponse = try JSONDecoder().decode(DTO.ScanHistoryResponse.self, from: data)
-            
+            let latencyMs = (Date().timeIntervalSince1970 - startTime) * 1000
+
+            Log.debug("SCAN_HISTORY", "✅ fetchScanHistory success - \(historyResponse.scans.count) scans, total: \(historyResponse.total), latency: \(String(format: "%.0f", latencyMs))ms")
+
             PostHogSDK.shared.capture("Scan History Fetch Successful", properties: [
                 "request_id": requestId,
                 "scan_count": historyResponse.scans.count,
                 "total": historyResponse.total,
                 "has_more": historyResponse.has_more,
-                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
+                "latency_ms": latencyMs
             ])
-            
+
             return historyResponse
         } catch {
-            print("Failed to decode ScanHistoryResponse: \(error)")
+            let latencyMs = (Date().timeIntervalSince1970 - startTime) * 1000
+            Log.error("SCAN_HISTORY", "❌ Failed to decode response - error: \(error.localizedDescription), latency: \(String(format: "%.0f", latencyMs))ms")
             
             PostHogSDK.shared.capture("Scan History Decode Error", properties: [
                 "request_id": requestId,
@@ -2283,7 +2291,7 @@ struct ScanStreamError: Error, LocalizedError {
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
             Log.error("WebService", "updateMemberFoodNotes: Failed to parse response")
-            Log.debug("WebService", "updateMemberFoodNotes: Response body: \(String(data: data, encoding: .utf8) ?? ")")")
+            Log.debug("WebService", "updateMemberFoodNotes: Response body: \(String(data: data, encoding: .utf8) ?? "nil")")
             throw NetworkError.decodingError
         }
         
@@ -2307,7 +2315,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBody)
             .build()
         
-        Log.debug("WebService", "submitFeedback URL: \(urlRequest.url?.absoluteString ?? ")nil")")
+        Log.debug("WebService", "submitFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
@@ -2349,7 +2357,7 @@ struct ScanStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBody)
             .build()
         
-        Log.debug("WebService", "updateFeedback URL: \(urlRequest.url?.absoluteString ?? ")nil")")
+        Log.debug("WebService", "updateFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         

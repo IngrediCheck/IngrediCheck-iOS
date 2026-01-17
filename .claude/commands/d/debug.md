@@ -15,12 +15,15 @@ User's issue description: $ARGUMENTS
 ### 2. Retrieve Logs
 
 **For physical device (idevicesyslog):**
-1. Check if idevicesyslog is still running: `ps aux | grep idevicesyslog | grep -v grep`
-2. If not running, restart it:
+1. Check if idevicesyslog is still running: `ps aux | grep "idevicesyslog -u" | grep -v grep`
+2. If not running, restart it (do NOT use -m filter - it incorrectly filters some logs):
    ```bash
-   idevicesyslog -u <UDID> -m "IngrediCheck" 2>/dev/null >> /tmp/ingredicheck-logs.txt &
+   idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
    ```
-3. Read the log file (e.g., `/tmp/ingredicheck-logs.txt`) using the Read tool
+3. Filter and read app logs using grep -a (binary mode since file may contain binary data):
+   ```bash
+   grep -a "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt
+   ```
 4. After reading, truncate for next session: `> /tmp/ingredicheck-logs.txt`
 5. **The app keeps running - no restart needed!**
 
@@ -42,13 +45,16 @@ Jan 17 16:09:04.087254 IngrediCheck(Foundation)[1181] <Notice>: [Category] messa
 - Network issues: HTTP status codes, `NetworkError`, timeouts, QUIC errors
 - Crashes or exceptions
 
-**Filter commands:**
+**Filter commands (use -a for binary mode):**
 ```bash
-# Show only custom app logs (with categories)
-grep -E "\[FamilyStore\]|\[WebService\]|\[AUTH\]|\[FamilyAPI\]" /tmp/ingredicheck-logs.txt
+# Show only custom app logs (Foundation = our NSLog calls)
+grep -a "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt
+
+# Show specific categories
+grep -a -E "\[FamilyStore\]|\[WebService\]|\[AUTH\]|\[SCAN_HISTORY\]|\[ScanHistoryStore\]" /tmp/ingredicheck-logs.txt
 
 # Show errors
-grep -i "error\|failed\|❌" /tmp/ingredicheck-logs.txt
+grep -a -i "error\|failed\|❌" /tmp/ingredicheck-logs.txt
 ```
 
 ### 4. Summarize Findings
@@ -78,6 +84,8 @@ The app uses `Log.debug/info/warning/error()` which internally calls NSLog:
 For physical devices, the app **continues running** during debug analysis - no restart, no lost state!
 
 ### Troubleshooting
-- **No logs appearing?** Check if idevicesyslog is running
+- **No logs appearing?** Check if idevicesyslog is running: `ps aux | grep "idevicesyslog -u"`
 - **Only system logs?** Custom Log calls use NSLog; if you see `<private>` that's os_log (shouldn't happen)
-- **Process died?** Restart with `idevicesyslog -u <UDID> -m "IngrediCheck" >> /tmp/ingredicheck-logs.txt &`
+- **Binary file warning from grep?** Use `grep -a` flag for binary mode
+- **Process died?** Restart with `idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &`
+- **IMPORTANT:** Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages

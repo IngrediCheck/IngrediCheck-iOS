@@ -36,11 +36,13 @@ Before building, check if `IngrediCheck/Config.swift` exists in this worktree:
 4. `install_app_device` with appPath
 5. Get real device UDID via `idevice_id -l` (libimobiledevice)
 6. Kill any existing idevicesyslog process: `pkill -f idevicesyslog 2>/dev/null || true`
-7. Start log capture in background:
+7. Clear and start log capture in background:
    ```bash
-   idevicesyslog -u <UDID> -m "IngrediCheck" 2>/dev/null >> /tmp/ingredicheck-logs.txt &
+   > /tmp/ingredicheck-logs.txt
+   idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
    ```
-   Note: Use `-m "IngrediCheck"` filter for efficiency (filters at source)
+   **Note:** Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages.
+   The debug command will use grep to filter relevant logs when reading.
 8. `launch_app_device` with bundleId to launch the app
 9. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
 

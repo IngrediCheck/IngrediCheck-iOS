@@ -50,6 +50,7 @@ import SwiftUI
     ///   - forceRefresh: If true, bypasses loading state check
     @MainActor
     func loadHistory(limit: Int = 20, offset: Int = 0, forceRefresh: Bool = false) async {
+        Log.debug("ScanHistoryStore", "🔵 loadHistory called - limit: \(limit), offset: \(offset), forceRefresh: \(forceRefresh)")
         guard !isLoading || forceRefresh else {
             Log.debug("ScanHistoryStore", "⏸️ Already loading, skipping")
             return

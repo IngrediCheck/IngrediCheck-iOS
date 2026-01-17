@@ -230,9 +230,12 @@ struct ListsTabState {
     }
 
     private func refreshHistory() {
+        Log.debug("LoggedInRootView", "📋 refreshHistory called")
         Task {
+            Log.debug("LoggedInRootView", "📋 refreshHistory Task started, calling loadHistory")
             // Load scan history via store (single source of truth)
             await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+            Log.debug("LoggedInRootView", "📋 refreshHistory loadHistory completed")
 
             // Sync to AppState for backwards compatibility
             await MainActor.run {
