@@ -15,14 +15,23 @@ User's issue description: $ARGUMENTS
 ### 2. Retrieve Logs
 
 **For physical device (idevicesyslog):**
-1. Check if idevicesyslog is still running: `ps aux | grep "idevicesyslog -u" | grep -v grep`
-2. If not running, restart it (do NOT use -m filter - it incorrectly filters some logs):
+1. Check if idevicesyslog is still running: `pgrep -f idevicesyslog`
+   - **Use `pgrep`** not `ps aux | grep` - more reliable process detection
+2. If not running, restart using `tee` (more reliable in Claude Code):
    ```bash
-   idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
+   pkill -f idevicesyslog 2>/dev/null || true
+   > /tmp/ingredicheck-logs.txt
+   idevicesyslog -u <UDID> 2>&1 | tee /tmp/ingredicheck-logs.txt &
+   sleep 3 && pgrep -f idevicesyslog  # Verify it started
    ```
-3. Check log file size to gauge activity: `ls -lh /tmp/ingredicheck-logs.txt`
-   - If 0 bytes: either nothing happened or idevicesyslog died immediately after starting
-   - If very large (>10MB): lots of system noise, grep will filter it
+3. Check log file for **stale logs** (common issue):
+   ```bash
+   ls -lh /tmp/ingredicheck-logs.txt  # Check size
+   grep -a -c "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt  # Check for app logs
+   ```
+   - If large file (>10MB) but 0 app logs → **stale logs**, truncate and wait for fresh logs
+   - If 0 bytes → idevicesyslog died, restart it
+   - If has app logs → proceed with analysis
 4. Filter and read app logs using grep -a (binary mode since file may contain binary data):
    ```bash
    grep -a "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt
@@ -97,7 +106,7 @@ For physical devices, the app **continues running** during debug analysis - no r
 Run these in order when logs seem missing or wrong:
 ```bash
 # 1. Is idevicesyslog running?
-ps aux | grep "idevicesyslog -u" | grep -v grep
+pgrep -f idevicesyslog
 
 # 2. Is the log file being written to?
 ls -lh /tmp/ingredicheck-logs.txt
@@ -105,18 +114,20 @@ ls -lh /tmp/ingredicheck-logs.txt
 # 3. Is the device connected?
 idevice_id -l
 
-# 4. Quick peek at recent raw logs (last 50 lines)
-tail -50 /tmp/ingredicheck-logs.txt
-
-# 5. Any app logs at all?
+# 4. Any app logs at all? (0 = stale logs, need to truncate and wait)
 grep -a -c "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt
+
+# 5. Quick peek at app logs
+grep -a "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt | tail -20
 ```
 
 ### Troubleshooting
-- **No logs appearing?** Check if idevicesyslog is running: `ps aux | grep "idevicesyslog -u"`
+- **No logs appearing?** Check if idevicesyslog is running: `pgrep -f idevicesyslog`
 - **Log file empty (0 bytes)?** idevicesyslog may have died immediately - check device connection with `idevice_id -l`
+- **Large file but 0 app logs?** Stale logs from before app launched - truncate with `> /tmp/ingredicheck-logs.txt` and wait
 - **Only system logs?** Custom Log calls use NSLog; if you see `<private>` that's os_log (shouldn't happen)
 - **Binary file warning from grep?** Use `grep -a` flag for binary mode
-- **Process died?** Restart with `idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &`
+- **Process died?** Restart with `tee`: `idevicesyslog -u <UDID> 2>&1 | tee /tmp/ingredicheck-logs.txt &`
 - **Device locked?** Unlock the device - idevicesyslog may not capture logs when locked
+- **Claude Code background process issue?** Processes started with `&` may die. Use `tee` approach which is more reliable.
 - **IMPORTANT:** Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages
