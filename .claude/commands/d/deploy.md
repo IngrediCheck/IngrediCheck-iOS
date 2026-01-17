@@ -36,21 +36,19 @@ Before building, check if `IngrediCheck/Config.swift` exists in this worktree:
 4. `install_app_device` with appPath
 5. Get real device UDID via `idevice_id -l` (libimobiledevice)
 6. Kill any existing idevicesyslog process: `pkill -f idevicesyslog 2>/dev/null || true`
-7. Clear and start log capture using `tee` (more reliable in Claude Code):
+7. Clear and start log capture (all in ONE bash call with timeout ~15s):
    ```bash
    > /tmp/ingredicheck-logs.txt
-   idevicesyslog -u <UDID> 2>&1 | tee /tmp/ingredicheck-logs.txt &
-   ```
-   **Note:** Use `tee` instead of simple redirection - it keeps the process alive longer.
-   Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages.
-8. Verify idevicesyslog started AND is capturing logs:
-   ```bash
-   sleep 3
-   pgrep -f idevicesyslog || echo "WARNING: idevicesyslog not running"
+   idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
+   sleep 5
    ls -lh /tmp/ingredicheck-logs.txt  # Should be >0 bytes and growing
+   head -3 /tmp/ingredicheck-logs.txt  # Verify logs flowing
    ```
-   If process not found or file empty, warn user and suggest checking device connection/trust.
-   **Known issue:** Background processes may die in Claude Code. If this happens, `/d:debug` will restart it.
+   **IMPORTANT:** Do NOT use `run_in_background: true` parameter - it breaks redirects.
+   Use inline `&` with verification commands in same bash call.
+   Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages.
+8. If log file empty or not growing, warn user to check device connection/trust.
+   **Known issue:** Background processes may die between commands. `/d:debug` will restart if needed.
 9. `launch_app_device` with bundleId to launch the app
 10. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
 

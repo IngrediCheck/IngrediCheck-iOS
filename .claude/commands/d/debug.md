@@ -17,13 +17,17 @@ User's issue description: $ARGUMENTS
 **For physical device (idevicesyslog):**
 1. Check if idevicesyslog is still running: `pgrep -f idevicesyslog`
    - **Use `pgrep`** not `ps aux | grep` - more reliable process detection
-2. If not running, restart using `tee` (more reliable in Claude Code):
+2. If not running, restart with simple redirect (DO NOT use `run_in_background: true`):
    ```bash
    pkill -f idevicesyslog 2>/dev/null || true
    > /tmp/ingredicheck-logs.txt
-   idevicesyslog -u <UDID> 2>&1 | tee /tmp/ingredicheck-logs.txt &
-   sleep 3 && pgrep -f idevicesyslog  # Verify it started
+   idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
+   sleep 5
+   ls -lh /tmp/ingredicheck-logs.txt  # Should be >0 and growing
+   head -3 /tmp/ingredicheck-logs.txt  # Verify logs flowing
    ```
+   **IMPORTANT:** Run this as a single bash call with inline `&`, NOT with `run_in_background: true` parameter.
+   The `run_in_background` parameter breaks redirects. Use a timeout (e.g., 15s) on the bash call.
 3. Check log file for **stale logs** (common issue):
    ```bash
    ls -lh /tmp/ingredicheck-logs.txt  # Check size
@@ -127,7 +131,7 @@ grep -a "IngrediCheck(Foundation)" /tmp/ingredicheck-logs.txt | tail -20
 - **Large file but 0 app logs?** Stale logs from before app launched - truncate with `> /tmp/ingredicheck-logs.txt` and wait
 - **Only system logs?** Custom Log calls use NSLog; if you see `<private>` that's os_log (shouldn't happen)
 - **Binary file warning from grep?** Use `grep -a` flag for binary mode
-- **Process died?** Restart with `tee`: `idevicesyslog -u <UDID> 2>&1 | tee /tmp/ingredicheck-logs.txt &`
+- **Process died?** Restart with: `idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &` (in single bash call with sleep/verify)
 - **Device locked?** Unlock the device - idevicesyslog may not capture logs when locked
-- **Claude Code background process issue?** Processes started with `&` may die. Use `tee` approach which is more reliable.
+- **Claude Code `run_in_background` breaks redirects?** Do NOT use `run_in_background: true` parameter. Use inline `&` with verification in same bash call.
 - **IMPORTANT:** Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages
