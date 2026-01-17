@@ -43,8 +43,13 @@ Before building, check if `IngrediCheck/Config.swift` exists in this worktree:
    ```
    **Note:** Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages.
    The debug command will use grep to filter relevant logs when reading.
-8. `launch_app_device` with bundleId to launch the app
-9. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
+8. Verify idevicesyslog started successfully:
+   ```bash
+   sleep 1 && ps aux | grep "idevicesyslog -u" | grep -v grep
+   ```
+   If no process found, warn user and suggest checking device connection/trust.
+9. `launch_app_device` with bundleId to launch the app
+10. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
 
 **For simulator:**
 1. `session-set-defaults` with projectPath, simulatorId, **and scheme**
