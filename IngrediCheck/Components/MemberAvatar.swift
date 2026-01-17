@@ -87,7 +87,7 @@ struct MemberAvatar: View {
         // If there is no hash, clear any cached avatar and fall back to initials.
         guard let hash = member.imageFileHash, !hash.isEmpty else {
             if avatarImage != nil {
-                print("[MemberAvatar] imageFileHash cleared for \(member.name), resetting avatarImage")
+                Log.debug("MemberAvatar", "imageFileHash cleared for \(member.name), resetting avatarImage")
             }
             avatarImage = nil
             loadedHash = nil
@@ -103,7 +103,7 @@ struct MemberAvatar: View {
                 return width > 0 && height > 0 && width.isFinite && height.isFinite
             }
             if isValid {
-                print("[MemberAvatar] Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
+                Log.debug("MemberAvatar", "Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
                 return
             }
         }
@@ -119,14 +119,14 @@ struct MemberAvatar: View {
                 if isValid {
                     avatarImage = local
                     loadedHash = hash
-                    print("[MemberAvatar] ✅ Loaded local memoji for \(member.name) (hash=\(hash))")
+                    Log.debug("MemberAvatar", "✅ Loaded local memoji for \(member.name) (hash=\(hash))")
                     return
                 }
             }
         }
         
         // 2) Try remote (for memoji images from Supabase)
-        print("[MemberAvatar] Loading remote avatar for \(member.name), imageFileHash=\(hash)")
+        Log.debug("MemberAvatar", "Loading remote avatar for \(member.name), imageFileHash=\(hash)")
         do {
             let uiImage = try await webService.fetchImage(
                 imageLocation: .imageFileHash(hash),
@@ -141,7 +141,7 @@ struct MemberAvatar: View {
             }
             
             guard isValid else {
-                print("[MemberAvatar] ⚠️ Loaded image has invalid size, skipping")
+                Log.debug("MemberAvatar", "⚠️ Loaded image has invalid size, skipping")
                 avatarImage = nil
                 loadedHash = nil
                 return
@@ -149,9 +149,9 @@ struct MemberAvatar: View {
             
             avatarImage = uiImage
             loadedHash = hash
-            print("[MemberAvatar] ✅ Loaded remote avatar for \(member.name) (hash=\(hash))")
+            Log.debug("MemberAvatar", "✅ Loaded remote avatar for \(member.name) (hash=\(hash))")
         } catch {
-            print("[MemberAvatar] ❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
+            Log.debug("MemberAvatar", "❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
             avatarImage = nil
             loadedHash = nil
         }

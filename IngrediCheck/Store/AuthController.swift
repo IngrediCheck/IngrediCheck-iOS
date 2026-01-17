@@ -7,6 +7,7 @@ import GoogleSignIn
 import GoogleSignInSwift
 import CryptoKit
 import PostHog
+import os
 
 enum AuthControllerError: Error, LocalizedError {
     case rootViewControllerNotFound
@@ -252,7 +253,7 @@ private enum AuthFlowMode {
         Task {
             for await authStateChange in supabaseClient.auth.authStateChanges {
                 await MainActor.run {
-                    print("Auth change Event: \(authStateChange.event)")
+                    Log.debug("AuthController", "Auth change Event: \(authStateChange.event)")
                     self.handleSessionChange(
                         event: authStateChange.event,
                         session: authStateChange.session
@@ -264,20 +265,20 @@ private enum AuthFlowMode {
     
     public func signOut() async {
         do {
-            print("Signing Out")
+            Log.debug("AuthController", "Signing Out")
             // Clear onboarding state before sign-out
             await MainActor.run {
                 OnboardingPersistence.shared.setStage(.none)
             }
             _ = try await supabaseClient.auth.signOut()
         } catch AuthError.sessionMissing {
-            print("Already signed out, nothing to revoke.")
+            Log.debug("AuthController", "Already signed out, nothing to revoke.")
         } catch let error as NSError {
             if error.domain == NSURLErrorDomain && error.code == -1009 {
-                print("Internet connection appears to be offline.")
+                Log.debug("AuthController", "Internet connection appears to be offline.")
                 return
             }
-            print("Signout failed: \(error)")
+            Log.error("AuthController", "Signout failed: \(error)")
         }
     }
 
@@ -295,10 +296,10 @@ private enum AuthFlowMode {
 
     func signIn() async {
         
-        print("signIn()")
+        Log.debug("AuthController", "signIn()")
 
         guard await signInState != .signedIn else {
-            print("Already Signed In, so not Signing in again")
+            Log.debug("AuthController", "Already Signed In, so not Signing in again")
             return
         }
 
@@ -314,12 +315,12 @@ private enum AuthFlowMode {
     @MainActor
     public func upgradeCurrentAccount(to provider: AccountUpgradeProvider) async {
         guard signedInAsGuest else {
-            print("Upgrade skipped: user is not signed in as guest.")
+            Log.debug("AuthController", "Upgrade skipped: user is not signed in as guest.")
             return
         }
 
         guard isUpgradingAccount == false else {
-            print("Upgrade already in progress.")
+            Log.debug("AuthController", "Upgrade already in progress.")
             return
         }
 
@@ -342,7 +343,7 @@ private enum AuthFlowMode {
         } catch {
             isUpgradingAccount = false
             accountUpgradeError = error
-            print("Account upgrade failed: \(error)")
+            Log.error("AuthController", "Account upgrade failed: \(error)")
         }
     }
 
@@ -359,7 +360,7 @@ private enum AuthFlowMode {
             _ = try await supabaseClient.auth.signIn(email: email, password: password)
             return true
         } catch {
-            print("Anonymous signin failed for stored credentials: \(error)")
+            Log.error("AuthController", "Anonymous signin failed for stored credentials: \(error)")
             keychain.delete(AuthController.anonUserNameKey)
             keychain.delete(AuthController.anonPasswordKey)
             return false
@@ -370,7 +371,7 @@ private enum AuthFlowMode {
         do {
             _ = try await supabaseClient.auth.signInAnonymously()
         } catch {
-            print("signInAnonymously failed: \(error)")
+            Log.error("AuthController", "signInAnonymously failed: \(error)")
         }
     }
     
@@ -383,7 +384,7 @@ private enum AuthFlowMode {
                     self.session = session
                 }
             } catch {
-                print("Apple sign-in failed: \(error)")
+                Log.error("AuthController", "Apple sign-in failed: \(error)")
             }
         }
     }
@@ -542,7 +543,7 @@ private enum AuthFlowMode {
                     completion?(.success(()))
                 }
             } catch {
-                print("Google sign-in failed: \(error)")
+                Log.error("AuthController", "Google sign-in failed: \(error)")
                 await MainActor.run {
                     completion?(.failure(error))
                 }
@@ -560,7 +561,7 @@ private enum AuthFlowMode {
                     completion?(.success(()))
                 }
             } catch {
-                print("Apple sign-in failed: \(error)")
+                Log.error("AuthController", "Apple sign-in failed: \(error)")
                 await MainActor.run {
                     completion?(.failure(error))
                 }
@@ -601,7 +602,7 @@ private enum AuthFlowMode {
                 loginType = "Guest Login"
             }
             
-            print("[AUTH] ✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
+            Log.debug("AUTH", "✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
             
             registerDeviceAfterLogin(session: session)
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
@@ -609,7 +610,7 @@ private enum AuthFlowMode {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
             if shouldReset {
-                print("[AUTH] 🔴 User signed out")
+                Log.debug("AUTH", "🔴 User signed out")
                 AnalyticsService.shared.resetAnalytics()
             }
         }

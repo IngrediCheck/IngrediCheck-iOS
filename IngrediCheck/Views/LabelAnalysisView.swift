@@ -38,8 +38,8 @@ import PostHog
         let startTime = Date().timeIntervalSince1970
         self.error = nil
 
-        print("[PHOTO_SCAN] 🔵 Starting photo scan analysis - scan_id: \(scanId), request_id: \(requestId)")
-        print("[PHOTO_SCAN] ⏳ Polling: YES (polling GET /scan/{scan_id} every 2 seconds)")
+        Log.debug("PHOTO_SCAN", "🔵 Starting photo scan analysis - scan_id: \(scanId), request_id: \(requestId)")
+        Log.debug("PHOTO_SCAN", "⏳ Polling: YES (polling GET /scan/{scan_id} every 2 seconds)")
 
         PostHogSDK.shared.capture("Photo Scan Analysis Started", properties: [
             "request_id": requestId,
@@ -55,7 +55,7 @@ import PostHog
             while !isComplete && !Task.isCancelled {
                 pollCount += 1
                 do {
-                    print("[PHOTO_SCAN] 🔄 Poll #\(pollCount) - Getting scan status for scan_id: \(scanId)")
+                    Log.debug("PHOTO_SCAN", "🔄 Poll #\(pollCount) - Getting scan status for scan_id: \(scanId)")
                     let currentScan = try await webService.getScan(scanId: scanId)
                     
                     await MainActor.run {
@@ -85,8 +85,8 @@ import PostHog
                         if currentScan.state == "done",
                            let analysisResult = currentScan.analysis_result {
                             let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
-                            print("[PHOTO_SCAN] ✅ Analysis complete - scan_id: \(self.scanId), poll_count: \(pollCount), total_latency: \(Int(totalLatency))ms")
-                            print("[PHOTO_SCAN] 🎯 Stopping polls - state: done")
+                            Log.debug("PHOTO_SCAN", "✅ Analysis complete - scan_id: \(self.scanId), poll_count: \(pollCount), total_latency: \(Int(totalLatency))ms")
+                            Log.debug("PHOTO_SCAN", "🎯 Stopping polls - state: done")
                             
                             withAnimation {
                                 self.ingredientRecommendations = analysisResult.toIngredientRecommendations()
@@ -104,19 +104,19 @@ import PostHog
                             
                             isComplete = true
                         } else {
-                            print("[PHOTO_SCAN] ⏳ Still processing - scan_id: \(self.scanId), state: \(currentScan.state), continuing to poll...")
+                            Log.debug("PHOTO_SCAN", "⏳ Still processing - scan_id: \(self.scanId), state: \(currentScan.state), continuing to poll...")
                         }
                     }
                     
                     if !isComplete {
-                        print("[PHOTO_SCAN] ⏸️ Waiting 2 seconds before next poll...")
+                        Log.debug("PHOTO_SCAN", "⏸️ Waiting 2 seconds before next poll...")
                         try await Task.sleep(nanoseconds: 2_000_000_000)  // 2 seconds
                     }
                 } catch {
                     await MainActor.run {
                         if !Task.isCancelled {
                             let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
-                            print("[PHOTO_SCAN] ❌ Poll error - scan_id: \(self.scanId), poll_count: \(pollCount), error: \(error.localizedDescription)")
+                            Log.debug("PHOTO_SCAN", "❌ Poll error - scan_id: \(self.scanId), poll_count: \(pollCount), error: \(error.localizedDescription)")
                             self.error = error
                             
                             PostHogSDK.shared.capture("Photo Scan Polling Failed", properties: [

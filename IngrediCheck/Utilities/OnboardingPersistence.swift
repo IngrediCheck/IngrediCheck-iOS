@@ -7,6 +7,34 @@
 
 import Foundation
 import Supabase
+import os
+
+// MARK: - Centralized Logging Utility
+
+/// Centralized logging utility using Apple's unified logging (os_log).
+/// Logs appear in Console.app, idevicesyslog, and Xcode debugger.
+///
+/// Usage:
+///   Log.debug("FamilyStore", "Loading family data...")
+///   Log.error("WebService", "❌ Failed to fetch: \(error)")
+struct Log {
+    /// Uses NSLog for idevicesyslog compatibility (os_log doesn't appear in idevicesyslog)
+    static func debug(_ category: String, _ message: String) {
+        NSLog("[%@] %@", category, message)
+    }
+
+    static func info(_ category: String, _ message: String) {
+        NSLog("[%@] %@", category, message)
+    }
+
+    static func warning(_ category: String, _ message: String) {
+        NSLog("[%@] ⚠️ %@", category, message)
+    }
+
+    static func error(_ category: String, _ message: String) {
+        NSLog("[%@] ❌ %@", category, message)
+    }
+}
 
 /// A helper class to manage the onboarding state (Stage-based) both locally and remotely.
 /// It prioritizes local UserDefaults for immediate synchronous access during app launch,
@@ -49,7 +77,7 @@ final class OnboardingPersistence {
     /// Sets the stage locally AND triggers a remote sync.
     /// Use this instead of modifying `localStage` directly when application logic changes the stage.
     func setStage(_ stage: RemoteOnboardingStage, coordinator: AppNavigationCoordinator? = nil) {
-        print("[OnboardingPersistence] Setting local stage to: \(stage.rawValue)")
+        Log.debug("OnboardingPersistence", "Setting local stage to: \(stage.rawValue)")
         localStage = stage
         
         // Trigger remote sync
@@ -61,7 +89,7 @@ final class OnboardingPersistence {
     /// Marks the onboarding as completed locally and synced remotely.
     /// Call this at the definitive end of any onboarding flow (e.g. Success sheet, Login).
     func markCompleted() {
-        print("[OnboardingPersistence] Marking onboarding as completed.")
+        Log.debug("OnboardingPersistence", "Marking onboarding as completed.")
         setStage(.completed)
     }
     
@@ -71,14 +99,14 @@ final class OnboardingPersistence {
         // Crucial: Only sync if we have a valid session (Guest or User).
         // This prevents persisting "Get Started" state for new users who haven't performed Guest Login yet.
         guard let _ = try? await client.auth.session else {
-             print("[OnboardingPersistence] sync skipped: No active session.")
+             Log.debug("OnboardingPersistence", "sync skipped: No active session.")
              return
         }
 
         // CRITICAL: If onboarding is already completed locally, don't overwrite it.
         // This prevents regression when navigation temporarily goes to early onboarding screens.
         if isLocallyCompleted {
-            print("[OnboardingPersistence] sync skipped: Onboarding already completed locally. Preventing regression.")
+            Log.debug("OnboardingPersistence", "sync skipped: Onboarding already completed locally. Preventing regression.")
             return
         }
 
@@ -86,7 +114,7 @@ final class OnboardingPersistence {
         if let stage = metadata.stage {
             // Update local stage to match what the coordinator thinks we are in
             // This ensures we don't drift if the coordinator changes state logic
-            print("[OnboardingPersistence] sync: Updating local stage to match coordinator: \(stage.rawValue)")
+            Log.debug("OnboardingPersistence", "sync: Updating local stage to match coordinator: \(stage.rawValue)")
             localStage = stage
             await syncRemote(stage: stage, coordinator: coordinator)
         }
@@ -94,7 +122,7 @@ final class OnboardingPersistence {
     
     /// Resets the local completion flag (e.g. for Logout).
     func reset() {
-        print("[OnboardingPersistence] Resetting local onboarding state.")
+        Log.debug("OnboardingPersistence", "Resetting local onboarding state.")
         UserDefaults.standard.removeObject(forKey: stageKey)
     }
     
@@ -103,7 +131,7 @@ final class OnboardingPersistence {
     /// Syncs the specific stage (and detailed metadata if coordinator is provided) to Supabase.
     private func syncRemote(stage: RemoteOnboardingStage, coordinator: AppNavigationCoordinator?) async {
         guard let session = try? await client.auth.session else {
-             print("[OnboardingPersistence] Remote sync skipped: no active session.")
+             Log.debug("OnboardingPersistence", "Remote sync skipped: no active session.")
              return
         }
         
@@ -124,10 +152,10 @@ final class OnboardingPersistence {
                 // UserAttributes requires [String: AnyJSON]
                 let attrs = UserAttributes(data: anyJSONDict)
                 try await client.auth.update(user: attrs)
-                print("✅ [OnboardingPersistence] Synced remote stage: \(stage.rawValue)")
+                Log.debug("OnboardingPersistence", "✅ [OnboardingPersistence] Synced remote stage: \(stage.rawValue)")
             }
         } catch {
-            print("❌ [OnboardingPersistence] Failed to sync remote stage: \(error)")
+            Log.error("OnboardingPersistence", "❌ [OnboardingPersistence] Failed to sync remote stage: \(error)")
         }
     }
     
@@ -136,19 +164,19 @@ final class OnboardingPersistence {
     func restore(into coordinator: AppNavigationCoordinator) async {
         // 1. Fetch Remote Metadata
         guard let metadata = await fetchRemoteMetadata() else {
-            print("[OnboardingPersistence] No remote metadata found.")
+            Log.debug("OnboardingPersistence", "No remote metadata found.")
             // Falling back to whatever local state we have or default
             return
         }
         
         guard let remoteStage = metadata.stage else { return }
-        print("[OnboardingPersistence] Remote stage is: \(remoteStage.rawValue)")
+        Log.debug("OnboardingPersistence", "Remote stage is: \(remoteStage.rawValue)")
         
         // 2. Conflict Resolution
         // If remote says completed, update local immediately.
         if remoteStage == .completed {
             if localStage != .completed {
-                print("[OnboardingPersistence] Remote is completed but local wasn't. Updating local -> completed.")
+                Log.debug("OnboardingPersistence", "Remote is completed but local wasn't. Updating local -> completed.")
                 localStage = .completed
             }
             coordinator.showCanvas(.home)
@@ -157,7 +185,7 @@ final class OnboardingPersistence {
         
         // If local says completed, TRUST LOCAL (prevent regression).
         if isLocallyCompleted {
-             print("[OnboardingPersistence] Local is completed. Ignoring non-completed remote state.")
+             Log.debug("OnboardingPersistence", "Local is completed. Ignoring non-completed remote state.")
              coordinator.showCanvas(.home)
              return
         }
@@ -170,7 +198,7 @@ final class OnboardingPersistence {
     func fetchRemoteMetadata() async -> RemoteOnboardingMetadata? {
         // Fetch fresh user object from server to ensure metadata is up-to-date
         guard let user = try? await client.auth.user() else {
-            print("[OnboardingPersistence] fetchRemoteMetadata: Failed to fetch user.")
+            Log.debug("OnboardingPersistence", "fetchRemoteMetadata: Failed to fetch user.")
             return nil
         }
         

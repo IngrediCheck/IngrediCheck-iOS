@@ -31,36 +31,36 @@ final class MemojiStore {
     var currentToolIndex: Int = 0
     
     deinit {
-        print("[MemojiStore] ❌ MemojiStore deallocated")
+        Log.debug("MemojiStore", "❌ MemojiStore deallocated")
     }
     
     func generate(selection: MemojiSelection, coordinator: AppNavigationCoordinator) async {
-        print("[MemojiStore] ═══════════════════════════════════════════════════")
-        print("[MemojiStore] generate() called - Thread.isMainThread=\(Thread.isMainThread)")
+        Log.debug("MemojiStore", "═══════════════════════════════════════════════════")
+        Log.debug("MemojiStore", "generate() called - Thread.isMainThread=\(Thread.isMainThread)")
         isGenerating = true
         image = nil
         imageStoragePath = nil
-        print("[MemojiStore] image set to nil, backgroundColorHex=\(selection.backgroundHex ?? "nil")")
+        Log.debug("MemojiStore", "image set to nil, backgroundColorHex=\(selection.backgroundHex ?? "nil")")
         backgroundColorHex = selection.backgroundHex
         coordinator.navigateInBottomSheet(.bringingYourAvatar)
-        print("[MemojiStore] Navigated to .bringingYourAvatar")
+        Log.debug("MemojiStore", "Navigated to .bringingYourAvatar")
         
         do {
-            print("[MemojiStore] Calling generateMemojiImage...")
+            Log.debug("MemojiStore", "Calling generateMemojiImage...")
             let generated = try await generateMemojiImage(requestBody: selection.toMemojiRequest())
             
             // CRITICAL: Check for cancellation before updating state
             guard !Task.isCancelled else {
-                print("[MemojiStore] ⚠️ Task cancelled before assigning image")
+                Log.debug("MemojiStore", "⚠️ Task cancelled before assigning image")
                 isGenerating = false
                 return
             }
             
-            print("[MemojiStore] generateMemojiImage returned - Thread.isMainThread=\(Thread.isMainThread)")
+            Log.debug("MemojiStore", "generateMemojiImage returned - Thread.isMainThread=\(Thread.isMainThread)")
             
             // Check for cancellation before processing
             guard !Task.isCancelled else {
-                print("[MemojiStore] ⚠️ Task cancelled before image assignment")
+                Log.debug("MemojiStore", "⚠️ Task cancelled before image assignment")
                 isGenerating = false
                 return
             }
@@ -69,20 +69,20 @@ final class MemojiStore {
             // before any access. Assignment is on main thread since MemojiStore is @MainActor.
             image = generated.image
             imageStoragePath = generated.storagePath
-            print("[MemojiStore] ✅ image assigned to memojiStore.image - Thread.isMainThread=\(Thread.isMainThread)")
+            Log.debug("MemojiStore", "✅ image assigned to memojiStore.image - Thread.isMainThread=\(Thread.isMainThread)")
             
             // Access size for logging only, wrapped in MainActor.run for thread safety
             // This ensures UIImage internal state is accessed on main thread
             let (width, height) = await MainActor.run {
                 let w = generated.image.size.width
                 let h = generated.image.size.height
-                print("[MemojiStore] image.size - width=\(w), height=\(h), Thread.isMainThread=\(Thread.isMainThread)")
+                Log.debug("MemojiStore", "image.size - width=\(w), height=\(h), Thread.isMainThread=\(Thread.isMainThread)")
                 return (w, h)
             }
             
             // Check again before navigation
             guard !Task.isCancelled else {
-                print("[MemojiStore] ⚠️ Task cancelled before navigation")
+                Log.debug("MemojiStore", "⚠️ Task cancelled before navigation")
                 isGenerating = false
                 return
             }
@@ -92,22 +92,22 @@ final class MemojiStore {
             try? await Task.sleep(nanoseconds: 16_000_000) // ~1 frame at 60fps
             
             guard !Task.isCancelled else {
-                print("[MemojiStore] ⚠️ Task cancelled during navigation delay")
+                Log.debug("MemojiStore", "⚠️ Task cancelled during navigation delay")
                 isGenerating = false
                 return
             }
             
-            print("[MemojiStore] About to navigate to .meetYourAvatar")
+            Log.debug("MemojiStore", "About to navigate to .meetYourAvatar")
             coordinator.navigateInBottomSheet(.meetYourAvatar)
-            print("[MemojiStore] ✅ Navigated to .meetYourAvatar")
+            Log.debug("MemojiStore", "✅ Navigated to .meetYourAvatar")
         } catch {
             // Log error so we can debug why memoji generation failed
-            print("[MemojiStore] ❌ Memoji generation failed: \(error.localizedDescription)")
-            print("[MemojiStore] ❌ Error debugging info: \(error)")
+            Log.debug("MemojiStore", "❌ Memoji generation failed: \(error.localizedDescription)")
+            Log.debug("MemojiStore", "❌ Error debugging info: \(error)")
             
             // Check for cancellation before updating state
             guard !Task.isCancelled else {
-                print("[MemojiStore] ⚠️ Task cancelled during error handling")
+                Log.debug("MemojiStore", "⚠️ Task cancelled during error handling")
                 isGenerating = false
                 return
             }
@@ -121,16 +121,16 @@ final class MemojiStore {
             }
             
             ToastManager.shared.show(message: errorMessage, type: .error, duration: 4.0)
-            print("[MemojiStore] ✅ Toast error shown: \(errorMessage)")
+            Log.debug("MemojiStore", "✅ Toast error shown: \(errorMessage)")
             
             // Navigate back to the previous screen instead of showing avatar
             // Check if we have a previous route to go back to
             if let previousRoute = previousRouteForGenerateAvatar {
-                print("[MemojiStore] Navigating back to previous route: \(previousRoute)")
+                Log.debug("MemojiStore", "Navigating back to previous route: \(previousRoute)")
                 coordinator.navigateInBottomSheet(previousRoute)
             } else {
                 // If no previous route, go back to generateAvatar screen
-                print("[MemojiStore] No previous route, navigating back to .generateAvatar")
+                Log.debug("MemojiStore", "No previous route, navigating back to .generateAvatar")
                 coordinator.navigateInBottomSheet(.generateAvatar)
             }
             
@@ -141,13 +141,13 @@ final class MemojiStore {
         
         // Final cancellation check before clearing the generating flag
         guard !Task.isCancelled else {
-            print("[MemojiStore] ⚠️ Task cancelled before clearing isGenerating")
+            Log.debug("MemojiStore", "⚠️ Task cancelled before clearing isGenerating")
             return
         }
         
         isGenerating = false
-        print("[MemojiStore] generate() completed - isGenerating=false")
-        print("[MemojiStore] ═══════════════════════════════════════════════════")
+        Log.debug("MemojiStore", "generate() completed - isGenerating=false")
+        Log.debug("MemojiStore", "═══════════════════════════════════════════════════")
     }
 }
 

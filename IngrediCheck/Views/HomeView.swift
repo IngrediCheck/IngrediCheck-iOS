@@ -594,12 +594,18 @@ struct HomeView: View {
     }
     
     private func refreshRecentScans() async {
-        guard !isRefreshingHistory else { return }
+        Log.debug("HomeView", "📋 refreshRecentScans called")
+        guard !isRefreshingHistory else {
+            Log.debug("HomeView", "⏸️ refreshRecentScans skipped - already refreshing")
+            return
+        }
         isRefreshingHistory = true
         defer { isRefreshingHistory = false }
 
+        Log.debug("HomeView", "📋 refreshRecentScans calling loadHistory")
         // Load via store (single source of truth)
         await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+        Log.debug("HomeView", "✅ refreshRecentScans loadHistory completed")
 
         // Sync store data to AppState for backwards compatibility with ListsTab
         await MainActor.run {

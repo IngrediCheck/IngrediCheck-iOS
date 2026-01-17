@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import SimpleToast
+import os
 
 @MainActor struct ListsTab: View {
 
@@ -263,8 +264,10 @@ import SimpleToast
                 
                 RecentScansListView(scans: filteredScans)
                     .refreshable {
+                        NSLog("[RecentScansPageView] 🔄 Pull-to-refresh triggered")
                         // Load via store (single source of truth)
                         await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+                        NSLog("[RecentScansPageView] ✅ loadHistory completed")
                         // Sync to AppState for backwards compatibility
                         appState.listsTabState.scans = scanHistoryStore.scans
                     }
@@ -397,13 +400,15 @@ import SimpleToast
                 }
             }
             .padding(.bottom)
-            
+
             if let scans = appState.listsTabState.scans {
                 RecentScansListView(scans: scans)
                 .frame(maxWidth: .infinity)
                 .refreshable {
+                    NSLog("[RecentScansView] 🔄 Pull-to-refresh triggered")
                     // Load via store (single source of truth)
                     await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+                    NSLog("[RecentScansView] ✅ loadHistory completed")
                     // Sync to AppState for backwards compatibility
                     appState.listsTabState.scans = scanHistoryStore.scans
                 }
@@ -567,7 +572,7 @@ import SimpleToast
         }
 
         Task {
-            print("Searching for \(searchText)")
+            Log.debug("ListsTab", "Searching for \(searchText)")
             // Load from store and filter client-side
             await scanHistoryStore.loadHistory(limit: 100, offset: 0, forceRefresh: true)
 
@@ -836,7 +841,7 @@ struct ScanDetailView: View {
         Task {
             // Note: clientActivityId is not available in Scan, so feedback submission would need scan.id
             // For now, leaving as placeholder
-            print("Feedback submission not yet implemented for Scan")
+            Log.debug("ListsTab", "Feedback submission not yet implemented for Scan")
         }
     }
     

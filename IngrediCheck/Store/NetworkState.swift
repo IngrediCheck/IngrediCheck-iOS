@@ -1,5 +1,6 @@
 import Network
 import Foundation
+import os
 
 @Observable final class NetworkState {
     
@@ -11,7 +12,7 @@ import Foundation
         monitor = NWPathMonitor()
         monitor?.pathUpdateHandler = { path in
             DispatchQueue.main.async {
-                print("NetworkMonitor: \(path)")
+                Log.debug("NetworkState", "NetworkMonitor: \(path)")
                 if path.status == .satisfied {
                     self.connected = true
                 } else {

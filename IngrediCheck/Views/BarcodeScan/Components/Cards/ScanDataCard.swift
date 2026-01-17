@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 /// Unified card component that displays scan data for both barcode and photo scans
 /// Takes a scanId and optionally initialScan data (from SSE events or cache)
@@ -164,14 +165,14 @@ struct ScanDataCard: View {
             // If isSubmitting, wait for submission to complete before fetching
             // This prevents premature getScan calls for photo mode
             if isSubmitting {
-                print("[SCAN_CARD] ⏳ Waiting for submission to complete - scan_id: \(scanId)")
+                Log.debug("SCAN_CARD", "⏳ Waiting for submission to complete - scan_id: \(scanId)")
                 return
             }
 
             // If initialScan is provided (from SSE or cache), use it directly
             // No API call, no polling - this is for barcode scans
             if let initialScan = initialScan {
-                print("[SCAN_CARD] 📦 Using initialScan (SSE/cache) - scan_id: \(scanId), scan_type: \(initialScan.scan_type)")
+                Log.debug("SCAN_CARD", "📦 Using initialScan (SSE/cache) - scan_id: \(scanId), scan_type: \(initialScan.scan_type)")
                 await MainActor.run {
                     self.scan = initialScan
                     cachedInitialScan = initialScan
@@ -194,15 +195,15 @@ struct ScanDataCard: View {
             // When submission completes, trigger getScan and re-poll
             // This happens for EVERY photo submission (not just first photo)
             // because each new photo may reveal additional product information
-            print("[SCAN_CARD] 🎬 task(id: isSubmitting) triggered - isSubmitting: \(isSubmitting), scan_id: \(scanId)")
+            Log.debug("SCAN_CARD", "🎬 task(id: isSubmitting) triggered - isSubmitting: \(isSubmitting), scan_id: \(scanId)")
             
             if !isSubmitting && !scanId.isEmpty && !scanId.hasPrefix("pending_") && scanId != "skeleton" {
-                print("[SCAN_CARD] 🔄 Submission completed, starting fetch/re-poll - scan_id: \(scanId)")
+                Log.debug("SCAN_CARD", "🔄 Submission completed, starting fetch/re-poll - scan_id: \(scanId)")
 
                 // Cancel existing polling if running (for subsequent photos)
                 // Set isPolling to false to allow new polling to start
                 if isPolling {
-                    print("[SCAN_CARD] ⏹️ Cancelling existing polling before starting new fetch - scan_id: \(scanId)")
+                    Log.debug("SCAN_CARD", "⏹️ Cancelling existing polling before starting new fetch - scan_id: \(scanId)")
                     pollingTask?.cancel()
                     pollingTask = nil
                     await MainActor.run {
@@ -212,7 +213,7 @@ struct ScanDataCard: View {
 
                 await fetchScan()
             } else {
-                print("[SCAN_CARD] ⏭️ Skipping fetch - isSubmitting: \(isSubmitting), scanId: \(scanId)")
+                Log.debug("SCAN_CARD", "⏭️ Skipping fetch - isSubmitting: \(isSubmitting), scanId: \(scanId)")
             }
         }
         .task(id: initialScan) {
@@ -225,7 +226,7 @@ struct ScanDataCard: View {
                         self.scan = initialScan
                         cachedInitialScan = initialScan
                         onResultUpdated?()
-                        print("[SCAN_CARD] 🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
+                        Log.debug("SCAN_CARD", "🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
                     }
                 }
             }
@@ -655,11 +656,11 @@ struct ScanDataCard: View {
 
         // Wait 2 seconds before first fetch for photo scans
         // This gives the server time to process the image after submission
-        print("[SCAN_CARD] ⏳ Waiting 2 seconds before first fetch for photo scan - scan_id: \(scanId)")
+        Log.debug("SCAN_CARD", "⏳ Waiting 2 seconds before first fetch for photo scan - scan_id: \(scanId)")
         try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
         
         do {
-            print("[SCAN_CARD] 🔵 Fetching scan via API - scan_id: \(scanId) (photo scan or history)")
+            Log.debug("SCAN_CARD", "🔵 Fetching scan via API - scan_id: \(scanId) (photo scan or history)")
             let fetchedScan = try await webService.getScan(scanId: scanId)
             
             await MainActor.run {
@@ -673,17 +674,17 @@ struct ScanDataCard: View {
                 if fetchedScan.scan_type == "photo" || fetchedScan.scan_type == "barcode_plus_photo" {
                     // Start polling if scan is not done yet
                     if fetchedScan.state != "done" {
-                        print("[SCAN_CARD] ⏳ Starting polling for photo scan - scan_id: \(scanId), state: \(fetchedScan.state)")
+                        Log.debug("SCAN_CARD", "⏳ Starting polling for photo scan - scan_id: \(scanId), state: \(fetchedScan.state)")
                         startPolling()
                     } else {
                         // Scan is complete, increment scan count
-                        print("[SCAN_CARD] ✅ Scan is done - scan_id: \(scanId)")
+                        Log.debug("SCAN_CARD", "✅ Scan is done - scan_id: \(scanId)")
                         userPreferences.incrementScanCount()
                     }
                 } else {
                     // Barcode scan - should not reach here if initialScan was provided
                     // But if it does, don't poll (analysis comes via SSE)
-                    print("[SCAN_CARD] ⚠️ Barcode scan fetched via API - this should use initialScan instead")
+                    Log.warning("SCAN_CARD", "⚠️ Barcode scan fetched via API - this should use initialScan instead")
                     if fetchedScan.state == "done" {
                         userPreferences.incrementScanCount()
                     }
@@ -693,7 +694,7 @@ struct ScanDataCard: View {
             await MainActor.run {
                 self.errorState = error.localizedDescription
                 self.isLoading = false
-                print("[SCAN_CARD] ❌ Failed to fetch scan - scan_id: \(scanId), error: \(error.localizedDescription)")
+                Log.error("SCAN_CARD", "❌ Failed to fetch scan - scan_id: \(scanId), error: \(error.localizedDescription)")
             }
         }
     }
@@ -701,17 +702,17 @@ struct ScanDataCard: View {
     private func startPolling() {
         // Prevent duplicate polling sessions
         guard pollingTask == nil && !isPolling else {
-            print("[SCAN_CARD] ⚠️ Polling already active - skipping startPolling() - scan_id: \(scanId)")
+            Log.warning("SCAN_CARD", "⚠️ Polling already active - skipping startPolling() - scan_id: \(scanId)")
             return
         }
         
         // Only poll for photo scans and barcode_plus_photo scans - barcode scans use SSE
         guard let currentScan = scan, (currentScan.scan_type == "photo" || currentScan.scan_type == "barcode_plus_photo") else {
-            print("[SCAN_CARD] ⚠️ startPolling() called but scan is not a photo or barcode_plus_photo scan - skipping")
+            Log.warning("SCAN_CARD", "⚠️ startPolling() called but scan is not a photo or barcode_plus_photo scan - skipping")
             return
         }
         
-        print("[SCAN_CARD] ⏳ Starting polling for \(currentScan.scan_type) scan - scan_id: \(scanId)")
+        Log.debug("SCAN_CARD", "⏳ Starting polling for \(currentScan.scan_type) scan - scan_id: \(scanId)")
         isPolling = true
         
         pollingTask = Task {
@@ -724,7 +725,7 @@ struct ScanDataCard: View {
                 do {
                     try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
                     
-                    print("[SCAN_CARD] 🔄 Poll #\(pollCount) - scan_id: \(scanId) (photo scan)")
+                    Log.debug("SCAN_CARD", "🔄 Poll #\(pollCount) - scan_id: \(scanId) (photo scan)")
                     let fetchedScan = try await webService.getScan(scanId: scanId)
                     
                     await MainActor.run {
@@ -734,7 +735,7 @@ struct ScanDataCard: View {
 
                         // Stop polling if scan is done
                         if fetchedScan.state == "done" {
-                            print("[SCAN_CARD] ✅ Polling complete - scan_id: \(scanId), state: done")
+                            Log.debug("SCAN_CARD", "✅ Polling complete - scan_id: \(scanId), state: done")
                             pollingTask?.cancel()
                             pollingTask = nil
                             isPolling = false
@@ -745,7 +746,7 @@ struct ScanDataCard: View {
                     if !Task.isCancelled {
                         await MainActor.run {
                             self.errorState = error.localizedDescription
-                            print("[SCAN_CARD] ❌ Poll error - scan_id: \(scanId), error: \(error.localizedDescription)")
+                            Log.error("SCAN_CARD", "❌ Poll error - scan_id: \(scanId), error: \(error.localizedDescription)")
                             pollingTask?.cancel()
                             pollingTask = nil
                             isPolling = false
@@ -807,13 +808,13 @@ private struct ScanProductImageThumbnail: View {
         .task(id: imageLocationKey) {
             guard image == nil else { return }
             do {
-                print("[ScanDataCard] Fetching thumbnail: \(imageLocationKey)")
+                Log.debug("ScanDataCard", "Fetching thumbnail: \(imageLocationKey)")
                 let uiImage = try await webService.fetchImage(imageLocation: imageLocation, imageSize: .small)
                 await MainActor.run {
                     image = uiImage
                 }
             } catch {
-                print("[ScanDataCard] ❌ Thumbnail fetch failed: \(error)")
+                Log.error("ScanDataCard", "❌ Thumbnail fetch failed: \(error)")
             }
         }
     }

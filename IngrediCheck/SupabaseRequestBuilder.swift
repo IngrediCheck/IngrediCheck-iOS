@@ -1,5 +1,6 @@
 
 import Foundation
+import os
 
 enum SafeEatsEndpoint: String {
     case deleteme = "deleteme"
@@ -149,7 +150,7 @@ class SupabaseRequestBuilder {
         finishMultipartFormDataIfNeeded()
         
         if hasMultipartFormData {
-            print("Size of Supabase \(endpoint.rawValue) request body is: \(request.httpBody?.count ?? 0)")
+            Log.debug("SupabaseRequestBuilder", "Size of Supabase \(endpoint.rawValue) request body is: \(request.httpBody?.count ?? 0)")
         }
 
         return request
