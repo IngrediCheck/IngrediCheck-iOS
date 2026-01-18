@@ -2104,10 +2104,56 @@ struct ScanStreamError: Error, LocalizedError {
         }
         
         Log.debug("WebService", "fetchFoodNotesAll: ✅ Success! Family note: \(familyNote != nil ? ")present" : "null"), Member notes: \(memberNotes.count)")
-        
+
         return FoodNotesAllResponse(familyNote: familyNote, memberNotes: memberNotes)
     }
-    
+
+    /// Fetches a summary of the user's food notes from the AI server.
+    /// Returns nil if no food notes exist (404) or if the response is empty.
+    func fetchFoodNotesSummary() async throws -> DTO.FoodNotesSummaryResponse? {
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            throw NetworkError.authError
+        }
+
+        Log.debug("WebService", "fetchFoodNotesSummary: Starting GET request to /family/food-notes/summary")
+
+        let request = SupabaseRequestBuilder(endpoint: .family_food_notes_summary)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        let httpResponse = response as! HTTPURLResponse
+
+        guard httpResponse.statusCode == 200 else {
+            // 404 means no food notes exist yet
+            if httpResponse.statusCode == 404 {
+                Log.debug("WebService", "fetchFoodNotesSummary: No food notes found (404)")
+                return nil
+            }
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            Log.error("WebService", "fetchFoodNotesSummary: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+
+        // Check for null/empty response
+        let responseString = String(data: data, encoding: .utf8) ?? ""
+        if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
+            Log.debug("WebService", "fetchFoodNotesSummary: Empty response")
+            return nil
+        }
+
+        do {
+            let decoded = try JSONDecoder().decode(DTO.FoodNotesSummaryResponse.self, from: data)
+            Log.debug("WebService", "fetchFoodNotesSummary: ✅ Success - summary: \(decoded.summary.prefix(50))...")
+            return decoded
+        } catch {
+            Log.error("WebService", "fetchFoodNotesSummary: ❌ Decoding failed: \(error)")
+            throw NetworkError.decodingError
+        }
+    }
+
     func updateFoodNotes(content: [String: Any], version: Int) async throws -> FoodNotesResponse {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError

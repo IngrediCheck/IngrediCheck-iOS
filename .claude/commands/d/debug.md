@@ -4,12 +4,27 @@ Read and analyze logs from the running app without restarting it.
 
 User's issue description: $ARGUMENTS
 
-## Instructions
+## Execution Model
+
+**IMMEDIATELY** spawn a Task subagent to execute this log analysis. Do NOT run in the main conversation.
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Analyze iOS debug logs"
+  prompt: <include full instructions below, substituting $ARGUMENTS>
+```
+
+After the subagent completes, relay the analysis summary to the user.
+
+---
+
+## Subagent Instructions
 
 ### 1. Get Session Info
 - Read `.claude/debug.txt`
   - Device format: `device:<targetId>:<logFilePath>:<realUDID>`
-  - Simulator format: `sim:<targetId>:<sessionId>`
+  - Simulator format: `sim:<simulatorId>:<logFilePath>`
 - **If file missing/malformed:** Tell user to run `/d:deploy` first
 
 ### 2. Retrieve Logs
@@ -44,10 +59,21 @@ User's issue description: $ARGUMENTS
    - **Important:** Truncate AFTER you've extracted all needed info
 6. **The app keeps running - no restart needed!**
 
-**For simulator (XcodeBuildMCP):**
-- `stop_sim_log_cap` with sessionId to get logs
-- **If session not found/expired:** Tell user to run `/d:deploy` to start fresh
-- After analysis, spawn a background Task to restart log capture
+**For simulator (file-based, same as device):**
+1. Check if log capture is running: `pgrep -f "simctl launch"`
+2. If not running, restart (this also relaunches the app):
+   ```bash
+   xcrun simctl terminate <simulatorId> llc.fungee.ingredicheck 2>/dev/null || true
+   nohup xcrun simctl launch --console <simulatorId> llc.fungee.ingredicheck > /tmp/ingredicheck-sim-logs.txt 2>&1 &
+   sleep 3
+   ```
+   **NOTE:** `simctl launch --console` captures NSLog output. Do NOT use `log stream` - it doesn't capture NSLog.
+3. Check and filter logs the same way as device:
+   ```bash
+   ls -lh /tmp/ingredicheck-sim-logs.txt
+   cat /tmp/ingredicheck-sim-logs.txt
+   ```
+4. Truncate after analysis: `> /tmp/ingredicheck-sim-logs.txt`
 
 ### 3. Analyze Logs
 
@@ -89,11 +115,10 @@ tail -f /tmp/ingredicheck-logs.txt | grep -a "IngrediCheck(Foundation)"
 - Suggested fix if apparent
 - End with: "Ready for next issue. Run `/d:debug` again when needed."
 
-**For simulator only:** Spawn a background Task agent to restart log capture.
-
 ## Config
 - Bundle ID: `llc.fungee.ingredicheck`
 - Log file (device): `/tmp/ingredicheck-logs.txt`
+- Log file (simulator): `/tmp/ingredicheck-sim-logs.txt`
 
 ## Technical Notes
 

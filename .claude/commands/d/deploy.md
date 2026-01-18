@@ -4,7 +4,41 @@ Build and deploy the app to a connected iOS device or simulator using XcodeBuild
 
 Target: $ARGUMENTS
 
-## Instructions
+## Execution Model
+
+**IMMEDIATELY** spawn a Task subagent to execute this deployment. Do NOT run in the main conversation.
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Deploy to iOS device"
+  prompt: <include full instructions below, substituting $ARGUMENTS>
+```
+
+After the subagent completes, report the result briefly (success/failure, device name).
+
+---
+
+## Subagent Instructions
+
+### MCP Tool Preloading (FIRST)
+
+**CRITICAL:** Load ALL needed MCP tools upfront in ONE parallel batch before doing anything else:
+```
+MCPSearch: select:mcp__XcodeBuildMCP__list_devices
+MCPSearch: select:mcp__XcodeBuildMCP__list_sims
+MCPSearch: select:mcp__XcodeBuildMCP__session-set-defaults
+MCPSearch: select:mcp__XcodeBuildMCP__build_device
+MCPSearch: select:mcp__XcodeBuildMCP__get_device_app_path
+MCPSearch: select:mcp__XcodeBuildMCP__install_app_device
+MCPSearch: select:mcp__XcodeBuildMCP__launch_app_device
+MCPSearch: select:mcp__XcodeBuildMCP__build_sim
+MCPSearch: select:mcp__XcodeBuildMCP__get_sim_app_path
+MCPSearch: select:mcp__XcodeBuildMCP__install_app_sim
+MCPSearch: select:mcp__XcodeBuildMCP__boot_sim
+```
+
+This eliminates ~7 sequential round-trips during execution.
 
 ### Target Selection
 
@@ -23,7 +57,7 @@ Target: $ARGUMENTS
 ### Pre-Build Setup (PARALLEL)
 
 Run these in parallel to save time:
-- **Bash**: `ls IngrediCheck/Config.swift` - verify exists, if missing copy from main worktree
+- **Bash**: `ls IngrediCheck/Config.swift` - verify exists. If missing, copy from main worktree: `cp "$(git worktree list | head -1 | awk '{print $1}')/IngrediCheck/Config.swift" IngrediCheck/Config.swift`
 - **Bash**: `idevice_id -l` - get real device UDID for later log capture
 - **Bash**: `pkill -f idevicesyslog 2>/dev/null || true` - clean up any existing log process
 
@@ -34,18 +68,17 @@ Run these in parallel to save time:
 2. `build_device` → if fails, stop and report error
 3. `get_device_app_path` → get the .app path
 4. `install_app_device` with appPath
-5. Start log capture (all in ONE bash call with timeout ~10s):
-   ```bash
-   > /tmp/ingredicheck-logs.txt
-   idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &
-   sleep 2
-   ls -lh /tmp/ingredicheck-logs.txt
-   head -2 /tmp/ingredicheck-logs.txt
-   ```
-   **IMPORTANT:** Do NOT use `run_in_background: true` parameter - it breaks redirects.
-   Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages.
-6. `launch_app_device` with bundleId to launch the app
-7. Save to `.claude/debug.txt` as `device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>`
+5. Start log capture using TWO sequential Bash calls (not one multi-line):
+   - **First call**: `nohup idevicesyslog -u <UDID> > /tmp/ingredicheck-logs.txt 2>&1 &`
+   - **Second call**: `sleep 2 && ps aux | grep idevicesyslog | grep -v grep && ls -lh /tmp/ingredicheck-logs.txt`
+
+   **IMPORTANT:**
+   - Do NOT use `run_in_background: true` parameter - it breaks redirects
+   - Do NOT use multi-line commands or newlines between `&&` - they cause parsing issues
+   - Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages
+6. Run in PARALLEL:
+   - `launch_app_device` with bundleId to launch the app
+   - Bash to save `.claude/debug.txt`: `mkdir -p .claude && echo "device:<targetId>:/tmp/ingredicheck-logs.txt:<realUDID>" > .claude/debug.txt`
 
 **Note:** If log capture fails, `/d:debug` will restart it. Don't block deploy on log issues.
 
@@ -55,8 +88,13 @@ Run these in parallel to save time:
 3. `build_sim` → if fails, stop and report error
 4. `get_sim_app_path` → get the .app path
 5. `install_app_sim` with appPath
-6. `start_sim_log_cap` with bundleId → **also launches the app**
-7. Save to `.claude/debug.txt` as `sim:<targetId>:<logSessionId>`
+6. Launch app WITH log capture (combines launch + logging in one command):
+   ```bash
+   nohup xcrun simctl launch --console <simulatorId> llc.fungee.ingredicheck > /tmp/ingredicheck-sim-logs.txt 2>&1 &
+   ```
+   **NOTE:** Do NOT use `launch_app_sim` - use `simctl launch --console` instead to capture NSLog output.
+7. Verify: `sleep 2 && ps aux | grep "simctl launch" | grep -v grep && ls -lh /tmp/ingredicheck-sim-logs.txt`
+8. Save to `.claude/debug.txt`: `mkdir -p .claude && echo "sim:<simulatorId>:/tmp/ingredicheck-sim-logs.txt" > .claude/debug.txt`
 
 Tell user: "Deployed with log capture. Run `/d:debug` when you hit an issue."
 

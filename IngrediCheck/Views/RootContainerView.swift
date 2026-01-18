@@ -13,6 +13,7 @@ struct RootContainerView: View {
     @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
     @State private var webService = WebService()
     @State private var memojiStore = MemojiStore()
+    @State private var foodNotesStore: FoodNotesStore?
 
     init(restoredState: (canvas: CanvasRoute, sheet: BottomSheetRoute)? = nil) {
         if let state = restoredState {
@@ -140,6 +141,7 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        .environment(foodNotesStore)
         // Allow presenting SettingsSheet from anywhere in this container
         .sheet(item: $appState.activeSheet) { sheet in
             switch sheet {
@@ -167,6 +169,12 @@ struct RootContainerView: View {
             }
         }
         .task {
+            // Initialize shared FoodNotesStore FIRST (before any child view tasks run)
+            if foodNotesStore == nil {
+                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+                Log.debug("RootContainerView", "FoodNotesStore initialized")
+            }
+
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
             // Always attempt to restore onboarding position on launch from Supabase metadata.

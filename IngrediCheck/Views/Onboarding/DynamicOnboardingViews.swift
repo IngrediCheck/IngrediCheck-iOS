@@ -669,11 +669,11 @@ struct PreferencesAddedSuccessSheet: View {
 struct EditSectionBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
     @Binding var isPresented: Bool
-    
+
     let stepId: String
     let currentSectionIndex: Int
-    let foodNotesStore: FoodNotesStore? = nil
     
     @State private var dragOffset: CGFloat = 0
     @State private var isDragging: Bool = false

@@ -10,10 +10,10 @@ import SwiftUI
 struct FamilyCarouselView: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
+    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
     @EnvironmentObject private var store: Onboarding
-    
+
     @State var selectedFamilyMember: UserModel? = nil
-    @State private var foodNotesStore: FoodNotesStore?
     
     // Convert FamilyMember objects to UserModel format
     private var familyMembersList: [UserModel] {
@@ -76,11 +76,6 @@ struct FamilyCarouselView: View {
             }
         }
         .onAppear {
-            // Initialize FoodNotesStore with environment values
-            if foodNotesStore == nil {
-                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: store)
-            }
-            
             // Initialize selection to "Everyone" if not already set
             // But don't automatically load food notes - let user explicitly select a member
             if selectedFamilyMember == nil {
@@ -90,7 +85,7 @@ struct FamilyCarouselView: View {
                     familyMemberImage: "Everyone",
                     backgroundColor: .clear
                 )
-                
+
                 // Set FamilyStore.selectedMemberId to nil for "Everyone" but don't load food notes
                 // This ensures the UI shows "Everyone" as selected without breaking the flow
                 familyStore.selectedMemberId = nil
@@ -199,6 +194,13 @@ struct FamilyCarouselMemberAvatarView: View {
 }
 
 #Preview {
+    let webService = WebService()
+    let onboarding = Onboarding(onboardingFlowtype: .individual)
+    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+
     FamilyCarouselView()
         .environment(FamilyStore())
+        .environmentObject(onboarding)
+        .environment(webService)
+        .environment(foodNotesStore)
 }

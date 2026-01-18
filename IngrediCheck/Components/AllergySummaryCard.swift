@@ -30,12 +30,20 @@ struct MyIcon: Shape {
 }
 
 struct AllergySummaryCard: View {
+    var summary: String? = nil
     var onTap: (() -> Void)? = nil
 
     private var emptyStateFormattedText: String {
-        formatCardText("\"Add *allergies* or *dietary* needs for your *family* members to make meal *choices* easier for everyone .”\"")
+        formatCardText("\"Add *allergies* or *dietary* needs for your *family* members to make meal *choices* easier for everyone.\"")
     }
-    
+
+    /// Returns true if we should show the empty state (no data yet)
+    private var isEmptyState: Bool {
+        guard let summary = summary else { return true }
+        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "No Food Notes yet."
+    }
+
     var body: some View {
         ZStack {
             // Tappable background
@@ -54,26 +62,33 @@ struct AllergySummaryCard: View {
             
             // Content
             VStack(alignment: .leading, spacing: 8) {
-                Text("No Data Yet")
-                    .font(ManropeFont.regular.size(8))
-                    .foregroundStyle(.grayScale130)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(.grayScale30, in: .capsule)
-                    .overlay(
-                        Capsule()
-                            .stroke(lineWidth: 0.5)
-                            .foregroundStyle(.grayScale70)
-                    )
-                
-                MultiColorText(text: emptyStateFormattedText)
-                    .padding(.trailing, 10)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(6)
-                
-//                Text("\"Your family avoids 🥜, dairy, 🦀, eggs, gluten, red meat 🥩, alcohol, making meal choices simpler and safer for everyone.\"")
-//                    .font(ManropeFont.bold.size(14))
-//                    .foregroundStyle(.grayScale140)
+                if isEmptyState {
+                    // Empty state: "No Data Yet" badge + placeholder text
+                    Text("No Data Yet")
+                        .font(ManropeFont.regular.size(8))
+                        .foregroundStyle(.grayScale130)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(.grayScale30, in: .capsule)
+                        .overlay(
+                            Capsule()
+                                .stroke(lineWidth: 0.5)
+                                .foregroundStyle(.grayScale70)
+                        )
+
+                    MultiColorText(text: emptyStateFormattedText)
+                        .padding(.trailing, 10)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(6)
+                } else {
+                    // Has summary: show the AI-generated summary text
+                    Text("\"\(summary!)\"")
+                        .font(ManropeFont.bold.size(14))
+                        .foregroundStyle(.grayScale140)
+                        .padding(.trailing, 10)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(6)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 12)
