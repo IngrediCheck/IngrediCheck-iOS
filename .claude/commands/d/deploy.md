@@ -57,7 +57,7 @@ This eliminates ~7 sequential round-trips during execution.
 ### Pre-Build Setup (PARALLEL)
 
 Run these in parallel to save time:
-- **Bash**: `ls IngrediCheck/Config.swift` - verify exists. If missing, copy: `cp /Users/sanket/GitHub/IngrediCheck-iOS/IngrediCheck/Config.swift IngrediCheck/Config.swift`
+- **Bash**: `ls IngrediCheck/Config.swift` - verify exists. If missing, copy from main worktree: `cp "$(git worktree list | head -1 | awk '{print $1}')/IngrediCheck/Config.swift" IngrediCheck/Config.swift`
 - **Bash**: `idevice_id -l` - get real device UDID for later log capture
 - **Bash**: `pkill -f idevicesyslog 2>/dev/null || true` - clean up any existing log process
 
