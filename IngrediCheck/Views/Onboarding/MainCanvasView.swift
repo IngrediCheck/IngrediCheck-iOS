@@ -62,16 +62,19 @@ struct MainCanvasView: View {
 
             // Initialize previous section index
             previousSectionIndex = store.currentSectionIndex
+		}
+        // Use task(id:) so it re-runs when foodNotesStore becomes available (fixes race with RootContainerView init)
+        .task(id: foodNotesStore != nil) {
+            guard foodNotesStore != nil else { return }
+            Log.debug("MainCanvasView", "Food notes load task triggered, store exists: \(foodNotesStore != nil)")
 
             // Fetch and load food notes data when view appears
             // This loads the union view (Everyone + all members) for display
-            Task {
-                await foodNotesStore?.loadFoodNotesAll()
+            await foodNotesStore?.loadFoodNotesAll()
 
-                // Prepare preferences for the current selection locally from the loaded data
-                foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
-            }
-		}
+            // Prepare preferences for the current selection locally from the loaded data
+            foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+        }
 		.onChange(of: store.currentSectionIndex) { newIndex in
             // Update previous section index
             previousSectionIndex = newIndex

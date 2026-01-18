@@ -66,15 +66,18 @@ struct EditableCanvasView: View {
         .onAppear {
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
+        }
+        // Use task(id:) so it re-runs when foodNotesStore becomes available (fixes race with RootContainerView init)
+        .task(id: foodNotesStore != nil) {
+            guard foodNotesStore != nil else { return }
+            Log.debug("EditableCanvasView", "Food notes load task triggered, store exists: \(foodNotesStore != nil)")
 
             // Fetch and load food notes data when view appears
-            Task {
-                await foodNotesStore?.loadFoodNotesAll()
+            await foodNotesStore?.loadFoodNotesAll()
 
-                // Prepare preferences for the current selection locally from the loaded data
-                foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
-                didFinishInitialLoad = true
-            }
+            // Prepare preferences for the current selection locally from the loaded data
+            foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+            didFinishInitialLoad = true
         }
         .onChange(of: store.preferences) { _ in
             // Update completion status whenever preferences change
