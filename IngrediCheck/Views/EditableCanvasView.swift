@@ -18,8 +18,8 @@ struct EditableCanvasView: View {
     // Optional: center a specific section when arriving here (e.g., Lifestyle/Nutrition)
     let targetSectionName: String?
     let onBack: (() -> Void)?
-    
-    @State private var foodNotesStore: FoodNotesStore?
+
+    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
     @State private var didFinishInitialLoad: Bool = false
     
     let titleOverride: String?
@@ -64,18 +64,13 @@ struct EditableCanvasView: View {
             onBack?()
         }
         .onAppear {
-            // Initialize FoodNotesStore with environment values
-            if foodNotesStore == nil {
-                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: store)
-            }
-            
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
-            
+
             // Fetch and load food notes data when view appears
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
-                
+
                 // Prepare preferences for the current selection locally from the loaded data
                 foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
                 didFinishInitialLoad = true
@@ -777,7 +772,13 @@ private extension EditableCanvasView {
 }
 
 #Preview {
+    let webService = WebService()
+    let onboarding = Onboarding(onboardingFlowtype: .individual)
+    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+
     EditableCanvasView()
-        .environmentObject(Onboarding(onboardingFlowtype: .individual))
+        .environmentObject(onboarding)
+        .environment(webService)
+        .environment(foodNotesStore)
 }
 

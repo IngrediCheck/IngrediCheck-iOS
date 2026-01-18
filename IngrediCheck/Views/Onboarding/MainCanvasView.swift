@@ -13,10 +13,9 @@ struct MainCanvasView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
-    
+    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+
     private let flow: OnboardingFlowType
-    
-    @State private var foodNotesStore: FoodNotesStore?
     @State private var cardScrollTarget: UUID? = nil
     @State private var tagBarScrollTarget: UUID? = nil
     @State private var isLoadingMemberPreferences: Bool = false // Track when loading member preferences
@@ -57,23 +56,18 @@ struct MainCanvasView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 		.onAppear {
             store.onboardingFlowtype = flow
-            
-            // Initialize FoodNotesStore with environment values
-            if foodNotesStore == nil {
-                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: store)
-            }
-            
+
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
-            
+
             // Initialize previous section index
             previousSectionIndex = store.currentSectionIndex
-            
+
             // Fetch and load food notes data when view appears
             // This loads the union view (Everyone + all members) for display
             Task {
                 await foodNotesStore?.loadFoodNotesAll()
-                
+
                 // Prepare preferences for the current selection locally from the loaded data
                 foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
             }
@@ -465,18 +459,12 @@ func onboardingSheetFamilyMemberSelectNote() -> some View {
 }
 
 #Preview {
+    let webService = WebService()
+    let onboarding = Onboarding(onboardingFlowtype: .individual)
+    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+
     MainCanvasView(flow: .individual)
-        .environmentObject(Onboarding(onboardingFlowtype: .individual))
-    
-    
-//    ZStack {
-//        Color.gray
-//        VStack {
-//            SkeletonCanvasCard()
-//            SkeletonCanvasCard()
-//            SkeletonCanvasCard()
-//            SkeletonCanvasCard()
-//        }
-//        
-//    }
+        .environmentObject(onboarding)
+        .environment(webService)
+        .environment(foodNotesStore)
 }

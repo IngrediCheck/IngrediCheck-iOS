@@ -52,6 +52,7 @@ struct HomeView: View {
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AuthController.self) private var authController
+    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
     @EnvironmentObject private var onboarding: Onboarding
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
@@ -144,10 +145,13 @@ struct HomeView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         
-                        AllergySummaryCard(onTap: {
-                            editTargetSectionName = nil
-                            showEditableCanvas = true
-                        })
+                        AllergySummaryCard(
+                            summary: foodNotesStore?.foodNotesSummary,
+                            onTap: {
+                                editTargetSectionName = nil
+                                showEditableCanvas = true
+                            }
+                        )
                         .frame(maxWidth: .infinity)
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
@@ -466,6 +470,12 @@ struct HomeView: View {
                 if appState.listsTabState.scans == nil {
                     await refreshRecentScans()
                 }
+            }
+            // ------------ FOOD NOTES SUMMARY ------------
+            // Use task(id:) so it re-runs when foodNotesStore becomes available
+            .task(id: foodNotesStore != nil) {
+                Log.debug("HomeView", "Food notes summary task triggered, store exists: \(foodNotesStore != nil)")
+                foodNotesStore?.refreshSummary()
             }
             // Trigger a push navigation to Settings when requested by app state
             .onChange(of: appState.navigateToSettings) { _, newValue in

@@ -20,6 +20,7 @@ enum SafeEatsEndpoint: String {
     case devices_is_internal = "devices/%@/is-internal"
     case family_food_notes = "family/food-notes"
     case family_food_notes_all = "family/food-notes/all"
+    case family_food_notes_summary = "family/food-notes/summary"
     case family_member_food_notes = "family/members/%@/food-notes"
     
     // Scan API endpoints
@@ -45,7 +46,7 @@ class SupabaseRequestBuilder {
 
     private static func baseURL(for endpoint: SafeEatsEndpoint) -> String {
         switch endpoint {
-        case .scan_barcode, .scan_image, .scan_reanalyze:
+        case .scan_barcode, .scan_image, .scan_reanalyze, .family_food_notes_summary:
             return Config.flyIOBaseURL + "/"
         case .scan_history, .scan_get, .scan_favorite, .scan_feedback, .scan_feedback_update, .stats_v2:
             return Config.supabaseFunctionsURLBase
@@ -130,7 +131,7 @@ class SupabaseRequestBuilder {
     private func setAPIKey() {
         // Only set API key for Supabase endpoints, not for scan API endpoints
         // Scan API uses Bearer token authentication only
-        let scanEndpoints: [SafeEatsEndpoint] = [.scan_barcode, .scan_image, .scan_get, .scan_favorite, .scan_reanalyze, .scan_feedback, .scan_feedback_update, .stats_v2]
+        let scanEndpoints: [SafeEatsEndpoint] = [.scan_barcode, .scan_image, .scan_get, .scan_favorite, .scan_reanalyze, .scan_feedback, .scan_feedback_update, .stats_v2, .family_food_notes_summary]
         if !scanEndpoints.contains(endpoint) {
             request.setValue(Config.supabaseKey, forHTTPHeaderField: "apikey")
         }

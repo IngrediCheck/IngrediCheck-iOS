@@ -816,6 +816,20 @@ class DTO {
         let unmatched: Int
         let uncertain: Int
     }
+
+    // MARK: - Food Notes Summary
+
+    struct FoodNotesSummaryResponse: Codable {
+        let summary: String
+        let generatedAt: String
+        let isCached: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case summary
+            case generatedAt = "generated_at"
+            case isCached = "is_cached"
+        }
+    }
 }
 
 // MARK: - Scan API Extension Helpers

@@ -42,17 +42,54 @@ final class FoodNotesStore {
     
     /// Loading state for food notes operations
     var isLoadingFoodNotes: Bool = false
-    
+
     /// Sync management
     private var isSyncing: Bool = false
     private var syncDebounceTask: Task<Void, Never>? = nil
     private var pendingSyncMembers: Set<String> = []
+
+    // MARK: - Summary State
+
+    /// Cached summary of food notes from API
+    var foodNotesSummary: String? = nil
+
+    /// Loading state for summary
+    private(set) var isLoadingSummary: Bool = false
+
+    /// Debounce task for summary refresh
+    private var summaryRefreshTask: Task<Void, Never>? = nil
     
     init(webService: WebService, onboardingStore: Onboarding) {
         self.webService = webService
         self.onboardingStore = onboardingStore
     }
-    
+
+    // MARK: - Summary
+
+    /// Public method to refresh summary - debounced to avoid rapid-fire calls
+    func refreshSummary() {
+        summaryRefreshTask?.cancel()
+        summaryRefreshTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))  // Debounce
+            guard !Task.isCancelled else { return }
+            await loadFoodNotesSummaryInternal()
+        }
+    }
+
+    private func loadFoodNotesSummaryInternal() async {
+        isLoadingSummary = true
+        defer { isLoadingSummary = false }
+
+        Log.debug("FoodNotesStore", "Loading food notes summary...")
+        do {
+            let response = try await webService.fetchFoodNotesSummary()
+            foodNotesSummary = response?.summary
+            Log.debug("FoodNotesStore", "Summary loaded: \(foodNotesSummary ?? "nil")")
+        } catch {
+            Log.error("FoodNotesStore", "Failed to load summary: \(error)")
+        }
+    }
+
     // MARK: - Loading Food Notes
     
     /// Loads the union view (family + all members) from GET /ingredicheck/family/food-notes/all.
@@ -293,13 +330,16 @@ final class FoodNotesStore {
         guard !isSyncing else { return }
         let members = pendingSyncMembers
         pendingSyncMembers.removeAll()
-        
+
         isSyncing = true
         defer { isSyncing = false }
-        
+
         for memberKey in members {
             await syncMember(memberKey)
         }
+
+        // After all syncs complete, refresh the summary
+        refreshSummary()
     }
     
     private func syncMember(_ memberKey: String) async {
