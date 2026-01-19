@@ -56,53 +56,7 @@ final class FamilyService {
         let response = try JSONDecoder().decode(InviteResponse.self, from: data)
         return response.inviteCode
     }
-    
-    /// Handles empty response body for 200/201 status codes by fetching the family
-    /// - Parameters:
-    ///   - statusCode: HTTP status code from the response
-    ///   - body: Response body string
-    /// - Returns: Family object if fetch succeeds, nil if not an empty 200/201 response
-    /// - Throws: Error if all retry attempts fail
-    private func handleEmptyResponseIfNeeded(statusCode: Int, body: String) async throws -> Family? {
-        guard body.isEmpty && (statusCode == 200 || statusCode == 201) else {
-            return nil // Not an empty 200/201 response, return nil to proceed with normal decoding
-        }
-        
-        print("[FamilyService] ⚠️ Empty response body for status \(statusCode)")
-        print("[FamilyService] 🔄 Attempting to fetch family after empty response")
-        
-        // Add initial delay to ensure backend has finished processing
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-        
-        // Retry fetching the family up to 3 times with exponential backoff
-        var lastError: Error?
-        for attempt in 1...3 {
-            do {
-                print("[FamilyService] 🔄 Fetch attempt \(attempt)/3")
-                let family = try await fetchFamily()
-                print("[FamilyService] ✅ Successfully fetched family after empty response")
-                return family
-            } catch {
-                lastError = error
-                print("[FamilyService] ⚠️ Fetch attempt \(attempt) failed: \(error.localizedDescription)")
-                if attempt < 3 {
-                    // Exponential backoff: 1s, 2s, 4s
-                    let delay = UInt64(1_000_000_000 * UInt64(pow(2.0, Double(attempt - 1))))
-                    try? await Task.sleep(nanoseconds: delay)
-                }
-            }
-        }
-        
-        // If all retries failed, throw the last error
-        if let error = lastError {
-            print("[FamilyService] ❌ All fetch attempts failed, throwing last error")
-            throw error
-        }
-        
-        print("[FamilyService] ❌ All fetch attempts failed with no error")
-        throw NetworkError.decodingError
-    }
-    
+
     // MARK: - Public API
     
     func createFamily(
@@ -159,27 +113,10 @@ final class FamilyService {
                 Log.debug("FamilyService", "📄 Error body: \(result.body)")
                 throw NetworkError.invalidResponse(result.statusCode)
             }
-            
-            // Handle empty response body by fetching the family
-            if let fetchedFamily = try await handleEmptyResponseIfNeeded(statusCode: result.statusCode, body: result.body) {
-                return fetchedFamily
-            }
-            
-            // If response body is not empty, decode it normally
-            guard !result.body.isEmpty else {
-                Log.debug("FamilyService", "❌ Cannot proceed with empty body and status \(result.statusCode)")
-                throw NetworkError.decodingError
-            }
-            
-            do {
-                let family = try decodeFamily(from: result.body)
-                Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
-                return family
-            } catch {
-                Log.debug("FamilyService", "❌ Failed to decode family response: \(error)")
-                Log.debug("FamilyService", "📄 Response body that failed to decode: \(result.body)")
-                throw error
-            }
+
+            let family = try decodeFamily(from: result.body)
+            Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
+            return family
         } catch {
             Log.debug("FamilyService", "❌ createFamily failed with error: \(error)")
             if let networkError = error as? NetworkError {
@@ -190,91 +127,38 @@ final class FamilyService {
             throw error
         }
     }
-    
-    func updateFamily(
-        name: String,
-        selfMember: FamilyMember,
-        otherMembers: [FamilyMember]?
-    ) async throws -> Family {
-        let otherNames = otherMembers?.map { $0.name } ?? []
+
+    func updateFamily(name: String) async throws -> Family {
         Log.debug("FamilyService", "🔵 updateFamily called")
-        Log.debug("FamilyService", "📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherNames)")
-        
-        do {
-            let jwt = try await currentJWT()
-            Log.debug("FamilyService", "✅ JWT obtained (length: \(jwt.count) chars)")
-            
-            func memberDict(_ member: FamilyMember) -> [String: Any] {
-                var dict: [String: Any] = [
-                    "id": member.id.uuidString,
-                    "name": member.name,
-                    "color": member.color
-                ]
-                if let imageFileHash = member.imageFileHash {
-                    dict["imageFileHash"] = imageFileHash
-                    Log.debug("FamilyService", "📸 Member \(member.name) has imageFileHash: \(imageFileHash)")
-                }
-                return dict
-            }
-            
-            let selfMemberDict = memberDict(selfMember)
-            let otherMembersDict = otherMembers?.map(memberDict)
-            
-            Log.debug("FamilyService", "📡 API Configuration - baseURL: \(baseURL), full path: \(baseURL)family")
-            Log.debug("FamilyService", "📦 Request - name: \(name), selfMember keys: \(selfMemberDict.keys), otherMembers count: \(otherMembersDict?.count ?? 0)")
-            
-            let result = try await FamilyAPI.updateFamily(
-                baseURL: baseURL,
-                apiKey: apiKey,
-                jwt: jwt,
-                name: name,
-                selfMember: selfMemberDict,
-                otherMembers: otherMembersDict
-            )
-            
-            Log.debug("FamilyService", "📥 Response received - status: \(result.statusCode), body length: \(result.body.count) chars")
-            
-            if !result.body.isEmpty {
-                Log.debug("FamilyService", "📄 Response body (first 1000 chars): \(String(result.body.prefix(1000)))")
-            } else {
-                Log.debug("FamilyService", "⚠️ Response body is empty")
-            }
-            
-            guard (200 ..< 300).contains(result.statusCode) else {
-                Log.debug("FamilyService", "❌ Error response - status: \(result.statusCode)")
-                Log.debug("FamilyService", "📄 Error body: \(result.body)")
-                throw NetworkError.invalidResponse(result.statusCode)
-            }
-            
-            // Handle empty response body by fetching the family
-            if let fetchedFamily = try await handleEmptyResponseIfNeeded(statusCode: result.statusCode, body: result.body) {
-                return fetchedFamily
-            }
-            
-            // If response body is not empty, decode it normally
-            guard !result.body.isEmpty else {
-                Log.debug("FamilyService", "❌ Cannot proceed with empty body and status \(result.statusCode)")
-                throw NetworkError.decodingError
-            }
-            
-            do {
-                let family = try decodeFamily(from: result.body)
-                Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
-                return family
-            } catch {
-                Log.debug("FamilyService", "❌ Failed to decode family response: \(error)")
-                Log.debug("FamilyService", "📄 Response body that failed to decode: \(result.body)")
-                throw error
-            }
-        } catch {
-            Log.debug("FamilyService", "❌ updateFamily failed with error: \(error)")
-            if let networkError = error as? NetworkError {
-                Log.debug("FamilyService", "❌ NetworkError type: \(networkError)")
-            } else if let urlError = error as? URLError {
-                Log.debug("FamilyService", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
-            }
-            throw error
+        Log.debug("FamilyService", "📝 Parameters - name: \(name)")
+
+        let jwt = try await currentJWT()
+        Log.debug("FamilyService", "✅ JWT obtained (length: \(jwt.count) chars)")
+
+        let result = try await FamilyAPI.updateFamily(
+            baseURL: baseURL,
+            apiKey: apiKey,
+            jwt: jwt,
+            name: name
+        )
+
+        Log.debug("FamilyService", "📥 Response received - status: \(result.statusCode), body length: \(result.body.count) chars")
+
+        if !result.body.isEmpty {
+            Log.debug("FamilyService", "📄 Response body (first 1000 chars): \(String(result.body.prefix(1000)))")
+        } else {
+            Log.debug("FamilyService", "⚠️ Response body is empty")
         }
+
+        guard (200 ..< 300).contains(result.statusCode) else {
+            Log.debug("FamilyService", "❌ Error response - status: \(result.statusCode)")
+            Log.debug("FamilyService", "📄 Error body: \(result.body)")
+            throw NetworkError.invalidResponse(result.statusCode)
+        }
+
+        let family = try decodeFamily(from: result.body)
+        Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
+        return family
     }
     
     func fetchFamily() async throws -> Family {
@@ -387,23 +271,12 @@ final class FamilyService {
             Log.debug("FamilyService", "joinFamily bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
-        
-        // Handle empty response body by fetching the family
-        if let fetchedFamily = try await handleEmptyResponseIfNeeded(statusCode: result.statusCode, body: result.body) {
-            return fetchedFamily
-        }
-        
-        // If response body is not empty, decode it normally
-        guard !result.body.isEmpty else {
-            print("[FamilyService] ❌ Cannot proceed with empty body and status \(result.statusCode)")
-            throw NetworkError.decodingError
-        }
-        
+
         let family = try decodeFamily(from: result.body)
         Log.debug("FamilyService", "joinFamily decoded family name=\(family.name)")
         return family
     }
-    
+
     func leaveFamily() async throws {
         Log.debug("FamilyService", "leaveFamily request")
         let jwt = try await currentJWT()
@@ -444,23 +317,12 @@ final class FamilyService {
             Log.debug("FamilyService", "addMember bad status: \(result.statusCode), body=\(result.body)")
             throw NetworkError.invalidResponse(result.statusCode)
         }
-        
-        // Handle empty response body by fetching the family
-        if let fetchedFamily = try await handleEmptyResponseIfNeeded(statusCode: result.statusCode, body: result.body) {
-            return fetchedFamily
-        }
-        
-        // If response body is not empty, decode it normally
-        guard !result.body.isEmpty else {
-            print("[FamilyService] ❌ Cannot proceed with empty body and status \(result.statusCode)")
-            throw NetworkError.decodingError
-        }
-        
+
         let family = try decodeFamily(from: result.body)
         Log.debug("FamilyService", "addMember decoded family name=\(family.name)")
         return family
     }
-    
+
     func editMember(_ member: FamilyMember) async throws -> Family {
         Log.debug("FamilyService", "editMember request id=\(member.id)")
         let jwt = try await currentJWT()

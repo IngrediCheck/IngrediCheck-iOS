@@ -195,14 +195,10 @@ struct ManageFamilyView: View {
         guard !trimmed.isEmpty else { return }
         Task { @MainActor in
             if let family = familyStore.family {
-                // Update family name using updateFamily (PUT request)
+                // Update family name using updateFamily (PATCH request)
                 guard family.name != trimmed else { return }
-                await familyStore.updateFamily(
-                    name: trimmed,
-                    selfMember: family.selfMember,
-                    otherMembers: family.otherMembers
-                )
-            } else if let selfMember = familyStore.pendingSelfMember {
+                await familyStore.updateFamily(name: trimmed)
+            } else if familyStore.pendingSelfMember != nil {
                 // For pending families, just update the local state
                 // The family name will be set when the family is created
                 // For now, we can't update it until the family is created

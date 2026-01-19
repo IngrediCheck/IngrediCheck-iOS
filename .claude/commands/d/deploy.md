@@ -85,16 +85,17 @@ Run these in parallel to save time:
 **For simulator:**
 1. `session-set-defaults` with projectPath, simulatorId, **and scheme**
 2. `boot_sim` (if not already booted)
-3. `build_sim` → if fails, stop and report error
-4. `get_sim_app_path` → get the .app path
-5. `install_app_sim` with appPath
-6. Launch app WITH log capture (combines launch + logging in one command):
+3. **Bash**: `open -a Simulator` - open the Simulator window so user can see the app
+4. `build_sim` → if fails, stop and report error
+5. `get_sim_app_path` → get the .app path
+6. `install_app_sim` with appPath
+7. Launch app WITH log capture (combines launch + logging in one command):
    ```bash
    nohup xcrun simctl launch --console <simulatorId> llc.fungee.ingredicheck > /tmp/ingredicheck-sim-logs.txt 2>&1 &
    ```
    **NOTE:** Do NOT use `launch_app_sim` - use `simctl launch --console` instead to capture NSLog output.
-7. Verify: `sleep 2 && ps aux | grep "simctl launch" | grep -v grep && ls -lh /tmp/ingredicheck-sim-logs.txt`
-8. Save to `.claude/debug.txt`: `mkdir -p .claude && echo "sim:<simulatorId>:/tmp/ingredicheck-sim-logs.txt" > .claude/debug.txt`
+8. Verify: `sleep 2 && ps aux | grep "simctl launch" | grep -v grep && ls -lh /tmp/ingredicheck-sim-logs.txt`
+9. Save to `.claude/debug.txt`: `mkdir -p .claude && echo "sim:<simulatorId>:/tmp/ingredicheck-sim-logs.txt" > .claude/debug.txt`
 
 Tell user: "Deployed with log capture. Run `/d:debug` when you hit an issue."
 
