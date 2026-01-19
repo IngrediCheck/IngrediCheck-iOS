@@ -565,32 +565,24 @@ final class FamilyStore {
         }
     }
     
-    /// Updates an existing family's name and members
-    func updateFamily(
-        name: String,
-        selfMember: FamilyMember,
-        otherMembers: [FamilyMember]
-    ) async {
+    /// Updates an existing family's name
+    func updateFamily(name: String) async {
         Log.debug("FamilyStore", "🔵 updateFamily called")
-        Log.debug("FamilyStore", "📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
+        Log.debug("FamilyStore", "📝 Parameters - name: \(name)")
         isLoading = true
         errorMessage = nil
-        defer { 
+        defer {
             isLoading = false
             Log.debug("FamilyStore", "✅ updateFamily completed - isLoading: false")
         }
-        
+
         do {
             Log.debug("FamilyStore", "⏳ Calling service.updateFamily...")
-            family = try await service.updateFamily(
-                name: name,
-                selfMember: selfMember,
-                otherMembers: otherMembers.isEmpty ? nil : otherMembers
-            )
-            
+            family = try await service.updateFamily(name: name)
+
             // Sync pending invite status after update
             syncPendingInviteStatus()
-            
+
             Log.debug("FamilyStore", "✅ updateFamily success - family name: \(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
