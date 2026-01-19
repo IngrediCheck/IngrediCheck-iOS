@@ -7,11 +7,13 @@
 import SwiftUI
 
 struct WhosThisFor: View {
-    let justmePressed: (() -> Void)?
-    let addFamilyPressed: (() -> Void)?
+    let justmePressed: (() async -> Void)?
+    let addFamilyPressed: (() async -> Void)?
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @State private var isJustMeLoading = false
+    @State private var isAddFamilyLoading = false
     
-    init(justmePressed: (() -> Void)? = nil, addFamilyPressed: (() -> Void)? = nil) {
+    init(justmePressed: (() async -> Void)? = nil, addFamilyPressed: (() async -> Void)? = nil) {
         self.justmePressed = justmePressed
         self.addFamilyPressed = addFamilyPressed
     }
@@ -49,13 +51,41 @@ struct WhosThisFor: View {
                 SecondaryButton(
                     title: "Just Me",
                     takeFullWidth: true,
-                    action: { justmePressed?() }
+                    isLoading: isJustMeLoading,
+                    isDisabled: isJustMeLoading || isAddFamilyLoading,
+                    action: {
+                        guard !isJustMeLoading else { return }
+                        Task {
+                            isJustMeLoading = true
+                            await justmePressed?()
+                            // Reset loading state after operation completes
+                            // Add a small delay to ensure navigation completes
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            await MainActor.run {
+                                isJustMeLoading = false
+                            }
+                        }
+                    }
                 )
 
                 SecondaryButton(
                     title: "Add Family",
                     takeFullWidth: true,
-                    action: { addFamilyPressed?() }
+                    isLoading: isAddFamilyLoading,
+                    isDisabled: isJustMeLoading || isAddFamilyLoading,
+                    action: {
+                        guard !isAddFamilyLoading else { return }
+                        Task {
+                            isAddFamilyLoading = true
+                            await addFamilyPressed?()
+                            // Reset loading state after operation completes
+                            // Add a small delay to ensure navigation completes
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            await MainActor.run {
+                                isAddFamilyLoading = false
+                            }
+                        }
+                    }
                 )
                 
             }

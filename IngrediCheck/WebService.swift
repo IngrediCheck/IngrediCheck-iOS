@@ -16,6 +16,26 @@ enum NetworkError: Error {
     case notFound(String)
 }
 
+extension NetworkError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse(let code):
+            if code == 201 {
+                return "The request was successful, but we couldn't verify the result. Please check your connection and try again."
+            }
+            return "Server error occurred. Please try again."
+        case .badUrl:
+            return "Invalid request. Please try again."
+        case .decodingError:
+            return "We received an unexpected response. Please try again."
+        case .authError:
+            return "Please sign in to continue."
+        case .notFound(let message):
+            return message.isEmpty ? "Resource not found. Please try again." : message
+        }
+    }
+}
+
 extension Sequence {
     func asyncMap<T>(
         _ transform: (Element) async throws -> T

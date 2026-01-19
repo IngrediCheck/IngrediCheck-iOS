@@ -526,6 +526,110 @@ struct ScanCameraView: View {
         }
     }
     
+    // MARK: - Photo Processing
+    /// Processes a photo image (from camera or gallery) through the complete flow:
+    /// scanId determination, hash calculation, storage, UI updates, and API submission
+    private func processPhoto(image: UIImage) async {
+        Log.debug("PHOTO_SCAN", "📸 CameraScreen: processPhoto() called")
+        
+        // Determine which scanId to use based on centered card
+        let (scanIdToUse, isUsingCenteredCard) = await MainActor.run { () -> (String, Bool) in
+            // If there's a centered card that's not skeleton/pending/empty, use that
+            if let centeredId = currentCenteredScanId,
+               !centeredId.isEmpty,
+               centeredId != skeletonCardId,
+               !centeredId.hasPrefix("pending_") {
+                scanId = centeredId  // Update state to match
+                Log.debug("PHOTO_SCAN", "🎯 CameraScreen: Using centered card's scanId - scanId: \(centeredId)")
+                return (centeredId, true)
+            } else {
+                // Generate new scanId or reuse existing one for new scan
+                if scanId == nil {
+                    scanId = UUID().uuidString
+                    Log.debug("PHOTO_SCAN", "🆔 CameraScreen: Generated new scan_id: \(scanId!)")
+                } else {
+                    Log.debug("PHOTO_SCAN", "🆔 CameraScreen: Using existing scan_id: \(scanId!)")
+                }
+                return (scanId!, false)
+            }
+        }
+        
+        // Calculate image hash
+        let imageHash = calculateImageHash(image: image)
+        Log.debug("PHOTO_SCAN", "🔐 CameraScreen: Calculated image hash - hash: \(imageHash)")
+        
+        // Calculate image index and store image
+        let imageIndex = await MainActor.run { () -> Int in
+            // Calculate image index BEFORE appending (0-based index)
+            let imageIndex = capturedImagesPerScanId[scanIdToUse]?.count ?? 0
+            Log.debug("PHOTO_SCAN", "📸 CameraScreen: Photo processed - imageIndex: \(imageIndex)")
+            
+            // Store image and hash in capturedImagesPerScanId
+            if capturedImagesPerScanId[scanIdToUse] == nil {
+                capturedImagesPerScanId[scanIdToUse] = []
+            }
+            capturedImagesPerScanId[scanIdToUse]?.append((image: image, hash: imageHash))
+            Log.debug("PHOTO_SCAN", "💾 CameraScreen: Stored image in capturedImagesPerScanId - scanId: \(scanIdToUse), imageIndex: \(imageIndex), totalImages: \(capturedImagesPerScanId[scanIdToUse]?.count ?? 0)")
+            
+            // Add to capturedPhotoHistory (limit to 10)
+            capturedPhoto = image
+            capturedPhotoHistory.insert(image, at: 0)
+            if capturedPhotoHistory.count > 10 {
+                capturedPhotoHistory.removeLast(capturedPhotoHistory.count - 10)
+            }
+            
+            // Add scanId to scanIds immediately (for first photo of this product)
+            // Subsequent photos for same scanId will just update the localImages
+            let isFirstPhotoForThisScan = !scanIds.contains(scanIdToUse)
+            if isFirstPhotoForThisScan {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
+                        // Replace skeleton with new scanId
+                        scanIds[skeletonIndex] = scanIdToUse
+                        // Only scroll if not using centered card (skeleton replacement always scrolls)
+                        if !isUsingCenteredCard {
+                            scrollTargetScanId = scanIdToUse
+                        }
+                    } else {
+                        // Insert at beginning (before history)
+                        scanIds.insert(scanIdToUse, at: 0)
+                        // Only scroll if not using centered card
+                        if !isUsingCenteredCard {
+                            scrollTargetScanId = scanIdToUse
+                        }
+                    }
+                }
+                
+                // Remove from history if it's there
+                if let historyIndex = historyScanIds.firstIndex(of: scanIdToUse) {
+                    historyScanIds.remove(at: historyIndex)
+                }
+                
+                if isUsingCenteredCard {
+                    Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added centered card to active scans (no scroll) - scanId: \(scanIdToUse)")
+                } else {
+                    Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added scanId to scanIds immediately (first photo) - scanId: \(scanIdToUse)")
+                }
+            } else {
+                Log.debug("PHOTO_SCAN", "🔄 CameraScreen: Reusing existing scanId (subsequent photo) - scanId: \(scanIdToUse)")
+            }
+            
+            // Mark as submitting for EVERY photo (not just first)
+            // This ensures we re-poll after each new image is submitted
+            // because each new photo may reveal additional product information
+            submittingScanIds.insert(scanIdToUse)
+            Log.debug("PHOTO_SCAN", "📝 CameraScreen: Marked scanId as submitting - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
+            
+            return imageIndex
+        }
+        
+        // Submit image to scan API
+        // After 200 response, scanId will be removed from submittingScanIds
+        // This triggers task(id: isSubmitting) in ScanDataCard to re-fetch and re-poll
+        Log.debug("PHOTO_SCAN", "🚀 CameraScreen: Starting Task to submit image - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
+        await submitImage(image: image, scanId: scanIdToUse, imageIndex: imageIndex)
+    }
+    
     var body: some View {
         ZStack {
 #if targetEnvironment(simulator)
@@ -776,103 +880,9 @@ struct ScanCameraView: View {
                                 if let image = image {
                                     Log.debug("PHOTO_SCAN", "📸 CameraScreen: Camera callback received - hasImage: true")
                                     
-                                    // Update UI and submit image on MainActor
-                                    Task { @MainActor in
-                                        // Determine which scanId to use based on centered card
-                                        let scanIdToUse: String
-                                        let isUsingCenteredCard: Bool  // Track if we're using a centered existing card
-
-                                        // If there's a centered card that's not skeleton/pending/empty, use that
-                                        if let centeredId = currentCenteredScanId,
-                                           !centeredId.isEmpty,  // Check for empty string
-                                           centeredId != skeletonCardId,
-                                           !centeredId.hasPrefix("pending_") {
-                                            scanIdToUse = centeredId
-                                            scanId = centeredId  // Update state to match
-                                            isUsingCenteredCard = true
-                                            Log.debug("PHOTO_SCAN", "🎯 CameraScreen: Using centered card's scanId - scanId: \(scanIdToUse)")
-                                        } else {
-                                            // Generate new scanId or reuse existing one for new scan
-                                            if scanId == nil {
-                                                scanId = UUID().uuidString
-                                                Log.debug("PHOTO_SCAN", "🆔 CameraScreen: Generated new scan_id: \(scanId!)")
-                                            } else {
-                                                Log.debug("PHOTO_SCAN", "🆔 CameraScreen: Using existing scan_id: \(scanId!)")
-                                            }
-                                            scanIdToUse = scanId!
-                                            isUsingCenteredCard = false
-                                        }
-                                        
-                                        // Calculate image hash
-                                        let imageHash = calculateImageHash(image: image)
-                                        Log.debug("PHOTO_SCAN", "🔐 CameraScreen: Calculated image hash - hash: \(imageHash)")
-
-                                        // Calculate image index BEFORE appending (0-based index)
-                                        let imageIndex = capturedImagesPerScanId[scanIdToUse]?.count ?? 0
-                                        Log.debug("PHOTO_SCAN", "📸 CameraScreen: Photo captured - imageIndex: \(imageIndex)")
-
-                                        // Store image and hash in capturedImagesPerScanId
-                                        if capturedImagesPerScanId[scanIdToUse] == nil {
-                                            capturedImagesPerScanId[scanIdToUse] = []
-                                        }
-                                        capturedImagesPerScanId[scanIdToUse]?.append((image: image, hash: imageHash))
-                                        Log.debug("PHOTO_SCAN", "💾 CameraScreen: Stored image in capturedImagesPerScanId - scanId: \(scanIdToUse), imageIndex: \(imageIndex), totalImages: \(capturedImagesPerScanId[scanIdToUse]?.count ?? 0)")
-                                        
-                                        capturedPhoto = image
-                                        capturedPhotoHistory.insert(image, at: 0)
-                                        if capturedPhotoHistory.count > 10 {
-                                            capturedPhotoHistory.removeLast(capturedPhotoHistory.count - 10)
-                                        }
-
-                                        // Add scanId to scanIds immediately (for first photo of this product)
-                                        // Subsequent photos for same scanId will just update the localImages
-                                        let isFirstPhotoForThisScan = !scanIds.contains(scanIdToUse)
-                                        if isFirstPhotoForThisScan {
-                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                                if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
-                                                    // Replace skeleton with new scanId
-                                                    scanIds[skeletonIndex] = scanIdToUse
-                                                    // Only scroll if not using centered card (skeleton replacement always scrolls)
-                                                    if !isUsingCenteredCard {
-                                                        scrollTargetScanId = scanIdToUse
-                                                    }
-                                                } else {
-                                                    // Insert at beginning (before history)
-                                                    scanIds.insert(scanIdToUse, at: 0)
-                                                    // Only scroll if not using centered card
-                                                    if !isUsingCenteredCard {
-                                                        scrollTargetScanId = scanIdToUse
-                                                    }
-                                                }
-                                            }
-
-                                            // Remove from history if it's there
-                                            if let historyIndex = historyScanIds.firstIndex(of: scanIdToUse) {
-                                                historyScanIds.remove(at: historyIndex)
-                                            }
-
-                                            if isUsingCenteredCard {
-                                                Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added centered card to active scans (no scroll) - scanId: \(scanIdToUse)")
-                                            } else {
-                                                Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added scanId to scanIds immediately (first photo) - scanId: \(scanIdToUse)")
-                                            }
-                                        } else {
-                                            Log.debug("PHOTO_SCAN", "🔄 CameraScreen: Reusing existing scanId (subsequent photo) - scanId: \(scanIdToUse)")
-                                        }
-
-                                        // Mark as submitting for EVERY photo (not just first)
-                                        // This ensures we re-poll after each new image is submitted
-                                        // because each new photo may reveal additional product information
-                                        submittingScanIds.insert(scanIdToUse)
-                                        Log.debug("PHOTO_SCAN", "📝 CameraScreen: Marked scanId as submitting - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
-
-                                        // Submit image to scan API
-                                        // After 200 response, scanId will be removed from submittingScanIds
-                                        // This triggers task(id: isSubmitting) in ScanDataCard to re-fetch and re-poll
-                                        Log.debug("PHOTO_SCAN", "🚀 CameraScreen: Starting Task to submit image - scanId: \(scanIdToUse), imageIndex: \(imageIndex)")
+                                    // Process photo through the same flow as gallery selection
                                         Task {
-                                            await submitImage(image: image, scanId: scanIdToUse, imageIndex: imageIndex)
-                                        }
+                                        await processPhoto(image: image)
                                     }
                                 } else {
                                     Log.error("PHOTO_SCAN", "❌ CameraScreen: Camera callback returned nil image")
@@ -1182,7 +1192,10 @@ struct ScanCameraView: View {
         .sheet(isPresented: $isShowingPhotoPicker) {
             PhotoPicker(images: $capturedPhotoHistory,
                         didHitLimit: $galleryLimitHit,
-                        maxTotalCount: 10)
+                        maxTotalCount: 10,
+                        onImageSelected: { image in
+                            await processPhoto(image: image)
+                        })
         }
     }
 }
@@ -1247,6 +1260,7 @@ extension ScanCameraView {
         @Binding var images: [UIImage]
         @Binding var didHitLimit: Bool
         var maxTotalCount: Int = 10
+        var onImageSelected: ((UIImage) async -> Void)? = nil
         
         func makeUIViewController(context: Context) -> PHPickerViewController {
             var configuration = PHPickerConfiguration()
@@ -1278,72 +1292,88 @@ extension ScanCameraView {
                 
                 guard !results.isEmpty else { return }
                 
-                for result in results {
-                    let provider = result.itemProvider
-                    guard provider.canLoadObject(ofClass: UIImage.self) else { continue }
-                    
-                    provider.loadObject(ofClass: UIImage.self) { object, _ in
-                        guard let uiImage = object as? UIImage else { return }
-                        DispatchQueue.main.async {
-                            if self.parent.images.count < self.parent.maxTotalCount {
-                                // Insert newest images at the front of the history
-                                self.parent.images.insert(uiImage, at: 0)
+                // Process images sequentially to maintain scanId consistency
+                Task {
+                    for result in results {
+                        let provider = result.itemProvider
+                        guard provider.canLoadObject(ofClass: UIImage.self) else { continue }
+                        
+                        // Load image asynchronously
+                        if let uiImage = try? await withCheckedThrowingContinuation({ (continuation: CheckedContinuation<UIImage, Error>) in
+                            provider.loadObject(ofClass: UIImage.self) { object, error in
+                                if let error = error {
+                                    continuation.resume(throwing: error)
+                                } else if let uiImage = object as? UIImage {
+                                    continuation.resume(returning: uiImage)
+                                } else {
+                                    continuation.resume(throwing: NSError(domain: "PhotoPicker", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load image"]))
+                                }
+                            }
+                        }) {
+                            // Process image through the same flow as captured photos
+                            if let processImage = parent.onImageSelected {
+                                await processImage(uiImage)
                             } else {
-                                // We hit the global limit of 10 images; show a warning in the parent view.
-                                self.parent.didHitLimit = true
+                                // Fallback: add to history if no processor provided
+                                await MainActor.run {
+                                    if self.parent.images.count < self.parent.maxTotalCount {
+                                        self.parent.images.insert(uiImage, at: 0)
+                                    } else {
+                                        self.parent.didHitLimit = true
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
-    
-    // MARK: - Photo card matching ContentView4 style
-    
-    struct PhotoContentView4: View {
-        let image: UIImage
         
-        var body: some View {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.thinMaterial.opacity(0.2))
-                    .frame(width: 300, height: 120)
-                
-                HStack {
-                    HStack(spacing: 47) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(.thinMaterial.opacity(0.4))
-                                .frame(width: 68, height: 92)
-                            
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 64, height: 88)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
-                    }
+        // MARK: - Photo card matching ContentView4 style
+        
+        struct PhotoContentView4: View {
+            let image: UIImage
+            
+            var body: some View {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.thinMaterial.opacity(0.2))
+                        .frame(width: 300, height: 120)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 185, height: 25)
-                            .opacity(0.3)
+                    HStack {
+                        HStack(spacing: 47) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.thinMaterial.opacity(0.4))
+                                    .frame(width: 68, height: 92)
+                                
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 64, height: 88)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+                        }
                         
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 132, height: 20)
-                            .padding(.bottom, 7)
-                        
-                        RoundedRectangle(cornerRadius: 52)
-                            .fill(.thinMaterial.opacity(0.4))
-                            .frame(width: 79, height: 24)
+                        VStack(alignment: .leading, spacing: 8) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(.thinMaterial.opacity(0.4))
+                                .frame(width: 185, height: 25)
+                                .opacity(0.3)
+                            
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(.thinMaterial.opacity(0.4))
+                                .frame(width: 132, height: 20)
+                                .padding(.bottom, 7)
+                            
+                            RoundedRectangle(cornerRadius: 52)
+                                .fill(.thinMaterial.opacity(0.4))
+                                .frame(width: 79, height: 24)
+                        }
                     }
                 }
             }
         }
     }
-
 }
 

@@ -436,10 +436,7 @@ struct PersistentBottomSheet: View {
         case .enterInviteCode:
             EnterYourInviteCode(
                 yesPressed: {
-                    Task { @MainActor in
-                        await authController.signIn()
-                        coordinator.showCanvas(.welcomeToYourFamily)
-                    }
+                    coordinator.showCanvas(.welcomeToYourFamily)
                 },
                 noPressed: {
                     coordinator.navigateInBottomSheet(.whosThisFor)
@@ -448,17 +445,13 @@ struct PersistentBottomSheet: View {
             
         case .whosThisFor:
             WhosThisFor {
-                Task { @MainActor in
-                    // Guest login already happened on .heyThere screen, just proceed
-                    await familyStore.createBiteBuddyFamily()
-                    coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
-                    coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
-                }
+                // Guest login already happened on .heyThere screen, just proceed
+                await familyStore.createBiteBuddyFamily()
+                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
+                coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
             } addFamilyPressed: {
-                Task { @MainActor in
-                    // Guest login already happened on .heyThere screen, just proceed
-                    coordinator.showCanvas(.letsMeetYourIngrediFam)
-                }
+                // Guest login already happened on .heyThere screen, just proceed
+                coordinator.showCanvas(.letsMeetYourIngrediFam)
             }
             
         case .letsMeetYourIngrediFam:
@@ -612,27 +605,40 @@ struct PersistentBottomSheet: View {
             ) {
                 coordinator.navigateInBottomSheet(.generateAvatar)
             } assignedPressed: {
-                Task {
-                    await handleAssignAvatar(
-                        memojiStore: memojiStore,
-                        familyStore: familyStore
-                    )
-                    
-                    // Navigate back based on where we came from
-                    if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
-                        // If we came from meetYourProfile, go back there with the same memberId
-                        if case .meetYourProfile(let memberId) = previousRoute {
-                            coordinator.navigateInBottomSheet(.meetYourProfile(memberId: memberId))
-                            memojiStore.previousRouteForGenerateAvatar = nil
+                await handleAssignAvatar(
+                    memojiStore: memojiStore,
+                    familyStore: familyStore,
+                    webService: webService
+                )
+                
+                // Navigate back based on where we came from
+                if let previousRoute = memojiStore.previousRouteForGenerateAvatar {
+                    // If we came from meetYourProfile, go back there with the same memberId
+                    if case .meetYourProfile(let memberId) = previousRoute {
+                        coordinator.navigateInBottomSheet(.meetYourProfile(memberId: memberId))
+                        memojiStore.previousRouteForGenerateAvatar = nil
+                    } else if case .addMoreMembers = previousRoute {
+                        // If we came from AddMoreMembers in onboarding, continue forward to AddMoreMembersMinimal
+                        // Otherwise, go back to AddMoreMembers
+                        if case .mainCanvas = coordinator.currentCanvasRoute {
+                            // In onboarding flow, continue forward
+                            coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
                         } else {
+                            // Not in onboarding, go back
                             coordinator.navigateInBottomSheet(previousRoute)
-                            memojiStore.previousRouteForGenerateAvatar = nil
                         }
-                    } else if case .home = coordinator.currentCanvasRoute {
-                        coordinator.navigateInBottomSheet(.homeDefault)
+                        memojiStore.previousRouteForGenerateAvatar = nil
                     } else {
-                        coordinator.navigateInBottomSheet(.addMoreMembers)
+                        coordinator.navigateInBottomSheet(previousRoute)
+                        memojiStore.previousRouteForGenerateAvatar = nil
                     }
+                } else if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else if case .mainCanvas = coordinator.currentCanvasRoute {
+                    // In onboarding flow without previous route, continue to AddMoreMembersMinimal
+                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
+                } else {
+                    coordinator.navigateInBottomSheet(.addMoreMembers)
                 }
             }
             
@@ -985,7 +991,8 @@ struct PersistentBottomSheet: View {
 @MainActor
 private func handleAssignAvatar(
     memojiStore: MemojiStore,
-    familyStore: FamilyStore
+    familyStore: FamilyStore,
+    webService: WebService
 ) async {
     // CRITICAL: Capture all data immediately to prevent accessing deallocated memory.
     // We no longer re-upload the PNG; instead we use the storage path inside the
@@ -1008,9 +1015,8 @@ private func handleAssignAvatar(
     // We need to add the member to the pending list first.
     var targetMemberId: UUID? = currentAvatarTargetMemberId
     
-    // If no targetMemberId is set but we're in onboarding and have a displayName, add the member
+    // If no targetMemberId is set but we have a displayName, we need to create the member
     if targetMemberId == nil,
-        currentFamily == nil, // We're in onboarding (no family exists yet)
        let name = displayName,
         !name.isEmpty {
         
@@ -1024,28 +1030,61 @@ private func handleAssignAvatar(
         
         if isFromProfile || currentPendingSelfMember == nil {
             // This is for the self member
-            if familyStore.pendingSelfMember == nil {
-                Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
-                familyStore.setPendingSelfMember(name: name)
-            }
-            // Re-capture after modification
-            if let newSelfMember = familyStore.pendingSelfMember {
-                targetMemberId = newSelfMember.id
+            if currentFamily == nil {
+                // Onboarding: add to pending
+                if familyStore.pendingSelfMember == nil {
+                    Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+                    familyStore.setPendingSelfMember(name: name)
+                }
+                // Re-capture after modification
+                if let newSelfMember = familyStore.pendingSelfMember {
+                    targetMemberId = newSelfMember.id
+                }
+            } else {
+                // Family exists: self member should already exist, this shouldn't happen
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Family exists but trying to create self member, this is unexpected")
+                ToastManager.shared.show(message: "Unable to assign avatar. Please try again.", type: .error)
+                return
             }
         } else {
             // This is for an other member
-            Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
-            familyStore.addPendingOtherMember(name: name)
-            // Re-capture after modification
-            let updatedPendingMembers = familyStore.pendingOtherMembers
-            if !updatedPendingMembers.isEmpty, let lastMember = updatedPendingMembers.last {
-                targetMemberId = lastMember.id
+            if currentFamily != nil {
+                // Family exists: add member immediately to family
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: Family exists, adding member immediately: \(name)")
+                do {
+                    let newMember = try await familyStore.addMemberImmediate(
+                        name: name,
+                        image: nil, // We'll use storagePath instead
+                        storagePath: storagePath,
+                        color: backgroundColorHex,
+                        webService: webService
+                    )
+                    targetMemberId = newMember.id
+                    Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Member created successfully: \(newMember.name)")
+                    // Avatar is already assigned via storagePath in addMemberImmediate, so we can return
+                    // But we should verify the avatar was set correctly
+                    return
+                } catch {
+                    Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to create member: \(error.localizedDescription)")
+                    ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+                    return
+                }
+            } else {
+                // Onboarding: add to pending
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending other member: \(name)")
+                familyStore.addPendingOtherMember(name: name)
+                // Re-capture after modification
+                let updatedPendingMembers = familyStore.pendingOtherMembers
+                if !updatedPendingMembers.isEmpty, let lastMember = updatedPendingMembers.last {
+                    targetMemberId = lastMember.id
+                }
             }
         }
     }
     
     guard let targetMemberId = targetMemberId else {
         Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
+        ToastManager.shared.show(message: "Unable to assign avatar. Please enter a name and try again.", type: .error)
         return
     }
     
@@ -1075,15 +1114,38 @@ private func handleAssignAvatar(
     let currentPendingOthers = familyStore.pendingOtherMembers
     let pendingOthersToCheck = !currentPendingOthers.isEmpty ? currentPendingOthers : currentPendingOtherMembers
     if let pendingOther = pendingOthersToCheck.first(where: { $0.id == targetMemberId }) {
-        // This is a pending other member - use setAvatarForPendingOtherMember
+        // This is a pending other member
         Log.debug("PersistentBottomSheet", "handleAssignAvatar: Assigning to pending other member: \(pendingOther.name)")
-        await familyStore.setAvatarForPendingOtherMemberFromMemoji(
-            id: targetMemberId,
-            storagePath: storagePath,
-            backgroundColorHex: backgroundColorHex
-        )
-        Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned to pending other member")
-        return
+        
+        // If family exists, add the member to the family first, then assign avatar
+        if let family = currentFamily {
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: Family exists, adding pending member to family")
+            do {
+                let newMember = try await familyStore.addMemberImmediate(
+                    name: pendingOther.name,
+                    image: nil,
+                    storagePath: storagePath,
+                    color: backgroundColorHex ?? pendingOther.color,
+                    webService: webService
+                )
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Member added to family and avatar assigned: \(newMember.name)")
+                // Avatar is already assigned via storagePath in addMemberImmediate
+                return
+            } catch {
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to add pending member to family: \(error.localizedDescription)")
+                ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+                return
+            }
+        } else {
+            // Onboarding: just assign avatar to pending member
+            await familyStore.setAvatarForPendingOtherMemberFromMemoji(
+                id: targetMemberId,
+                storagePath: storagePath,
+                backgroundColorHex: backgroundColorHex
+            )
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned to pending other member")
+            return
+        }
     }
     
     // 3. Otherwise, this is an existing member (from home view) - update directly without re-uploading
@@ -1091,12 +1153,14 @@ private func handleAssignAvatar(
         // 1. Get the member first to access their color for compositing - use captured data
         guard let family = currentFamily else {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No family loaded, cannot update member")
+            ToastManager.shared.show(message: "Unable to assign avatar. Family not found.", type: .error)
             return
         }
         
         let allMembers = [family.selfMember] + family.otherMembers
         guard let member = allMembers.first(where: { $0.id == targetMemberId }) else {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Member \(targetMemberId) not found in family")
+            ToastManager.shared.show(message: "Unable to assign avatar. Member not found.", type: .error)
             return
         }
 
@@ -1132,11 +1196,13 @@ private func handleAssignAvatar(
         if let errorMsg = familyStore.errorMessage {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Failed to update member in backend: \(errorMsg)")
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Avatar uploaded but member update failed - imageFileHash may not be persisted")
+            ToastManager.shared.show(message: "Failed to update member: \(errorMsg)", type: .error)
         } else {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
         }
     } catch {
         Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
+        ToastManager.shared.show(message: "Failed to assign avatar: \(error.localizedDescription)", type: .error)
     }
     
 }

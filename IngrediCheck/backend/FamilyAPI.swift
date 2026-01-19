@@ -279,5 +279,43 @@ struct FamilyAPI {
             body: body
         )
     }
+    
+    // PUT /ingredicheck/family
+    static func updateFamily(
+        baseURL: String,
+        apiKey: String,
+        jwt: String,
+        name: String,
+        selfMember: [String: Any],
+        otherMembers: [[String: Any]]? = nil
+    ) async throws -> (statusCode: Int, body: String) {
+        Log.debug("FamilyAPI", "🔵 updateFamily called")
+        Log.debug("FamilyAPI", "📝 Parameters - name: \(name), selfMember: \(selfMember), otherMembers count: \(otherMembers?.count ?? 0)")
+        
+        var body: [String: Any] = [
+            "name": name,
+            "selfMember": selfMember
+        ]
+        if let otherMembers = otherMembers {
+            body["otherMembers"] = otherMembers
+        }
+        
+        // Log request body for debugging
+        if let jsonData = try? JSONSerialization.data(withJSONObject: body, options: .prettyPrinted),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            Log.debug("FamilyAPI", "📦 updateFamily request body: \(jsonString)")
+        } else {
+            Log.debug("FamilyAPI", "⚠️ Failed to serialize request body to JSON string")
+        }
+        
+        return try await makeRequest(
+            baseURL: baseURL,
+            path: "family",
+            method: "PUT",
+            apiKey: apiKey,
+            jwt: jwt,
+            body: body
+        )
+    }
 }
 

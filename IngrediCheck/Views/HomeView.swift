@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isSettingsPresented = false
+    @State private var isManageFamilyPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var isRefreshingHistory: Bool = false
     @State private var showEditableCanvas: Bool = false
@@ -217,6 +218,13 @@ struct HomeView: View {
                             .frame(height: 125)
                         }
                         .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            // Only open Manage Family if family exists and has other members
+                            if let family = familyStore.family, !family.otherMembers.isEmpty {
+                                isManageFamilyPresented = true
+                            }
+                        }
                     }
                     .padding(.bottom, 20)
                     
@@ -516,6 +524,14 @@ struct HomeView: View {
                 .presentationDetents([chatSmallDetent, .medium, .large],
                                      selection: $selectedChatDetent)
                 .presentationDragIndicator(.visible)
+            }
+            
+            // ------------ MANAGE FAMILY SHEET ------------
+            .sheet(isPresented: $isManageFamilyPresented) {
+                NavigationStack {
+                    ManageFamilyView()
+                        .environment(coordinator)
+                }
             }
 
             // ------------ PRODUCT DETAIL ------------

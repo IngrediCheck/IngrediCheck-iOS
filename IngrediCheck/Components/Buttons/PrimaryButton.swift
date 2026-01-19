@@ -63,7 +63,6 @@ struct PrimaryButton: View {
                     .foregroundStyle(isDisabled ? .grayScale110 : .grayScale10)
             }
         }
-        // Respect explicit width/height when takeFullWidth is false, otherwise fill horizontally with a sensible min width
         .frame(width: takeFullWidth ? nil : width, height: height)
         .frame(minWidth: takeFullWidth ? 152 : 0)
         .frame(maxWidth: takeFullWidth ? .infinity : nil)
@@ -72,32 +71,55 @@ struct PrimaryButton: View {
             Capsule()
                 .stroke(lineWidth: 1)
                 .foregroundStyle(isDisabled ? .grayScale40 : .grayScale10)
-            
         )
-//        .opacity(isDisabled ? 1.0 : 1.0)
+        // Outer drop shadow - only when not disabled
+        .shadow(
+            color: isDisabled ? Color.clear : Color(hex: "C5C5C5").opacity(0.47),
+            radius: 2.6,
+            x: 0,
+            y: 1
+        )
     }
     
     @ViewBuilder
     private var backgroundView: some View {
         if isDisabled {
             Capsule()
-                .fill(
-                    Color.grayScale40
-                )
+                .fill(Color.grayScale40)
         } else {
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            ZStack {
+                // Base gradient
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "9DCF10"),
+                                Color(hex: "6B8E06")
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .shadow(.inner(color: Color(hex: "EDEDED").opacity(0.25), radius: 7.5, x: 2, y: 18))
+                        .shadow(.inner(color: Color(hex: "72930A").opacity(1.2), radius: 5.7, x: 0, y: 0))
+                        .shadow(.drop(color: Color(hex: "6B8E06").opacity(0.8), radius: 5.7, x: 0, y: 4))
                     )
-                    .shadow(.inner(color: Color(hex: "EDEDED").opacity(0.25), radius: 7.5, x: 2, y: 9))
-                    .shadow(.inner(color: Color(hex: "72930A"), radius: 5.7, x: 0, y: 4))
+                    .clipShape(Capsule())
+                
+                // Inset depth shadow
+                Capsule()
+                    .fill(Color.clear)
                     .shadow(
-                        .drop(color: Color(hex: "C5C5C5").opacity(0.57), radius: 11, x: 0, y: 4)
+                        color: Color(hex: "6B8E06").opacity(0.8),
+                        radius: 5.7,
+                        x: 0,
+                        y: 4
                     )
-                )
+                    .clipShape(Capsule())
+                
+                // Border (will be overridden by overlay)
+                Capsule()
+                    .stroke(Color.white, lineWidth: 1)
+            }
         }
     }
 }
