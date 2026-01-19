@@ -121,7 +121,7 @@ struct LetsMeetYourIngrediFamView: View {
                                         .foregroundStyle(.grayScale110)
                                         .padding(.vertical, 8)
                                         .padding(.horizontal, 18)
-                                        .background(Color(hex: "#F2F2F2"), in: Capsule())
+                                        .background(Color.clear, in: Capsule())
                                 }
                                 .buttonStyle(.plain)
                                 .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {

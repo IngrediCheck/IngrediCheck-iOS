@@ -391,7 +391,7 @@ struct ManageFamilyView: View {
                         .foregroundStyle(Color(hex: "#F04438"))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
-                        .background(Color(hex: "#F2F2F2"), in: Capsule())
+                        .background(Color.clear, in: Capsule())
                         .overlay(
                             Capsule()
                                 .stroke(Color(hex: "#F04438"), lineWidth: 1)

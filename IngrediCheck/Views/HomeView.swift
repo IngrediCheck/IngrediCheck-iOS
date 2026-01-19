@@ -505,9 +505,10 @@ struct HomeView: View {
             
             // ------------ EDITABLE CANVAS ------------
             .navigationDestination(isPresented: $showEditableCanvas) {
-                EditableCanvasView(
+                UnifiedCanvasView(
+                    mode: .editing,
                     targetSectionName: editTargetSectionName,
-                    onBack: {
+                    onDismiss: {
                         showEditableCanvas = false
                     }
                 )

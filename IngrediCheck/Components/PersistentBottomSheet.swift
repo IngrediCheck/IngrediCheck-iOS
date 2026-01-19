@@ -45,6 +45,12 @@ struct PersistentBottomSheet: View {
             }
         }()
         
+        // Block background interaction when addMoreMembers is open from home screen
+        let shouldBlockBackgroundInteraction: Bool = {
+            guard case .home = coordinator.currentCanvasRoute else { return false }
+            return coordinator.currentBottomSheetRoute == .addMoreMembers
+        }()
+        
         ZStack(alignment: .bottom) {
             if canTapOutsideToDismiss {
                 Color.black
@@ -55,11 +61,26 @@ struct PersistentBottomSheet: View {
                         coordinator.navigateInBottomSheet(.homeDefault)
                     }
             }
+            
+            // Block all background interactions when addMoreMembers is open from home
+            if shouldBlockBackgroundInteraction {
+                Color.black
+                    .opacity(0.01) // Minimal opacity but still blocks touches
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .allowsHitTesting(true) // Block all touches
+            }
 
             VStack {
                 Spacer()
                 
                 bottomSheetContainer()
+            }
+            
+            // Show loginToContinue as overlay alert when opened from PermissionsCanvas
+            if coordinator.currentBottomSheetRoute == .loginToContinue && 
+               coordinator.currentCanvasRoute == .whyWeNeedThesePermissions {
+                bottomSheetContent(for: .loginToContinue)
             }
         }
         .background(
@@ -89,7 +110,14 @@ struct PersistentBottomSheet: View {
                 withAnimation(.easeOut(duration: 0.28)) {
                     dragOffsetY = 0
                 }
-            } else {
+            } else if newValue == .homeDefault {
+                // Don't reset dragOffsetY when dismissing to homeDefault via drag
+                // Keep it at dismiss position to prevent blank sheet flash
+            } else if oldValue == .homeDefault && newValue != .homeDefault {
+                // Reset dragOffsetY only when presenting a NEW sheet from homeDefault
+                dragOffsetY = 0
+            } else if oldValue != .homeDefault && newValue != .homeDefault {
+                // Transitioning between non-home sheets, reset offset
                 dragOffsetY = 0
             }
         }
@@ -176,40 +204,71 @@ struct PersistentBottomSheet: View {
     
     @ViewBuilder
     private func bottomSheetContainer() -> some View {
-        let canSwipeToDismiss = coordinator.currentBottomSheetRoute == .yourCurrentAvatar || coordinator.currentBottomSheetRoute == .setUpAvatarFor
+        // Allow swipe to dismiss for avatar sheets and addMoreMembers when opened from home
+        let canSwipeToDismiss = coordinator.currentBottomSheetRoute == .yourCurrentAvatar || 
+                                coordinator.currentBottomSheetRoute == .setUpAvatarFor ||
+                                (coordinator.currentBottomSheetRoute == .addMoreMembers && coordinator.currentCanvasRoute == .home)
         let dismissThreshold: CGFloat = 120
         let dismissAnimationDistance: CGFloat = 700
 
-        let dragGesture = DragGesture()
+        // Velocity threshold for dismissal (points per second)
+        let velocityThreshold: CGFloat = 500
+
+        let dragGesture = DragGesture(minimumDistance: 0)
             .onChanged { value in
                 guard canSwipeToDismiss else { return }
                 let t = value.translation.height
-                withAnimation(.interactiveSpring(response: 0.25, dampingFraction: 0.9, blendDuration: 0.1)) {
-                    dragOffsetY = max(0, t)
+                // Direct 1:1 tracking without animation for native feel
+                // Add rubber-banding when trying to drag upward (negative values)
+                if t < 0 {
+                    // Rubber-band effect: diminishing returns when dragging up
+                    dragOffsetY = t / 3
+                } else {
+                    dragOffsetY = t
                 }
             }
             .onEnded { value in
                 guard canSwipeToDismiss else { return }
                 let t = value.translation.height
-                if t > dismissThreshold {
-                    withAnimation(.easeOut(duration: 0.22)) {
+                let velocity = value.predictedEndTranslation.height - t
+
+                // Dismiss if: dragged past threshold OR fast downward velocity
+                let shouldDismiss = t > dismissThreshold || (t > 50 && velocity > velocityThreshold)
+
+                if shouldDismiss {
+                    // Calculate animation duration based on remaining distance and velocity
+                    let remainingDistance = dismissAnimationDistance - t
+                    let baseDuration = 0.25
+                    let velocityFactor = min(1.0, max(0.5, 1.0 - (velocity / 2000)))
+                    let duration = baseDuration * velocityFactor
+
+                    // Animate sheet down with velocity-aware timing
+                    withAnimation(.easeOut(duration: duration)) {
                         dragOffsetY = dismissAnimationDistance
                     }
+                    // Navigate after animation completes
                     Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                         coordinator.navigateInBottomSheet(.homeDefault)
-                        dragOffsetY = 0
+                        // Don't reset dragOffsetY here - keep it offscreen to prevent blank sheet flash
+                        // It will be reset when a new sheet is presented
                     }
                 } else {
-                    withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.85, blendDuration: 0.1)) {
+                    // Snap back with spring animation (native feel)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0)) {
                         dragOffsetY = 0
                     }
                 }
             }
 
+        // Always show quickAccessNeeded in bottom sheet when on PermissionsCanvas
+        // Login alert will be shown as overlay independently
+        let isOnPermissionsCanvas = coordinator.currentCanvasRoute == .whyWeNeedThesePermissions
+        let bottomSheetRouteToShow: BottomSheetRoute = isOnPermissionsCanvas ? .quickAccessNeeded : coordinator.currentBottomSheetRoute
+        
         let sheet = ZStack(alignment: .bottomTrailing) {
             let _ = Log.debug("PersistentBottomSheet", "currentCanvasRoute=\(coordinator.currentCanvasRoute), bottomSheetRoute=\(coordinator.currentBottomSheetRoute)")
-            bottomSheetContent(for: coordinator.currentBottomSheetRoute)
+            bottomSheetContent(for: bottomSheetRouteToShow)
                 .frame(maxWidth: .infinity, alignment: .top)
             
             if shouldShowOnboardingNextArrow {
@@ -239,7 +298,7 @@ struct PersistentBottomSheet: View {
             }
         }
         
-        if let height = getBottomSheetHeight() {
+        if let height = getBottomSheetHeight(for: bottomSheetRouteToShow) {
             sheet
                 .frame(height: height)
                 .frame(maxWidth: .infinity)
@@ -249,6 +308,8 @@ struct PersistentBottomSheet: View {
                 .shadow(color: .grayScale70, radius: 27.5)
                 .offset(y: dragOffsetY)
                 .gesture(dragGesture)
+                // Hide sheet when it's being dismissed (offset is beyond screen)
+                .opacity(dragOffsetY > 600 ? 0 : 1)
                 
 //                .overlay(
 //                    LinearGradient(
@@ -292,8 +353,9 @@ struct PersistentBottomSheet: View {
         }
     }
     
-    private func getBottomSheetHeight() -> CGFloat? {
-        switch coordinator.currentBottomSheetRoute {
+    private func getBottomSheetHeight(for route: BottomSheetRoute? = nil) -> CGFloat? {
+        let routeToCheck = route ?? coordinator.currentBottomSheetRoute
+        switch routeToCheck {
         case .alreadyHaveAnAccount:
             return 271
         case  .doYouHaveAnInviteCode:
@@ -819,6 +881,12 @@ struct PersistentBottomSheet: View {
             }
 
         case .readyToScanFirstProduct:
+            // MARK: - ScanningHelpSheet Feature Flag
+            // Set to true to show ScanningHelpSheet in onboarding flow (requires screen recording)
+            // Set to false to skip ScanningHelpSheet and go directly to PermissionsCanvas
+            // When screen recording is available, change this to true to re-enable the help sheet
+            let showScanningHelpSheet = false
+            
             ReadyToScanSheet(
                 onBack: {
                     if getOnboardingFlowType() == .individual {
@@ -829,8 +897,14 @@ struct PersistentBottomSheet: View {
                     }
                 },
                 onNotRightNow: {
-                    coordinator.showCanvas(.seeHowScanningWorks)
-                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                    if showScanningHelpSheet {
+                        coordinator.showCanvas(.seeHowScanningWorks)
+                        coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                    } else {
+                        // Skip ScanningHelpSheet and go directly to PermissionsCanvas
+                        coordinator.showCanvas(.whyWeNeedThesePermissions)
+                        coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                    }
                 },
                 onHaveAProduct: {
                     OnboardingPersistence.shared.markCompleted()
@@ -855,10 +929,22 @@ struct PersistentBottomSheet: View {
             )
 
         case .quickAccessNeeded:
+            // MARK: - ScanningHelpSheet Feature Flag
+            // Set to true to show ScanningHelpSheet in onboarding flow (requires screen recording)
+            // Set to false to skip ScanningHelpSheet and go directly to PermissionsCanvas
+            // When screen recording is available, change this to true to re-enable the help sheet
+            let showScanningHelpSheet = false
+            
             QuickAccessSheet(
                 onBack: {
-                    coordinator.showCanvas(.seeHowScanningWorks)
-                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                    if showScanningHelpSheet {
+                        coordinator.showCanvas(.seeHowScanningWorks)
+                        coordinator.navigateInBottomSheet(.seeHowScanningWorks)
+                    } else {
+                        // Skip ScanningHelpSheet and go back to ReadyToScanFirstProduct
+                        coordinator.showCanvas(.readyToScanFirstProduct)
+                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    }
                 },
                 onGoToHome: {
                     OnboardingPersistence.shared.markCompleted()
@@ -867,14 +953,22 @@ struct PersistentBottomSheet: View {
             )
 
         case .loginToContinue:
+            // Show as alert when opened from PermissionsCanvas, otherwise show as sheet
+            let showAsAlert = coordinator.currentCanvasRoute == .whyWeNeedThesePermissions
             LoginToContinueSheet(
                 onBack: {
-                    coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                    if showAsAlert {
+                        // Just dismiss the alert, keep quickAccessNeeded visible in bottom sheet
+                        coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                    } else {
+                        coordinator.navigateInBottomSheet(.quickAccessNeeded)
+                    }
                 },
                 onSignedIn: {
                     OnboardingPersistence.shared.markCompleted()
                     coordinator.showCanvas(.home)
-                }
+                },
+                showAsAlert: showAsAlert
             )
         }
     }

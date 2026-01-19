@@ -213,6 +213,7 @@ struct PermissionsCanvas: View {
             Toggle("", isOn: isOn)
                 .labelsHidden()
                 .tint(Color(hex: "#91B640"))
+                .disabled(isOn.wrappedValue)
                 .allowsHitTesting(!isLocked)
         }
         .padding(.vertical, 8)

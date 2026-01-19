@@ -201,6 +201,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0C3A858A2F04EDB20018E877 /* Sheets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sheets; sourceTree = "<group>"; };
 		0CBB73342F03B575003ED0F5 /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
+		D33AC8782F1E3E6300EAD08F /* Canvas */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Canvas; sourceTree = "<group>"; };
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
@@ -339,6 +340,7 @@
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				D33AC8782F1E3E6300EAD08F /* Canvas */,
 				0C3A858A2F04EDB20018E877 /* Sheets */,
 				D3BED0612ED997490088E044 /* HomeView.swift */,
 				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
@@ -449,6 +451,7 @@
 			fileSystemSynchronizedGroups = (
 				0C3A858A2F04EDB20018E877 /* Sheets */,
 				0CBB73342F03B575003ED0F5 /* Resources */,
+				D33AC8782F1E3E6300EAD08F /* Canvas */,
 				D3BECBA72ED9898E0088E044 /* Components */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBE72ED989D40088E044 /* Font Family */,

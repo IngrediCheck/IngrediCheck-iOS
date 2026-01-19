@@ -47,17 +47,9 @@ struct AddMoreMembers: View {
                     }
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .leading) {
+                        // No back button when opened from home screen - allow drag down to dismiss
                         if case .home = coordinator.currentCanvasRoute {
-                            Button {
-                                coordinator.navigateInBottomSheet(.homeDefault)
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(.black)
-                                    .frame(width: 24, height: 24)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
+                            // Back button removed - sheet can be dragged down to dismiss
                         } else if !familyStore.pendingOtherMembers.isEmpty {
                             Button {
                                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
@@ -225,10 +217,15 @@ struct AddMoreMembers: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.neutral500)
-                .frame(width: 60, height: 4)
-                .padding(.top, 11)
+            // Only show drag indicator when sheet is draggable (opened from home screen)
+            Group {
+                if case .home = coordinator.currentCanvasRoute {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(.neutral500)
+                        .frame(width: 60, height: 4)
+                        .padding(.top, 11)
+                }
+            }
             , alignment: .top
         )
         .onAppear {
