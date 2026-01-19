@@ -7,6 +7,238 @@
 
 import SwiftUI
 
+// MARK: - Food Emoji Mapper
+
+/// Utility to map food item names to their emoji icons from dynamicJsonData
+struct FoodEmojiMapper {
+    /// Build a dictionary mapping food names to emojis from dynamic steps
+    static func buildMapping(from steps: [DynamicStep]) -> [String: String] {
+        var mapping: [String: String] = [:]
+
+        for step in steps {
+            // Type-1: options array
+            if let options = step.content.options {
+                for option in options {
+                    let normalizedName = option.name.lowercased()
+                    if !option.icon.isEmpty && option.icon != "✏️" && option.icon != "✏" {
+                        mapping[normalizedName] = option.icon
+                    }
+                }
+            }
+
+            // Type-2: subSteps with options
+            if let subSteps = step.content.subSteps {
+                for subStep in subSteps {
+                    if let options = subStep.options {
+                        for option in options {
+                            let normalizedName = option.name.lowercased()
+                            if !option.icon.isEmpty && option.icon != "✏️" && option.icon != "✏" {
+                                mapping[normalizedName] = option.icon
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Type-3: regions with subRegions
+            if let regions = step.content.regions {
+                for region in regions {
+                    for subRegion in region.subRegions {
+                        let normalizedName = subRegion.name.lowercased()
+                        if !subRegion.icon.isEmpty && subRegion.icon != "✏️" && subRegion.icon != "✏" {
+                            mapping[normalizedName] = subRegion.icon
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add some common short aliases/variations
+        if let peanuts = mapping["peanuts"] { mapping["peanut"] = peanuts }
+        if let treeNuts = mapping["tree nuts"] { mapping["nuts"] = treeNuts }
+        if let shellfish = mapping["shellfish"] { mapping["crab"] = "🦀"; mapping["shrimp"] = "🦐"; mapping["lobster"] = "🦞" }
+        if let fish = mapping["fish"] { mapping["seafood"] = fish }
+        if let eggs = mapping["eggs"] { mapping["egg"] = eggs }
+        if let dairy = mapping["dairy"] { mapping["milk"] = dairy; mapping["cheese"] = "🧀" }
+        if let wheat = mapping["wheat"] { mapping["gluten"] = wheat; mapping["bread"] = "🍞" }
+
+        // Add common items that might appear in summaries
+        mapping["red meat"] = "🥩"
+        mapping["meat"] = "🥩"
+        mapping["chicken"] = "🍗"
+        mapping["poultry"] = "🍗"
+        mapping["soda"] = "🥤"
+        mapping["sugar"] = "🍬"
+        mapping["salt"] = "🧂"
+        mapping["fried food"] = "🍟"
+        mapping["fried foods"] = "🍟"
+        mapping["fast food"] = "🍔"
+        mapping["processed food"] = "🏭"
+        mapping["processed foods"] = "🏭"
+
+        return mapping
+    }
+
+    /// Inject emojis into summary text next to matching food names
+    static func injectEmojis(in text: String, using mapping: [String: String]) -> String {
+        var result = text
+
+        // Sort by length descending to match longer phrases first
+        let sortedNames = mapping.keys.sorted { $0.count > $1.count }
+
+        for name in sortedNames {
+            guard let emoji = mapping[name] else { continue }
+
+            // Create a case-insensitive regex pattern for the food name
+            // Match whole words only (with word boundaries)
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: name))\\b"
+
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let range = NSRange(result.startIndex..., in: result)
+
+                // Find all matches and replace from end to start to preserve indices
+                let matches = regex.matches(in: result, options: [], range: range)
+
+                for match in matches.reversed() {
+                    if let swiftRange = Range(match.range, in: result) {
+                        let matchedText = String(result[swiftRange])
+                        // Only add emoji if not already preceded by an emoji
+                        let beforeIndex = swiftRange.lowerBound
+                        let hasEmojiBefore: Bool = {
+                            guard beforeIndex > result.startIndex else { return false }
+                            let prevIndex = result.index(before: beforeIndex)
+                            return result[prevIndex].unicodeScalars.first?.properties.isEmoji == true
+                        }()
+
+                        if !hasEmojiBefore {
+                            result.replaceSubrange(swiftRange, with: "\(emoji) \(matchedText)")
+                        }
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+
+    /// Add MultiColorText markers (*word*) around common highlight phrases
+    static func addHighlightMarkers(to text: String) -> String {
+        var result = text
+
+        // Phrases to highlight (will appear in lighter color)
+        let highlightPhrases = [
+            "family",
+            "making meal",
+            "meal choices",
+            "and",
+            "for everyone",
+            "simpler",
+            "safer",
+            "choices"
+        ]
+
+        // Sort by length descending to match longer phrases first
+        let sortedPhrases = highlightPhrases.sorted { $0.count > $1.count }
+
+        for phrase in sortedPhrases {
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: phrase))\\b"
+
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let range = NSRange(result.startIndex..., in: result)
+                let matches = regex.matches(in: result, options: [], range: range)
+
+                for match in matches.reversed() {
+                    if let swiftRange = Range(match.range, in: result) {
+                        let matchedText = String(result[swiftRange])
+                        // Only wrap if not already wrapped in *
+                        let beforeIndex = swiftRange.lowerBound
+                        let afterIndex = swiftRange.upperBound
+
+                        let hasMarkerBefore = beforeIndex > result.startIndex && result[result.index(before: beforeIndex)] == "*"
+                        let hasMarkerAfter = afterIndex < result.endIndex && result[afterIndex] == "*"
+
+                        if !hasMarkerBefore && !hasMarkerAfter {
+                            result.replaceSubrange(swiftRange, with: "*\(matchedText)*")
+                        }
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+}
+
+// MARK: - AI Summary Card (for UnifiedCanvasView)
+
+/// Full-width summary card shown at top of Food Notes editing view
+struct AISummaryCard: View {
+    let summary: String
+    var dynamicSteps: [DynamicStep] = []
+
+    /// Summary text with emoji icons and highlight markers
+    private var formattedSummary: String {
+        let mapping = FoodEmojiMapper.buildMapping(from: dynamicSteps)
+        let withEmojis = FoodEmojiMapper.injectEmojis(in: summary, using: mapping)
+        return FoodEmojiMapper.addHighlightMarkers(to: withEmojis)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // "Summarized with AI" badge
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(.pink))
+                Text("Summarized with AI")
+                    .font(ManropeFont.medium.size(12))
+            }
+            .foregroundStyle(
+                LinearGradient(
+                    stops: [
+                        .init(color: Color(hex: "#FB4889"), location: 0),
+                        .init(color: Color(hex: "#9A64D4"), location: 0.5048),
+                        .init(color: Color(hex: "#0B77FF"), location: 1.0)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: Color(hex: "#FEF2F2"), location: 0),
+                                .init(color: Color(hex: "#F9EDF9"), location: 0.5048),
+                                .init(color: Color(hex: "#EBF3FE"), location: 1.0)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            )
+
+            // Summary text with emojis and multi-color formatting
+            MultiColorText(text: "\"\(formattedSummary)\"", font: ManropeFont.bold.size(16))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(hex: "#EEEEEE"), lineWidth: 0.5)
+        )
+        .shadow(color: Color(hex: "#ECECEC"), radius: 8)
+    }
+}
+
 struct MyIcon: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -31,6 +263,7 @@ struct MyIcon: Shape {
 
 struct AllergySummaryCard: View {
     var summary: String? = nil
+    var dynamicSteps: [DynamicStep] = []
     var onTap: (() -> Void)? = nil
 
     private var emptyStateFormattedText: String {
@@ -42,6 +275,14 @@ struct AllergySummaryCard: View {
         guard let summary = summary else { return true }
         let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty || trimmed == "No Food Notes yet."
+    }
+
+    /// Summary text with emoji icons injected next to food items and highlight markers
+    private var summaryWithEmojis: String {
+        guard let summary = summary else { return "" }
+        let mapping = FoodEmojiMapper.buildMapping(from: dynamicSteps)
+        let withEmojis = FoodEmojiMapper.injectEmojis(in: summary, using: mapping)
+        return FoodEmojiMapper.addHighlightMarkers(to: withEmojis)
     }
 
     var body: some View {
@@ -81,10 +322,8 @@ struct AllergySummaryCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .lineLimit(6)
                 } else {
-                    // Has summary: show the AI-generated summary text
-                    Text("\"\(summary!)\"")
-                        .font(ManropeFont.bold.size(14))
-                        .foregroundStyle(.grayScale140)
+                    // Has summary: show the AI-generated summary text with emojis
+                    MultiColorText(text: "\"\(summaryWithEmojis)\"")
                         .padding(.trailing, 10)
                         .fixedSize(horizontal: false, vertical: true)
                         .lineLimit(6)
@@ -117,5 +356,13 @@ struct AllergySummaryCard: View {
 }
 
 #Preview {
-    AllergySummaryCard()
+    ZStack {
+        Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
+        AllergySummaryCard()
+            .frame(width: 171, height: 196, alignment: .center)
+    }
+}
+
+#Preview("AISummaryCard") {
+    AISummaryCard(summary: "Test")
 }

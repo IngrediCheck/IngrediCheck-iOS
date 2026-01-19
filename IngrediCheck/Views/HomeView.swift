@@ -148,12 +148,13 @@ struct HomeView: View {
                         
                         AllergySummaryCard(
                             summary: foodNotesStore?.foodNotesSummary,
+                            dynamicSteps: onboarding.dynamicSteps,
                             onTap: {
                                 editTargetSectionName = nil
                                 showEditableCanvas = true
                             }
                         )
-                        .frame(maxWidth: .infinity)
+                        .frame(width: 171, height: 196)
                     }
                     .frame(height: UIScreen.main.bounds.height * 0.22)
                     .padding(.bottom, 24)

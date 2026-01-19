@@ -262,6 +262,17 @@ struct UnifiedCanvasView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
+                    // AI Summary Card at top (only show if we have a summary)
+                    if let summary = foodNotesStore?.foodNotesSummary,
+                       !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       summary != "No Food Notes yet." {
+                        AISummaryCard(
+                            summary: summary,
+                            dynamicSteps: store.dynamicSteps
+                        )
+                        .padding(.top, 16)
+                    }
+
                     ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                         EditableCanvasCard(
                             chips: card.chips,
@@ -273,7 +284,7 @@ struct UnifiedCanvasView: View {
                             showFamilyIcons: showFamilyIconsOnChips,
                             activeMemberId: selectedMemberId
                         )
-                        .padding(.top, index == 0 ? 16 : 0)
+                        .padding(.top, index == 0 && foodNotesStore?.foodNotesSummary == nil ? 16 : 0)
                         .id(card.id)
                     }
                 }
