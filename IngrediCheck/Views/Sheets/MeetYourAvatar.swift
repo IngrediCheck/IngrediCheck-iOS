@@ -11,8 +11,9 @@ struct MeetYourAvatar: View {
     let image: UIImage?
     let backgroundColorHex: String?
     let regeneratePressed: () -> Void
-    let assignedPressed: () -> Void
+    let assignedPressed: () async -> Void
     @State private var showConfetti = false
+    @State private var isAssigning = false
     @Environment(MemojiStore.self) private var memojiStore
     
     // Helper function to get the display name with possessive form
@@ -52,7 +53,7 @@ struct MeetYourAvatar: View {
         }
     }
     
-    init(image: UIImage? = nil, backgroundColorHex: String? = nil, regeneratePressed: @escaping () -> Void = {}, assignedPressed: @escaping () -> Void = {}) {
+    init(image: UIImage? = nil, backgroundColorHex: String? = nil, regeneratePressed: @escaping () -> Void = {}, assignedPressed: @escaping () async -> Void = {}) {
         self.image = image
         self.backgroundColorHex = backgroundColorHex
         self.regeneratePressed = regeneratePressed
@@ -97,10 +98,15 @@ struct MeetYourAvatar: View {
                     )
                     
                     Button {
-                        assignedPressed()
+                        Task {
+                            isAssigning = true
+                            await assignedPressed()
+                            isAssigning = false
+                        }
                     } label: {
-                        GreenCapsule(title: "Assign")
+                        GreenCapsule(title: "Assign", isLoading: isAssigning)
                     }
+                    .disabled(isAssigning)
                 }
             }
         }

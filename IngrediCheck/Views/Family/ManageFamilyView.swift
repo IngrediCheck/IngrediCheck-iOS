@@ -5,7 +5,7 @@ struct ManageFamilyView: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(WebService.self) private var webService
-    @State private var selfMemberName: String = ""
+    @State private var familyName: String = ""
     @FocusState private var isEditingFamilyName: Bool
     @State private var nameFieldWidth: CGFloat = 0
     @State private var shareItems: ShareItem?
@@ -106,38 +106,38 @@ struct ManageFamilyView: View {
             }
             .scrollIndicators(.hidden)
             .scrollContentBackground(.hidden)
-            .background(Color(hex: "#F7F7F7"))
+            .background(Color(hex: "#FFFFFF"))
         }
-        .background(Color(hex: "#F7F7F7"))
+        .background(Color(hex: "#FFFFFF"))
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            selfMemberName = familyStore.family?.selfMember.name
-            ?? familyStore.pendingSelfMember?.name
-            ?? ""
+            // Initialize family name: use existing family name, or generate from self member's first name
+            if let family = familyStore.family {
+                familyName = family.name
+            } else if let selfMember = familyStore.pendingSelfMember {
+                let firstName = selfMember.name.components(separatedBy: " ").first ?? selfMember.name
+                familyName = "\(firstName)'s Family"
+            } else {
+                familyName = ""
+            }
         }
-        .onChange(of: (familyStore.family?.selfMember.name ?? familyStore.pendingSelfMember?.name ?? "")) { _, newValue in
-            guard !newValue.isEmpty, !isEditingFamilyName else { return }
-            if selfMemberName != newValue { selfMemberName = newValue }
+        .onChange(of: familyStore.family?.name) { _, newValue in
+            guard let newValue = newValue, !newValue.isEmpty, !isEditingFamilyName else { return }
+            if familyName != newValue { familyName = newValue }
         }
-        .onChange(of: selfMemberName) { oldValue, newValue in
-            // Filter to letters and spaces only
-            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
+        .onChange(of: familyName) { oldValue, newValue in
+            // Filter to letters, spaces, apostrophes, and hyphens (for names like "O'Brien" or "Mary-Jane")
+            let filtered = newValue.filter { $0.isLetter || $0.isWhitespace || $0 == "'" || $0 == "-" }
             var finalized = filtered
             
-            // Limit to 25 characters
-            if finalized.count > 25 {
-                finalized = String(finalized.prefix(25))
-            }
-            
-            // Limit to max 3 words (max 2 spaces)
-            let components = finalized.components(separatedBy: .whitespaces)
-            if components.count > 3 {
-                finalized = components.prefix(3).joined(separator: " ")
+            // Limit to 50 characters (family names can be longer than individual names)
+            if finalized.count > 50 {
+                finalized = String(finalized.prefix(50))
             }
             
             if finalized != newValue {
-                selfMemberName = finalized
+                familyName = finalized
             }
         }
         .task {
@@ -190,34 +190,38 @@ struct ManageFamilyView: View {
         return "**\(spaced)**"
     }
 
-    private func commitSelfName() {
-        let trimmed = selfMemberName.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func commitFamilyName() {
+        let trimmed = familyName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         Task { @MainActor in
             if let family = familyStore.family {
-                var me = family.selfMember
-                guard me.name != trimmed else { return }
-                me.name = trimmed
-                await familyStore.editMember(me)
-            } else if familyStore.pendingSelfMember != nil {
-                if familyStore.pendingSelfMember?.name != trimmed {
-                    familyStore.updatePendingSelfMemberName(trimmed)
-                }
+                // Update family name using updateFamily (PUT request)
+                guard family.name != trimmed else { return }
+                await familyStore.updateFamily(
+                    name: trimmed,
+                    selfMember: family.selfMember,
+                    otherMembers: family.otherMembers
+                )
+            } else if let selfMember = familyStore.pendingSelfMember {
+                // For pending families, just update the local state
+                // The family name will be set when the family is created
+                // For now, we can't update it until the family is created
+                print("[ManageFamilyView] Cannot update family name for pending family")
             }
         }
     }
 
     @ViewBuilder
-    private func selfNameEditField() -> some View {
+    private func familyNameEditField() -> some View {
         HStack(spacing: 12) {
-            TextField("", text: $selfMemberName)
+            TextField("", text: $familyName)
                 .font(NunitoFont.semiBold.size(22))
                 .foregroundStyle(Color(hex: "#303030"))
                 .textInputAutocapitalization(.words)
                 .disableAutocorrection(true)
                 .focused($isEditingFamilyName)
                 .submitLabel(.done)
-                .onSubmit { commitSelfName() }
+                .onSubmit { commitFamilyName() }
             Image("pen-line")
                 .resizable()
                 .frame(width: 12, height: 12)
@@ -240,7 +244,7 @@ struct ManageFamilyView: View {
         .padding(.top, 10)
         .onTapGesture { isEditingFamilyName = true }
         .onChange(of: isEditingFamilyName) { _, editing in
-            if !editing { commitSelfName() }
+            if !editing { commitFamilyName() }
         }
     }
 
@@ -262,68 +266,15 @@ struct ManageFamilyView: View {
     }
 
     private var familyCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    selfNameEditField()
-                    Text("Everyone stays connected and updated here.")
-                        .font(ManropeFont.regular.size(12))
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(width: 161, alignment: .leading)
-                        .foregroundStyle(.grayScale110)
-                    
-                }
-                
-            }
-            
-            HStack(spacing: -8) {
-                ForEach(Array(members.prefix(6)), id: \.id) { member in
-                    MemberAvatar.custom(member: member, size: 32, imagePadding: 0)
-                }
-                if extraMemberCount > 0 {
-                    Circle()
-                        .fill(Color(hex: "#F2F2F2"))
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Text("+\(extraMemberCount)")
-                                .font(NunitoFont.semiBold.size(12))
-                                .foregroundStyle(.grayScale130)
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(lineWidth: 1)
-                                .foregroundStyle(Color.white)
-                        )
-                }
-                Spacer()
-                Button {
-                    coordinator.navigateInBottomSheet(.addMoreMembers)
-                } label: {
-                    GreenCapsule(title: "Add Member", width: 110, height: 36, takeFullWidth: false, labelFont: NunitoFont.semiBold.size(12))
-                        .frame(width: 110, height: 36)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-     
-      
-        .padding(20)
-        .frame(height: 143)
-        .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(Color.white)
+        FamilyCardView(
+            familyName: $familyName,
+            members: members,
+            extraMemberCount: extraMemberCount,
+            onAddMember: {
+                coordinator.navigateInBottomSheet(.addMoreMembers)
+            },
+            onCommitFamilyName: commitFamilyName
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(lineWidth: 0.75)
-                .foregroundStyle(Color(hex: "#EEEEEE"))
-        )
-        .shadow(color: Color.black.opacity(0.03), radius: 10.1, x: 0, y: 2)
-        .padding(20)
-        
-        
     }
 
     struct MemberRow: View {
@@ -437,10 +388,14 @@ struct ManageFamilyView: View {
                 } label: {
                     Text("Leave Family")
                         .font(NunitoFont.semiBold.size(12))
-                        .foregroundStyle(.grayScale110)
+                        .foregroundStyle(Color(hex: "#F04438"))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
                         .background(Color(hex: "#F2F2F2"), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color(hex: "#F04438"), lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
                 .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {
@@ -496,7 +451,169 @@ struct ManageFamilyView: View {
     }
 }
 
-#Preview {
-    ManageFamilyView()
-        .environment(FamilyStore())
+// MARK: - Family Card Component
+
+private struct FamilyCardView: View {
+    @Binding var familyName: String
+    let members: [FamilyMember]
+    let extraMemberCount: Int
+    let onAddMember: () -> Void
+    let onCommitFamilyName: () -> Void
+    
+    @FocusState private var isEditingFamilyName: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    // Label to clarify this is the family name
+                    Text("Family Name")
+                        .font(ManropeFont.regular.size(11))
+                        .foregroundStyle(.grayScale110)
+                        .padding(.top, 0)
+                    
+                    // Family name edit field
+                    HStack(spacing: 12) {
+                        TextField("", text: $familyName)
+                            .font(NunitoFont.semiBold.size(22))
+                            .foregroundStyle(Color(hex: "#303030"))
+                            .textInputAutocapitalization(.words)
+                            .disableAutocorrection(true)
+                            .focused($isEditingFamilyName)
+                            .submitLabel(.done)
+                            .onSubmit {
+                                isEditingFamilyName = false
+                                onCommitFamilyName()
+                            }
+                        Image("pen-line")
+                            .resizable()
+                            .frame(width: 12, height: 12)
+                            .foregroundStyle(.grayScale100)
+                            .onTapGesture { isEditingFamilyName = true }
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(minWidth: 144)
+                    .frame(height: 38)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(isEditingFamilyName ? Color(hex: "#EEF5E3") : .white))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
+                    )
+                    .contentShape(Rectangle())
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.top, 4)
+                    .onTapGesture { isEditingFamilyName = true }
+                    .onChange(of: isEditingFamilyName) { _, editing in
+                        if !editing { onCommitFamilyName() }
+                    }
+                    
+                    Text("Everyone stays connected and updated here.")
+                        .font(ManropeFont.regular.size(12))
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(width: 161, alignment: .leading)
+                        .foregroundStyle(.grayScale110)
+                }
+            }
+            
+            HStack {
+                HStack(spacing: -12) {
+                    ForEach(Array(members.prefix(6)), id: \.id) { member in
+                        MemberAvatar.custom(member: member, size: 32, imagePadding: 0)
+                    }
+                    if extraMemberCount > 0 {
+                        Circle()
+                            .fill(Color(hex: "#F2F2F2"))
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                Text("+\(extraMemberCount)")
+                                    .font(NunitoFont.semiBold.size(12))
+                                    .foregroundStyle(.grayScale130)
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(lineWidth: 1)
+                                    .foregroundStyle(Color.white)
+                            )
+                    }
+                    
+                    Spacer()
+                }
+                
+                Spacer()
+                
+                Button {
+                    onAddMember()
+                } label: {
+                    GreenCapsule(title: "Add Member",icon: "tabler_plus", height: 36, takeFullWidth: true, labelFont: NunitoFont.semiBold.size(12))
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 16)
+
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 28)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28)
+                .stroke(lineWidth: 0.75)
+                .foregroundStyle(Color(hex: "#EEEEEE"))
+        )
+        .shadow(color: Color.black.opacity(0.03), radius: 10.1, x: 0, y: 2)
+        .padding(.horizontal, 20)
+    }
 }
+
+// MARK: - Family Card Preview
+
+#Preview("Family Card") {
+    FamilyCardPreview()
+        .environment(WebService())
+}
+
+private struct FamilyCardPreview: View {
+    @State private var familyName: String = "Smith Family"
+    @FocusState private var isEditingFamilyName: Bool
+    
+    // Mock members data
+    private let mockMembers: [FamilyMember] = [
+        FamilyMember(id: UUID(), name: "John", color: "#E0BBE4", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Sarah", color: "#BAE1FF", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Emma", color: "#BAFFC9", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Mike", color: "#FFB3BA", joined: false, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Lisa", color: "#FFDFBA", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Tom", color: "#FFFFBA", joined: false, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Anna", color: "#E0BBE4", joined: true, imageFileHash: nil)
+    ]
+    
+    private var extraMemberCount: Int {
+        let maxShown = 6
+        return max(mockMembers.count - maxShown, 0)
+    }
+    
+    var body: some View {
+        FamilyCardView(
+            familyName: $familyName,
+            members: mockMembers,
+            extraMemberCount: extraMemberCount,
+            onAddMember: {
+                print("Add Member tapped in preview")
+            },
+            onCommitFamilyName: {
+                print("Family name committed: \(familyName)")
+            }
+        )
+        .background(Color(hex: "#F7F7F7"))
+    }
+}
+
+//#Preview {
+//    ManageFamilyView()
+//        .environment(FamilyStore())
+//}

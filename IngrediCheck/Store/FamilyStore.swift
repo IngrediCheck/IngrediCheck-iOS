@@ -565,6 +565,45 @@ final class FamilyStore {
         }
     }
     
+    /// Updates an existing family's name and members
+    func updateFamily(
+        name: String,
+        selfMember: FamilyMember,
+        otherMembers: [FamilyMember]
+    ) async {
+        Log.debug("FamilyStore", "🔵 updateFamily called")
+        Log.debug("FamilyStore", "📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
+        isLoading = true
+        errorMessage = nil
+        defer { 
+            isLoading = false
+            Log.debug("FamilyStore", "✅ updateFamily completed - isLoading: false")
+        }
+        
+        do {
+            Log.debug("FamilyStore", "⏳ Calling service.updateFamily...")
+            family = try await service.updateFamily(
+                name: name,
+                selfMember: selfMember,
+                otherMembers: otherMembers.isEmpty ? nil : otherMembers
+            )
+            
+            // Sync pending invite status after update
+            syncPendingInviteStatus()
+            
+            Log.debug("FamilyStore", "✅ updateFamily success - family name: \(family?.name ?? "nil")")
+        } catch {
+            errorMessage = (error as NSError).localizedDescription
+            Log.error("FamilyStore", "❌ updateFamily error: \(error)")
+            Log.error("FamilyStore", "❌ Error message: \(errorMessage ?? "nil")")
+            if let networkError = error as? NetworkError {
+                Log.error("FamilyStore", "❌ NetworkError details: \(networkError)")
+            } else if let urlError = error as? URLError {
+                Log.error("FamilyStore", "❌ URLError code: \(urlError.code.rawValue), description: \(urlError.localizedDescription)")
+            }
+        }
+    }
+    
     // MARK: - Members
     
     func addMember(_ member: FamilyMember) async {

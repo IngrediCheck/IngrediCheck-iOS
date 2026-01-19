@@ -9,6 +9,7 @@ import SwiftUI
 struct EnterYourInviteCode : View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(AuthController.self) private var authController
     @State private var isVerifying: Bool = false
     @State var code: [String] = Array(repeating: "", count: 6)
     @State private var isError: Bool = false
@@ -116,8 +117,28 @@ struct EnterYourInviteCode : View {
                             isError = false
                         }
                         
-                        print("[EnterYourInviteCode] Calling familyStore.join with code=\(entered.lowercased())")
-                        await familyStore.join(inviteCode: entered.lowercased())
+                        // Ensure user is authenticated (sign in anonymously if needed) before joining
+                        if await authController.signInState != .signedIn {
+                            print("[EnterYourInviteCode] User not authenticated, signing in anonymously...")
+                            await authController.signIn()
+                            
+                            // Wait a moment for session to be established
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            
+                            // Verify we're now signed in
+                            if await authController.signInState != .signedIn {
+                                print("[EnterYourInviteCode] ❌ Failed to sign in anonymously")
+                                await MainActor.run {
+                                    isVerifying = false
+                                    isError = true
+                                }
+                                return
+                            }
+                            print("[EnterYourInviteCode] ✅ Successfully signed in anonymously")
+                        }
+                        
+                        print("[EnterYourInviteCode] Calling familyStore.join with code=\(entered)")
+                        await familyStore.join(inviteCode: entered)
                         
                         await MainActor.run {
                             isVerifying = false
