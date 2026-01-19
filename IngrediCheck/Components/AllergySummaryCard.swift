@@ -6,6 +6,81 @@
 //
 
 import SwiftUI
+import UIKit
+
+// MARK: - Exclusion Multi-Color Text (UIKit-based for text wrapping around cutout)
+
+/// A UIViewRepresentable that displays multi-color text with an exclusion path
+/// for the bottom-right corner cutout in AllergySummaryCard
+struct ExclusionMultiColorText: UIViewRepresentable {
+    let text: String
+    var delimiter: Character = "*"
+    var font: UIFont = UIFont(name: "Manrope-Bold", size: 14) ?? .boldSystemFont(ofSize: 14)
+    var containerSize: CGSize = .zero
+    var exclusionRect: CGRect = .zero
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.backgroundColor = .clear
+        textView.isEditable = false
+        textView.isSelectable = false
+        textView.isScrollEnabled = false
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
+        textView.textContainer.lineBreakMode = .byWordWrapping
+        textView.textContainer.maximumNumberOfLines = 0
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        return textView
+    }
+
+    func updateUIView(_ textView: UITextView, context: Context) {
+        // Set the text container size to match available space
+        if containerSize != .zero {
+            textView.textContainer.size = containerSize
+        }
+
+        // Build attributed string with multi-color support
+        textView.attributedText = buildAttributedString()
+
+        // Set exclusion path for bottom-right corner
+        if exclusionRect != .zero && exclusionRect.origin.y > 0 {
+            let exclusionPath = UIBezierPath(rect: exclusionRect)
+            textView.textContainer.exclusionPaths = [exclusionPath]
+        } else {
+            textView.textContainer.exclusionPaths = []
+        }
+
+        // Force layout update
+        textView.layoutIfNeeded()
+    }
+
+    private func buildAttributedString() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        let components = text.components(separatedBy: String(delimiter))
+
+        // Paragraph style for proper word wrapping
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        paragraphStyle.lineBreakStrategy = .standard
+
+        // Colors matching MultiColorText
+        let defaultColor = UIColor(named: "grayScale140") ?? UIColor(red: 0.13, green: 0.15, blue: 0.17, alpha: 1.0)
+        let highlightColor = UIColor(named: "grayScale90") ?? UIColor(red: 0.48, green: 0.51, blue: 0.53, alpha: 1.0)
+
+        for (index, part) in components.enumerated() {
+            let color = index % 2 == 0 ? defaultColor : highlightColor
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: color,
+                .paragraphStyle: paragraphStyle
+            ]
+            result.append(NSAttributedString(string: part, attributes: attributes))
+        }
+
+        return result
+    }
+}
 
 // MARK: - Food Emoji Mapper
 
@@ -267,7 +342,7 @@ struct AllergySummaryCard: View {
     var onTap: (() -> Void)? = nil
 
     private var emptyStateFormattedText: String {
-        formatCardText("\"Add *allergies* or *dietary* needs for your *family* members to make meal *choices* easier for everyone.\"")
+        formatCardText("Add *allergies* or *dietary* needs for your *family* members to make meal *choices* easier for everyone.")
     }
 
     /// Returns true if we should show the empty state (no data yet)
@@ -285,77 +360,123 @@ struct AllergySummaryCard: View {
         return FoodEmojiMapper.addHighlightMarkers(to: withEmojis)
     }
 
-    var body: some View {
-        ZStack {
-            // Tappable background
-            MyIcon()
-                .fill(.grayScale10)
-                .overlay(
-                    MyIcon()
-                        .stroke(lineWidth: 0.25)
-                        .foregroundStyle(.grayScale60)
-                )
-                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                .contentShape(MyIcon())
-                .onTapGesture {
-                    onTap?()
-                }
-            
-            // Content
-            VStack(alignment: .leading, spacing: 8) {
-                if isEmptyState {
-                    // Empty state: "No Data Yet" badge + placeholder text
-                    Text("No Data Yet")
-                        .font(ManropeFont.regular.size(8))
-                        .foregroundStyle(.grayScale130)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 8)
-                        .background(.grayScale30, in: .capsule)
-                        .overlay(
-                            Capsule()
-                                .stroke(lineWidth: 0.5)
-                                .foregroundStyle(.grayScale70)
-                        )
+    /// Calculate the text container size based on card geometry
+    private func textContainerSize(for size: CGSize) -> CGSize {
+        let horizontalPadding: CGFloat = 10
+        let topPadding: CGFloat = 12
+        let bottomPadding: CGFloat = 17
+        let badgeHeight: CGFloat = isEmptyState ? 28 : 0  // Badge + spacing for empty state
 
-                    MultiColorText(text: emptyStateFormattedText)
-                        .padding(.trailing, 10)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineLimit(6)
-                } else {
-                    // Has summary: show the AI-generated summary text with emojis
-                    MultiColorText(text: "\"\(summaryWithEmojis)\"")
-                        .padding(.trailing, 10)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineLimit(6)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 12)
-            .padding(.bottom, 17)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .allowsHitTesting(false)
-            
-            // Button overlay - takes priority
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
+        let width = size.width - (horizontalPadding * 2)
+        let height = size.height - topPadding - bottomPadding - badgeHeight
+
+        return CGSize(width: max(0, width), height: max(0, height))
+    }
+
+    /// Calculate exclusion rect for the bottom-right corner cutout
+    /// Based on MyIcon shape which has a curved cutout starting at ~70% width, ~60% height
+    private func exclusionRect(for size: CGSize) -> CGRect {
+        // The green button is ~43px (37 + 6 padding) in bottom-right
+        // Only exclude the area where the button actually sits
+
+        let containerSize = textContainerSize(for: size)
+
+        // Button area: approximately 50x55 pixels in bottom-right of text area
+        let buttonWidth: CGFloat = 55
+        let buttonHeight: CGFloat = 65
+
+        let exclusionX = containerSize.width - buttonWidth
+        let exclusionY = containerSize.height - buttonHeight
+
+        // Only create exclusion if there's enough space
+        guard exclusionX > 0 && exclusionY > 0 else { return .zero }
+
+        return CGRect(x: exclusionX, y: exclusionY, width: buttonWidth + 20, height: buttonHeight + 20)
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Tappable background
+                MyIcon()
+                    .fill(.grayScale10)
+                    .overlay(
+                        MyIcon()
+                            .stroke(lineWidth: 0.25)
+                            .foregroundStyle(.grayScale60)
+                    )
+                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                    .contentShape(MyIcon())
+                    .onTapGesture {
                         onTap?()
-                    }) {
-                        GreenCircle(iconName: "arrow-up-right", iconSize: 20, circleSize: 37)
-                            .padding(3)
                     }
-                    .buttonStyle(.plain)
+
+                // Content with text exclusion for bottom-right cutout
+                VStack(alignment: .leading, spacing: 8) {
+                    if isEmptyState {
+                        // Empty state: "No Data Yet" badge + placeholder text
+                        Text("No Data Yet")
+                            .font(ManropeFont.regular.size(8))
+                            .foregroundStyle(.grayScale130)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(.grayScale30, in: .capsule)
+                            .overlay(
+                                Capsule()
+                                    .stroke(lineWidth: 0.5)
+                                    .foregroundStyle(.grayScale70)
+                            )
+
+                        ExclusionMultiColorText(
+                            text: emptyStateFormattedText,
+                            font: UIFont(name: "Manrope-Bold", size: 14) ?? .boldSystemFont(ofSize: 14),
+                            containerSize: textContainerSize(for: geometry.size),
+                            exclusionRect: exclusionRect(for: geometry.size)
+                        )
+                        .frame(width: textContainerSize(for: geometry.size).width,
+                               height: textContainerSize(for: geometry.size).height,
+                               alignment: .topLeading)
+                    } else {
+                        // Has summary: show the AI-generated summary text with emojis
+                        ExclusionMultiColorText(
+                            text: "\"\(summaryWithEmojis)\"",
+                            font: UIFont(name: "Manrope-Bold", size: 14) ?? .boldSystemFont(ofSize: 14),
+                            containerSize: textContainerSize(for: geometry.size),
+                            exclusionRect: exclusionRect(for: geometry.size)
+                        )
+                        .frame(width: textContainerSize(for: geometry.size).width,
+                               height: textContainerSize(for: geometry.size).height,
+                               alignment: .topLeading)
+                    }
                 }
+                .padding(.horizontal, 10)
+                .padding(.top, 12)
+                .padding(.bottom, 17)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .allowsHitTesting(false)
+
+                // Button overlay - takes priority
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            onTap?()
+                        }) {
+                            GreenCircle(iconName: "arrow-up-right", iconSize: 20, circleSize: 37)
+                                .padding(3)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.bottom, 3)
+                .padding(.trailing, 3)
             }
-            .padding(.bottom, 3)
-            .padding(.trailing, 3)
         }
     }
 }
 
-#Preview {
+#Preview("Empty State") {
     ZStack {
         Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
         AllergySummaryCard()
@@ -363,6 +484,30 @@ struct AllergySummaryCard: View {
     }
 }
 
+#Preview("With Summary") {
+    ZStack {
+        Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
+        /*
+         Your family avoids palm oil, is allergic to peanuts, celery, and fish, follows a vegetarian and vegan lifestyle, loves spicy food, aims for high protein and low carb, and is intolerant to fructose and histamine.
+         */
+        AllergySummaryCard(
+            summary: "Your *family* avoids 🥜 peanuts, 🦀 dairy, eggs, gluten, 🥩 red meat, alcohol, *making meal* *choices* *simpler* *and* *safer* *for everyone*."
+        )
+        .frame(width: 171, height: 196, alignment: .center)
+    }
+}
+
+#Preview("Long Text - Truncation") {
+    ZStack {
+        Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
+        AllergySummaryCard(
+            summary: "Your *family* avoids 🥜 peanuts, 🦀 shellfish, 🥛 dairy, 🥚 eggs, 🌾 gluten, 🥩 red meat, 🍺 alcohol, 🥜 tree nuts, 🫘 soy, 🌿 sesame, and many other allergens, *making meal* *choices* *simpler* *and* *safer* *for everyone* in your household."
+        )
+        .frame(width: 171, height: 196, alignment: .center)
+    }
+}
+
 #Preview("AISummaryCard") {
-    AISummaryCard(summary: "Test")
+    AISummaryCard(summary: "Your family avoids peanuts, dairy, eggs, gluten, red meat, alcohol, making meal choices simpler and safer for everyone.")
+        .padding()
 }
