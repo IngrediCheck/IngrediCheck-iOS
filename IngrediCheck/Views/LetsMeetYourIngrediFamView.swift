@@ -25,6 +25,10 @@ struct LetsMeetYourIngrediFamView: View {
     }
     
     private var shouldShowWelcomeFamily: Bool {
+        // Show welcome screen when joining via invite code
+        if coordinator.isJoiningViaInviteCode {
+            return true
+        }
         switch coordinator.currentBottomSheetRoute {
         case .whosThisFor:
             return true

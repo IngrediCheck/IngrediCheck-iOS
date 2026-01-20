@@ -498,7 +498,10 @@ struct PersistentBottomSheet: View {
         case .enterInviteCode:
             EnterYourInviteCode(
                 yesPressed: {
-                    coordinator.showCanvas(.welcomeToYourFamily)
+                    // Show profile screen first before welcome screen
+                    coordinator.isJoiningViaInviteCode = true
+                    coordinator.showCanvas(.letsMeetYourIngrediFam)
+                    coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
                 },
                 noPressed: {
                     coordinator.navigateInBottomSheet(.whosThisFor)
@@ -824,8 +827,11 @@ struct PersistentBottomSheet: View {
             
         case .meetYourProfile(let memberId):
             MeetYourProfileView(memberId: memberId) {
-                // Check if we're on the family overview screen
-                if coordinator.currentCanvasRoute == .letsMeetYourIngrediFam {
+                // Check if user just joined via invite code - proceed to welcome screen
+                if coordinator.isJoiningViaInviteCode {
+                    coordinator.isJoiningViaInviteCode = false
+                    coordinator.showCanvas(.welcomeToYourFamily)
+                } else if coordinator.currentCanvasRoute == .letsMeetYourIngrediFam {
                     // If on family overview, just go back to the family overview bottom sheet
                     coordinator.navigateInBottomSheet(.letsMeetYourIngrediFam)
                 } else if coordinator.currentCanvasRoute == .home {

@@ -61,6 +61,9 @@ class AppNavigationCoordinator {
     private var previousBottomSheetRoute: BottomSheetRoute?
     // Track if family creation was initiated from Settings
     var isCreatingFamilyFromSettings: Bool = false
+
+    // Track if user just joined a family via invite code
+    var isJoiningViaInviteCode: Bool = false
     
     // Global state for secondary edit sheet
     var editingStepId: String? = nil
