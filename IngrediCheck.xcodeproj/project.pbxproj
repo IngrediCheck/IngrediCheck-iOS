@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFADBFEDBD6464085931D95 /* AppRoute.swift */; };
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
 		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
@@ -107,6 +108,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2CFADBFEDBD6464085931D95 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
 		0CF25DF32EDD9C9600C582FA /* MeetYourProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetYourProfileView.swift; sourceTree = "<group>"; };
@@ -238,6 +240,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D3017FACE7F449A385F47E9B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2CFADBFEDBD6464085931D95 /* AppRoute.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		1F5987782E30C4F200381E32 /* TipJar */ = {
 			isa = PBXGroup;
 			children = (
@@ -399,6 +409,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				D3017FACE7F449A385F47E9B /* Models */,
 				0CBB73342F03B575003ED0F5 /* Resources */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
@@ -543,6 +554,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */,
 				397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */,
 				3976C41B2BBEE1750026991A /* SafariView.swift in Sources */,
 				392D9BF72B72CC8A00166CF1 /* HomeTab.swift in Sources */,

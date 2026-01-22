@@ -10,6 +10,7 @@ import StoreKit
 enum CameraPresentationSource {
     case homeView
     case productDetailView
+    case pushNavigation  // Used when navigating via AppRoute (Single Root NavigationStack)
 }
 
 struct ScanCameraView: View {

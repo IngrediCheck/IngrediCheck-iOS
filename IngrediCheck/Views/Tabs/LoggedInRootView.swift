@@ -49,6 +49,29 @@ struct ListsTabState {
     @MainActor var feedbackConfig: FeedbackConfig?
     @MainActor var navigateToSettings: Bool = false
 
+    // MARK: - Single Root NavigationStack
+
+    /// The unified navigation path for the entire app.
+    /// All navigation flows through this path via `navigate(to:)`.
+    @MainActor var navigationPath = NavigationPath()
+
+    /// Navigate to a route by pushing it onto the navigation stack.
+    @MainActor func navigate(to route: AppRoute) {
+        navigationPath.append(route)
+    }
+
+    /// Pop the top route from the navigation stack.
+    @MainActor func navigateBack() {
+        if !navigationPath.isEmpty {
+            navigationPath.removeLast()
+        }
+    }
+
+    /// Pop all routes, returning to the root view.
+    @MainActor func navigateToRoot() {
+        navigationPath = NavigationPath()
+    }
+
     @MainActor func setHistoryItemFavorited(clientActivityId: String, favorited: Bool) {
         // Legacy function for backwards compatibility with old HistoryItem API
         // The new API uses scans with id instead of clientActivityId
@@ -102,37 +125,43 @@ struct ListsTabState {
         @Bindable var appState = appState
         @Bindable var coordinator = coordinator
 
-        ZStack(alignment: .bottom) {
-            VStack {
-                switch (appState.activeTab) {
-                case .home:
-                    HomeTab()
-                case .lists:
-                    ListsTab()
+        NavigationStack(path: $appState.navigationPath) {
+            ZStack(alignment: .bottom) {
+                VStack {
+                    switch (appState.activeTab) {
+                    case .home:
+                        HomeTab()
+                    case .lists:
+                        ListsTab()
+                    }
                 }
-            }
-            .tabViewStyle(PageTabViewStyle())
-            .toolbar {
-                ToolbarItemGroup(placement: .bottomBar) {
-                    tabButtons
+                .tabViewStyle(PageTabViewStyle())
+                .toolbar {
+                    ToolbarItemGroup(placement: .bottomBar) {
+                        tabButtons
+                    }
                 }
-            }
 
-            // Dim background when certain sheets are presented (e.g., Invite)
-            Group {
-                switch coordinator.currentBottomSheetRoute {
-                case .wouldYouLikeToInvite(_, _):
-                    Color.black.opacity(0.45)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
-                default:
-                    EmptyView()
+                // Dim background when certain sheets are presented (e.g., Invite)
+                Group {
+                    switch coordinator.currentBottomSheetRoute {
+                    case .wouldYouLikeToInvite(_, _):
+                        Color.black.opacity(0.45)
+                            .ignoresSafeArea()
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    default:
+                        EmptyView()
+                    }
                 }
-            }
 
-            PersistentBottomSheet()
+                PersistentBottomSheet()
+            }
+            .navigationDestination(for: AppRoute.self) { route in
+                destinationView(for: route)
+            }
         }
+        .tint(Color(hex: "#303030"))
         .environment(coordinator)
         .environmentObject(onboarding)
         .onAppear {
@@ -168,6 +197,10 @@ struct ListsTabState {
                 refreshHistory()
             }
             lastPresentedSheet = newSheet
+        }
+        .onChange(of: appState.activeTab) { _, _ in
+            // Reset navigation to root when switching tabs
+            appState.navigateToRoot()
         }
     }
     
@@ -248,6 +281,61 @@ struct ListsTabState {
                     appState.listsTabState.listItems = listItems
                 }
             }
+        }
+    }
+
+    // MARK: - Navigation Destination Builder
+
+    /// Builds the destination view for each AppRoute.
+    /// All navigated views receive proper environment objects.
+    @ViewBuilder
+    private func destinationView(for route: AppRoute) -> some View {
+        switch route {
+        case .productDetail(let scanId, let initialScan):
+            ProductDetailView(
+                scanId: scanId,
+                initialScan: initialScan,
+                presentationSource: .pushNavigation
+            )
+
+        case .scanCamera(let initialMode, let initialScanId):
+            ScanCameraView()
+                .environment(userPreferences)
+
+        case .favoritesAll:
+            FavoritesPageView()
+                .environment(appState)
+
+        case .recentScansAll:
+            RecentScansPageView()
+                .environment(appState)
+                .environment(scanHistoryStore)
+
+        case .favoriteDetail(let item):
+            // Show product detail for a favorite list item
+            ProductDetailView(
+                scanId: item.list_item_id,
+                initialScan: nil,
+                presentationSource: .pushNavigation
+            )
+
+        case .settings:
+            SettingsContentView()
+                .environment(userPreferences)
+                .environment(memojiStore)
+                .environment(coordinator)
+
+        case .manageFamily:
+            ManageFamilyView()
+                .environment(coordinator)
+
+        case .editableCanvas(let targetSection):
+            UnifiedCanvasView(mode: .editing, targetSectionName: targetSection)
+                .environment(memojiStore)
+                .environment(coordinator)
+
+        case .ingrediBot:
+            IngrediBotChatView()
         }
     }
 }

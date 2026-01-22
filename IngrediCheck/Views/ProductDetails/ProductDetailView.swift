@@ -10,6 +10,7 @@ import SwiftUI
 enum ProductDetailPresentationSource {
     case homeView
     case cameraView
+    case pushNavigation  // Used when navigating via AppRoute (Single Root NavigationStack)
 }
 
 struct ProductDetailView: View {
@@ -959,6 +960,10 @@ struct ProductDetailView: View {
                 onRequestCameraWithScan?(scanId)
             }
             dismiss()
+        case .pushNavigation:
+            // Navigate to camera via AppRoute (dismisses product detail first)
+            // For now, treat same as homeView - open camera as full screen cover
+            isCameraPresentedFromDetail = true
         }
     }
     
