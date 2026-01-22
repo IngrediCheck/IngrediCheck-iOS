@@ -25,6 +25,10 @@ struct LetsMeetYourIngrediFamView: View {
     }
     
     private var shouldShowWelcomeFamily: Bool {
+        // Show welcome screen when joining via invite code
+        if coordinator.isJoiningViaInviteCode {
+            return true
+        }
         switch coordinator.currentBottomSheetRoute {
         case .whosThisFor:
             return true
@@ -121,7 +125,7 @@ struct LetsMeetYourIngrediFamView: View {
                                         .foregroundStyle(.grayScale110)
                                         .padding(.vertical, 8)
                                         .padding(.horizontal, 18)
-                                        .background(Color(hex: "#F2F2F2"), in: Capsule())
+                                        .background(Color.clear, in: Capsule())
                                 }
                                 .buttonStyle(.plain)
                                 .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {

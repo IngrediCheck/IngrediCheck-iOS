@@ -229,22 +229,23 @@ struct RootContainerView: View {
             DietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow)
         case .welcomeToYourFamily:
             NavigationStack {
-                EditableCanvasView(
+                UnifiedCanvasView(
+                    mode: .editing,
                     titleOverride: "Welcome to \(familyStore.family?.name ?? "your")'s family",
                     showBackButton: false
                 )
             }
         case .mainCanvas(let flow):
-            MainCanvasView(flow: flow)
+            UnifiedCanvasView(mode: .onboarding(flow: flow))
         case .home:
             HomeView()
         case .summaryJustMe:
             NavigationStack {
-                EditableCanvasView(titleOverride: "Your Food Notes", showBackButton: false)
+                UnifiedCanvasView(mode: .editing, titleOverride: "Your Food Notes", showBackButton: false)
             }
         case .summaryAddFamily:
             NavigationStack {
-                EditableCanvasView(titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
+                UnifiedCanvasView(mode: .editing, titleOverride: "Your IngrediFam Food Notes", showBackButton: false)
             }
         case .readyToScanFirstProduct:
             ReadyToScanCanvas()

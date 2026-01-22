@@ -285,8 +285,6 @@ struct ProductDetailView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            header
-            
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     // Gallery section - never redacted, shows placeholder images
@@ -311,6 +309,10 @@ struct ProductDetailView: View {
                                     ingredientRecommendations: resolvedIngredientRecommendations,
                                     onFeedback: { item, voteType in
                                         handleIngredientFeedback(item: item, voteType: voteType)
+                                    },
+                                    productVote: scan?.product_info_vote,
+                                    onProductFeedback: { voteType in
+                                        handleProductFeedback(voteType: voteType)
                                     }
                                 )
                                 .padding(.horizontal, 20)
@@ -344,7 +346,51 @@ struct ProductDetailView: View {
             }
         }
         .background(Color(hex: "FFFFFF"))
-        .navigationBarBackButtonHidden(true)
+        .navigationTitle(resolvedBrand.isEmpty ? "Product Detail" : resolvedBrand)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Back button (only show when presented from camera view)
+            if presentationSource == .cameraView {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(ManropeFont.medium.size(16))
+                        }
+                        .foregroundStyle(.grayScale150)
+                    }
+                }
+            }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 12) {
+                    // Re-analysis button (when stale)
+                    if resolvedIsStale {
+                        Button {
+                            performReanalysis()
+                        } label: {
+                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color(hex: "#FF8A00"))
+                        }
+                    }
+
+                    // Favorite button
+                    Button {
+                        toggleFavorite()
+                    } label: {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart")
+                            .font(.system(size: 20))
+                            .foregroundStyle(isFavorite ? Color(hex: "#FF1100") : .grayScale150)
+                    }
+                    .disabled(scanId == nil && product == nil)
+                }
+            }
+        }
         .onChange(of: isIngredientsExpanded) { _, expanded in
             if !expanded {
                 activeIngredientHighlight = nil
@@ -789,52 +835,6 @@ struct ProductDetailView: View {
         }
     }
 
-    private var header: some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.black)
-                    .frame(width: 24, height: 24)
-                    .contentShape(Rectangle())
-            }
-            
-            Spacer()
-            
-            Text("Product Detail")
-                .font(ManropeFont.semiBold.size(18))
-                .foregroundStyle(.grayScale150)
-            
-            Spacer()
-            
-            Button {
-                toggleFavorite()
-            } label: {
-                Image(systemName: isFavorite ? "heart.fill" : "heart")
-                    .font(.system(size: 20))
-                    .foregroundStyle(isFavorite ? Color(hex: "#FF1100") : .grayScale150)
-            }
-            .disabled(scanId == nil && product == nil)  // Disable if no scan or product data
-            
-            // Re-analysis button (nearby heart icon)
-            if resolvedIsStale {
-                Button {
-                    performReanalysis()
-                } label: {
-                    Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color(hex: "#FF8A00")) // Orange to indicate action needed/stale
-                }
-                .padding(.leading, 8)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 20)
-    }
-    
     // MARK: - Missing Ingredients View
     
     /// Shows when product has images/name but no ingredients
@@ -1052,15 +1052,12 @@ struct ProductDetailView: View {
     
     private var productInformation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(resolvedBrand)
-                .font(ManropeFont.regular.size(14))
-                .foregroundStyle(.grayScale100)
-            
             HStack(alignment: .top, spacing: 24) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(resolvedName)
                         .font(NunitoFont.bold.size(20))
                         .foregroundStyle(.grayScale150)
+                        .lineLimit(2)
               
                     // Only show resolvedDetails if it's not empty (API doesn't provide this field)
                     if !resolvedDetails.isEmpty {
@@ -1072,36 +1069,16 @@ struct ProductDetailView: View {
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 16) {
-                    HStack(spacing: 4) {
-                        StatusDotView(status: resolvedStatus)
-                        
-                        Text(resolvedStatus.title)
-                            .font(NunitoFont.bold.size(14))
-                            .foregroundStyle(resolvedStatus.color)
-                    }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(resolvedStatus.badgeBackground, in: Capsule())
-                    
-                    HStack(spacing: 12) {
-                        FeedbackButton(
-                            type: .up,
-                            isSelected: scan?.product_info_vote?.value == "up",
-                            style: .boxed
-                        ) {
-                            handleProductFeedback(voteType: "up")
-                        }
-                        
-                        FeedbackButton(
-                            type: .down,
-                            isSelected: scan?.product_info_vote?.value == "down",
-                            style: .boxed
-                        ) {
-                            handleProductFeedback(voteType: "down")
-                        }
-                    }
+                HStack(spacing: 4) {
+                    StatusDotView(status: resolvedStatus)
+
+                    Text(resolvedStatus.title)
+                        .font(NunitoFont.bold.size(14))
+                        .foregroundStyle(resolvedStatus.color)
                 }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(resolvedStatus.badgeBackground, in: Capsule())
             }
         }
         .padding(.horizontal, 20)

@@ -13,6 +13,8 @@ struct SettingsContentView: View {
     @Environment(\.openURL) var openURL
     @Environment(AppNavigationCoordinator.self) var coordinator
     @Environment(MemojiStore.self) var memojiStore
+    @Environment(FoodNotesStore.self) var foodNotesStore: FoodNotesStore?
+    @EnvironmentObject var onboarding: Onboarding
     
     @State private var showInternalModeToast = false
     @State private var internalModeToastMessage = "Internal Mode Unlocked"
@@ -307,12 +309,18 @@ struct SettingsContentView: View {
                 
             }
             .fullScreenCover(isPresented: $showEditableCanvas) {
-                EditableCanvasView(
+                UnifiedCanvasView(
+                    mode: .editing,
                     targetSectionName: editTargetSectionName,
-                    onBack: {
+                    onDismiss: {
                         showEditableCanvas = false
                     }
                 )
+                .environmentObject(onboarding)
+                .environment(coordinator)
+                .environment(webService)
+                .environment(familyStore)
+                .environment(foodNotesStore)
             }
         .background(Color(hex: "#F7F7F7"))
             .navigationBarTitleDisplayMode(.inline)

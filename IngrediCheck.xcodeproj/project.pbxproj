@@ -94,6 +94,7 @@
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
 		D3BED0662ED9974A00088E044 /* RecentScansFullView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */; };
+		D3CE197A2F20EF400097B28D /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CE19792F20EF400097B28D /* ViewExtensions.swift */; };
 		D3F0E0032F0A1B2C3D4E5F60 /* MemojiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */; };
 		D3F0E0042F0A1B2C3D4E5F60 /* MemojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */; };
 		D3F0E0062F0A1B2C3D4E5F60 /* AIMemojiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */; };
@@ -186,6 +187,7 @@
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0652ED9974A00088E044 /* RecentScansFullView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentScansFullView.swift; sourceTree = "<group>"; };
+		D3CE19792F20EF400097B28D /* ViewExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewExtensions.swift; sourceTree = "<group>"; };
 		D3F0E0012F0A1B2C3D4E5F60 /* MemojiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiModels.swift; sourceTree = "<group>"; };
 		D3F0E0022F0A1B2C3D4E5F60 /* MemojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemojiStore.swift; sourceTree = "<group>"; };
 		D3F0E0052F0A1B2C3D4E5F60 /* AIMemojiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMemojiService.swift; sourceTree = "<group>"; };
@@ -201,6 +203,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0C3A858A2F04EDB20018E877 /* Sheets */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Sheets; sourceTree = "<group>"; };
 		0CBB73342F03B575003ED0F5 /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
+		D33AC8782F1E3E6300EAD08F /* Canvas */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Canvas; sourceTree = "<group>"; };
 		D3BECBA72ED9898E0088E044 /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		D3BECBCA2ED989B70088E044 /* backend */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = backend; sourceTree = "<group>"; };
 		D3BECBE72ED989D40088E044 /* Font Family */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Font Family"; sourceTree = "<group>"; };
@@ -247,6 +250,7 @@
 		1FF63CC92E32020C005BEDF1 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				D3CE19792F20EF400097B28D /* ViewExtensions.swift */,
 				D3F6ACCB2F1102EC0019F5C4 /* ToastManager.swift */,
 				D3F6ACC72F10E3490019F5C4 /* OnboardingPersistence.swift */,
 				D3BECC8F2ED98EA10088E044 /* BottomSheetRoute.swift */,
@@ -339,6 +343,7 @@
 		397C86022B6C16F500FB9DAD /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				D33AC8782F1E3E6300EAD08F /* Canvas */,
 				0C3A858A2F04EDB20018E877 /* Sheets */,
 				D3BED0612ED997490088E044 /* HomeView.swift */,
 				D3BED0632ED997490088E044 /* EditableCanvasView.swift */,
@@ -449,6 +454,7 @@
 			fileSystemSynchronizedGroups = (
 				0C3A858A2F04EDB20018E877 /* Sheets */,
 				0CBB73342F03B575003ED0F5 /* Resources */,
+				D33AC8782F1E3E6300EAD08F /* Canvas */,
 				D3BECBA72ED9898E0088E044 /* Components */,
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
@@ -587,6 +593,7 @@
 				D3BECC842ED98D320088E044 /* LetsGetStartedView.swift in Sources */,
 				D382E0602EDEE4B600F139B2 /* FamilyModels.swift in Sources */,
 				D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */,
+				D3CE197A2F20EF400097B28D /* ViewExtensions.swift in Sources */,
 				D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */,
 				D382E0642EDEE4B600F139B2 /* FoodNotesStore.swift in Sources */,
 				0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */,

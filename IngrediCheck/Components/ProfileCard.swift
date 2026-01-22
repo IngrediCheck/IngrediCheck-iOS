@@ -10,7 +10,7 @@ import SwiftUI
 struct ProfileCard: View {
     @Environment(FamilyStore.self) private var familyStore
     
-    @State var isProfileCompleted: Bool = false
+    @State var isProfileCompleted: Bool = true
     
     private var selfMember: FamilyMember? {
         return familyStore.family?.selfMember
@@ -20,28 +20,20 @@ struct ProfileCard: View {
         ZStack {
             
             if isProfileCompleted {
-                Circle()
-                    .frame(width: 66, height: 66)
-                    .foregroundStyle(Color(hex: "#ABAAAA").opacity(0.1))
-                    .shadow(color: Color(hex: "#ECECEC"), radius: 9, x: 0, y: 0)
-                    
-                
-                Circle()
-                    .frame(width: 55, height: 55)
-                    .foregroundStyle(.grayScale10)
-                    .shadow(color: Color(hex: "#FBFBFB"), radius: 9, x: 0, y: 0)
-                    
-                
                 if let member = selfMember {
                     ProfileCardAvatarView(member: member, size: 55)
+                        .overlay(
+                            Circle().stroke(Color.white, lineWidth: 4)
+                        )
                 } else {
-                    Image("profile-ritika")
+                    Image("memoji_4")
                         .resizable()
                         .frame(width: 55, height: 55)
-                        .clipShape(.circle)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle().stroke(Color.white, lineWidth: 4)
+                        )
                 }
-                
-                    
             } else {
                 // the below component is only for background shadow as this is in zstack so for shadow this component is placed on the back of the circle so that the shadow should not overlap the circle
                 Text("611")
@@ -128,6 +120,44 @@ struct ProfileCardAvatarView: View {
     }
 }
 
+#Preview("ProfileCardAvatarView") {
+    let sampleMember = FamilyMember(
+        id: UUID(),
+        name: "John Doe",
+        color: "#91B640",
+        joined: true,
+        imageFileHash: "memoji_4",
+        invitePending: nil
+    )
+    
+    HStack(spacing: 20) {
+        ProfileCardAvatarView(member: sampleMember, size: 38)
+            .overlay(
+                Circle().stroke(Color.white, lineWidth: 4)
+            )
+
+        ProfileCardAvatarView(member: sampleMember, size: 55)
+            .overlay(
+                Circle().stroke(Color.white, lineWidth: 4)
+            )
+
+        ProfileCardAvatarView(member: sampleMember, size: 66)
+            .overlay(
+                Circle().stroke(Color.white, lineWidth: 4)
+            )
+
+    }
+    .padding()
+    .background(Color.grayScale30)
+    .environment(WebService())
+}
+
 #Preview {
-    ProfileCard()
+    ZStack {
+        
+        Color.grayScale30
+        
+        ProfileCard()
+            .environment(FamilyStore())
+    }
 }
