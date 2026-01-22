@@ -10,9 +10,11 @@ import SwiftUI
 
 struct IngrediBotChatView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(AppState.self) private var appState
     @State private var message: String = ""
     var onDismiss: (() -> Void)? = nil
     @State private var isBotThinking: Bool = false
+    @State private var navigationTestResult: String? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -112,11 +114,50 @@ struct IngrediBotChatView: View {
                         isFirstForSide: true
                     )
                     ConversationBubble(
-                        text: "Great! I’ve queued a Saturday morning prep reminder and saved your updated preferences.\nAnything else you’d like help with right now?",
+                        text: "Great! I've queued a Saturday morning prep reminder and saved your updated preferences.\nAnything else you'd like help with right now?",
                         isFirstForSide: true,
                         leadingIconName: "ingrediBot"
                     )
-                    
+
+                    // MARK: - Navigation Test Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("🧪 Navigation Test Commands:")
+                            .font(ManropeFont.semiBold.size(12))
+                            .foregroundStyle(.grayScale120)
+
+                        Text("Type one of these to test:")
+                            .font(ManropeFont.regular.size(11))
+                            .foregroundStyle(.grayScale100)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("• /scan - Open Camera")
+                            Text("• /family - Manage Family")
+                            Text("• /settings - Settings")
+                            Text("• /favorites - All Favorites")
+                            Text("• /recent - Recent Scans")
+                        }
+                        .font(ManropeFont.medium.size(11))
+                        .foregroundStyle(.paletteAccent)
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(hex: "F0F8E0"))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.paletteAccent.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                    .padding(.top, 16)
+
+                    if let result = navigationTestResult {
+                        ConversationBubble(
+                            text: result,
+                            isFirstForSide: true,
+                            leadingIconName: "ingrediBot"
+                        )
+                    }
+
                     if isBotThinking {
                         TypingBubble(side: .bot)
                     }
@@ -137,20 +178,25 @@ struct IngrediBotChatView: View {
                     )
                 
                 Button {
-                    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        message = ""
+                    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    message = ""
+
+                    // Check for navigation test commands
+                    if trimmed.hasPrefix("/") {
+                        handleNavigationCommand(trimmed)
+                        return
                     }
-                    // Navigate to Home screen directly
+
+                    // Original behavior - Navigate to Home screen directly
                     // Determine if we are in the initial onboarding flow
                     let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
-                    
+
                     if let onDismiss {
                         onDismiss()
                     } else {
                         coordinator.dismissChatBot()
                     }
-                    
+
                     if isOnboarding {
                         if coordinator.onboardingFlow == .individual {
                             coordinator.showCanvas(.summaryJustMe)
@@ -191,6 +237,44 @@ struct IngrediBotChatView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 // Keep future hook for showing typing previews or suggestions.
             }
+        }
+    }
+
+    // MARK: - Navigation Command Handler
+    private func handleNavigationCommand(_ command: String) {
+        switch command {
+        case "/scan", "/camera":
+            navigationTestResult = "✅ Navigating to Camera..."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
+            }
+
+        case "/family", "/managefamily":
+            navigationTestResult = "✅ Navigating to Manage Family..."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                appState.navigate(to: .manageFamily)
+            }
+
+        case "/settings":
+            navigationTestResult = "✅ Navigating to Settings..."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                appState.navigate(to: .settings)
+            }
+
+        case "/favorites", "/favs":
+            navigationTestResult = "✅ Navigating to Favorites..."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                appState.navigate(to: .favoritesAll)
+            }
+
+        case "/recent", "/history":
+            navigationTestResult = "✅ Navigating to Recent Scans..."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                appState.navigate(to: .recentScansAll)
+            }
+
+        default:
+            navigationTestResult = "❌ Unknown command: \(command)\nTry /scan, /family, /settings, /favorites, or /recent"
         }
     }
 }
@@ -297,6 +381,7 @@ private struct TypingBubble: View {
     NavigationStack {
         IngrediBotChatView()
             .environment(AppNavigationCoordinator())
+            .environment(AppState())
     }
 }
 

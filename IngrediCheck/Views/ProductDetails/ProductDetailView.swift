@@ -18,13 +18,13 @@ struct ProductDetailView: View {
     @Environment(WebService.self) private var webService
     @Environment(UserPreferences.self) private var userPreferences
     @Environment(ScanHistoryStore.self) private var scanHistoryStore
+    @Environment(AppState.self) private var appState: AppState?  // Optional - for push navigation
 
     @State private var isFavorite = false
     @State private var isIngredientsExpanded = false
     @State private var isIngredientsAlertExpanded = false
     @State private var selectedImageIndex = 0
     @State private var activeIngredientHighlight: IngredientHighlight?
-    @State private var isCameraPresentedFromDetail = false
     @State private var isImageViewerPresented = false
     @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
 
@@ -396,9 +396,6 @@ struct ProductDetailView: View {
             if !expanded {
                 activeIngredientHighlight = nil
             }
-        }
-        .fullScreenCover(isPresented: $isCameraPresentedFromDetail) {
-            ScanCameraViewWrapper(initialScanId: scanId, initialMode: .photo)
         }
         .fullScreenCover(isPresented: $isImageViewerPresented) {
             FullScreenImageViewer(
@@ -952,18 +949,24 @@ struct ProductDetailView: View {
     private func handleCameraButtonTap() {
         switch presentationSource {
         case .homeView:
-            // Open camera full screen on top of ProductDetails
-            isCameraPresentedFromDetail = true
+            // From HomeView, navigate to camera (no existing camera in stack)
+            if let appState = appState {
+                appState.navigate(to: .scanCamera(initialMode: .photo, initialScanId: scanId))
+            }
+        case .pushNavigation:
+            // From push navigation (likely came from ScanCameraView)
+            // Pop back to ScanCameraView instead of pushing a new one
+            if let appState = appState {
+                // Set the scanId to scroll to when returning to camera
+                appState.scrollToScanId = scanId
+                appState.navigateBack()
+            }
         case .cameraView:
             // Dismiss ProductDetails and return to camera with this scanId
             if let scanId = scanId {
                 onRequestCameraWithScan?(scanId)
             }
             dismiss()
-        case .pushNavigation:
-            // Navigate to camera via AppRoute (dismisses product detail first)
-            // For now, treat same as homeView - open camera as full screen cover
-            isCameraPresentedFromDetail = true
         }
     }
     

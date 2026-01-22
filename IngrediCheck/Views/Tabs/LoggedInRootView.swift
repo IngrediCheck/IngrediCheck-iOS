@@ -55,6 +55,9 @@ struct ListsTabState {
     /// All navigation flows through this path via `navigate(to:)`.
     @MainActor var navigationPath = NavigationPath()
 
+    /// ScanId to scroll to when returning to ScanCameraView (e.g., from ProductDetail "Add Image")
+    @MainActor var scrollToScanId: String?
+
     /// Navigate to a route by pushing it onto the navigation stack.
     @MainActor func navigate(to route: AppRoute) {
         navigationPath.append(route)
@@ -160,6 +163,9 @@ struct ListsTabState {
             .navigationDestination(for: AppRoute.self) { route in
                 destinationView(for: route)
             }
+            .navigationDestination(for: HistoryRouteItem.self) { item in
+                historyDestinationView(for: item)
+            }
         }
         .tint(Color(hex: "#303030"))
         .environment(coordinator)
@@ -223,7 +229,8 @@ struct ListsTabState {
         Spacer()
         Spacer()
         Button(action: {
-            appState.activeSheet = .scan
+            // Navigate to ScanCameraView via push navigation (Single Root NavigationStack)
+            appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
         }) {
             ZStack {
                 Circle()
@@ -299,8 +306,9 @@ struct ListsTabState {
             )
 
         case .scanCamera(let initialMode, let initialScanId):
-            ScanCameraView()
+            ScanCameraView(presentationSource: .pushNavigation)
                 .environment(userPreferences)
+                .environment(appState)
 
         case .favoritesAll:
             FavoritesPageView()
@@ -336,6 +344,40 @@ struct ListsTabState {
 
         case .ingrediBot:
             IngrediBotChatView()
+        }
+    }
+
+    // MARK: - History Navigation Destination Builder
+
+    /// Builds the destination view for HistoryRouteItem navigation.
+    /// This supports legacy navigation from ListsTab and related views.
+    @ViewBuilder
+    private func historyDestinationView(for item: HistoryRouteItem) -> some View {
+        switch item {
+        case .scan(let scan):
+            let product = scan.toProduct()
+            let recommendations = scan.analysis_result?.toIngredientRecommendations()
+            ProductDetailView(
+                scanId: scan.id,
+                initialScan: scan,
+                product: product,
+                matchStatus: scan.toProductRecommendation(),
+                ingredientRecommendations: recommendations,
+                isPlaceholderMode: false,
+                presentationSource: .pushNavigation
+            )
+
+        case .listItem(let item):
+            FavoriteItemDetailView(item: item)
+
+        case .favoritesAll:
+            FavoritesPageView()
+                .environment(appState)
+
+        case .recentScansAll:
+            RecentScansPageView()
+                .environment(appState)
+                .environment(scanHistoryStore)
         }
     }
 }

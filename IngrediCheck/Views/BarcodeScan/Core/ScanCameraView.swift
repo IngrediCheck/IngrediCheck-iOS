@@ -21,6 +21,8 @@ struct ScanCameraView: View {
     @Environment(WebService.self) var webService
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(AppState.self) var appState: AppState?  // Optional - available when in root NavigationStack
+    @Environment(\.dismiss) private var dismiss
     @State private var isCaptured: Bool = false
     @State private var overlayRect: CGRect = .zero
     @State private var overlayContainerSize: CGSize = .zero
@@ -912,7 +914,16 @@ struct ScanCameraView: View {
                         camera.startSession()
                     }
                 }
-            
+                .onAppear {
+                    // Check if we need to scroll to a specific card (coming back from ProductDetail)
+                    if let targetId = appState?.scrollToScanId, !targetId.isEmpty {
+                        Log.debug("SCAN_SCROLL", "🔵 CameraScreen: onAppear - scrollToScanId from AppState: \(targetId)")
+                        scrollTargetScanId = targetId
+                        // Clear the scroll target after using it
+                        appState?.scrollToScanId = nil
+                    }
+                }
+
             if mode == .scanner {
                 BarcodeScannerOverlay(onRectChange: { rect, size in
                     overlayRect = rect
@@ -937,17 +948,8 @@ struct ScanCameraView: View {
             }
             
             VStack {
-                HStack {
-                    ScanBackButton()
-                    Spacer()
-                    if mode == .scanner {
-                        FlashToggleButton(isScannerMode: true)
-                    }
-                }
-                .padding(.horizontal,20)
-                .padding(.bottom, 23)
-                
                 ScanStatusToast(state: toastState)
+                    .padding(.top, 60) // Account for navigation bar space
                     .onAppear {
                         updateToastState()
                     }
@@ -1103,7 +1105,15 @@ struct ScanCameraView: View {
                                         selectedIngredientRecommendations = ingredientRecommendations
                                         selectedOverallAnalysis = overallAnalysis
                                         selectedScanId = tappedScanId
-                                        isProductDetailPresented = true
+
+                                        // Use push navigation ONLY when opened via AppRoute (pushNavigation)
+                                        // Fall back to fullScreenCover when in sheet/cover context
+                                        if presentationSource == .pushNavigation, let appState = appState {
+                                            let initialScan = scanDataCache[tappedScanId]
+                                            appState.navigate(to: .productDetail(scanId: tappedScanId, initialScan: initialScan))
+                                        } else {
+                                            isProductDetailPresented = true
+                                        }
                                     }
                                 )
                         },
@@ -1260,35 +1270,6 @@ struct ScanCameraView: View {
                 .zIndex(3)
             }
         }
-        .fullScreenCover(isPresented: $isProductDetailPresented) {
-            NavigationStack {
-                if let selectedScanId = selectedScanId {
-                    // Pass scanId for real-time updates
-                    // Get local images for this scanId (if any)
-                    let localImagesForScan = capturedImagesPerScanId[selectedScanId]?.map { $0.image }
-                    let initialScan = scanDataCache[selectedScanId]  // Get cached scan if available
-
-                    ProductDetailView(
-                        scanId: selectedScanId,  // NEW: Pass scanId for real-time updates
-                        initialScan: initialScan,  // NEW: Pass initial scan data
-                        localImages: localImagesForScan,  // Pass local images for photo mode
-                        isPlaceholderMode: false,
-                        presentationSource: .cameraView,
-                        onRequestCameraWithScan: { requestedScanId in
-                            // Handle camera request from ProductDetail
-                            // Mark that we're returning from ProductDetailView programmatically
-                            isProgrammaticModeChange = true
-                            targetScanIdFromProductDetail = requestedScanId
-                            
-                            // Switch to photo mode (this will trigger onChange handler)
-                            mode = .photo
-                        }
-                    )
-                } else {
-                    ProductDetailView(isPlaceholderMode: true)
-                }
-            }
-        }
         .sheet(isPresented: $isShowingPhotoPicker) {
             PhotoPicker(images: $capturedPhotoHistory,
                         didHitLimit: $galleryLimitHit,
@@ -1297,6 +1278,16 @@ struct ScanCameraView: View {
                             await processPhoto(image: image)
                         })
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if mode == .scanner {
+                    FlashToggleButton(isScannerMode: true)
+                }
+            }
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)  // Makes back button white
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

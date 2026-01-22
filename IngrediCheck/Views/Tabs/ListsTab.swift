@@ -12,39 +12,15 @@ import os
     @Environment(ScanHistoryStore.self) var scanHistoryStore
 
     var body: some View {
-        @Bindable var appState = appState
-        NavigationStack(path: $appState.listsTabState.routes) {
-            Group {
-                if isSearching {
-                    ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
-                } else {
-                    defaultView
-                }
-            }
-            .navigationDestination(for: HistoryRouteItem.self) { item in
-                switch item {
-                case .scan(let scan):
-                    let product = scan.toProduct()
-                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
-                    ProductDetailView(
-                        scanId: scan.id,
-                        initialScan: scan,
-                        product: product,
-                        matchStatus: scan.toProductRecommendation(),
-                        ingredientRecommendations: recommendations,
-                        isPlaceholderMode: false,
-                        presentationSource: .homeView
-                    )
-                case .listItem(let item):
-                    FavoriteItemDetailView(item: item)
-                case .favoritesAll:
-                    FavoritesPageView()
-                case .recentScansAll:
-                    RecentScansPageView()
-                }
+        // Note: NavigationStack is provided by LoggedInRootView (Single Root NavigationStack)
+        // HistoryRouteItem navigation is registered at LoggedInRootView level
+        Group {
+            if isSearching {
+                ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
+            } else {
+                defaultView
             }
         }
-        .tint(Color(hex: "#303030"))
         .animation(.default, value: isSearching)
     }
 
@@ -421,11 +397,10 @@ import os
 }
 
 @MainActor struct RecentScansListView: View {
-    
+
     var scans: [DTO.Scan]
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(AppState.self) var appState
-    @State private var isCameraPresented: Bool = false
     
     var body: some View {
         Group {
@@ -452,7 +427,7 @@ import os
                                 .multilineTextAlignment(.center)
 
                             Button {
-                                isCameraPresented = true
+                                appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                             } label: {
                                 GreenCapsule(
                                     title: "Start Scanning",
@@ -503,9 +478,6 @@ import os
                 }
                 .scrollIndicators(.hidden)
             }
-        }
-        .fullScreenCover(isPresented: $isCameraPresented) {
-            ScanCameraView()
         }
     }
 }

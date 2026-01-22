@@ -14,7 +14,6 @@ struct TabBar: View {
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
-    @State private var isCameraPresented = false
     @State private var showCameraPermissionAlert = false
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(AppState.self) var appState
@@ -113,19 +112,6 @@ struct TabBar: View {
             .onChange(of: isExpanded) { oldValue, newValue in
                 something()
             }
-            .fullScreenCover(isPresented: $isCameraPresented, onDismiss: {
-                Task {
-                    // Refresh scan history from backend
-                    await scanHistoryStore.loadHistory(forceRefresh: true)
-                    // Sync to AppState for UI display in HomeView
-                    await MainActor.run {
-                        appState.listsTabState.scans = scanHistoryStore.scans
-                    }
-                }
-            }) {
-                ScanCameraView()
-            }
-            
     }
     
     
@@ -136,15 +122,15 @@ struct TabBar: View {
 
         switch status {
         case .authorized:
-            // Permission already granted, open camera
-            isCameraPresented = true
+            // Permission already granted, use push navigation
+            appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
 
         case .notDetermined:
             // Request permission
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
                     if granted {
-                        isCameraPresented = true
+                        appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                     } else {
                         showCameraPermissionAlert = true
                     }

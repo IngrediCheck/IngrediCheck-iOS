@@ -9,8 +9,8 @@ import SwiftUI
 
 struct YourBarcodeScans: View {
     @Environment(UserPreferences.self) var userPreferences
-    @State private var isCameraPresented = false
     @Environment(ScanHistoryStore.self) var scanHistoryStore
+    @Environment(AppState.self) var appState
     var barcodeScansCount: Int? = nil
     
     private var displayCount: Int {
@@ -32,7 +32,7 @@ struct YourBarcodeScans: View {
                 }
                 
                 Button {
-                    isCameraPresented = true
+                    appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                 } label: {
                     HStack(spacing: 4) {
                         Image("your-barcode-scan")
@@ -87,15 +87,6 @@ struct YourBarcodeScans: View {
                 .stroke(lineWidth: 0.25)
                 .foregroundStyle(.grayScale60)
         )
-        .fullScreenCover(isPresented: $isCameraPresented, onDismiss: {
-            Task {
-                await scanHistoryStore.loadHistory(forceRefresh: true)
-                // Also refresh scan count since a new scan might have occurred
-                userPreferences.refreshScanCount()
-            }
-        }) {
-            ScanCameraView()
-        }
         .onAppear {
             // Refresh count from UserDefaults when view appears to ensure it's up-to-date
             // This handles cases where the count was updated while the view wasn't visible
@@ -106,11 +97,12 @@ struct YourBarcodeScans: View {
 
 #Preview {
     let webService = WebService()
-    
+
     ZStack {
         YourBarcodeScans()
             .environment(UserPreferences())
             .environment(webService)
             .environment(ScanHistoryStore(webService: webService))
+            .environment(AppState())
     }
 }

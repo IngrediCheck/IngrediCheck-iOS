@@ -14,12 +14,10 @@ struct HomeView: View {
     @State private var isChatSheetPresented = false
     @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isSettingsPresented = false
-    @State private var isManageFamilyPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var isRefreshingHistory: Bool = false
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
-    @State private var navigationPath: [HistoryRouteItem] = []
     @SceneStorage("didPlayAverageScansLaunchAnimation") private var didPlayAverageScansLaunchAnimation: Bool = false
 
     private final class ScrollTrackingState {
@@ -31,7 +29,6 @@ struct HomeView: View {
     @State private var scrollTrackingState = ScrollTrackingState()
     @State private var stats: DTO.StatsResponse? = nil
     @State private var isLoadingStats: Bool = false
-    @State private var showScanCamera: Bool = false
     @State private var hasCheckedAutoScan: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
@@ -47,7 +44,6 @@ struct HomeView: View {
         let favorited: Bool
     }
     
-    @State private var activeProductDetail: ProductDetailPayload?
     
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
@@ -88,7 +84,7 @@ struct HomeView: View {
         // Make AppState observable/bindable so view updates when its properties change
         @Bindable var appState = appState
         
-        NavigationStack(path: $navigationPath) {
+        NavigationStack(path: $appState.navigationPath) {
             ScrollView(.vertical, showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 12) {
@@ -228,10 +224,8 @@ struct HomeView: View {
                         )
                         .contentShape(RoundedRectangle(cornerRadius: 24))
                         .onTapGesture {
-                            // Only open Manage Family if family exists and has other members
-                            if let family = familyStore.family, !family.otherMembers.isEmpty {
-                                isManageFamilyPresented = true
-                            }
+                            // Open Manage Family when tapped
+                            appState.navigate(to: .manageFamily)
                         }
                     }
 //                    .padding(.bottom, 20)
@@ -313,7 +307,7 @@ struct HomeView: View {
                                 
                                 Button {
                                     // Use push navigation instead of modal
-                                    navigationPath.append(HistoryRouteItem.scan(scan))
+                                    appState.navigationPath.append(HistoryRouteItem.scan(scan))
                                 } label: {
                                     ScanRow(scan: scan)
                                 }
@@ -409,7 +403,7 @@ struct HomeView: View {
                 TabBar(
                     isExpanded: $isTabBarExpanded,
                     onRecentScansTap: {
-                        navigationPath.append(.recentScansAll)
+                        appState.navigationPath.append(HistoryRouteItem.recentScansAll)
                     },
                     onChatBotTap: {
                         selectedChatDetent = .medium
@@ -476,44 +470,6 @@ struct HomeView: View {
                     .presentationDragIndicator(.visible)
                 }
             
-            // ------------ MANAGE FAMILY SCREEN ------------
-            // Use navigationDestination for standard iOS push navigation
-                .navigationDestination(isPresented: $isManageFamilyPresented) {
-                    ManageFamilyView()
-                        .environment(coordinator)
-                }
-            
-            // ------------ PRODUCT DETAIL ------------
-                .fullScreenCover(item: $activeProductDetail) { detail in
-                    ProductDetailView(
-                        scanId: detail.scanId,  // Pass scanId for real-time updates
-                        initialScan: detail.scan,  // Pass full scan with is_favorited
-                        product: detail.product,
-                        matchStatus: detail.matchStatus,
-                        ingredientRecommendations: detail.ingredientRecommendations,
-                        isPlaceholderMode: false,
-                        presentationSource: .homeView
-                    )
-                }
-            
-            // ------------ SCAN CAMERA (Auto-open on app start) ------------
-                .fullScreenCover(isPresented: $showScanCamera, onDismiss: {
-                    Task {
-                        // Refresh scan history from backend to get the latest scans
-                        await scanHistoryStore.loadHistory(forceRefresh: true)
-                        // Sync to AppState for UI display
-                        await MainActor.run {
-                            appState.listsTabState.scans = scanHistoryStore.scans
-                        }
-                        // Also refresh scan count since a new scan might have occurred
-                        userPreferences.refreshScanCount()
-                    }
-                }) {
-                    ScanCameraView()
-                }
-            
-            
-            
             // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
                 .navigationDestination(for: HistoryRouteItem.self) { item in
                     switch item {
@@ -527,7 +483,7 @@ struct HomeView: View {
                             matchStatus: scan.toProductRecommendation(),
                             ingredientRecommendations: recommendations,
                             isPlaceholderMode: false,
-                            presentationSource: .homeView
+                            presentationSource: .pushNavigation
                         )
                     case .listItem(let item):
                         // Fallback for list items if reached from Home
@@ -537,6 +493,49 @@ struct HomeView: View {
                         FavoritesPageView()
                     case .recentScansAll:
                         RecentScansPageView()
+                    }
+                }
+            // ------------ APP ROUTE HANDLING (For ScanCamera, ProductDetail, etc.) ------------
+                .navigationDestination(for: AppRoute.self) { route in
+                    switch route {
+                    case .scanCamera(_, _):
+                        ScanCameraView(presentationSource: .pushNavigation)
+                            .environment(userPreferences)
+                            .environment(appState)
+                            .environment(scanHistoryStore)
+                    case .productDetail(let scanId, let initialScan):
+                        ProductDetailView(
+                            scanId: scanId,
+                            initialScan: initialScan,
+                            presentationSource: .pushNavigation
+                        )
+                    case .favoritesAll:
+                        FavoritesPageView()
+                            .environment(appState)
+                    case .recentScansAll:
+                        RecentScansPageView()
+                            .environment(appState)
+                            .environment(scanHistoryStore)
+                    case .favoriteDetail(let item):
+                        ProductDetailView(
+                            scanId: item.list_item_id,
+                            initialScan: nil,
+                            presentationSource: .pushNavigation
+                        )
+                    case .settings:
+                        SettingsContentView()
+                            .environment(userPreferences)
+                            .environment(coordinator)
+                            .environment(memojiStore)
+                    case .manageFamily:
+                        ManageFamilyView()
+                            .environment(coordinator)
+                    case .editableCanvas(let targetSection):
+                        UnifiedCanvasView(mode: .editing, targetSectionName: targetSection)
+                            .environment(memojiStore)
+                            .environment(coordinator)
+                    case .ingrediBot:
+                        IngrediBotChatView()
                     }
                 }
                 .task {
@@ -553,12 +552,14 @@ struct HomeView: View {
                             // Check camera permission before auto-opening
                             let status = AVCaptureDevice.authorizationStatus(for: .video)
                             if status == .authorized {
-                                showScanCamera = true
+                                // Use push navigation instead of modal
+                                appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                             } else if status == .notDetermined {
                                 AVCaptureDevice.requestAccess(for: .video) { granted in
                                     DispatchQueue.main.async {
                                         if granted {
-                                            showScanCamera = true
+                                            // Use push navigation instead of modal
+                                            appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                                         }
                                     }
                                 }

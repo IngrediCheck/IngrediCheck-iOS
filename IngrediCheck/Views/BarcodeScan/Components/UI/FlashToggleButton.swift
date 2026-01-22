@@ -12,18 +12,12 @@ struct FlashToggleButton: View {
     var body: some View {
         HStack(spacing: 4) {
             if isScannerMode {
-                // Scanner mode: show torch icon only
-                ZStack {
-                    Image(systemName: isFlashon ? "flashlight.on.fill" : "flashlight.off.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 20, height: 20)
-                        .foregroundColor(.white)
-                }
-                .frame(width: 33, height: 33)
-                .background(
-                    .bar.opacity(0.4), in: .capsule
-                )
+                // Scanner mode: show torch icon only (no background, matches nav back button)
+                Image(systemName: isFlashon ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                    .foregroundColor(.white)
             } else {
                 // Photo mode: show custom flash asset
                 ZStack {
