@@ -59,6 +59,7 @@ struct CheckTab: View {
                 }
             }
         }
+        .tint(Color(hex: "#303030"))
     }
 }
 

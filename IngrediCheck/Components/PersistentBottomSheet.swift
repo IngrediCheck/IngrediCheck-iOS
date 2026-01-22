@@ -23,6 +23,7 @@ struct PersistentBottomSheet: View {
     @State private var isAnimatingHand: Bool = false
     @State private var dragOffsetY: CGFloat = 0
     @State private var isGeneratingInviteCode: Bool = false
+    @State private var tutorialCardSwipeOffset: CGFloat = 0
 
     // MARK: - CONSTANTS
 
@@ -149,15 +150,15 @@ struct PersistentBottomSheet: View {
                         // We are already at the screen coordinate space in PersistentBottomSheet (mostly)
                         // But let's use global origin to be safe
                         let globalOrigin = proxy.frame(in: .global).origin
-                        
+
                         ZStack {
-                            // Dimmed background with hole
+                            // Dimmed background with cutout hole to show original card
                             Color.black.opacity(0.63)
                                 .mask(
                                     ZStack {
                                         Rectangle().fill(Color.black)
-                                        
-                                        // cutout
+
+                                        // cutout to show original card underneath
                                         RoundedRectangle(cornerRadius: 24)
                                             .frame(width: data.cardFrame.width, height: data.cardFrame.height)
                                             .position(x: data.cardFrame.midX, y: data.cardFrame.midY)
@@ -165,7 +166,41 @@ struct PersistentBottomSheet: View {
                                     }
                                     .compositingGroup()
                                 )
-                            
+
+                            // Redacted dummy card on top of original card (swipeable)
+                            TutorialRedactedCard()
+                                .frame(width: data.cardFrame.width, height: data.cardFrame.height)
+                                .offset(x: tutorialCardSwipeOffset)
+                                .rotationEffect(.degrees(tutorialCardSwipeOffset / 30))
+                                .position(x: data.cardFrame.midX, y: data.cardFrame.midY)
+                                .gesture(
+                                    DragGesture()
+                                        .onChanged { value in
+                                            tutorialCardSwipeOffset = value.translation.width
+                                        }
+                                        .onEnded { value in
+                                            let threshold: CGFloat = 80
+                                            if abs(value.translation.width) > threshold ||
+                                               abs(value.predictedEndTranslation.width) > 150 {
+                                                // Swipe detected - dismiss overlay
+                                                let direction: CGFloat = value.translation.width > 0 ? 1 : -1
+                                                withAnimation(.easeOut(duration: 0.3)) {
+                                                    tutorialCardSwipeOffset = direction * 400
+                                                }
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                    NotificationCenter.default.post(name: .dismissSwipeTutorial, object: nil)
+                                                    isAnimatingHand = false
+                                                    tutorialCardSwipeOffset = 0
+                                                }
+                                            } else {
+                                                // Snap back
+                                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                                    tutorialCardSwipeOffset = 0
+                                                }
+                                            }
+                                        }
+                                )
+
                             // Hand icon and text
                             VStack(spacing: -1) {
                                 Image("swipe-hand")
@@ -173,16 +208,14 @@ struct PersistentBottomSheet: View {
                                     .scaledToFit()
                                     .frame(width: 80, height : 80)
                                     .foregroundStyle(.white)
-                                    .rotationEffect(.degrees(isAnimatingHand ? 10 : -20))
-                                    .offset(x: isAnimatingHand ? 30 : -30, y: 0)
-                                    .animation(
-                                        .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                        value: isAnimatingHand
-                                    )
+                                    .rotationEffect(.degrees(-10))
+                                    .offset(x: tutorialCardSwipeOffset * 0.4, y: 0)
                                     .onAppear {
                                         isAnimatingHand = true
+                                        // Start auto-swipe animation after a short delay
+                                        startTutorialSwipeAnimation()
                                     }
-                                
+
                                 Text("Swipe cards to review each category")
                                     .font(NunitoFont.bold.size(16))
                                     .foregroundStyle(.white)
@@ -194,9 +227,16 @@ struct PersistentBottomSheet: View {
                         .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
                         .ignoresSafeArea()
                         .offset(x: -globalOrigin.x, y: -globalOrigin.y)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            // Dismiss tutorial on tap anywhere
+                            NotificationCenter.default.post(name: .dismissSwipeTutorial, object: nil)
+                            isAnimatingHand = false
+                            tutorialCardSwipeOffset = 0
+                        }
                     }
                     .zIndex(9999) // Ensure it's on top of everything
-                    .allowsHitTesting(false) // Let touches pass through
+                    .allowsHitTesting(true) // Allow interactions
                 }
             }
         )
@@ -807,7 +847,8 @@ struct PersistentBottomSheet: View {
             NavigationStack {
                 IngrediBotChatView()
             }
-            
+            .tint(Color(hex: "#303030"))
+
         case .workingOnSummary:
             IngrediBotWithText(
                 text: "Working on your personalized summary…",
@@ -985,13 +1026,36 @@ struct PersistentBottomSheet: View {
         if case .mainCanvas(let flow) = coordinator.currentCanvasRoute {
             return flow
         }
-        
+
         // If there are other members in the family, show the family selection carousel
         if let family = familyStore.family, !family.otherMembers.isEmpty {
             return .family
         }
-        
+
         return .individual
+    }
+
+    // MARK: - Tutorial Animation
+
+    private func startTutorialSwipeAnimation() {
+        // Animate the card swiping left repeatedly
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s initial delay
+
+            while tutorialData?.show == true {
+                // Swipe left
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    tutorialCardSwipeOffset = -80
+                }
+                try? await Task.sleep(nanoseconds: 700_000_000)
+
+                // Return to center
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    tutorialCardSwipeOffset = 0
+                }
+                try? await Task.sleep(nanoseconds: 800_000_000)
+            }
+        }
     }
     
     // MARK: - INVITES / SHARE
@@ -1114,22 +1178,74 @@ private func handleAssignAvatar(
     // it means the user generated an avatar without adding the member first.
     // We need to add the member to the pending list first.
     var targetMemberId: UUID? = currentAvatarTargetMemberId
-    
+
+    // Extract memberId from previousRouteForGenerateAvatar if available
+    let memberIdFromRoute: UUID? = {
+        if case .meetYourProfile(let memberId) = memojiStore.previousRouteForGenerateAvatar {
+            return memberId
+        }
+        return nil
+    }()
+
+    // Check if we came from addMoreMembers route (adding a NEW member)
+    let isAddingNewMember: Bool = {
+        if case .addMoreMembers = memojiStore.previousRouteForGenerateAvatar {
+            return true
+        }
+        return false
+    }()
+
     // If no targetMemberId is set but we have a displayName, we need to create the member
     if targetMemberId == nil,
        let name = displayName,
         !name.isEmpty {
-        
+
         // If we came from MeetYourProfile, check if it's for self member (memberId is nil)
-        let isFromProfile: Bool = {
+        let isFromProfileForSelf: Bool = {
             if case .meetYourProfile(let memberId) = memojiStore.previousRouteForGenerateAvatar {
                 return memberId == nil
             }
             return false
         }()
-        
-        if isFromProfile || currentPendingSelfMember == nil {
-            // This is for the self member
+
+        // When family exists and we have a memberId from route, try to use it
+        if let family = currentFamily, let routeMemberId = memberIdFromRoute {
+            // Family exists and we have a memberId from the route - use it directly
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: Recovering targetMemberId from route: \(routeMemberId)")
+            targetMemberId = routeMemberId
+        } else if isAddingNewMember {
+            // Adding a NEW member from AddMoreMembers flow - create new member
+            if currentFamily != nil {
+                // Family exists: add member immediately to family
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: Adding new member from AddMoreMembers: \(name)")
+                do {
+                    let newMember = try await familyStore.addMemberImmediate(
+                        name: name,
+                        image: nil, // We'll use storagePath instead
+                        storagePath: storagePath,
+                        color: backgroundColorHex,
+                        webService: webService
+                    )
+                    targetMemberId = newMember.id
+                    Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ New member created: \(newMember.name)")
+                    // Avatar is already assigned via storagePath in addMemberImmediate, so we can return
+                    return
+                } catch {
+                    Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to create new member: \(error.localizedDescription)")
+                    ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+                    return
+                }
+            } else {
+                // Onboarding: add to pending
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: Adding pending other member from AddMoreMembers: \(name)")
+                familyStore.addPendingOtherMember(name: name)
+                let updatedPendingMembers = familyStore.pendingOtherMembers
+                if !updatedPendingMembers.isEmpty, let lastMember = updatedPendingMembers.last {
+                    targetMemberId = lastMember.id
+                }
+            }
+        } else if isFromProfileForSelf {
+            // This is for the self member from MeetYourProfile with nil memberId
             if currentFamily == nil {
                 // Onboarding: add to pending
                 if familyStore.pendingSelfMember == nil {
@@ -1141,10 +1257,16 @@ private func handleAssignAvatar(
                     targetMemberId = newSelfMember.id
                 }
             } else {
-                // Family exists: self member should already exist, this shouldn't happen
-                Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Family exists but trying to create self member, this is unexpected")
-                ToastManager.shared.show(message: "Unable to assign avatar. Please try again.", type: .error)
-                return
+                // Family exists but came from MeetYourProfile for self: use selfMember.id
+                Log.debug("PersistentBottomSheet", "handleAssignAvatar: Family exists, using selfMember.id for profile update")
+                targetMemberId = currentFamily?.selfMember.id
+            }
+        } else if currentPendingSelfMember == nil && currentFamily == nil {
+            // No pending self member and no family - this must be for the self member during onboarding
+            Log.debug("PersistentBottomSheet", "handleAssignAvatar: No targetMemberId, adding pending self member: \(name)")
+            familyStore.setPendingSelfMember(name: name)
+            if let newSelfMember = familyStore.pendingSelfMember {
+                targetMemberId = newSelfMember.id
             }
         } else {
             // This is for an other member
@@ -1304,5 +1426,171 @@ private func handleAssignAvatar(
         Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
         ToastManager.shared.show(message: "Failed to assign avatar: \(error.localizedDescription)", type: .error)
     }
-    
+
+}
+
+// MARK: - Tutorial Redacted Card
+
+/// A redacted/skeleton card view used in the swipe tutorial overlay
+private struct TutorialRedactedCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Redacted title
+                HStack {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.black.opacity(0.15))
+                        .frame(width: 100, height: 20)
+                    Spacer()
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.black.opacity(0.15))
+                        .frame(width: 30, height: 14)
+                }
+
+                // Redacted subtitle
+                VStack(alignment: .leading, spacing: 4) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.black.opacity(0.12))
+                        .frame(height: 12)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.black.opacity(0.12))
+                        .frame(width: 200, height: 12)
+                }
+            }
+
+            // Redacted chips
+            FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
+                ForEach(0..<4, id: \.self) { index in
+                    let widths: [CGFloat] = [80, 110, 95, 120]
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.5))
+                        .frame(width: widths[index], height: 32)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                        )
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            ZStack {
+                Color(hex: "FFEB84")
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Image("leaf-recycle")
+                            .opacity(0.3)
+                    }
+                }
+                .padding(.trailing, 10)
+                .offset(y: 17)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+    }
+}
+
+/// Preview wrapper with animation state
+private struct TutorialOverlayPreview: View {
+    @State private var swipeOffset: CGFloat = 0
+    @State private var isShowing: Bool = true
+
+    private let cardWidth = UIScreen.main.bounds.width - 40
+    private let cardHeight = UIScreen.main.bounds.height * 0.33
+
+    var body: some View {
+        ZStack {
+            // Simulated original card underneath (what would show through cutout)
+            Color(hex: "FFEB84")
+                .frame(width: cardWidth, height: cardHeight)
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .overlay(
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Oils & Fats")
+                            .font(.system(size: 20, weight: .regular))
+                        Text("Mark oils you prefer to avoid...")
+                            .font(.system(size: 12))
+                            .opacity(0.8)
+                    }
+                    .padding(12),
+                    alignment: .topLeading
+                )
+
+            // Dark overlay with cutout
+            Color.black.opacity(0.63)
+                .ignoresSafeArea()
+                .mask(
+                    ZStack {
+                        Rectangle().fill(Color.black)
+                        RoundedRectangle(cornerRadius: 24)
+                            .frame(width: cardWidth, height: cardHeight)
+                            .blendMode(.destinationOut)
+                    }
+                    .compositingGroup()
+                )
+
+            // Redacted card on top (swipeable)
+            TutorialRedactedCard()
+                .frame(width: cardWidth, height: cardHeight)
+                .offset(x: swipeOffset)
+                .rotationEffect(.degrees(swipeOffset / 30))
+
+            // Hand icon and text overlay
+            VStack(spacing: -1) {
+                Image("swipe-hand")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .foregroundStyle(.white)
+                    .rotationEffect(.degrees(-10))
+                    .offset(x: swipeOffset * 0.4, y: 0)
+
+                Text("Swipe cards to review each category")
+                    .font(NunitoFont.bold.size(16))
+                    .foregroundStyle(.white)
+            }
+            .offset(y: UIScreen.main.bounds.height * 0.25)
+        }
+        .onAppear {
+            startSwipeAnimation()
+        }
+    }
+
+    private func startSwipeAnimation() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+
+            while isShowing {
+                // Swipe left
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    swipeOffset = -80
+                }
+                try? await Task.sleep(nanoseconds: 700_000_000)
+
+                // Return to center
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    swipeOffset = 0
+                }
+                try? await Task.sleep(nanoseconds: 800_000_000)
+            }
+        }
+    }
+}
+
+#Preview("Tutorial Overlay with Animation") {
+    TutorialOverlayPreview()
+}
+
+#Preview("Redacted Card Only") {
+    TutorialRedactedCard()
+        .frame(width: UIScreen.main.bounds.width - 40, height: UIScreen.main.bounds.height * 0.33)
+        .padding()
 }

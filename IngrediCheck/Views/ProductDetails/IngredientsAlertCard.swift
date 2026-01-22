@@ -1,12 +1,16 @@
 import SwiftUI
 
 struct IngredientsAlertCard: View {
+    @Environment(FamilyStore.self) private var familyStore
+
     @Binding var isExpanded: Bool
     var items: [IngredientAlertItem]
     var status: ProductMatchStatus
     var overallAnalysis: String?  // Overall analysis text from API
     var ingredientRecommendations: [DTO.IngredientRecommendation]?  // To get unmatched ingredient names
     var onFeedback: ((IngredientAlertItem, String) -> Void)? = nil // Item, Vote ("up", "down")
+    var productVote: DTO.Vote? = nil  // Current product feedback vote
+    var onProductFeedback: ((String) -> Void)? = nil // Product feedback callback ("up", "down")
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -50,7 +54,7 @@ struct IngredientsAlertCard: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.system(size: 18))
                     .foregroundStyle(.white)
-                
+
                 Text(status.alertTitle)
                     .font(NunitoFont.bold.size(12))
                     .foregroundStyle(.white)
@@ -58,8 +62,29 @@ struct IngredientsAlertCard: View {
             .padding(.vertical, 10)
             .padding(.horizontal, 20)
             .background(status.color, in: Capsule())
-            
+
             Spacer(minLength: 0)
+
+            // Product feedback buttons (thumb up/down) on the right
+            if let onProductFeedback {
+                HStack(spacing: 12) {
+                    FeedbackButton(
+                        type: .up,
+                        isSelected: productVote?.value == "up",
+                        style: .boxed
+                    ) {
+                        onProductFeedback("up")
+                    }
+
+                    FeedbackButton(
+                        type: .down,
+                        isSelected: productVote?.value == "down",
+                        style: .boxed
+                    ) {
+                        onProductFeedback("down")
+                    }
+                }
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
@@ -69,6 +94,7 @@ struct IngredientsAlertCard: View {
         buildHighlightedText()
             .font(ManropeFont.regular.size(14))
             .lineSpacing(6)
+            .lineLimit(4)
     }
     
     private func buildHighlightedText() -> Text {
@@ -168,18 +194,21 @@ struct IngredientsAlertCard: View {
         VStack(spacing: 12) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 VStack(alignment: .leading, spacing: 12) {
-                    statusChip(for: item.status)
-                        .padding(.top, index == 0 ? 20 : 0)
-                    
-                    Text(item.name)
-                        .font(NunitoFont.bold.size(16))
-                        .foregroundStyle(Color.grayScale150)
-                    
+                    // Ingredient name with status badge on the right
+                    HStack(spacing: 8) {
+                        Text(item.name)
+                            .font(NunitoFont.bold.size(16))
+                            .foregroundStyle(Color.grayScale150)
+                        Spacer()
+                        statusChip(for: item.status)
+                    }
+                    .padding(.top, index == 0 ? 20 : 0)
+
                     Text(item.detail)
                         .font(ManropeFont.regular.size(14))
                         .foregroundStyle(.grayScale120)
                         .lineSpacing(4)
-                    
+
                     HStack {
                         avatarStack(for: item)
                         Spacer()
@@ -191,7 +220,7 @@ struct IngredientsAlertCard: View {
                             ) {
                                 onFeedback?(item, "up")
                             }
-                            
+
                             FeedbackButton(
                                 type: .down,
                                 isSelected: item.vote?.value == "down",
@@ -203,12 +232,12 @@ struct IngredientsAlertCard: View {
                     }
                 }
                 .padding(.vertical, 12)
-                
+
                 if index != items.count - 1 {
                     Divider()
                 }
             }
-            
+
             readMoreRow(text: "Read Less")
         }
         .padding(.horizontal, 20)
@@ -231,9 +260,25 @@ struct IngredientsAlertCard: View {
         HStack(spacing: -8) {
             if let memberIdentifiers = item.memberIdentifiers, !memberIdentifiers.isEmpty {
                 ForEach(Array(memberIdentifiers.prefix(5)), id: \.self) { memberIdentifier in
-                    // Create a custom avatar view similar to ChipMemberAvatarView but sized for 32x32
-                    MemberAvatarView(memberIdentifier: memberIdentifier)
-                        .frame(width: 32, height: 32)
+                    if memberIdentifier == "Family" {
+                        // Special "Everyone" avatar
+                        Circle()
+                            .fill(Color(hex: "#D9D9D9"))
+                            .frame(width: 32, height: 32)
+                            .overlay {
+                                Image("family")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 30, height: 30)
+                                    .clipShape(Circle())
+                            }
+                            .overlay {
+                                Circle().stroke(Color.white, lineWidth: 1)
+                            }
+                    } else if let member = resolveMember(from: memberIdentifier) {
+                        // Use centralized MemberAvatar component
+                        MemberAvatar.custom(member: member, size: 32, imagePadding: 0)
+                    }
                 }
             } else {
                 // Fallback: show placeholder if no member identifiers
@@ -252,6 +297,19 @@ struct IngredientsAlertCard: View {
         }
         .padding(.vertical, 4)
     }
+
+    /// Resolves a FamilyMember from a member identifier string
+    private func resolveMember(from identifier: String) -> FamilyMember? {
+        guard let uuid = UUID(uuidString: identifier),
+              let family = familyStore.family else {
+            return nil
+        }
+
+        if uuid == family.selfMember.id {
+            return family.selfMember
+        }
+        return family.otherMembers.first { $0.id == uuid }
+    }
 }
 
 struct IngredientAlertItem: Identifiable {
@@ -259,107 +317,9 @@ struct IngredientAlertItem: Identifiable {
     let name: String
     let detail: String
     let status: IngredientAlertStatus
-    let memberIdentifiers: [String]?  // Array of member IDs or ["Everyone"]
+    let memberIdentifiers: [String]?  // Array of member IDs or ["Family"]
     let vote: DTO.Vote?
     let rawIngredientName: String? // Actual ingredient name from API if available
-}
-
-// Member Avatar View for Ingredients Alert Card (32x32 size)
-private struct MemberAvatarView: View {
-    @Environment(FamilyStore.self) private var familyStore
-    @Environment(WebService.self) private var webService
-    
-    let memberIdentifier: String // "Everyone" or member UUID string
-    
-    @State private var avatarImage: UIImage? = nil
-    @State private var loadedHash: String? = nil
-    
-    var body: some View {
-        Circle()
-            .fill(circleBackgroundColor)
-            .frame(width: 32, height: 32)
-            .overlay {
-                if memberIdentifier == "Everyone" {
-                    Image("Everyone")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 30, height: 30)
-                        .clipShape(Circle())
-                } else if let avatarImage {
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 30, height: 30)
-                        .clipShape(Circle())
-                } else if let member = resolvedMember {
-                    Text(String(member.name.prefix(1)))
-                        .font(NunitoFont.semiBold.size(12))
-                        .foregroundStyle(.white)
-                }
-            }
-            .overlay {
-                Circle()
-                    .stroke(Color.white, lineWidth: 1)
-                    .frame(width: 32, height: 32)
-            }
-            .task(id: memberIdentifier) {
-                await loadAvatarIfNeeded()
-            }
-    }
-    
-    private var circleBackgroundColor: Color {
-        if memberIdentifier == "Everyone" {
-            return Color(hex: "#D9D9D9")
-        }
-        if let member = resolvedMember {
-            return Color(hex: member.color)
-        }
-        return Color(hex: "#D9D9D9")
-    }
-    
-    private var resolvedMember: FamilyMember? {
-        guard memberIdentifier != "Everyone",
-              let uuid = UUID(uuidString: memberIdentifier),
-              let family = familyStore.family else {
-            return nil
-        }
-        
-        if uuid == family.selfMember.id {
-            return family.selfMember
-        }
-        return family.otherMembers.first { $0.id == uuid }
-    }
-    
-    @MainActor
-    private func loadAvatarIfNeeded() async {
-        guard memberIdentifier != "Everyone",
-              let member = resolvedMember else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        guard let hash = member.imageFileHash, !hash.isEmpty else {
-            avatarImage = nil
-            loadedHash = nil
-            return
-        }
-        
-        if loadedHash == hash, avatarImage != nil {
-            return
-        }
-        
-        do {
-            let uiImage = try await webService.fetchImage(
-                imageLocation: .imageFileHash(hash),
-                imageSize: .small
-            )
-            avatarImage = uiImage
-            loadedHash = hash
-        } catch {
-            // Silently fail - will show fallback
-        }
-    }
 }
 
 enum IngredientAlertStatus {

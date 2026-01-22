@@ -77,53 +77,58 @@ struct AverageScansCard: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      HStack(alignment: .bottom, spacing: 2) {
-        Text(weeklyAverage > 1000 ? "1k+" : weeklyAverage == 1000 ? "1k" : "\(weeklyAverage)")
-          .font(.system(size: 44, weight: .bold))
-          .frame(height: 37.8)
-          .foregroundStyle(.grayScale150)
-        Text("Avg. Scans")
-          .font(ManropeFont.regular.size(10))
-          .foregroundStyle(.grayScale100)
-          .padding(.bottom, 2)
-      }
-      .padding(.horizontal, 12)
-      VStack(spacing: 4) {
-        // Bars + Average Line
-        ZStack(alignment: .bottom) {
-          // Weekly Average Line
-          RoundedRectangle(cornerRadius: 1)
-            .fill(.primary300)
-            .frame(width: 140, height: 1.5)
-            .offset(y: -CGFloat(weeklyAverage) / 100 * 50) // move up from bottom
-          // Bars
-          HStack(alignment: .bottom, spacing: 8) {
-            ForEach(Array(avgArray.enumerated()), id: \.element.id) { index, array in
-              let height = (index < animatedBarHeights.count) ? animatedBarHeights[index] : 0
-              RoundedRectangle(cornerRadius: 3)
-                .foregroundStyle(array.value >= weeklyAverage ? .secondary800 : .secondary400)
-                .frame(width: 12, height: height)
-            }
+      VStack(alignment: .leading, spacing: 12) {
+          
+          HStack(alignment: .bottom, spacing: 2) {
+              Text(weeklyAverage > 1000 ? "1k+" : weeklyAverage == 1000 ? "1k" : "\(weeklyAverage)")
+                  .font(.system(size: 44, weight: .bold))
+                  .foregroundStyle(.grayScale150)
+              
+              Text("Avg. Scans")
+                  .font(ManropeFont.regular.size(10))
+                  .foregroundStyle(.grayScale100)
+                  .padding(.bottom, 2)
           }
-        }
-        .frame(height: 50, alignment: .bottom) // ensure ZStack height matches max bar height
-        // Day Labels
-        HStack(spacing: 0) {
-          ForEach(avgArray) { array in
-            Text(array.day)
-              .font(ManropeFont.regular.size(9.2))
-              .foregroundStyle(.grayScale90)
-              .frame(width: 12 + 8, alignment: .center)
+          .padding(.horizontal, 12)
+          
+          Spacer()
+          
+          VStack(spacing: 4) {
+              // Bars + Average Line
+              ZStack(alignment: .bottom) {
+                  // Weekly Average Line
+                  RoundedRectangle(cornerRadius: 1)
+                      .fill(.primary300)
+                      .frame(width: 140, height: 1.5)
+                      .offset(y: -CGFloat(weeklyAverage) / 100 * 50) // move up from bottom
+                  // Bars
+                  HStack(alignment: .bottom, spacing: 8) {
+                      ForEach(Array(avgArray.enumerated()), id: \.element.id) { index, array in
+                          let height = (index < animatedBarHeights.count) ? animatedBarHeights[index] : 0
+                          RoundedRectangle(cornerRadius: 3)
+                              .foregroundStyle(array.value >= weeklyAverage ? .secondary800 : .secondary400)
+                              .frame(width: 12, height: height)
+                      }
+                  }
+              }
+              .frame(height: 50, alignment: .bottom) // ensure ZStack height matches max bar height
+              
+              // Day Labels
+              HStack(spacing: 0) {
+                  ForEach(avgArray) { array in
+                      Text(array.day)
+                          .font(ManropeFont.regular.size(9.2))
+                          .foregroundStyle(.grayScale90)
+                          .frame(width: 12 + 8, alignment: .center)
+                  }
+              }
           }
-        }
+          .padding(.horizontal, 14)
       }
-      .padding(.horizontal, 14)
-    }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(.vertical, 12)
     .background(
-      RoundedRectangle(cornerRadius: 18)
+      RoundedRectangle(cornerRadius: 24)
         .foregroundStyle(.white)
         .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
     )

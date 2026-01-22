@@ -64,7 +64,7 @@ struct UserFeedbackCard: View {
                 }
             }
         }
-        .padding(12)
+        .padding(16)
         .frame(height: UIScreen.main.bounds.height * 0.18)
         .background(
             RoundedRectangle(cornerRadius: 24)

@@ -6,19 +6,22 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct TabBar: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    
+
     @State var scale: CGFloat = 1.0
     @State var offsetY: CGFloat = 0
     @Binding var isExpanded: Bool
     @State private var isCameraPresented = false
+    @State private var showCameraPermissionAlert = false
     @Environment(ScanHistoryStore.self) var scanHistoryStore
+    @Environment(AppState.self) var appState
     var onRecentScansTap: (() -> Void)? = nil
     var onChatBotTap: (() -> Void)? = nil
 
-    
+
     var body: some View {
 //        ZStack {
             ZStack(alignment: .bottom) {
@@ -68,7 +71,7 @@ struct TabBar: View {
                 .offset(y: offsetY)
                 
                 Button {
-                    isCameraPresented = true
+                    handleScannerTap()
                 } label: {
                     ZStack {
                         Circle()
@@ -90,7 +93,7 @@ struct TabBar: View {
                                     )
                             )
                             .rotationEffect(.degrees(18))
-                        
+
                         Image("tabBar-scanner")
                             .resizable()
                             .frame(width: 32, height: 32)
@@ -99,80 +102,127 @@ struct TabBar: View {
                 .buttonStyle(.plain)
                 .padding(.bottom, 18)
             }
+            .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
+                Button("Later", role: .cancel) { }
+                Button("Open Settings") {
+                    openAppSettings()
+                }
+            } message: {
+                Text("To scan products, please allow camera access in Settings.")
+            }
             .onChange(of: isExpanded) { oldValue, newValue in
                 something()
             }
             .fullScreenCover(isPresented: $isCameraPresented, onDismiss: {
                 Task {
+                    // Refresh scan history from backend
                     await scanHistoryStore.loadHistory(forceRefresh: true)
+                    // Sync to AppState for UI display in HomeView
+                    await MainActor.run {
+                        appState.listsTabState.scans = scanHistoryStore.scans
+                    }
                 }
             }) {
                 ScanCameraView()
             }
             
-//            VStack {
-//                
-//                Spacer()
-//                
-//                Button {
-//                    something()
-//                } label: {
-//                    Text("Toggle")
-//                }
-//                
-//            }
-//        }
     }
     
     
+    // MARK: - Camera Permission Handling
+
+    private func handleScannerTap() {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+
+        switch status {
+        case .authorized:
+            // Permission already granted, open camera
+            isCameraPresented = true
+
+        case .notDetermined:
+            // Request permission
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        isCameraPresented = true
+                    } else {
+                        showCameraPermissionAlert = true
+                    }
+                }
+            }
+
+        case .denied, .restricted:
+            // Permission denied or restricted, show alert
+            showCameraPermissionAlert = true
+
+        @unknown default:
+            showCameraPermissionAlert = true
+        }
+    }
+
+    private func openAppSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+        if UIApplication.shared.canOpenURL(settingsURL) {
+            UIApplication.shared.open(settingsURL)
+        }
+    }
+
+    // MARK: - Tab Bar Animation
+
     func something() {
         withAnimation(.smooth) {
-            
+
             if isExpanded {
                 withAnimation(.smooth) {
                     offsetY = 25
                 }
-                
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.smooth) {
                         scale = 1
                     }
                 }
-                
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     withAnimation(.smooth) {
                         offsetY = 0
                     }
                 }
-                
+
             } else {
                 withAnimation(.smooth) {
                     offsetY = 25
                 }
-                
-                
+
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.smooth) {
                         scale = 0.1
                     }
                 }
-                
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     withAnimation(.smooth) {
                         offsetY = 0
                     }
                 }
             }
-            
+
         }
 
     }
-    
+
 }
 
 #Preview {
-    ZStack {
-        Color.gray.opacity(0.1).ignoresSafeArea()
+    VStack {
+        Image("Iphone-image")
+            .resizable()
+//            .aspectRatio(contentMode: .fill)
+            .opacity(0.1).ignoresSafeArea()
         TabBar(isExpanded: .constant(true))
+            .environment(AppState())
+            .environment(ScanHistoryStore(webService: WebService()))
+            .environment(AppNavigationCoordinator(initialRoute: .home))
     }
 }

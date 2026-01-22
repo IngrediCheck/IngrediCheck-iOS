@@ -43,8 +43,8 @@ final class FoodNotesStore {
     /// Loading state for food notes operations
     var isLoadingFoodNotes: Bool = false
 
-    /// Sync management
-    private var isSyncing: Bool = false
+    /// Sync management - exposed for UI to show sync indicator
+    private(set) var isSyncing: Bool = false
     private var syncDebounceTask: Task<Void, Never>? = nil
     private var pendingSyncMembers: Set<String> = []
 

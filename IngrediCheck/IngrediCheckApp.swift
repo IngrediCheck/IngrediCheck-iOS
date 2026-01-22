@@ -52,6 +52,27 @@ struct MainView: View {
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         AnalyticsService.shared.configure()
+
+        // Configure navigation bar appearance globally
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground() // Transparent background
+        appearance.backButtonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.clear] // Hide "Back" text
+
+        // Create custom back indicator with 20px leading padding
+        let backImage = UIImage(systemName: "chevron.left")?
+            .withConfiguration(UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold))
+            .withTintColor(UIColor(red: 0x30/255.0, green: 0x30/255.0, blue: 0x30/255.0, alpha: 1.0), renderingMode: .alwaysOriginal)
+            .withAlignmentRectInsets(UIEdgeInsets(top: 0, left: -12, bottom: 0, right: 0)) // Add left padding
+
+        appearance.setBackIndicatorImage(backImage, transitionMaskImage: backImage)
+
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+
+        // Set back button color to #303030 (fallback for other elements)
+        UINavigationBar.appearance().tintColor = UIColor(red: 0x30/255.0, green: 0x30/255.0, blue: 0x30/255.0, alpha: 1.0)
+
         return true
     }
 

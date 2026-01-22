@@ -44,6 +44,7 @@ import os
                 }
             }
         }
+        .tint(Color(hex: "#303030"))
         .animation(.default, value: isSearching)
     }
 
@@ -213,40 +214,16 @@ import os
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 0) {
-            Image(systemName: "chevron.left")
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    dismiss()
-                }
-                .accessibilityAddTraits(.isButton)
-
-           
-
-            Text("Recent Scans")
-                .font(ManropeFont.semiBold.size(18))
-                .foregroundStyle(.grayScale150)
-                .padding(.leading , 12)
-
-            Spacer()
-
-            Image("filter")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 24, height: 24)
-                .padding(.trailing, 2)
-                .padding(.vertical, 8)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    isShowingFilterMenu.toggle()
-                }
-                .accessibilityAddTraits(.isButton)
-        }
-//        .padding(.horizontal, 20)
-     
-        .background(Color.white)
+    private var filterButton: some View {
+        Image("filter")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isShowingFilterMenu.toggle()
+            }
+            .accessibilityAddTraits(.isButton)
     }
     
     var defaultView: some View {
@@ -291,13 +268,15 @@ import os
                 .frame(maxWidth: .infinity)
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            header
-        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal)
-        .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Recent Scans")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                filterButton
+            }
+        }
         .task {
             // Load scan history when view appears if not already loaded
             if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {

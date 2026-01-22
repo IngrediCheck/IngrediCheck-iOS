@@ -21,9 +21,11 @@ struct MemberAvatar: View {
     let showBorder: Bool
     let borderWidth: CGFloat
     let imagePadding: CGFloat
-    
+
     @State private var avatarImage: UIImage? = nil
     @State private var loadedHash: String? = nil
+    @State private var isLoading: Bool = false
+    @State private var loadFailed: Bool = false
     
     /// Initializes a member avatar view
     /// - Parameters:
@@ -52,7 +54,7 @@ struct MemberAvatar: View {
             Circle()
                 .fill(Color(hex: member.color))
                 .frame(width: size, height: size)
-            
+
             // Memoji image on top (transparent PNG should show circle through)
             if let img = avatarImage {
                 Image(uiImage: img)
@@ -61,8 +63,13 @@ struct MemberAvatar: View {
                     .scaledToFit() // Preserve aspect ratio
                     .frame(width: size - imagePadding * 2, height: size - imagePadding * 2)
                     .clipShape(Circle())
+            } else if isLoading && member.imageFileHash != nil && !member.imageFileHash!.isEmpty {
+                // Show loading indicator while loading (only if there's supposed to be an image)
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(size > 60 ? 1.0 : 0.7)
             } else {
-                // Fallback: initial letter
+                // Fallback: initial letter (shown when no image hash or load failed)
                 Text(String(member.name.prefix(1)))
                     .font(NunitoFont.semiBold.size(size * 0.375))
                     .foregroundStyle(.white)
@@ -91,69 +98,72 @@ struct MemberAvatar: View {
             }
             avatarImage = nil
             loadedHash = nil
+            isLoading = false
+            loadFailed = false
             return
         }
 
-        // If we've already loaded this exact hash, skip re-fetching.
+        // If we've already loaded this exact hash in this view instance, skip re-fetching.
         if loadedHash == hash, let existingImage = avatarImage {
-            // Validate image is still valid
-            let isValid = await MainActor.run {
-                let width = existingImage.size.width
-                let height = existingImage.size.height
-                return width > 0 && height > 0 && width.isFinite && height.isFinite
-            }
+            let isValid = existingImage.size.width > 0 && existingImage.size.height > 0
             if isValid {
                 Log.debug("MemberAvatar", "Avatar for \(member.name) already loaded for hash \(hash), skipping reload")
+                isLoading = false
+                loadFailed = false
                 return
             }
         }
-        
+
+        // Start loading indicator
+        isLoading = true
+        loadFailed = false
+
         // 1) Try local asset first (for local memojis)
         if hash.hasPrefix("memoji_") {
             if let local = UIImage(named: hash) {
-                let isValid = await MainActor.run {
-                    let width = local.size.width
-                    let height = local.size.height
-                    return width > 0 && height > 0 && width.isFinite && height.isFinite
-                }
+                let isValid = local.size.width > 0 && local.size.height > 0
                 if isValid {
                     avatarImage = local
                     loadedHash = hash
+                    isLoading = false
+                    loadFailed = false
                     Log.debug("MemberAvatar", "✅ Loaded local memoji for \(member.name) (hash=\(hash))")
                     return
                 }
             }
         }
-        
-        // 2) Try remote (for memoji images from Supabase)
-        Log.debug("MemberAvatar", "Loading remote avatar for \(member.name), imageFileHash=\(hash)")
+
+        // 2) Try remote (uses WebService disk cache internally)
+        Log.debug("MemberAvatar", "Loading avatar for \(member.name), imageFileHash=\(hash)")
         do {
             let uiImage = try await webService.fetchImage(
                 imageLocation: .imageFileHash(hash),
                 imageSize: size <= 36 ? .small : (size <= 64 ? .medium : .large)
             )
-            
+
             // Validate loaded image
-            let isValid = await MainActor.run {
-                let width = uiImage.size.width
-                let height = uiImage.size.height
-                return width > 0 && height > 0 && width.isFinite && height.isFinite
-            }
-            
+            let isValid = uiImage.size.width > 0 && uiImage.size.height > 0
+
             guard isValid else {
                 Log.debug("MemberAvatar", "⚠️ Loaded image has invalid size, skipping")
                 avatarImage = nil
                 loadedHash = nil
+                isLoading = false
+                loadFailed = true
                 return
             }
-            
+
             avatarImage = uiImage
             loadedHash = hash
-            Log.debug("MemberAvatar", "✅ Loaded remote avatar for \(member.name) (hash=\(hash))")
+            isLoading = false
+            loadFailed = false
+            Log.debug("MemberAvatar", "✅ Loaded avatar for \(member.name) (hash=\(hash))")
         } catch {
             Log.debug("MemberAvatar", "❌ Failed to load avatar for \(member.name): \(error.localizedDescription)")
             avatarImage = nil
             loadedHash = nil
+            isLoading = false
+            loadFailed = true
         }
     }
 }

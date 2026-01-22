@@ -201,6 +201,15 @@ struct DynamicSubStepsQuestionView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .dismissSwipeTutorial)) { _ in
+            // Handle tap-to-dismiss from overlay
+            if showTutorial {
+                withAnimation {
+                    showTutorial = false
+                    userPreferences.cardsSwipeTutorialShown = true
+                }
+            }
+        }
     }
     
     private func selections(for cardTitle: String) -> Set<String> {
@@ -261,6 +270,11 @@ struct DynamicSubStepsQuestionView: View {
 
 // MARK: - Tutorial Data Structures
 
+/// Notification posted when user taps the tutorial overlay to dismiss it
+extension Notification.Name {
+    static let dismissSwipeTutorial = Notification.Name("dismissSwipeTutorial")
+}
+
 struct TutorialData: Equatable {
     var show: Bool
     var cardFrame: CGRect
@@ -268,7 +282,7 @@ struct TutorialData: Equatable {
 
 struct TutorialOverlayPreferenceKey: PreferenceKey {
     static var defaultValue: TutorialData = TutorialData(show: false, cardFrame: .zero)
-    
+
     static func reduce(value: inout TutorialData, nextValue: () -> TutorialData) {
         let next = nextValue()
         if next.show {

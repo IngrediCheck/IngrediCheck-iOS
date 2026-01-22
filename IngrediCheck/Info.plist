@@ -45,5 +45,7 @@
 		<string>Manrope-Bold.ttf</string>
 		<string>Manrope-ExtraBold.ttf</string>
 	</array>
+	<key>UIDesignRequiresCompatibility</key>
+	<true/>
 </dict>
 </plist>

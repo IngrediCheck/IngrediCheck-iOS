@@ -42,7 +42,6 @@ struct ManageFamilyView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
             List {
                 Section {
                     familyCard
@@ -109,7 +108,7 @@ struct ManageFamilyView: View {
             .background(Color(hex: "#FFFFFF"))
         }
         .background(Color(hex: "#FFFFFF"))
-        .navigationBarBackButtonHidden(true)
+        .navigationTitle("Manage Family")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             // Initialize family name: use existing family name, or generate from self member's first name
@@ -147,6 +146,10 @@ struct ManageFamilyView: View {
         }
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
+        }
+        .onDisappear {
+            // Reset flag when leaving family management
+            coordinator.isCreatingFamilyFromSettings = false
         }
     }
     
@@ -242,23 +245,6 @@ struct ManageFamilyView: View {
         .onChange(of: isEditingFamilyName) { _, editing in
             if !editing { commitFamilyName() }
         }
-    }
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.grayScale150)
-            }
-            Text("Manage Family")
-                .font(NunitoFont.bold.size(18))
-                .foregroundStyle(.grayScale150)
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 16)
     }
 
     private var familyCard: some View {

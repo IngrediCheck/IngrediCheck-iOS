@@ -63,29 +63,6 @@ struct SettingsContentView: View {
             VStack(spacing: 0) {
                 // Sticky Header Section
                 VStack(spacing: 24) {
-                    // Top bar with back chevron and title (effective 12pt horizontal padding)
-                    HStack() {
-                        Button { dismiss() } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.grayScale150)
-                                .padding(.horizontal , 8)
-                                
-                        }
-                        Text("Profile")
-                            .onTapGesture {
-                                dismiss()
-                            }
-                            .font(NunitoFont.bold.size(18))
-                            .foregroundStyle(.grayScale150)
-                        Text("& Settings")
-                            .font(NunitoFont.bold.size(18))
-                            .foregroundStyle(.grayScale150)
-                        Spacer()
-                    }
-                    .padding(.horizontal, -8)
-                    .padding(.top, 8)
-                    
                     // Profile Image and Name Header
                     VStack(spacing: 8) {
                         ProfileCard(isProfileCompleted: true)
@@ -151,37 +128,29 @@ struct SettingsContentView: View {
                         
                         sectionCard {
                             VStack(spacing: 0) {
-                                // Conditional navigation based on family existence AND other members
-                                // Show "Manage Family" only if family exists AND has other members
+                                // Conditional title based on family existence AND other members
+                                // Show "Manage Family" if family exists AND has other members
                                 // Show "Create Family" if no family OR family is just "Just Me" (no other members)
-                                if let family = familyStore.family, !family.otherMembers.isEmpty {
-                                    // Family exists with other members -> Navigate to ManageFamilyView
-                                    NavigationLink {
-                                        ManageFamilyView()
-                                            .environment(coordinator)
-                                    } label: {
-                                        rowContent(
-                                            image: Image("create-family-icon"),
-                                            title: "Manage Family",
-                                            iconColor: Color(hex: "#75990E")
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                } else {
-                                    // No family OR "Just Me" family -> Start family creation flow
-                                    Button {
-                                        coordinator.isCreatingFamilyFromSettings = true
-                                        coordinator.showCanvas(.letsMeetYourIngrediFam)
-                                        dismiss()
-                                    } label: {
-                                        rowContent(
-                                            image: Image("create-family-icon"),
-                                            title: "Create Family",
-                                            iconColor: Color(hex: "#75990E")
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
+                                let hasExistingFamily = familyStore.family != nil && !familyStore.family!.otherMembers.isEmpty
+
+                                // Use standard NavigationLink for both cases - ManageFamilyView handles both
+                                NavigationLink {
+                                    ManageFamilyView()
+                                        .environment(coordinator)
+                                        .onAppear {
+                                            // Set flag when creating family from settings (no existing family members)
+                                            if !hasExistingFamily {
+                                                coordinator.isCreatingFamilyFromSettings = true
+                                            }
+                                        }
+                                } label: {
+                                    rowContent(
+                                        image: Image("create-family-icon"),
+                                        title: hasExistingFamily ? "Manage Family" : "Create Family",
+                                        iconColor: Color(hex: "#75990E")
+                                    )
                                 }
+                                .buttonStyle(.plain)
                                 Divider()
                                     .padding(.horizontal, 16)
                                 settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {
@@ -308,7 +277,8 @@ struct SettingsContentView: View {
                     }
                 
             }
-            .fullScreenCover(isPresented: $showEditableCanvas) {
+            // Use navigationDestination for standard iOS push navigation with swipe-back gesture
+            .navigationDestination(isPresented: $showEditableCanvas) {
                 UnifiedCanvasView(
                     mode: .editing,
                     targetSectionName: editTargetSectionName,
@@ -323,8 +293,8 @@ struct SettingsContentView: View {
                 .environment(foodNotesStore)
             }
         .background(Color(hex: "#F7F7F7"))
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
             .sheet(isPresented: $isFeedbackPresented) {
                 FeedbackView(
                     feedbackData: $settingsFeedbackData,
@@ -1010,7 +980,7 @@ struct SettingsSheet: View {
             SettingsContentView()
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
+        .tint(Color(hex: "#303030"))
     }
 }
 

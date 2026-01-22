@@ -34,7 +34,7 @@ struct MatchingRateCard: View {
     }
 
     var body: some View {
-        VStack( ){
+        VStack {
             ZStack {
                 Rectangle()
                     .fill(.clear)
@@ -45,13 +45,9 @@ struct MatchingRateCard: View {
                             uncertainCount: uncertainCount,
                             unmatchedCount: unmatchedCount
                         )
-                            .scaleEffect( UIScreen.main.bounds.width * 0.00217)
-                            .offset(y: 35)
-                        , alignment: .bottom
-                        
-                    
-                        
-                    )
+                        .scaleEffect(UIScreen.main.bounds.width * 0.00217)
+                            .offset(y: 45)
+                        , alignment: .bottom)
               
                 VStack() {
                     HStack(alignment: .bottom, spacing: 0) {
@@ -92,24 +88,24 @@ struct MatchingRateCard: View {
             
           
            
-        }.frame(maxWidth: .infinity  )
-            .frame(height: 229)
-            .background(.grayScale10, in: RoundedRectangle(cornerRadius: 24))
-            .shadow(
-                color: isEmptyState ? .clear : Color(hex: "#ECECEC"),
-                radius: isEmptyState ? 0 : 9,
-                x: 0,
-                y: 0
-            )
-            .overlay(
-                Text("Matching Rate")
-                    .frame(height: 17)
-                    .font(ManropeFont.medium.size(16))
-                    .padding(14)
-                
-                ,alignment: .topLeading
-            
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 229)
+        .background(content: {
+            Color.white
+                .cornerRadius(24)
+                .shadow(
+                        color: Color(hex: "#ECECEC"),
+                        radius: 9,
+                        x: 0,
+                        y: 0
                 )
+        })
+        .overlay(
+            Text("Matching Rate")
+                .frame(height: 17)
+                .font(ManropeFont.semiBold.size(20))
+                .padding(16) ,alignment: .topLeading)
            
     }
     
@@ -164,15 +160,15 @@ struct MatchingRateCard1: View {
     Group {
         // Filled state preview
         ZStack {
-            Color.gray.opacity(0.1).ignoresSafeArea()
-            MatchingRateCard(matchedCount: 0, uncertainCount: 0, unmatchedCount: 47, increaseValue: 20)
+//            Color.gray.opacity(0.1).ignoresSafeArea()
+            MatchingRateCard(matchedCount: 0, uncertainCount: 0, unmatchedCount: 47, increaseValue: nil)
                 .padding(.horizontal, 20)
         }
         .previewDisplayName("Filled State")
         
         // Empty state preview
         ZStack {
-            Color.gray.opacity(0.9).ignoresSafeArea()
+//            Color.gray.opacity(0.9).ignoresSafeArea()
             MatchingRateCard(matchedCount: 0, uncertainCount: 0, unmatchedCount: 0)
                 .padding(.horizontal, 20)
         }

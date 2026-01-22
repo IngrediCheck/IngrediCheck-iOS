@@ -14,22 +14,22 @@ struct CreateYourAvatarCard: View {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Create Your Avatar")
-                            .font(ManropeFont.medium.size(18))
+                            .font(ManropeFont.semiBold.size(20))
                             .foregroundStyle(.grayScale150)
                             .lineLimit(1)
                         
                         Text("Create a fun digital version of yourself.")
-                            .font(ManropeFont.light.size(12))
+                            .font(ManropeFont.medium.size(14))
                             .foregroundStyle(.grayScale100)
                             .lineLimit(2)
                     }
                     
                     HStack(alignment: .center, spacing: 4) {
                         Text("Explore")
-                            .font(ManropeFont.regular.size(12))
+                            .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.grayScale150)
                         
-                        Image("right-arrow")
+                        Image(systemName: "arrow.right")
                             .resizable()
                             .frame(width: 12, height: 12)
                         //this icon is mising in assets
@@ -63,7 +63,7 @@ struct CreateYourAvatarCard: View {
                         .zIndex(2)
                 }
             }
-            .padding(12)
+            .padding(16)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 20)

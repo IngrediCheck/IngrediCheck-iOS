@@ -50,6 +50,7 @@ enum ValidationResult {
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Your Dietary Preferences")
         }
+        .tint(Color(hex: "#303030"))
     }
     
     private var validationStatus: some View {
