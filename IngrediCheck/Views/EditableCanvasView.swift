@@ -53,13 +53,21 @@ struct EditableCanvasView: View {
         ZStack(alignment: .bottom) {
             mainContent
         }
-        .overlay(bottomGradientOverlay, alignment: .bottom)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            tabBarOverlay
-        }
+        .modifier(
+            ConditionalBottomTabBar(
+                isEnabled: !navCoordinator.isEditSheetPresented,
+                gradientColors: [
+                    Color.white.opacity(0),
+                    Color.white
+                ]
+            ) {
+                TabBar(isExpanded: $isTabBarExpanded)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        )
         .background(Color.white)
-        .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(titleOverride ?? "Food Notes")
+        .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
             onBack?()
         }
@@ -498,9 +506,6 @@ private extension EditableCanvasView {
     @ViewBuilder
     var mainContent: some View {
         VStack(spacing: 0) {
-            customNavigationBar
-                .zIndex(10)
-            
             // Family member selector capsules (only if user has a family)
             if let family = familyStore.family, !family.otherMembers.isEmpty {
                 familyCapsulesRow(members: [family.selfMember] + family.otherMembers)
@@ -520,47 +525,7 @@ private extension EditableCanvasView {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
-    
-    @ViewBuilder
-    var customNavigationBar: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                HStack {
-                    if showBackButton {
-                        Button {
-                            // Dismiss bottom sheet if it's open
-                            if navCoordinator.isEditSheetPresented {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    navCoordinator.isEditSheetPresented = false
-                                }
-                            }
-                            dismiss()
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.black)
-                                .padding(8)
-                                .contentShape(Rectangle())
-                        }
-                    }
-                    Spacer()
-                }
-                
-                Text(titleOverride ?? "Food Notes")
-                    .font(NunitoFont.bold.size(18))
-                    .foregroundStyle(.grayScale150)
-                    .allowsHitTesting(false)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-            .background(Color.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
-    }
-    
 
-    
     var loadingView: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -748,30 +713,6 @@ private extension EditableCanvasView {
         }
     }
     
-    @ViewBuilder
-    var bottomGradientOverlay: some View {
-        if !navCoordinator.isEditSheetPresented {
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0),
-                    Color.white,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 132)
-            .frame(maxWidth: .infinity)
-            .allowsHitTesting(false)
-        }
-    }
-    
-    @ViewBuilder
-    var tabBarOverlay: some View {
-        if !navCoordinator.isEditSheetPresented {
-            TabBar(isExpanded: $isTabBarExpanded)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 }
 
 #Preview {

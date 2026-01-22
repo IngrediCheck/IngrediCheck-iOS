@@ -20,14 +20,20 @@ struct FullScreenImageViewer: View {
     @State private var lastOffset: CGSize = .zero
     @GestureState private var dragOffset: CGSize = .zero
 
+    // Swipe to dismiss state
+    @State private var dismissOffset: CGFloat = 0
+    @State private var isDismissing: Bool = false
+
     // Constants
     private let minScale: CGFloat = 1.0
     private let maxScale: CGFloat = 4.0
+    private let dismissThreshold: CGFloat = 150
 
     var body: some View {
         ZStack {
-            // Background
+            // Background - fades as user drags down
             Color.black
+                .opacity(backgroundOpacity)
                 .ignoresSafeArea()
 
             // Main content
@@ -70,16 +76,35 @@ struct FullScreenImageViewer: View {
                     }
                 }
 
-                Spacer()
+//                Spacer()
 
+                // Zoom controls - positioned above thumbnail strip
+                zoomControls
+                    .padding(.bottom, images.count > 1 ? 12 : 40)
+                
                 // Bottom thumbnail strip
                 if images.count > 1 {
                     thumbnailStrip
                         .padding(.bottom, 40)
                 }
             }
+            .offset(y: dismissOffset)
+            .scaleEffect(dismissScale)
+            .gesture(swipeToDismissGesture)
         }
         .statusBarHidden(true)
+    }
+
+    // MARK: - Dismiss Animation Properties
+
+    private var backgroundOpacity: Double {
+        let progress = min(abs(dismissOffset) / dismissThreshold, 1.0)
+        return 1.0 - (progress * 0.5)
+    }
+
+    private var dismissScale: CGFloat {
+        let progress = min(abs(dismissOffset) / dismissThreshold, 1.0)
+        return 1.0 - (progress * 0.1)
     }
 
     // MARK: - Header
@@ -105,24 +130,9 @@ struct FullScreenImageViewer: View {
 
             Spacer()
 
-            // Reset zoom button (only show if zoomed)
-            if scale > 1.0 || offset != .zero {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        resetZoom()
-                    }
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
-                }
-            } else {
-                Color.clear
-                    .frame(width: 44, height: 44)
-            }
+            // Placeholder to maintain layout
+            Color.clear
+                .frame(width: 44, height: 44)
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -248,6 +258,132 @@ struct FullScreenImageViewer: View {
                     }
                 }
             }
+    }
+
+    private var swipeToDismissGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                // Only allow swipe to dismiss when not zoomed
+                guard scale <= 1.0 else { return }
+
+                // Allow both up and down swipe
+                let verticalMovement = value.translation.height
+
+                // Apply resistance for upward swipes
+                if verticalMovement < 0 {
+                    dismissOffset = verticalMovement * 0.3
+                } else {
+                    dismissOffset = verticalMovement
+                }
+            }
+            .onEnded { value in
+                guard scale <= 1.0 else { return }
+
+                let velocity = value.predictedEndTranslation.height - value.translation.height
+                let shouldDismiss = abs(dismissOffset) > dismissThreshold || abs(velocity) > 500
+
+                if shouldDismiss && dismissOffset > 0 {
+                    // Dismiss with animation
+                    isDismissing = true
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        dismissOffset = UIScreen.main.bounds.height
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        dismiss()
+                    }
+                } else {
+                    // Snap back
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        dismissOffset = 0
+                    }
+                }
+            }
+    }
+
+    // MARK: - Zoom Controls
+    
+    private var zoomControls: some View {
+        HStack(spacing: 20) {
+            // Zoom out button
+            Button {
+                zoomOut()
+            } label: {
+                Image(systemName: "minus.magnifyingglass")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.white.opacity(0.2))
+                    .clipShape(Circle())
+            }
+            .disabled(scale <= minScale)
+            .opacity(scale <= minScale ? 0.5 : 1.0)
+            
+            // Zoom percentage badge (centered)
+            Text("\(Int(scale * 100))%")
+                .font(ManropeFont.semiBold.size(14))
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.black.opacity(0.6))
+                )
+                .frame(minWidth: 60)
+            
+            // Zoom in button
+            Button {
+                zoomIn()
+            } label: {
+                Image(systemName: "plus.magnifyingglass")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.white.opacity(0.2))
+                    .clipShape(Circle())
+            }
+            .disabled(scale >= maxScale)
+            .opacity(scale >= maxScale ? 0.5 : 1.0)
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    // MARK: - Zoom Actions
+    
+    private func zoomIn() {
+        let increment: CGFloat = 0.5
+        let newScale = min(scale + increment, maxScale)
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            scale = newScale
+            lastScale = 1.0
+            
+            // Reset offset when zooming in from 1.0
+            if scale == increment + 1.0 {
+                offset = .zero
+                lastOffset = .zero
+            }
+        }
+    }
+    
+    private func zoomOut() {
+        let decrement: CGFloat = 0.5
+        var newScale = max(scale - decrement, minScale)
+        
+        // If zooming out to 1.0, reset everything
+        if newScale <= minScale + 0.1 {
+            newScale = minScale
+        }
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            scale = newScale
+            lastScale = 1.0
+            
+            // Reset offset if zoomed out to 1.0
+            if newScale <= minScale {
+                offset = .zero
+                lastOffset = .zero
+            }
+        }
     }
 
     // MARK: - Helper Methods

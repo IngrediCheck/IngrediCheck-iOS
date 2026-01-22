@@ -5,6 +5,7 @@ import Combine
 import PhotosUI
 import CryptoKit
 import os
+import StoreKit
 
 enum CameraPresentationSource {
     case homeView
@@ -18,6 +19,7 @@ struct ScanCameraView: View {
     @Environment(\.scenePhase) var scenePhase
     @Environment(WebService.self) var webService
     @Environment(ScanHistoryStore.self) var scanHistoryStore
+    @Environment(UserPreferences.self) var userPreferences
     @State private var isCaptured: Bool = false
     @State private var overlayRect: CGRect = .zero
     @State private var overlayContainerSize: CGSize = .zero
@@ -51,7 +53,13 @@ struct ScanCameraView: View {
     @State private var capturedImagesPerScanId: [String: [(image: UIImage, hash: String)]] = [:]  // Track captured images per scanId with hash
     @State private var submittingScanIds: Set<String> = []  // Track scanIds currently submitting images (prevents premature getScan)
     private let skeletonCardId = "skeleton"  // Constant ID for skeleton card
-    
+    @State private var completedHapticScanIds: Set<String> = []  // Track scans we've already fired haptics for
+
+    // MARK: - Rating Prompt State
+    @State private var awaitingRatingOutcome = false
+    @State private var ratingPromptPresentedAt: Date?
+    @State private var dismissalFallbackTask: Task<Void, Never>?
+
     // MARK: - Presentation Source Tracking
     @State private var presentationSource: CameraPresentationSource = .homeView
     @State private var isProgrammaticModeChange: Bool = false
@@ -344,6 +352,80 @@ struct ScanCameraView: View {
         }
     }
     
+    // MARK: - Haptics
+    private func triggerAnalysisCompletedHaptic(for scanId: String) {
+        // Ensure we only fire once per scan
+        guard !completedHapticScanIds.contains(scanId) else { return }
+        completedHapticScanIds.insert(scanId)
+
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+
+    // MARK: - Rating Prompt
+    private func checkAndPromptForRating() {
+        if userPreferences.canPromptForRating() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                userPreferences.recordRatingPrompt()
+                ratingPromptPresentedAt = Date()
+                awaitingRatingOutcome = true
+                scheduleDismissalFallback()
+
+                let foregroundScene = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first { $0.activationState == .foregroundActive }
+                if let windowScene = foregroundScene {
+                    SKStoreReviewController.requestReview(in: windowScene)
+                }
+            }
+        }
+    }
+
+    private func scheduleDismissalFallback() {
+        dismissalFallbackTask?.cancel()
+        dismissalFallbackTask = Task {
+            try? await Task.sleep(nanoseconds: 10 * 1_000_000_000)
+            await MainActor.run {
+                guard awaitingRatingOutcome else { return }
+                guard scenePhase == .active else { return }
+                handleRatingPromptFinished(recordDismissal: true)
+            }
+        }
+    }
+
+    private func handleRatingPromptFinished(recordDismissal: Bool) {
+        dismissalFallbackTask?.cancel()
+        dismissalFallbackTask = nil
+        defer {
+            awaitingRatingOutcome = false
+            ratingPromptPresentedAt = nil
+        }
+        if recordDismissal {
+            userPreferences.recordPromptDismissal()
+        }
+    }
+
+    private func handleRatingScenePhaseChange(_ newPhase: ScenePhase) {
+        guard awaitingRatingOutcome else { return }
+        switch newPhase {
+        case .active:
+            if let start = ratingPromptPresentedAt {
+                let elapsed = Date().timeIntervalSince(start)
+                if elapsed < 5.0 {
+                    handleRatingPromptFinished(recordDismissal: true)
+                } else {
+                    handleRatingPromptFinished(recordDismissal: false)
+                }
+            } else {
+                handleRatingPromptFinished(recordDismissal: true)
+            }
+        case .background:
+            handleRatingPromptFinished(recordDismissal: false)
+        default:
+            break
+        }
+    }
+
     // MARK: - Scan History
     private func loadScanHistory() async {
         Log.debug("SCAN_HISTORY", "🔵 CameraScreen: Loading scan history from store")
@@ -468,30 +550,37 @@ struct ScanCameraView: View {
     // MARK: - New Product Session (Photo Mode)
     private func addNewProductScanSession() {
         Log.debug("PHOTO_SCAN", "➕ CameraScreen: Adding new product scan session")
-        
+
         // Clear capturedImagesPerScanId for old scanId if it exists
         if let oldScanId = scanId {
             capturedImagesPerScanId[oldScanId] = nil
             Log.debug("PHOTO_SCAN", "🗑️ CameraScreen: Cleared capturedImagesPerScanId for old scanId: \(oldScanId)")
         }
-        
+
         // Reset scanId for new product session
         scanId = nil
-        
+
         // Clear captured photo history for new session
         capturedPhotoHistory = []
-        
+
         // Remove existing skeleton if it exists
         if let existingSkeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
             scanIds.remove(at: existingSkeletonIndex)
         }
-        
+
+        // Clear scroll target first so carousel's onChange always fires
+        scrollTargetScanId = nil
+
         // Add new skeleton card at the beginning (will be replaced when first image is captured)
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             scanIds.insert(skeletonCardId, at: 0)
+        }
+
+        // Set scroll target on next runloop tick to ensure items are updated
+        DispatchQueue.main.async {
             scrollTargetScanId = skeletonCardId
         }
-        
+
         Log.debug("PHOTO_SCAN", "✅ CameraScreen: New product session started - skeleton card added")
     }
     
@@ -698,6 +787,7 @@ struct ScanCameraView: View {
                     } else if newPhase == .background {
                         camera.stopSession()
                     }
+                    handleRatingScenePhaseChange(newPhase)
                 }
                 .onChange(of: mode) { newMode in
                     camera.scanningEnabled = (newMode == .scanner)
@@ -959,6 +1049,13 @@ struct ScanCameraView: View {
                                     // Update cache when scan data changes (e.g., from polling)
                                     // This enables toast to reflect latest_guidance changes
                                     scanDataCache[itemId] = updatedScan
+
+                                    // Trigger haptic feedback and rating prompt once when analysis is completed
+                                    if updatedScan.state == "done", updatedScan.analysis_result != nil {
+                                        triggerAnalysisCompletedHaptic(for: updatedScan.id)
+                                        checkAndPromptForRating()
+                                    }
+
                                     updateToastState()
                                 },
                                 onFavoriteToggle: { scanId, isFavorited in
@@ -1163,30 +1260,32 @@ struct ScanCameraView: View {
             }
         }
         .fullScreenCover(isPresented: $isProductDetailPresented) {
-            if let selectedScanId = selectedScanId {
-                // Pass scanId for real-time updates
-                // Get local images for this scanId (if any)
-                let localImagesForScan = capturedImagesPerScanId[selectedScanId]?.map { $0.image }
-                let initialScan = scanDataCache[selectedScanId]  // Get cached scan if available
+            NavigationStack {
+                if let selectedScanId = selectedScanId {
+                    // Pass scanId for real-time updates
+                    // Get local images for this scanId (if any)
+                    let localImagesForScan = capturedImagesPerScanId[selectedScanId]?.map { $0.image }
+                    let initialScan = scanDataCache[selectedScanId]  // Get cached scan if available
 
-                ProductDetailView(
-                    scanId: selectedScanId,  // NEW: Pass scanId for real-time updates
-                    initialScan: initialScan,  // NEW: Pass initial scan data
-                    localImages: localImagesForScan,  // Pass local images for photo mode
-                    isPlaceholderMode: false,
-                    presentationSource: .cameraView,
-                    onRequestCameraWithScan: { requestedScanId in
-                        // Handle camera request from ProductDetail
-                        // Mark that we're returning from ProductDetailView programmatically
-                        isProgrammaticModeChange = true
-                        targetScanIdFromProductDetail = requestedScanId
-                        
-                        // Switch to photo mode (this will trigger onChange handler)
-                        mode = .photo
-                    }
-                )
-            } else {
-                ProductDetailView(isPlaceholderMode: true)
+                    ProductDetailView(
+                        scanId: selectedScanId,  // NEW: Pass scanId for real-time updates
+                        initialScan: initialScan,  // NEW: Pass initial scan data
+                        localImages: localImagesForScan,  // Pass local images for photo mode
+                        isPlaceholderMode: false,
+                        presentationSource: .cameraView,
+                        onRequestCameraWithScan: { requestedScanId in
+                            // Handle camera request from ProductDetail
+                            // Mark that we're returning from ProductDetailView programmatically
+                            isProgrammaticModeChange = true
+                            targetScanIdFromProductDetail = requestedScanId
+                            
+                            // Switch to photo mode (this will trigger onChange handler)
+                            mode = .photo
+                        }
+                    )
+                } else {
+                    ProductDetailView(isPlaceholderMode: true)
+                }
             }
         }
         .sheet(isPresented: $isShowingPhotoPicker) {

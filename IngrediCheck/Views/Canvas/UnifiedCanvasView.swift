@@ -77,19 +77,28 @@ struct UnifiedCanvasView: View {
                 editSheetOverlay
             }
         }
-        .overlay(alignment: .bottom) {
-            if mode.showTabBar {
-                bottomGradientOverlay
+        .modifier(
+            ConditionalBottomTabBar(
+                isEnabled: mode.showTabBar && !coordinator.isEditSheetPresented,
+                gradientColors: [
+                    Color.white.opacity(0),
+                    Color.white
+                ]
+            ) {
+                TabBar(isExpanded: $isTabBarExpanded)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if mode.showTabBar {
-                tabBarOverlay
-            }
-        }
+        )
         .background(Color.white)
-        .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(mode == .editing ? (titleOverride ?? "Food Notes") : "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if mode == .editing {
+                ToolbarItem(placement: .topBarTrailing) {
+                    SyncIndicatorView(isSyncing: foodNotesStore?.isSyncing == true || foodNotesStore?.isLoadingFoodNotes == true)
+                }
+            }
+        }
         .onAppear {
             handleOnAppear()
         }
@@ -184,63 +193,28 @@ struct UnifiedCanvasView: View {
             CustomIngrediCheckProgressBar(progress: CGFloat(store.progress * 100))
                 .animation(.smooth, value: store.progress)
         case .editing:
-            customNavigationBar
+            EmptyView() // Uses default navigation bar with title and back button
         }
-    }
-
-    @ViewBuilder
-    private var customNavigationBar: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                HStack {
-                    if showBackButton {
-                        Button {
-                            handleBackButton()
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.black)
-                                .padding(8)
-                                .contentShape(Rectangle())
-                        }
-                    }
-                    Spacer()
-                }
-
-                Text(titleOverride ?? "Food Notes")
-                    .font(NunitoFont.bold.size(18))
-                    .foregroundStyle(.grayScale150)
-                    .allowsHitTesting(false)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-            .background(Color.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     // MARK: - Cards Content
 
     @ViewBuilder
     private var cardsContent: some View {
-        if foodNotesStore?.isLoadingFoodNotes == true && mode == .editing {
-            loadingView
+        let cards = buildCards()
+        if mode.showTagBar {
+            // Onboarding mode: use CanvasSummaryScrollView
+            CanvasSummaryScrollView(
+                cards: cards,
+                scrollTarget: $cardScrollTarget,
+                showPlaceholder: cards.isEmpty,
+                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                showFamilyIcons: showFamilyIconsOnChips
+            )
         } else {
-            let cards = buildCards()
-            if mode.showTagBar {
-                // Onboarding mode: use CanvasSummaryScrollView
-                CanvasSummaryScrollView(
-                    cards: cards,
-                    scrollTarget: $cardScrollTarget,
-                    showPlaceholder: cards.isEmpty,
-                    itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
-                    showFamilyIcons: showFamilyIconsOnChips
-                )
-            } else {
-                // Editing mode: use custom scroll view with edit buttons
-                editableCardsScrollView(cards: cards)
-            }
+            // Editing mode: use custom scroll view with edit buttons
+            // Data is already available from FoodNotesStore, refresh happens in background
+            editableCardsScrollView(cards: cards)
         }
     }
 
@@ -350,51 +324,6 @@ struct UnifiedCanvasView: View {
         }
     }
 
-    // MARK: - Loading View
-
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle())
-                .scaleEffect(1.2)
-            Text("Loading your preferences...")
-                .font(ManropeFont.medium.size(16))
-                .foregroundStyle(.grayScale100)
-                .padding(.top, 8)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - Bottom Gradient Overlay (Editing only)
-
-    @ViewBuilder
-    private var bottomGradientOverlay: some View {
-        if !coordinator.isEditSheetPresented {
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0),
-                    Color.white,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 132)
-            .frame(maxWidth: .infinity)
-            .allowsHitTesting(false)
-        }
-    }
-
-    // MARK: - Tab Bar Overlay (Editing only)
-
-    @ViewBuilder
-    private var tabBarOverlay: some View {
-        if !coordinator.isEditSheetPresented {
-            TabBar(isExpanded: $isTabBarExpanded)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 
     // MARK: - Scroll Tracking Background (Editing only)
 
@@ -582,26 +511,81 @@ struct UnifiedCanvasView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Sync Indicator View
 
-#Preview("Onboarding") {
-    let webService = WebService()
-    let onboarding = Onboarding(onboardingFlowtype: .individual)
-    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+private struct SyncIndicatorView: View {
+    let isSyncing: Bool
+    @State private var rotation: Double = 0
 
-    UnifiedCanvasView(mode: .onboarding(flow: .individual))
-        .environmentObject(onboarding)
-        .environment(webService)
-        .environment(foodNotesStore)
+    var body: some View {
+        Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill")
+            .font(.system(size: 22))
+            .foregroundStyle(isSyncing ? Color.grayScale50 : .grayScale30)
+            .rotationEffect(.degrees(rotation))
+            .onChange(of: isSyncing) { _, newValue in
+                if newValue {
+                    startRotation()
+                } else {
+                    stopRotation()
+                }
+            }
+            .onAppear {
+                if isSyncing {
+                    startRotation()
+                }
+            }
+    }
+
+    private func startRotation() {
+        withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+            rotation = 360
+        }
+    }
+
+    private func stopRotation() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            rotation = 0
+        }
+    }
 }
 
-#Preview("Editing") {
-    let webService = WebService()
-    let onboarding = Onboarding(onboardingFlowtype: .individual)
-    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+// MARK: - Preview
 
-    UnifiedCanvasView(mode: .editing)
-        .environmentObject(onboarding)
-        .environment(webService)
-        .environment(foodNotesStore)
+//#Preview("Onboarding") {
+//    let webService = WebService()
+//    let onboarding = Onboarding(onboardingFlowtype: .individual)
+//    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+//
+//    UnifiedCanvasView(mode: .onboarding(flow: .individual))
+//        .environmentObject(onboarding)
+//        .environment(webService)
+//        .environment(foodNotesStore)
+//}
+
+//#Preview("Editing") {
+//    let webService = WebService()
+//    let onboarding = Onboarding(onboardingFlowtype: .individual)
+//    let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
+//
+//    UnifiedCanvasView(mode: .editing)
+//        .environmentObject(onboarding)
+//        .environment(webService)
+//        .environment(foodNotesStore)
+//}
+
+#Preview("Sync Indicator") {
+    VStack(spacing: 40) {
+        VStack {
+            Text("Syncing")
+                .font(.caption)
+            SyncIndicatorView(isSyncing: true)
+        }
+
+        VStack {
+            Text("Not Syncing")
+                .font(.caption)
+            SyncIndicatorView(isSyncing: false)
+        }
+    }
+    .padding()
 }

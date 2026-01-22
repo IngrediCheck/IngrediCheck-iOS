@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct HomeView: View {
     private let chatSmallDetent: PresentationDetent = .height(260)
@@ -66,7 +67,7 @@ struct HomeView: View {
         return [family.selfMember] + family.otherMembers
     }
     private var primaryMemberName: String {
-        return familyStore.family?.selfMember.name ?? "IngrediFriend"
+        return familyStore.family?.selfMember.name ?? "BiteBuddy"
     }
     
     // MARK: - Family avatars
@@ -84,35 +85,29 @@ struct HomeView: View {
     }
     
     var body: some View {
+        // Make AppState observable/bindable so view updates when its properties change
+        @Bindable var appState = appState
+        
         NavigationStack(path: $navigationPath) {
             ScrollView(.vertical, showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
-                VStack(spacing: 0) {
-                    
+                VStack(spacing: 12) {
+                                        
                     // Greeting section
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 3) {
-                                Text("Hello")
-                                    .font(NunitoFont.regular.size(14))
-                                    .foregroundStyle(.grayScale150)
-                                
-                                Text("👋")
-                                    .font(.system(size: 10))
-                                    .padding(.bottom, 1)
-                            }
-                            .frame(height: 16)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Hello 👋")
+                                .font(NunitoFont.regular.size(14))
+                                .foregroundStyle(.grayScale150)
                             
                             Text(primaryMemberName)
                                 .font(NunitoFont.semiBold.size(32))
                                 .foregroundStyle(.grayScale150)
-                                .frame(height: 28)
-                                .offset(x: -1.8)
+                                .offset(x: -2)
                             
                             Text("Complete your profile easily.")
-                                .font(ManropeFont.regular.size(12))
-                                .foregroundStyle(.grayScale100)
-                                .frame(height: 16)
+                                .font(ManropeFont.regular.size(14))
+                                .foregroundStyle(.grayScale110)
                         }
                         
                         Spacer()
@@ -122,7 +117,7 @@ struct HomeView: View {
                                 isSettingsPresented = true
                             }
                     }
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 24)
                     
                     // Food Notes & Allergy Summary...
                     HStack(spacing: 12) {
@@ -133,18 +128,17 @@ struct HomeView: View {
                                     .foregroundStyle(.grayScale150)
                                     .frame(height: 15)
                                 
-                                Text("Here's what your family avoids  or needs to watch out for.")
-                                    .font(ManropeFont.regular.size(12))
-                                    .foregroundStyle(.grayScale100)
+                                Text("Here’s what your family avoids or needs to watch out for.")
+                                    .font(ManropeFont.regular.size(14))
+                                    .foregroundStyle(.grayScale110)
+                                    .lineLimit(3)
                             }
-                            Spacer()
-                            
+                                                        
                             AskIngrediBotButton {
                                 selectedChatDetent = .medium
                                 isChatSheetPresented = true
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         
                         AllergySummaryCard(
                             summary: foodNotesStore?.foodNotesSummary,
@@ -154,10 +148,10 @@ struct HomeView: View {
                                 showEditableCanvas = true
                             }
                         )
-                        .frame(width: 171, height: 196)
+                        .frame(width: 165, height: 196)
                     }
-                    .frame(height: UIScreen.main.bounds.height * 0.22)
-                    .padding(.bottom, 24)
+                    .frame(maxWidth: .infinity)
+//                    .padding(.bottom, 24)
                     
                     // Family + Average scans
                     HStack(spacing: 12) {
@@ -165,21 +159,23 @@ struct HomeView: View {
                             playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
                             avgScans: stats?.avgScans ?? 0
                         )
-                            .onAppear {
-                                didPlayAverageScansLaunchAnimation = true
-                            }
-                            .frame(maxWidth: .infinity)
+                        .onAppear {
+                            didPlayAverageScansLaunchAnimation = true
+                        }
+                        .frame(maxWidth: .infinity)
                         
-                        VStack {
+                        VStack(spacing: 12) {
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
-                                    .font(ManropeFont.medium.size(18))
+                                    .font(ManropeFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
                                     .padding(.bottom, 4)
-                            
+                                    .lineLimit(2)
+                                
                                 Text("Your people, their choices.")
-                                    .font(ManropeFont.regular.size(12))
-                                    .foregroundStyle(.grayScale100)
+                                    .font(ManropeFont.regular.size(14))
+                                    .foregroundStyle(.grayScale110)
+                                    .lineLimit(2)
                                 
                                 Spacer()
                                 
@@ -216,10 +212,21 @@ struct HomeView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .frame(height: 125)
+                            .frame(height: 141)
                         }
                         .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(Color.white)
+                                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 24)
+                                        .stroke(lineWidth: 0.75)
+                                        .foregroundStyle(Color(hex: "#EEEEEE"))
+                                )
+                        )
+                        .contentShape(RoundedRectangle(cornerRadius: 24))
                         .onTapGesture {
                             // Only open Manage Family if family exists and has other members
                             if let family = familyStore.family, !family.otherMembers.isEmpty {
@@ -227,30 +234,33 @@ struct HomeView: View {
                             }
                         }
                     }
-                    .padding(.bottom, 20)
+//                    .padding(.bottom, 20)
                     
-                    Image(.homescreenbanner)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .cornerRadius(20)
-                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                        .padding(.bottom, 20)
+                    //                    Image(.homescreenbanner)
+                    //                        .resizable()
+                    //                        .scaledToFit()
+                    //                        .frame(maxWidth: .infinity)
+                    //                        .cornerRadius(20)
+                    //                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
+                    //                        .padding(.bottom, 20)
                     
                     HStack(spacing: 12) {
                         YourBarcodeScans(barcodeScansCount: stats?.barcodeScansCount ?? 0)
                             .frame(maxWidth: .infinity)
+
                         UserFeedbackCard()
                             .frame(maxWidth: .infinity)
+
                     }
-                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity)
+//                    .padding(.bottom, 20)
                     
                     MatchingRateCard(
                         matchedCount: stats?.matchingStats.matched ?? 0,
                         uncertainCount: stats?.matchingStats.uncertain ?? 0,
                         unmatchedCount: stats?.matchingStats.unmatched ?? 0
                     )
-                        .padding(.bottom, 20)
+//                    .padding(.bottom, 20)
                     
                     CreateYourAvatarCard()
                     
@@ -263,35 +273,15 @@ struct HomeView: View {
                                 coordinator.navigateInBottomSheet(.yourCurrentAvatar)
                             }
                         }
-                        .padding(.bottom, 20)
+//                        .padding(.bottom, 20)
                     
                     
                     // Recent Scans header
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing : 6) {
-                                Text("Recent Scans")
-                                    .font(ManropeFont.medium.size(18))
-                                    .foregroundStyle(.grayScale150)
-                                
-                                Button {
-                                    Task {
-                                        await refreshRecentScans()
-                                    }
-                                } label: {
-                                    if isRefreshingHistory {
-                                        ProgressView()
-                                            .progressViewStyle(.circular)
-                                            .scaleEffect(0.7)
-                                    } else {
-                                        Image(systemName: "arrow.clockwise")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(Color(hex: "B6B6B6"))
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(isRefreshingHistory)
-                            }
+                            Text("Recent Scans")
+                                .font(ManropeFont.medium.size(18))
+                                .foregroundStyle(.grayScale150)
                             
                             Text("Here’s what you checked last in past 2 days")
                                 .font(ManropeFont.regular.size(12))
@@ -305,30 +295,13 @@ struct HomeView: View {
                             NavigationLink(value: HistoryRouteItem.recentScansAll) {
                                 Text("View All")
                                     .underline()
-                                    .font(ManropeFont.medium.size(14))
-                                    .foregroundStyle(Color(hex: "B6B6B6"))
+                                    .font(ManropeFont.bold.size(14))
+                                    .foregroundStyle(Color(hex: "#82B611"))
                             }
                             .buttonStyle(.plain)
-                            
-                            //                            Button {
-                            //                                Task {
-                            //                                    await refreshRecentScans()
-                            //                                }
-                            //                            } label: {
-                            //                                if isRefreshingHistory {
-                            //                                    ProgressView()
-                            //                                        .progressViewStyle(.circular)
-                            //                                        .scaleEffect(0.7)
-                            //                                } else {
-                            //                                    Image(systemName: "arrow.clockwise")
-                            //                                        .font(.system(size: 14, weight: .medium))
-                            //                                }
-                            //                            }
-                            //                            .buttonStyle(.plain)
-                            //                            .disabled(isRefreshingHistory)
                         }
                     }
-                    .padding(.bottom, 20)
+//                    .padding(.bottom, 20)
                     
                     // Recent Scans list / empty state
                     if let scans = appState.listsTabState.scans,
@@ -339,21 +312,8 @@ struct HomeView: View {
                             ForEach(Array(items.enumerated()), id: \.element.id) { index, scan in
                                 
                                 Button {
-                                    let product = scan.toProduct()
-                                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
-                                    
-                                    let payload = ProductDetailPayload(
-                                        scanId: scan.id,
-                                        scan: scan,
-                                        product: product,
-                                        matchStatus: scan.toProductRecommendation(),
-                                        ingredientRecommendations: recommendations,
-                                        clientActivityId: nil,
-                                        favorited: scan.is_favorited ?? false
-                                    )
-                                    
-                                    activeProductDetail = payload
-                                    
+                                    // Use push navigation instead of modal
+                                    navigationPath.append(HistoryRouteItem.scan(scan))
                                 } label: {
                                     ScanRow(scan: scan)
                                 }
@@ -402,19 +362,19 @@ struct HomeView: View {
                                     scrollTrackingState.didInitialize = true
                                     return
                                 }
-
+                                
                                 // Track the maximum (most negative) scroll offset reached
                                 if newValue < 0 {
                                     scrollTrackingState.maxScrollOffset = min(scrollTrackingState.maxScrollOffset, newValue)
                                 } else {
                                     scrollTrackingState.maxScrollOffset = 0
                                 }
-
+                                
                                 let scrollDelta = newValue - scrollTrackingState.prevValue
                                 let minScrollDelta: CGFloat = 5 // Minimum scroll change to trigger state change
-
+                                
                                 var nextExpanded = isTabBarExpanded
-
+                                
                                 // Only change expansion state when scrolled past the top (newValue < 0)
                                 if newValue < 0 {
                                     if scrollDelta < -minScrollDelta {
@@ -426,11 +386,11 @@ struct HomeView: View {
                                         }
                                     }
                                 }
-
+                                
                                 if nextExpanded != isTabBarExpanded {
                                     isTabBarExpanded = nextExpanded
                                 }
-
+                                
                                 scrollTrackingState.prevValue = newValue
                             }
                     }
@@ -440,23 +400,12 @@ struct HomeView: View {
             .coordinateSpace(name: "homeScroll")
             .frame(maxWidth: .infinity)
             .clipped()
-            .overlay(
-                // Bottom gradient - positioned behind everything, flush with bottom (ignores safe area)
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0),
-                        Color(hex: "#FCFCFE"),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 132)
-                .frame(maxWidth: .infinity)
-                .allowsHitTesting(false),
-                alignment: .bottom
-            ).ignoresSafeArea(edges: .bottom)
-            .overlay(
-                // TabBar in its original position (respects safe area)
+            .withBottomTabBar(
+                gradientColors: [
+                    Color.white.opacity(0),
+                    Color(hex: "#FCFCFE")
+                ]
+            ) {
                 TabBar(
                     isExpanded: $isTabBarExpanded,
                     onRecentScansTap: {
@@ -466,144 +415,161 @@ struct HomeView: View {
                         selectedChatDetent = .medium
                         isChatSheetPresented = true
                     }
-                ),
-                alignment: .bottom
-            )
-            .background(Color.white)
-//            .padding(.top , 16)
-//            .background(Color.red)
-            
-           
-            // ------------ HISTORY LOADING ------------
-            .task {
-                if appState.listsTabState.scans == nil {
-                    await refreshRecentScans()
-                }
+                )
             }
+            .background(Color(hex: "#FCFCFC"))
+            //            .padding(.top , 16)
+            //            .background(Color.red)
+            
+            
+            // ------------ HISTORY LOADING ------------
+                .task {
+                    if appState.listsTabState.scans == nil {
+                        await refreshRecentScans()
+                    }
+                }
             // ------------ FOOD NOTES SUMMARY ------------
             // Use task(id:) so it re-runs when foodNotesStore becomes available
-            .task(id: foodNotesStore != nil) {
-                Log.debug("HomeView", "Food notes summary task triggered, store exists: \(foodNotesStore != nil)")
-                foodNotesStore?.refreshSummary()
-            }
-            // Trigger a push navigation to Settings when requested by app state
-            .onChange(of: appState.navigateToSettings) { _, newValue in
-                if newValue {
-                    isSettingsPresented = true
-                    appState.navigateToSettings = false
+                .task(id: foodNotesStore != nil) {
+                    Log.debug("HomeView", "Food notes summary task triggered, store exists: \(foodNotesStore != nil)")
+                    foodNotesStore?.refreshSummary()
                 }
-            }
-
+            // Trigger a push navigation to Settings when requested by app state
+                .onChange(of: appState.navigateToSettings) { _, newValue in
+                    if newValue {
+                        isSettingsPresented = true
+                        appState.navigateToSettings = false
+                    }
+                }
+            
             // ------------ SETTINGS SCREEN ------------
             // Use SettingsContentView (without NavigationStack) in navigationDestination
             // to avoid nested NavigationStack issues that cause NavigationPath comparisonTypeMismatch errors
-            .navigationDestination(isPresented: $isSettingsPresented) {
-                SettingsContentView()
-                    .environment(userPreferences)
-                    .environment(coordinator)
-                    .environment(memojiStore)
-            }
+                .navigationDestination(isPresented: $isSettingsPresented) {
+                    SettingsContentView()
+                        .environment(userPreferences)
+                        .environment(coordinator)
+                        .environment(memojiStore)
+                }
             
             // ------------ EDITABLE CANVAS ------------
-            .navigationDestination(isPresented: $showEditableCanvas) {
-                UnifiedCanvasView(
-                    mode: .editing,
-                    targetSectionName: editTargetSectionName,
-                    onDismiss: {
-                        showEditableCanvas = false
-                    }
-                )
+                .navigationDestination(isPresented: $showEditableCanvas) {
+                    UnifiedCanvasView(
+                        mode: .editing,
+                        targetSectionName: editTargetSectionName,
+                        onDismiss: {
+                            showEditableCanvas = false
+                        }
+                    )
                     .environmentObject(onboarding)
-            }
-            
-
-
-            // ------------ CHAT SHEET ------------
-            .sheet(isPresented: $isChatSheetPresented) {
-                IngrediBotChatView {
-                    isChatSheetPresented = false
                 }
-                .presentationDetents([chatSmallDetent, .medium, .large],
-                                     selection: $selectedChatDetent)
-                .presentationDragIndicator(.visible)
-            }
             
-            // ------------ MANAGE FAMILY SHEET ------------
-            .sheet(isPresented: $isManageFamilyPresented) {
-                NavigationStack {
+            
+            
+            // ------------ CHAT SHEET ------------
+                .sheet(isPresented: $isChatSheetPresented) {
+                    IngrediBotChatView {
+                        isChatSheetPresented = false
+                    }
+                    .presentationDetents([chatSmallDetent, .medium, .large],
+                                         selection: $selectedChatDetent)
+                    .presentationDragIndicator(.visible)
+                }
+            
+            // ------------ MANAGE FAMILY SCREEN ------------
+            // Use navigationDestination for standard iOS push navigation
+                .navigationDestination(isPresented: $isManageFamilyPresented) {
                     ManageFamilyView()
                         .environment(coordinator)
                 }
-            }
-
+            
             // ------------ PRODUCT DETAIL ------------
-            .fullScreenCover(item: $activeProductDetail) { detail in
-                ProductDetailView(
-                    scanId: detail.scanId,  // Pass scanId for real-time updates
-                    initialScan: detail.scan,  // Pass full scan with is_favorited
-                    product: detail.product,
-                    matchStatus: detail.matchStatus,
-                    ingredientRecommendations: detail.ingredientRecommendations,
-                    isPlaceholderMode: false,
-                    presentationSource: .homeView
-                )
-            }
-            
-            // ------------ SCAN CAMERA (Auto-open on app start) ------------
-            .fullScreenCover(isPresented: $showScanCamera, onDismiss: {
-                Task {
-                    await scanHistoryStore.loadHistory(forceRefresh: true)
-                    // Also refresh scan count since a new scan might have occurred
-                    userPreferences.refreshScanCount()
-                }
-            }) {
-                ScanCameraView()
-            }
-            
-
-
-            // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
-            .navigationDestination(for: HistoryRouteItem.self) { item in
-                switch item {
-                case .scan(let scan):
-                    let product = scan.toProduct()
-                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
+                .fullScreenCover(item: $activeProductDetail) { detail in
                     ProductDetailView(
-                        scanId: scan.id,
-                        initialScan: scan,
-                        product: product,
-                        matchStatus: scan.toProductRecommendation(),
-                        ingredientRecommendations: recommendations,
+                        scanId: detail.scanId,  // Pass scanId for real-time updates
+                        initialScan: detail.scan,  // Pass full scan with is_favorited
+                        product: detail.product,
+                        matchStatus: detail.matchStatus,
+                        ingredientRecommendations: detail.ingredientRecommendations,
                         isPlaceholderMode: false,
                         presentationSource: .homeView
                     )
-                case .listItem(let item):
-                    // Fallback for list items if reached from Home
-                    FavoriteItemDetailView(item: item)  // Assuming FavoriteItemDetailView is available
-                case .favoritesAll:
-                     // Fallback, not strictly needed for Recent Scans
-                     FavoritesPageView()
-                case .recentScansAll:
-                     RecentScansPageView()
                 }
-            }
-            .task {
-                await loadStats()
-            }
-            .onAppear {
-                // Check if we should auto-open scan camera on app start
-                // Only trigger once when HomeView first appears
-                if !hasCheckedAutoScan && userPreferences.startScanningOnAppStart {
-                    hasCheckedAutoScan = true
-                    // Small delay to ensure view is fully loaded
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-                        showScanCamera = true
+            
+            // ------------ SCAN CAMERA (Auto-open on app start) ------------
+                .fullScreenCover(isPresented: $showScanCamera, onDismiss: {
+                    Task {
+                        // Refresh scan history from backend to get the latest scans
+                        await scanHistoryStore.loadHistory(forceRefresh: true)
+                        // Sync to AppState for UI display
+                        await MainActor.run {
+                            appState.listsTabState.scans = scanHistoryStore.scans
+                        }
+                        // Also refresh scan count since a new scan might have occurred
+                        userPreferences.refreshScanCount()
+                    }
+                }) {
+                    ScanCameraView()
+                }
+            
+            
+            
+            // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
+                .navigationDestination(for: HistoryRouteItem.self) { item in
+                    switch item {
+                    case .scan(let scan):
+                        let product = scan.toProduct()
+                        let recommendations = scan.analysis_result?.toIngredientRecommendations()
+                        ProductDetailView(
+                            scanId: scan.id,
+                            initialScan: scan,
+                            product: product,
+                            matchStatus: scan.toProductRecommendation(),
+                            ingredientRecommendations: recommendations,
+                            isPlaceholderMode: false,
+                            presentationSource: .homeView
+                        )
+                    case .listItem(let item):
+                        // Fallback for list items if reached from Home
+                        FavoriteItemDetailView(item: item)  // Assuming FavoriteItemDetailView is available
+                    case .favoritesAll:
+                        // Fallback, not strictly needed for Recent Scans
+                        FavoritesPageView()
+                    case .recentScansAll:
+                        RecentScansPageView()
                     }
                 }
-            }
-            
+                .task {
+                    await loadStats()
+                }
+                .onAppear {
+                    // Check if we should auto-open scan camera on app start
+                    // Only trigger once when HomeView first appears
+                    if !hasCheckedAutoScan && userPreferences.startScanningOnAppStart {
+                        hasCheckedAutoScan = true
+                        // Small delay to ensure view is fully loaded
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                            // Check camera permission before auto-opening
+                            let status = AVCaptureDevice.authorizationStatus(for: .video)
+                            if status == .authorized {
+                                showScanCamera = true
+                            } else if status == .notDetermined {
+                                AVCaptureDevice.requestAccess(for: .video) { granted in
+                                    DispatchQueue.main.async {
+                                        if granted {
+                                            showScanCamera = true
+                                        }
+                                    }
+                                }
+                            }
+                            // If denied/restricted, don't auto-open (user needs to enable in settings)
+                        }
+                    }
+                }
+
         }
+        .tint(Color(hex: "#303030")) // Back button and navigation tint color
     }
     
     private func loadStats() async {
@@ -646,12 +612,15 @@ struct HomeView: View {
 }
 
 #Preview {
+    let webService = WebService()
     HomeView()
         .environmentObject(Onboarding(onboardingFlowtype: .individual))
         .environment(AppState())
-        .environment(WebService())
+        .environment(webService)
+        .environment(ScanHistoryStore(webService: webService))
         .environment(UserPreferences())
         .environment(AuthController())
         .environment(FamilyStore())
         .environment(AppNavigationCoordinator(initialRoute: .home))
+        .environment(MemojiStore())
 }
