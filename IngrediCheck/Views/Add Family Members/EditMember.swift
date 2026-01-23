@@ -78,7 +78,6 @@ struct EditMember: View {
                                 .stroke(lineWidth: showError ? 2 : 0.5)
                                 .foregroundStyle(showError ? .red : .grayScale60)
                         )
-                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .autocorrectionDisabled(true)
                         .onChange(of: name) { _, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

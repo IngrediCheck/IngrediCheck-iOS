@@ -632,7 +632,41 @@ final class FamilyStore {
             Log.error("FamilyStore", "editMember error: \(error)")
         }
     }
-    
+
+    /// Updates a member's avatar (imageFileHash and color)
+    func updateMemberAvatar(memberId: UUID, imageFileHash: String?, color: String?) async throws {
+        Log.debug("FamilyStore", "updateMemberAvatar called for \(memberId), hash=\(imageFileHash ?? "nil"), color=\(color ?? "nil")")
+
+        guard let family = family else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "No family found"])
+        }
+
+        // Find the member to update
+        var memberToUpdate: FamilyMember?
+        if family.selfMember.id == memberId {
+            memberToUpdate = family.selfMember
+        } else {
+            memberToUpdate = family.otherMembers.first(where: { $0.id == memberId })
+        }
+
+        guard var member = memberToUpdate else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Member not found"])
+        }
+
+        // Create updated member with new avatar
+        let updatedMember = FamilyMember(
+            id: member.id,
+            name: member.name,
+            color: color ?? member.color,
+            joined: member.joined,
+            imageFileHash: imageFileHash,
+            invitePending: member.invitePending
+        )
+
+        // Call editMember to persist the change
+        await editMember(updatedMember)
+    }
+
     func deleteMember(id: UUID) async {
         Log.debug("FamilyStore", "deleteMember called for id=\(id)")
         isLoading = true
@@ -911,6 +945,14 @@ final class FamilyStore {
         }
         
         self.family = f
+    }
+    
+    // MARK: - Preview Helpers
+    
+    /// Preview-only helper to set mock family data for SwiftUI previews
+    /// This bypasses the normal API flow and directly sets the family property
+    func setMockFamilyForPreview(_ family: Family) {
+        self.family = family
     }
 }
 

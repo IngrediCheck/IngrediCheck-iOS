@@ -64,12 +64,15 @@ class DTO {
             vegetarian = try Ingredient.decodeYesNoMaybe(from: container, forKey: .vegetarian)
             
             // Handle both "ingredients" and "contains" fields
-            // API may use "contains" (array of strings) or "ingredients" (array of Ingredient objects)
+            // API sends "contains" as array of Ingredient objects with nested contains
             if let ingredientsArray = try? container.decode([Ingredient].self, forKey: .ingredients) {
                 ingredients = ingredientsArray
-            } else if let containsArray = try? container.decode([String].self, forKey: .contains) {
-                // Convert "contains" array of strings to Ingredient array
-                ingredients = containsArray.map { Ingredient(name: $0, vegan: nil, vegetarian: nil, ingredients: []) }
+            } else if let containsArray = try? container.decode([Ingredient].self, forKey: .contains) {
+                // API uses "contains" field with nested Ingredient objects
+                ingredients = containsArray
+            } else if let containsStrings = try? container.decode([String].self, forKey: .contains) {
+                // Fallback: "contains" as array of strings (legacy format)
+                ingredients = containsStrings.map { Ingredient.parseFromString($0) }
             } else {
                 ingredients = []
             }
@@ -106,6 +109,58 @@ class DTO {
             } else {
                 return nil
             }
+        }
+
+        /// Parse an ingredient from a string, handling nested format like "Chocolate (Sugar, Cocoa)"
+        static func parseFromString(_ text: String) -> Ingredient {
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
+
+            // Check for nested format: "Name (sub1, sub2, sub3)"
+            guard let openParen = trimmed.firstIndex(of: "("),
+                  let closeParen = trimmed.lastIndex(of: ")"),
+                  openParen < closeParen else {
+                // No nested ingredients - return simple ingredient
+                return Ingredient(name: trimmed, vegan: nil, vegetarian: nil, ingredients: [])
+            }
+
+            let name = String(trimmed[..<openParen]).trimmingCharacters(in: .whitespaces)
+            let nestedString = String(trimmed[trimmed.index(after: openParen)..<closeParen])
+
+            // Split by comma, but be careful of nested parentheses
+            let nestedIngredients = splitByCommaRespectingParentheses(nestedString)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .map { Ingredient.parseFromString($0) }  // Recursive for deep nesting
+
+            return Ingredient(name: name, vegan: nil, vegetarian: nil, ingredients: nestedIngredients)
+        }
+
+        /// Split a string by commas while respecting nested parentheses
+        private static func splitByCommaRespectingParentheses(_ text: String) -> [String] {
+            var result: [String] = []
+            var current = ""
+            var parenDepth = 0
+
+            for char in text {
+                if char == "(" {
+                    parenDepth += 1
+                    current.append(char)
+                } else if char == ")" {
+                    parenDepth -= 1
+                    current.append(char)
+                } else if char == "," && parenDepth == 0 {
+                    result.append(current)
+                    current = ""
+                } else {
+                    current.append(char)
+                }
+            }
+
+            if !current.isEmpty {
+                result.append(current)
+            }
+
+            return result
         }
     }
     
@@ -271,7 +326,6 @@ class DTO {
                         ingredientToString(i)
                       }
                       .joined(separator: ", ")
-                      .capitalized
                     + ")"
             }
         }
@@ -517,7 +571,8 @@ class DTO {
             if container.contains(.ingredients) {
                 // Backend now only returns string arrays for ingredients
                 if let stringArray = try? container.decode([String].self, forKey: .ingredients) {
-                    ingredients = stringArray.map { Ingredient(name: $0, vegan: nil, vegetarian: nil, ingredients: []) }
+                    // Parse nested format like "Dark Chocolate (Sugar, Cocoa, Vanilla)"
+                    ingredients = stringArray.map { Ingredient.parseFromString($0) }
                 } else {
                     // Fallback: try decoding as Ingredient objects (for backward compatibility)
                     ingredients = try container.decodeIfPresent([Ingredient].self, forKey: .ingredients) ?? []
@@ -790,9 +845,9 @@ class DTO {
     
     // Feedback Request
     struct FeedbackRequest: Codable {
-        let target: String? // "product_info", "analysis_result", "ingredient_analysis", "image"
+        let target: String // "product_info", "product_image", "analysis", "flagged_ingredient", "other"
         let vote: String // "up", "down", "none"
-        let scan_id: String
+        let scan_id: String?
         let analysis_id: String?
         let image_url: String?
         let ingredient_name: String?
@@ -809,12 +864,19 @@ class DTO {
         let avgScans: Int
         let barcodeScansCount: Int
         let matchingStats: MatchingStats
+        let weeklyStats: [WeeklyStat]?
     }
     
     struct MatchingStats: Codable {
         let matched: Int
         let unmatched: Int
         let uncertain: Int
+    }
+    
+    struct WeeklyStat: Codable {
+        let day: String  // "M", "T", "W", "T", "F", "S", "S"
+        let value: Int   // Scan count for that day
+        let date: String // ISO date string
     }
 
     // MARK: - Food Notes Summary

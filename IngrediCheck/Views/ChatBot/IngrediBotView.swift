@@ -12,6 +12,9 @@ struct IngrediBotView: View {
     @State var other: Bool = true
     var body: some View {
         VStack(spacing: 0) {
+            
+            Spacer()
+            
             // Bot illustration
             Image("ingrediBot")
                 .resizable()
@@ -36,8 +39,7 @@ struct IngrediBotView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.grayScale150)
                 .padding(.top, 12)
-
-            Spacer()
+                .padding(.bottom, 40)
             
             Text("Shall we get started?")
                 .font(NunitoFont.medium.size(20))
@@ -117,6 +119,17 @@ struct IngrediBotView: View {
     }
 }
 
-#Preview {
+#Preview("Default") {
     IngrediBotView()
+        .environment(AppNavigationCoordinator())
+}
+
+#Preview("Other Selected") {
+    IngrediBotView(other: true)
+        .environment(AppNavigationCoordinator())
+}
+
+#Preview("Other Not Selected") {
+    IngrediBotView(other: false)
+        .environment(AppNavigationCoordinator())
 }

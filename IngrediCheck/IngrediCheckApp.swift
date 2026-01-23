@@ -56,7 +56,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Configure navigation bar appearance globally
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0xFC/255.0, green: 0xFC/255.0, blue: 0xFC/255.0, alpha: 1.0) // #FCFCFC
+        appearance.backgroundColor = UIColor(red: 0xF2/255.0, green: 0xF2/255.0, blue: 0xF9/255.0, alpha: 1.0) // #F2F2F9 (pageBackground)
         appearance.shadowColor = .clear // Remove bottom border/shadow
         appearance.backButtonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.clear] // Hide "Back" text
 

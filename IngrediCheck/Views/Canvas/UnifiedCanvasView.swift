@@ -81,15 +81,15 @@ struct UnifiedCanvasView: View {
             ConditionalBottomTabBar(
                 isEnabled: mode.showTabBar && !coordinator.isEditSheetPresented,
                 gradientColors: [
-                    Color.white.opacity(0),
-                    Color.white
+                    Color.pageBackground.opacity(0),
+                    Color.pageBackground
                 ]
             ) {
                 TabBar(isExpanded: $isTabBarExpanded)
                     .fixedSize(horizontal: false, vertical: true)
             }
         )
-        .background(Color.white)
+        .background(Color.pageBackground)
         .navigationTitle(mode == .editing ? (titleOverride ?? "Food Notes") : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -155,6 +155,14 @@ struct RootContainerView: View {
                 EmptyView()
             }
         }
+        // Global AI Bot sheet (post-login) - accessible from HomeView and other post-login screens
+        .sheet(isPresented: $coordinator.isAIBotSheetPresented) {
+            IngrediBotChatView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .environment(coordinator)
+                .environment(appState)
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)

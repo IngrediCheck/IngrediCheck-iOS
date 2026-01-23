@@ -86,6 +86,7 @@ import os
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitle("Favorites")
+        .background(Color.pageBackground)
     }
 }
 
@@ -188,6 +189,7 @@ import os
                 defaultView
             }
         }
+        .background(Color.pageBackground)
     }
 
     private var filterButton: some View {
@@ -235,12 +237,18 @@ import os
                 .frame(maxWidth: .infinity)
             } else {
                 // Empty state
-                VStack {
-                    Spacer()
-                    Text("No recent scans")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
+                EmptyStateView(
+                    imageName: "history-emptystate",
+                    title: "No Scans !",
+                    description: [
+                        "Your recent scans will appear here once",
+                        "you start scanning products."
+                    ],
+                    buttonTitle: "Start Scanning",
+                    buttonAction: {
+                        appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
+                    }
+                )
                 .frame(maxWidth: .infinity)
             }
         }
@@ -405,44 +413,18 @@ import os
     var body: some View {
         Group {
             if scans.isEmpty {
-                VStack {
-                    ZStack(alignment: .bottom) {
-                        Image("history-emptystate")
-                            .resizable()
-                            .scaledToFit()
-
-                        VStack(spacing: 0) {
-                            Text("No Scans !")
-                                .font(ManropeFont.bold.size(16))
-                                .foregroundStyle(.grayScale150)
-
-                            Text("Your recent scans will appear here once")
-                                .font(ManropeFont.regular.size(13))
-                                .foregroundStyle(.grayScale100)
-                                .multilineTextAlignment(.center)
-
-                            Text("you start scanning products.")
-                                .font(ManropeFont.regular.size(13))
-                                .foregroundStyle(.grayScale100)
-                                .multilineTextAlignment(.center)
-
-                            Button {
-                                appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
-                            } label: {
-                                GreenCapsule(
-                                    title: "Start Scanning",
-                                    width: 159,
-                                    height: 52,
-                                    takeFullWidth: false,
-                                    labelFont: ManropeFont.bold.size(16)
-                                )
-                            }
-                            .padding(.top,24)
-                            .buttonStyle(.plain)
-                        }
-                        .offset(y: -UIScreen.main.bounds.height * 0.2)
+                EmptyStateView(
+                    imageName: "history-emptystate",
+                    title: "No Scans !",
+                    description: [
+                        "Your recent scans will appear here once",
+                        "you start scanning products."
+                    ],
+                    buttonTitle: "Start Scanning",
+                    buttonAction: {
+                        appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                     }
-                }
+                )
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {

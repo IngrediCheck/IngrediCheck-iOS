@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFADBFEDBD6464085931D95 /* AppRoute.swift */; };
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
 		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
@@ -59,6 +58,7 @@
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
 		635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */; };
+		AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFADBFEDBD6464085931D95 /* AppRoute.swift */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
@@ -108,7 +108,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		2CFADBFEDBD6464085931D95 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
 		0CF25DF32EDD9C9600C582FA /* MeetYourProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetYourProfileView.swift; sourceTree = "<group>"; };
@@ -117,6 +116,7 @@
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarViewModel.swift; sourceTree = "<group>"; };
+		2CFADBFEDBD6464085931D95 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
 		390F0D432BAE0D44009081AD /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
@@ -240,14 +240,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D3017FACE7F449A385F47E9B /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				2CFADBFEDBD6464085931D95 /* AppRoute.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
 		1F5987782E30C4F200381E32 /* TipJar */ = {
 			isa = PBXGroup;
 			children = (
@@ -436,6 +428,14 @@
 				1F5987B52E30E6DA00381E32 /* StoreKit.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D3017FACE7F449A385F47E9B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2CFADBFEDBD6464085931D95 /* AppRoute.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		D35FB7F02E56E704009A5AA1 /* Recovered References */ = {

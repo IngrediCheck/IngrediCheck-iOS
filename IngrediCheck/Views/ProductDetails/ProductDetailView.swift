@@ -21,12 +21,13 @@ struct ProductDetailView: View {
     @Environment(AppState.self) private var appState: AppState?  // Optional - for push navigation
 
     @State private var isFavorite = false
-    @State private var isIngredientsExpanded = false
+    @AppStorage("ingredientsSectionExpanded") private var isIngredientsExpanded = true  // Default: expanded, persists user choice
     @State private var isIngredientsAlertExpanded = false
     @State private var selectedImageIndex = 0
     @State private var activeIngredientHighlight: IngredientHighlight?
     @State private var isImageViewerPresented = false
     @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
+    @State private var reanalysisRotation: Double = 0  // Rotation for sync icon animation
 
     // Real-time scan observation (new approach)
     var scanId: String? = nil  // If provided, view will fetch/poll for scan updates
@@ -263,15 +264,21 @@ struct ProductDetailView: View {
         
         print("[ProductDetailView] ✅ Ingredients available - count: \(product.ingredients.count), string length: \(ingredientsString.count)")
         
-        // Create highlights from ingredientRecommendations
+        // Create highlights from resolvedIngredientRecommendations (handles both scan and legacy modes)
         var highlights: [IngredientHighlight] = []
-        if let recommendations = ingredientRecommendations {
+        if let recommendations = resolvedIngredientRecommendations {
             for recommendation in recommendations {
                 // Only create highlights for flagged ingredients
                 if recommendation.safetyRecommendation != .safe {
+                    // Use appropriate color based on safety recommendation
+                    let highlightColor: Color = recommendation.safetyRecommendation == .definitelyUnsafe
+                        ? .fail100  // Red for unmatched
+                        : .warning100  // Yellow for uncertain (maybeUnsafe)
+
                     highlights.append(IngredientHighlight(
                         phrase: recommendation.ingredientName,
-                        reason: recommendation.reasoning
+                        reason: recommendation.reasoning,
+                        color: highlightColor
                     ))
                 }
             }
@@ -291,6 +298,7 @@ struct ProductDetailView: View {
                     // Gallery section - never redacted, shows placeholder images
                     productGallery
                         .unredacted()
+                        .padding(.top, 16)
                     
                     // Content sections - redacted in placeholder mode
                     Group {
@@ -346,9 +354,48 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .background(Color(hex: "FFFFFF"))
+        .background(Color(hex: "#FAFAFA"))  // Lighter background for Product Details
+        .overlay(alignment: .bottom) {
+            // Ingredient tooltip overlay - shown at ProductDetailView level for proper positioning
+            if let highlight = activeIngredientHighlight {
+                ZStack(alignment: .bottom) {
+                    // Dismiss backdrop
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                activeIngredientHighlight = nil
+                            }
+                        }
+
+                    // Tooltip card
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(highlight.phrase)
+                            .font(NunitoFont.bold.size(14))
+                            .foregroundStyle(.grayScale150)
+
+                        Text(highlight.reason)
+                            .font(ManropeFont.regular.size(13))
+                            .foregroundStyle(.grayScale120)
+                            .lineSpacing(4)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(Color.white)
+                            .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: -8)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: activeIngredientHighlight)
         .navigationTitle(resolvedBrand.isEmpty ? "Product Detail" : resolvedBrand)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             // Back button (only show when presented from camera view)
             if presentationSource == .cameraView {
@@ -363,20 +410,36 @@ struct ProductDetailView: View {
                                 .font(ManropeFont.medium.size(16))
                         }
                         .foregroundStyle(.grayScale150)
+                        .padding(.leading, 4)
                     }
                 }
             }
             
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 12) {
-                    // Re-analysis button (when stale)
-                    if resolvedIsStale {
+                    // Re-analysis button (when stale or reanalyzing)
+                    if resolvedIsStale || isReanalyzingLocally {
                         Button {
-                            performReanalysis()
+                            if !isReanalyzingLocally {
+                                performReanalysis()
+                            }
                         } label: {
-                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                                .font(.system(size: 18))
-                                .foregroundStyle(Color(hex: "#FF8A00"))
+                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(isReanalyzingLocally ? Color.grayScale50 : Color(hex: "#FF8A00"))
+                                .rotationEffect(.degrees(reanalysisRotation))
+                        }
+                        .disabled(isReanalyzingLocally)
+                        .onChange(of: isReanalyzingLocally) { _, isReanalyzing in
+                            if isReanalyzing {
+                                withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                                    reanalysisRotation = 360
+                                }
+                            } else {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    reanalysisRotation = 0
+                                }
+                            }
                         }
                     }
 
@@ -390,6 +453,7 @@ struct ProductDetailView: View {
                     }
                     .disabled(scanId == nil && product == nil)
                 }
+                .padding(.trailing, 4)
             }
         }
         .onChange(of: isIngredientsExpanded) { _, expanded in
@@ -621,6 +685,12 @@ struct ProductDetailView: View {
     private func handleProductFeedback(voteType: String) {
         guard let currentScan = scan else { return }
         
+        // Validate required fields for product_info feedback
+        guard !currentScan.id.isEmpty else {
+            Log.error("ProductDetailView", "Cannot submit product feedback: scan_id is missing")
+            return
+        }
+        
         // 1. Calculate optimistic new vote
         let oldVote = currentScan.product_info_vote
         
@@ -654,10 +724,10 @@ struct ProductDetailView: View {
                 }
                 else {
                     let request = DTO.FeedbackRequest(
-                        target: "analysis",
+                        target: "product_info",
                         vote: voteType,
                         scan_id: currentScan.id,
-                        analysis_id: currentScan.analysis_id,
+                        analysis_id: nil,
                         image_url: nil,
                         ingredient_name: nil,
                         comment: nil
@@ -672,7 +742,7 @@ struct ProductDetailView: View {
                     scanHistoryStore.upsertScan(updatedScan)
                 }
             } catch {
-                print("Error submitting feedback: \(error)")
+                Log.error("ProductDetailView", "Error submitting product feedback: \(error.localizedDescription)")
                 // 5. Revert on error
                 await MainActor.run {
                     self.scan = currentScan
@@ -685,6 +755,25 @@ struct ProductDetailView: View {
     
     private func handleIngredientFeedback(item: IngredientAlertItem, voteType: String) {
         guard let currentScan = scan, let rawName = item.rawIngredientName else { return }
+        
+        // Validate required fields for flagged_ingredient feedback
+        guard !rawName.isEmpty else {
+            Log.error("ProductDetailView", "Cannot submit ingredient feedback: ingredient_name is empty")
+            return
+        }
+        
+        // Check if we have an existing vote - if so, we can update without analysis_id
+        let hasExistingVote = item.vote != nil
+        
+        // For new feedback, analysis_id is required per API spec
+        // But if we have analysis_result, we should still try (backend will validate)
+        guard hasExistingVote || currentScan.analysis_id != nil || currentScan.analysis_result != nil else {
+            Log.error("ProductDetailView", "Cannot submit ingredient feedback: analysis_id is missing and no existing vote to update")
+            return
+        }
+        
+        // Use analysis_id if available, otherwise we'll let backend handle validation
+        let analysisId = currentScan.analysis_id
         
         // 1. Calculate optimistic new vote
         let oldVote = item.vote
@@ -729,11 +818,22 @@ struct ProductDetailView: View {
                 } else if let currentVote = item.vote {
                      updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
                 } else {
+                    // For new feedback, analysis_id is required per API spec
+                    guard let analysisId = analysisId, !analysisId.isEmpty else {
+                        Log.error("ProductDetailView", "Cannot create new ingredient feedback: analysis_id is required but missing")
+                        // Revert optimistic update
+                        await MainActor.run {
+                            self.scan = currentScan
+                            scanHistoryStore.upsertScan(currentScan)
+                        }
+                        return
+                    }
+                    
                     let request = DTO.FeedbackRequest(
                         target: "flagged_ingredient",
                         vote: voteType,
                         scan_id: currentScan.id,
-                        analysis_id: currentScan.analysis_id,
+                        analysis_id: analysisId,
                         image_url: nil,
                         ingredient_name: rawName,
                         comment: nil
@@ -748,7 +848,7 @@ struct ProductDetailView: View {
                     scanHistoryStore.upsertScan(updatedScan)
                 }
             } catch {
-                print("Error submitting ingredient feedback: \(error)")
+                Log.error("ProductDetailView", "Error submitting ingredient feedback: \(error.localizedDescription)")
                 // 5. Revert
                 await MainActor.run {
                     self.scan = currentScan
@@ -762,13 +862,27 @@ struct ProductDetailView: View {
     private func handleImageFeedback(imageUrl: String, voteType: String) {
         guard let currentScan = scan else { return }
         
+        // Validate required fields for product_image feedback
+        guard !currentScan.id.isEmpty else {
+            Log.error("ProductDetailView", "Cannot submit image feedback: scan_id is missing")
+            return
+        }
+        
+        guard !imageUrl.isEmpty else {
+            Log.error("ProductDetailView", "Cannot submit image feedback: image_url is empty")
+            return
+        }
+        
         // 1. Find the image and current vote
         guard let imageIndex = currentScan.images.firstIndex(where: { img in
             switch img {
             case .inventory(let i): return i.url == imageUrl
             default: return false
             }
-        }) else { return }
+        }) else {
+            Log.error("ProductDetailView", "Cannot submit image feedback: image not found in scan")
+            return
+        }
         
         var targetImage = currentScan.images[imageIndex]
         var oldVote: DTO.Vote?
@@ -824,7 +938,7 @@ struct ProductDetailView: View {
                     scanHistoryStore.upsertScan(updatedScan)
                 }
             } catch {
-                print("Error submitting image feedback: \(error)")
+                Log.error("ProductDetailView", "Error submitting image feedback: \(error.localizedDescription)")
                 await MainActor.run {
                     self.scan = currentScan
                     scanHistoryStore.upsertScan(currentScan)
@@ -954,12 +1068,16 @@ struct ProductDetailView: View {
                 appState.navigate(to: .scanCamera(initialMode: .photo, initialScanId: scanId))
             }
         case .pushNavigation:
-            // From push navigation (likely came from ScanCameraView)
-            // Pop back to ScanCameraView instead of pushing a new one
+            // From push navigation - check if camera is actually in the stack
             if let appState = appState {
-                // Set the scanId to scroll to when returning to camera
-                appState.scrollToScanId = scanId
-                appState.navigateBack()
+                if appState.hasCameraInStack {
+                    // Camera exists in stack, pop back to it
+                    appState.scrollToScanId = scanId
+                    appState.navigateBack()
+                } else {
+                    // No camera in stack (came from HomeView/Recent Scans), push new camera
+                    appState.navigate(to: .scanCamera(initialMode: .photo, initialScanId: scanId))
+                }
             }
         case .cameraView:
             // Dismiss ProductDetails and return to camera with this scanId

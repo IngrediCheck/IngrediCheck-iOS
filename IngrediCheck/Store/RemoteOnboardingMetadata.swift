@@ -36,6 +36,7 @@ enum BottomSheetRouteIdentifier: String, Codable {
     case meetYourAvatar
     case yourCurrentAvatar
     case setUpAvatarFor
+    case updateAvatar
     case dietaryPreferencesSheet
     case allSetToJoinYourFamily
     case onboardingStep

@@ -1288,6 +1288,14 @@ struct ScanCameraView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)  // Makes back button white
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Track that camera is in navigation stack (for ProductDetail "Add Photo" navigation)
+            appState?.hasCameraInStack = true
+        }
+        .onDisappear {
+            // Camera is being removed from navigation stack
+            appState?.hasCameraInStack = false
+        }
     }
 }
 

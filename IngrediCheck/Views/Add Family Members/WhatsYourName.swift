@@ -83,7 +83,6 @@ struct WhatsYourName: View {
                                 .stroke(lineWidth: showError ? 2 : 0.5)
                                 .foregroundStyle(showError ? .red : .grayScale60)
                         )
-                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .autocorrectionDisabled(true)   // ✅ stops autocorrect
                         .onChange(of: name) { oldValue, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

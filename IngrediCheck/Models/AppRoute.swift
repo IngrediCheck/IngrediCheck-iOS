@@ -42,11 +42,6 @@ enum AppRoute: Hashable {
     /// - Parameter targetSection: Optional section to scroll to
     case editableCanvas(targetSection: String?)
 
-    // MARK: - AI Bot
-
-    /// Navigate to IngrediBot chat view
-    case ingrediBot
-
     // MARK: - Hashable Conformance
 
     func hash(into hasher: inout Hasher) {
@@ -72,8 +67,6 @@ enum AppRoute: Hashable {
         case .editableCanvas(let section):
             hasher.combine("editableCanvas")
             hasher.combine(section)
-        case .ingrediBot:
-            hasher.combine("ingrediBot")
         }
     }
 
@@ -95,8 +88,6 @@ enum AppRoute: Hashable {
             return true
         case (.editableCanvas(let lSection), .editableCanvas(let rSection)):
             return lSection == rSection
-        case (.ingrediBot, .ingrediBot):
-            return true
         default:
             return false
         }

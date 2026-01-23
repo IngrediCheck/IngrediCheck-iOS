@@ -71,7 +71,7 @@ struct IngredientsAlertCard: View {
                     FeedbackButton(
                         type: .up,
                         isSelected: productVote?.value == "up",
-                        style: .boxed
+                        style: .whiteBoxed
                     ) {
                         onProductFeedback("up")
                     }
@@ -79,7 +79,7 @@ struct IngredientsAlertCard: View {
                     FeedbackButton(
                         type: .down,
                         isSelected: productVote?.value == "down",
-                        style: .boxed
+                        style: .whiteBoxed
                     ) {
                         onProductFeedback("down")
                     }
@@ -216,7 +216,7 @@ struct IngredientsAlertCard: View {
                             FeedbackButton(
                                 type: .up,
                                 isSelected: item.vote?.value == "up",
-                                style: .plain
+                                style: .boxed
                             ) {
                                 onFeedback?(item, "up")
                             }
@@ -224,7 +224,7 @@ struct IngredientsAlertCard: View {
                             FeedbackButton(
                                 type: .down,
                                 isSelected: item.vote?.value == "down",
-                                style: .plain
+                                style: .boxed
                             ) {
                                 onFeedback?(item, "down")
                             }

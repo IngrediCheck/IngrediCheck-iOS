@@ -10,9 +10,6 @@ import SwiftUI
 import AVFoundation
 
 struct HomeView: View {
-    private let chatSmallDetent: PresentationDetent = .height(260)
-    @State private var isChatSheetPresented = false
-    @State private var selectedChatDetent: PresentationDetent = .medium
     @State private var isSettingsPresented = false
     @State private var isTabBarExpanded: Bool = true
     @State private var isRefreshingHistory: Bool = false
@@ -24,6 +21,7 @@ struct HomeView: View {
         var prevValue: CGFloat = 0
         var maxScrollOffset: CGFloat = 0
         var didInitialize: Bool = false
+        var scrollEndWorkItem: DispatchWorkItem?
     }
 
     @State private var scrollTrackingState = ScrollTrackingState()
@@ -101,9 +99,9 @@ struct HomeView: View {
                                 .foregroundStyle(.grayScale150)
                                 .offset(x: -2)
                             
-                            Text("Complete your profile easily.")
+                            Text("Your food notes, personalized for you.")
                                 .font(ManropeFont.regular.size(14))
-                                .foregroundStyle(.grayScale110)
+                                .foregroundStyle(.grayScale130)
                         }
                         
                         Spacer()
@@ -125,14 +123,13 @@ struct HomeView: View {
                                     .frame(height: 15)
                                 
                                 Text("Here’s what your family avoids or needs to watch out for.")
-                                    .font(ManropeFont.regular.size(14))
+                                    .font(ManropeFont.medium.size(14))
                                     .foregroundStyle(.grayScale110)
                                     .lineLimit(3)
                             }
                                                         
                             AskIngrediBotButton {
-                                selectedChatDetent = .medium
-                                isChatSheetPresented = true
+                                coordinator.showAIBotSheet()
                             }
                         }
                         
@@ -153,7 +150,8 @@ struct HomeView: View {
                     HStack(spacing: 12) {
                         AverageScansCard(
                             playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
-                            avgScans: stats?.avgScans ?? 0
+                            avgScans: stats?.avgScans ?? 0,
+                            weeklyStats: stats?.weeklyStats
                         )
                         .onAppear {
                             didPlayAverageScansLaunchAnimation = true
@@ -215,7 +213,6 @@ struct HomeView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 24)
                                 .fill(Color.white)
-                                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 24)
                                         .stroke(lineWidth: 0.75)
@@ -270,22 +267,22 @@ struct HomeView: View {
 //                        .padding(.bottom, 20)
                     
                     
-                    // Recent Scans header
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Recent Scans")
-                                .font(ManropeFont.medium.size(18))
-                                .foregroundStyle(.grayScale150)
-                            
-                            Text("Here’s what you checked last in past 2 days")
-                                .font(ManropeFont.regular.size(12))
-                                .foregroundStyle(.grayScale100)
-                        }
-                        
-                        Spacer()
-                        
-                        // KEEP YOUR SHEET VERSION
-                        HStack(spacing: 6) {
+                    // Recent Scans Card
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Header
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Recent Scans")
+                                    .font(ManropeFont.semiBold.size(18))
+                                    .foregroundStyle(.grayScale150)
+
+                                Text("Here's what you checked last in past 2 days")
+                                    .font(ManropeFont.regular.size(12))
+                                    .foregroundStyle(.grayScale100)
+                            }
+
+                            Spacer()
+
                             NavigationLink(value: HistoryRouteItem.recentScansAll) {
                                 Text("View All")
                                     .underline()
@@ -294,45 +291,53 @@ struct HomeView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                    }
-//                    .padding(.bottom, 20)
-                    
-                    // Recent Scans list / empty state
-                    if let scans = appState.listsTabState.scans,
-                       !scans.isEmpty {
-                        let items = Array(scans.prefix(5))
-                        
-                        VStack(spacing: 0) {
-                            ForEach(Array(items.enumerated()), id: \.element.id) { index, scan in
-                                
-                                Button {
-                                    // Use push navigation instead of modal
-                                    appState.navigationPath.append(HistoryRouteItem.scan(scan))
-                                } label: {
-                                    ScanRow(scan: scan)
-                                }
-                                .buttonStyle(.plain)
-                                
-                                if index != items.count - 1 {
-                                    Divider().padding(.vertical, 14)
+
+                        // Recent Scans list / empty state
+                        if let scans = appState.listsTabState.scans,
+                           !scans.isEmpty {
+                            let items = Array(scans.prefix(5))
+
+                            VStack(spacing: 0) {
+                                ForEach(Array(items.enumerated()), id: \.element.id) { index, scan in
+
+                                    Button {
+                                        // Use push navigation instead of modal
+                                        appState.navigationPath.append(HistoryRouteItem.scan(scan))
+                                    } label: {
+                                        ScanRow(scan: scan)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if index != items.count - 1 {
+                                        Divider().padding(.vertical, 14)
+                                    }
                                 }
                             }
+                        } else {
+                            VStack(spacing: 12) {
+                                Image("blackroboicon")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 120, height: 120)
+                                Text("Ooops, No scans yet!")
+                                    .font(NunitoFont.semiBold.size(16))
+                                    .foregroundStyle(.grayScale100)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
                         }
-                    } else {
-                        VStack(spacing: 12) {
-                            Image("blackroboicon")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 120, height: 120)
-                            Text("Ooops, No scans yet!")
-                                .font(NunitoFont.semiBold.size(16))
-                                .foregroundStyle(.grayScale100)
-                                .multilineTextAlignment(.center)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top , 8)
-                        .padding(.bottom , 129)
                     }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(Color.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .stroke(lineWidth: 0.75)
+                                    .foregroundStyle(Color(hex: "#EEEEEE"))
+                            )
+                    )
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 20)
@@ -384,8 +389,25 @@ struct HomeView: View {
                                 if nextExpanded != isTabBarExpanded {
                                     isTabBarExpanded = nextExpanded
                                 }
-                                
+
                                 scrollTrackingState.prevValue = newValue
+
+                                // Cancel any pending scroll-end work item
+                                scrollTrackingState.scrollEndWorkItem?.cancel()
+
+                                // Schedule re-expansion after scrolling stops (0.4s delay)
+                                if !isTabBarExpanded {
+                                    let workItem = DispatchWorkItem { [weak scrollTrackingState] in
+                                        guard scrollTrackingState != nil else { return }
+                                        DispatchQueue.main.async {
+                                            withAnimation(.easeOut(duration: 0.25)) {
+                                                isTabBarExpanded = true
+                                            }
+                                        }
+                                    }
+                                    scrollTrackingState.scrollEndWorkItem = workItem
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+                                }
                             }
                     }
                 )
@@ -406,12 +428,11 @@ struct HomeView: View {
                         appState.navigationPath.append(HistoryRouteItem.recentScansAll)
                     },
                     onChatBotTap: {
-                        selectedChatDetent = .medium
-                        isChatSheetPresented = true
+                        coordinator.showAIBotSheet()
                     }
                 )
             }
-            .background(Color(hex: "#FCFCFC"))
+            .background(Color.pageBackground)
             //            .padding(.top , 16)
             //            .background(Color.red)
             
@@ -457,19 +478,7 @@ struct HomeView: View {
                     )
                     .environmentObject(onboarding)
                 }
-            
-            
-            
-            // ------------ CHAT SHEET ------------
-                .sheet(isPresented: $isChatSheetPresented) {
-                    IngrediBotChatView {
-                        isChatSheetPresented = false
-                    }
-                    .presentationDetents([chatSmallDetent, .medium, .large],
-                                         selection: $selectedChatDetent)
-                    .presentationDragIndicator(.visible)
-                }
-            
+
             // ------------ HISTORY ROUTE HANDLING (For Recent Scans) ------------
                 .navigationDestination(for: HistoryRouteItem.self) { item in
                     switch item {
@@ -534,8 +543,6 @@ struct HomeView: View {
                         UnifiedCanvasView(mode: .editing, targetSectionName: targetSection)
                             .environment(memojiStore)
                             .environment(coordinator)
-                    case .ingrediBot:
-                        IngrediBotChatView()
                     }
                 }
                 .task {

@@ -50,6 +50,7 @@ struct WhosThisFor: View {
             HStack(spacing: 16) {
                 SecondaryButton(
                     title: "Just Me",
+                    icon: "justMe",
                     takeFullWidth: true,
                     isLoading: isJustMeLoading,
                     isDisabled: isJustMeLoading || isAddFamilyLoading,
@@ -70,6 +71,7 @@ struct WhosThisFor: View {
 
                 SecondaryButton(
                     title: "Add Family",
+                    icon: "addfamily",
                     takeFullWidth: true,
                     isLoading: isAddFamilyLoading,
                     isDisabled: isJustMeLoading || isAddFamilyLoading,
@@ -106,4 +108,21 @@ struct WhosThisFor: View {
 //            , alignment: .top
 //        )
     }
+}
+
+#Preview("Default") {
+    WhosThisFor(
+        justmePressed: {
+            print("Just Me pressed")
+        },
+        addFamilyPressed: {
+            print("Add Family pressed")
+        }
+    )
+    .environment(AppNavigationCoordinator())
+}
+
+#Preview("Without Actions") {
+    WhosThisFor()
+        .environment(AppNavigationCoordinator())
 }

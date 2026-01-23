@@ -69,7 +69,10 @@ class AppNavigationCoordinator {
     var editingStepId: String? = nil
     var isEditSheetPresented: Bool = false
     var currentEditingSectionIndex: Int = 0
-    
+
+    // Global state for AI Bot sheet (post-login)
+    var isAIBotSheetPresented: Bool = false
+
     /// Optional callback invoked after navigation changes to sync state to Supabase
     var onNavigationChange: (() async -> Void)?
 
@@ -184,6 +187,16 @@ class AppNavigationCoordinator {
             }
         }
         previousBottomSheetRoute = nil
+    }
+
+    // MARK: - Global AI Bot Sheet (Post-Login)
+
+    func showAIBotSheet() {
+        isAIBotSheetPresented = true
+    }
+
+    func dismissAIBotSheet() {
+        isAIBotSheetPresented = false
     }
 
     // Get bottom sheet route for current canvas route
@@ -340,6 +353,8 @@ class AppNavigationCoordinator {
             return (.quickAccessNeeded, nil)
         case .loginToContinue:
             return (.loginToContinue, nil)
+        case .updateAvatar(memberId: let memberId):
+            return (.updateAvatar, nil)
         }
     }
     
@@ -435,6 +450,8 @@ class AppNavigationCoordinator {
             return .quickAccessNeeded
         case .loginToContinue:
             return .loginToContinue
+        case .updateAvatar:
+            return .generateAvatar
         }
     }
     static func restoreState(from metadata: RemoteOnboardingMetadata) -> (canvas: CanvasRoute, sheet: BottomSheetRoute) {

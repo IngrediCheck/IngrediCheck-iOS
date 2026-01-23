@@ -58,6 +58,10 @@ struct ListsTabState {
     /// ScanId to scroll to when returning to ScanCameraView (e.g., from ProductDetail "Add Image")
     @MainActor var scrollToScanId: String?
 
+    /// Tracks whether ScanCameraView is currently in the navigation stack.
+    /// Used by ProductDetailView to decide whether to pop back or push new camera.
+    @MainActor var hasCameraInStack: Bool = false
+
     /// Navigate to a route by pushing it onto the navigation stack.
     @MainActor func navigate(to route: AppRoute) {
         navigationPath.append(route)
@@ -341,9 +345,6 @@ struct ListsTabState {
             UnifiedCanvasView(mode: .editing, targetSectionName: targetSection)
                 .environment(memojiStore)
                 .environment(coordinator)
-
-        case .ingrediBot:
-            IngrediBotChatView()
         }
     }
 

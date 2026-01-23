@@ -441,7 +441,7 @@ struct PersistentBottomSheet: View {
         case .homeDefault:
             return 0
         case .chatIntro:
-            return 738
+            return 568
         case .chatConversation:
             return 738
         case .workingOnSummary:
@@ -449,7 +449,7 @@ struct PersistentBottomSheet: View {
         case .meetYourProfileIntro:
             return 200
         case .meetYourProfile:
-            return 389
+            return 397
         case .preferencesAddedSuccess:
             return 285
         case .readyToScanFirstProduct:
@@ -460,6 +460,8 @@ struct PersistentBottomSheet: View {
             return 253
         case .loginToContinue:
             return 236
+        case .updateAvatar(memberId: let memberId):
+            return 492
         }
     }
     
@@ -569,7 +571,12 @@ struct PersistentBottomSheet: View {
                         familyStore.setPendingSelfMemberFromExisting(family.selfMember)
                     }
                     coordinator.navigateInBottomSheet(.addMoreMembers)
+                } else if familyStore.pendingSelfMember != nil || familyStore.family != nil {
+                    // Self member already exists (created earlier or family exists)
+                    // Skip "What's your name?" and go directly to "Add more members"
+                    coordinator.navigateInBottomSheet(.addMoreMembers)
                 } else {
+                    // No self member yet - show "What's your name?" for initial creation
                     coordinator.navigateInBottomSheet(.whatsYourName)
                 }
             }
@@ -1017,6 +1024,15 @@ struct PersistentBottomSheet: View {
                 },
                 showAsAlert: showAsAlert
             )
+        case .updateAvatar(memberId: let memberId):
+            UpdateAvatarSheet(memberId: memberId) {
+                // Navigate back to previous route (meetYourProfile or home)
+                if case .home = coordinator.currentCanvasRoute {
+                    coordinator.navigateInBottomSheet(.homeDefault)
+                } else {
+                    coordinator.navigateInBottomSheet(.meetYourProfile(memberId: memberId))
+                }
+            }
         }
     }
     
