@@ -1139,7 +1139,8 @@ struct ScanCameraView: View {
                     )
                     
                     // Add New Product button (photo mode only) - left side, center-aligned with carousel cards
-                    if mode == .photo {
+                    // Hide when skeleton card is already present (no need to add another)
+                    if mode == .photo && !scanIds.contains(skeletonCardId) {
                         VStack {
                             Spacer()
                             HStack(spacing: 0) {
@@ -1278,7 +1279,17 @@ struct ScanCameraView: View {
                             await processPhoto(image: image)
                         })
         }
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 if mode == .scanner {
                     FlashToggleButton(isScannerMode: true)
@@ -1286,15 +1297,18 @@ struct ScanCameraView: View {
             }
         }
         .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)  // Makes back button white
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             // Track that camera is in navigation stack (for ProductDetail "Add Photo" navigation)
             appState?.hasCameraInStack = true
+            // Track that camera is currently visible (for AIBot FAB visibility)
+            appState?.isInScanCameraView = true
         }
         .onDisappear {
             // Camera is being removed from navigation stack
             appState?.hasCameraInStack = false
+            // Camera is no longer visible
+            appState?.isInScanCameraView = false
         }
     }
 }

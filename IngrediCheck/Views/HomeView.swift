@@ -112,6 +112,7 @@ struct HomeView: View {
                             }
                     }
                     .padding(.bottom, 24)
+                    .frame(maxWidth: .infinity)
                     
                     // Food Notes & Allergy Summary...
                     HStack(spacing: 12) {
@@ -121,18 +122,19 @@ struct HomeView: View {
                                     .font(ManropeFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
                                     .frame(height: 15)
-                                
-                                Text("Here’s what your family avoids or needs to watch out for.")
+
+                                Text("Here's what your family avoids or needs to watch out for.")
                                     .font(ManropeFont.medium.size(14))
                                     .foregroundStyle(.grayScale110)
                                     .lineLimit(3)
                             }
-                                                        
+
                             AskIngrediBotButton {
                                 coordinator.showAIBotSheet()
                             }
                         }
-                        
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
                         AllergySummaryCard(
                             summary: foodNotesStore?.foodNotesSummary,
                             dynamicSteps: onboarding.dynamicSteps,
@@ -141,48 +143,50 @@ struct HomeView: View {
                                 showEditableCanvas = true
                             }
                         )
-                        .frame(width: 165, height: 196)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 196)
                     }
                     .frame(maxWidth: .infinity)
-//                    .padding(.bottom, 24)
+                    .padding(.trailing, 12)
                     
-                    // Family + Average scans
-                    HStack(spacing: 12) {
-                        AverageScansCard(
-                            playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
-                            avgScans: stats?.avgScans ?? 0,
-                            weeklyStats: stats?.weeklyStats
-                        )
-                        .onAppear {
-                            didPlayAverageScansLaunchAnimation = true
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        VStack(spacing: 12) {
+                    // Family + Average scans - use GeometryReader to ensure equal width
+                    GeometryReader { geometry in
+                        let cardWidth = (geometry.size.width - 12) / 2 // 12 is spacing
+                        HStack(spacing: 12) {
+                            AverageScansCard(
+                                playsLaunchAnimation: !didPlayAverageScansLaunchAnimation,
+                                avgScans: stats?.avgScans ?? 0,
+                                weeklyStats: stats?.weeklyStats
+                            )
+                            .onAppear {
+                                didPlayAverageScansLaunchAnimation = true
+                            }
+                            .frame(width: cardWidth)
+
                             VStack(alignment: .leading) {
                                 Text("Your IngrediFam")
                                     .font(ManropeFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
                                     .padding(.bottom, 4)
                                     .lineLimit(2)
-                                
+
                                 Text("Your people, their choices.")
                                     .font(ManropeFont.regular.size(14))
                                     .foregroundStyle(.grayScale110)
                                     .lineLimit(2)
-                                
+
                                 Spacer()
-                                
+
                                 HStack {
                                     ZStack(alignment: .bottomTrailing) {
                                         let membersToShow = Array(familyMembers.prefix(3))
-                                        
+
                                         HStack(spacing: -8) {
                                             ForEach(membersToShow, id: \.id) { member in
                                                 FamilyMemberAvatarView(member: member)
                                             }
                                         }
-                                        
+
                                         if familyMembers.count > 3 {
                                             Text("+\(familyMembers.count - 3)")
                                                 .font(NunitoFont.semiBold.size(12))
@@ -195,9 +199,9 @@ struct HomeView: View {
                                                 .offset(x: 10, y: -2)
                                         }
                                     }
-                                    
+
                                     Spacer()
-                                    
+
                                     Button {
                                         coordinator.navigateInBottomSheet(.addMoreMembers)
                                     } label: {
@@ -207,24 +211,25 @@ struct HomeView: View {
                                 }
                             }
                             .frame(height: 141)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(Color.white)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 24)
-                                        .stroke(lineWidth: 0.75)
-                                        .foregroundStyle(Color(hex: "#EEEEEE"))
-                                )
-                        )
-                        .contentShape(RoundedRectangle(cornerRadius: 24))
-                        .onTapGesture {
-                            // Open Manage Family when tapped
-                            appState.navigate(to: .manageFamily)
+                            .padding(16)
+                            .frame(width: cardWidth)
+                            .background(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .fill(Color.white)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 24)
+                                            .stroke(lineWidth: 0.75)
+                                            .foregroundStyle(Color(hex: "#EEEEEE"))
+                                    )
+                            )
+                            .contentShape(RoundedRectangle(cornerRadius: 24))
+                            .onTapGesture {
+                                // Open Manage Family when tapped
+                                appState.navigate(to: .manageFamily)
+                            }
                         }
                     }
+                    .frame(height: 173) // Fixed height for the card row (141 content + 16*2 padding)
 //                    .padding(.bottom, 20)
                     
                     //                    Image(.homescreenbanner)
@@ -300,11 +305,17 @@ struct HomeView: View {
                             VStack(spacing: 0) {
                                 ForEach(Array(items.enumerated()), id: \.element.id) { index, scan in
 
-                                    Button {
-                                        // Use push navigation instead of modal
-                                        appState.navigationPath.append(HistoryRouteItem.scan(scan))
-                                    } label: {
-                                        ScanRow(scan: scan)
+                                    NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                                        RecentScanCard(
+                                            scan: scan,
+                                            style: .compact,
+                                            onFavoriteToggle: { scanId, newValue in
+                                                handleFavoriteToggle(scanId: scanId, favorited: newValue)
+                                            },
+                                            onScanUpdated: { updatedScan in
+                                                handleScanUpdated(updatedScan)
+                                            }
+                                        )
                                     }
                                     .buttonStyle(.plain)
 
@@ -577,9 +588,89 @@ struct HomeView: View {
                 }
 
         }
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowAIBotFAB {
+                AIBotFAB(
+                    onTap: { presentAIBotWithContext() },
+                    showPromptBubble: coordinator.showFeedbackPromptBubble,
+                    onPromptTap: { coordinator.dismissFeedbackPrompt(openChat: true) },
+                    onPromptDismiss: { coordinator.dismissFeedbackPrompt(openChat: false) }
+                )
+                .padding(.trailing, 20)
+//                .padding(.bottom, 100)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: shouldShowAIBotFAB)
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: coordinator.showFeedbackPromptBubble)
         .tint(Color(hex: "#303030")) // Back button and navigation tint color
+        // AI Bot sheet - attached here so it works correctly when Food Notes is shown via navigationDestination
+        .sheet(isPresented: Binding(
+            get: { coordinator.isAIBotSheetPresented },
+            set: { coordinator.isAIBotSheetPresented = $0 }
+        ), onDismiss: {
+            coordinator.dismissAIBotSheet()
+        }) {
+            IngrediBotChatView(
+                scanId: coordinator.aibotContextScanId,
+                analysisId: coordinator.aibotContextAnalysisId,
+                ingredientName: coordinator.aibotContextIngredientName,
+                feedbackId: coordinator.aibotContextFeedbackId
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .environment(coordinator)
+            .environment(appState)
+        }
     }
-    
+
+    // MARK: - AIBot FAB
+
+    private var shouldShowAIBotFAB: Bool {
+        // Don't show on root (HomeView has its own AIBot buttons)
+        guard !appState.navigationPath.isEmpty else { return false }
+
+        // Hide when ScanCameraView is the visible/active view
+        // This flag is set by ScanCameraView on appear/disappear
+        if appState.isInScanCameraView {
+            return false
+        }
+
+        // Show on all detail screens (ProductDetailView, etc.)
+        return true
+    }
+
+    private func presentAIBotWithContext() {
+        // Dismiss any feedback prompt bubble first and open chat with pending context
+        // (feedback context includes analysisId, ingredientName, feedbackId as needed)
+        if coordinator.showFeedbackPromptBubble {
+            coordinator.dismissFeedbackPrompt(openChat: true)
+            return
+        }
+
+        // Try to get context from AppRoute navigation
+        // Only pass scanId for product_scan context (not analysisId - that's for feedback)
+        if let currentRoute = appState.currentRoute {
+            switch currentRoute {
+            case .productDetail(let scanId, _):
+                coordinator.showAIBotSheetWithContext(scanId: scanId)
+                return
+            default:
+                break
+            }
+        }
+
+        // Fallback: Check if ProductDetailView has set displayedScanId (for HistoryRouteItem navigation)
+        // Only pass scanId for product_scan context
+        if let displayedScanId = appState.displayedScanId {
+            coordinator.showAIBotSheetWithContext(scanId: displayedScanId)
+            return
+        }
+
+        // No product context available - open chat with home context
+        coordinator.showAIBotSheet()
+    }
+
     private func loadStats() async {
         guard !isLoadingStats else { return }
         isLoadingStats = true
@@ -613,9 +704,53 @@ struct HomeView: View {
         await MainActor.run {
             appState.listsTabState.scans = scanHistoryStore.scans
         }
-        
+
         // Refresh stats
         await loadStats()
+    }
+
+    // MARK: - RecentScanCard Callbacks
+
+    private func handleFavoriteToggle(scanId: String, favorited: Bool) {
+        // Update AppState for backwards compatibility
+        appState.setHistoryItemFavorited(clientActivityId: scanId, favorited: favorited)
+
+        // Update scan in store and AppState.listsTabState.scans
+        if var scans = appState.listsTabState.scans,
+           let idx = scans.firstIndex(where: { $0.id == scanId }) {
+            let oldScan = scans[idx]
+            let newScan = DTO.Scan(
+                id: oldScan.id,
+                scan_type: oldScan.scan_type,
+                barcode: oldScan.barcode,
+                state: oldScan.state,
+                product_info: oldScan.product_info,
+                product_info_source: oldScan.product_info_source,
+                product_info_vote: oldScan.product_info_vote,
+                analysis_result: oldScan.analysis_result,
+                images: oldScan.images,
+                latest_guidance: oldScan.latest_guidance,
+                created_at: oldScan.created_at,
+                last_activity_at: oldScan.last_activity_at,
+                is_favorited: favorited,
+                analysis_id: oldScan.analysis_id
+            )
+            scans[idx] = newScan
+            appState.listsTabState.scans = scans
+            scanHistoryStore.upsertScan(newScan)
+        }
+    }
+
+    private func handleScanUpdated(_ updatedScan: DTO.Scan) {
+        // Update scan in store
+        scanHistoryStore.upsertScan(updatedScan)
+
+        // Sync to AppState for backwards compatibility
+        if var scans = appState.listsTabState.scans,
+           let idx = scans.firstIndex(where: { $0.id == updatedScan.id }) {
+            scans[idx] = updatedScan
+            appState.listsTabState.scans = scans
+        }
     }
 }
 

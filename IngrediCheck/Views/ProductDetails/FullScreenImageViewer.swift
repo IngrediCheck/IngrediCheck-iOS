@@ -13,6 +13,7 @@ struct FullScreenImageViewer: View {
     let images: [ProductDetailView.ProductImage]
     @Binding var selectedIndex: Int
     var onFeedback: ((String, String) -> Void)?
+    var loadingImageUrl: String? = nil  // Which image URL is currently loading
 
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -179,21 +180,28 @@ struct FullScreenImageViewer: View {
 
             // Feedback buttons or placeholder
             if let image = images[safe: selectedIndex], case .api(let locationInfo, let vote) = image, case .url(let url) = locationInfo {
+                let urlString = url.absoluteString
+                let isThisImageLoading = loadingImageUrl == urlString
+
                 HStack(spacing: 8) {
                     FeedbackButton(
                         type: .up,
                         isSelected: vote?.value == "up",
+                        isLoading: isThisImageLoading && vote?.value == "up",
+                        isDisabled: isThisImageLoading || loadingImageUrl != nil,
                         style: .overlay
                     ) {
-                        onFeedback?(url.absoluteString, "up")
+                        onFeedback?(urlString, "up")
                     }
 
                     FeedbackButton(
                         type: .down,
                         isSelected: vote?.value == "down",
+                        isLoading: isThisImageLoading && vote?.value == "down",
+                        isDisabled: isThisImageLoading || loadingImageUrl != nil,
                         style: .overlay
                     ) {
-                        onFeedback?(url.absoluteString, "down")
+                        onFeedback?(urlString, "down")
                     }
                 }
             } else {

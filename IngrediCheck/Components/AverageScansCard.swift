@@ -102,7 +102,7 @@ struct AverageScansCard: View {
                   .foregroundStyle(.grayScale100)
                   .padding(.bottom, 2)
           }
-          .padding(.horizontal, 12)
+//          .padding(.horizontal, 12)
           
           Spacer()
           
@@ -140,7 +140,7 @@ struct AverageScansCard: View {
                   }
               }
           }
-          .padding(.horizontal, 14)
+//          .padding(.horizontal, 14)
       }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(.vertical, 12)

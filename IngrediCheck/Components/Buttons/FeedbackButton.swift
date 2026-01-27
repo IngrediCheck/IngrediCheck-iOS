@@ -19,18 +19,21 @@ struct FeedbackButton: View {
     
     let type: FeedbackType
     let isSelected: Bool
+    var isLoading: Bool = false
+    var isDisabled: Bool = false
     var style: Style = .plain
     let action: () -> Void
-    
+
     @State private var isAnimating = false
-    
+
     var body: some View {
         Button(action: {
+            guard !isLoading && !isDisabled else { return }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 isAnimating = true
             }
             action()
-            
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     isAnimating = false
@@ -40,6 +43,8 @@ struct FeedbackButton: View {
             content
         }
         .buttonStyle(.plain)
+        .disabled(isLoading || isDisabled)
+        .opacity(isDisabled && !isLoading ? 0.5 : 1.0)
     }
     
     @ViewBuilder
@@ -49,30 +54,54 @@ struct FeedbackButton: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(strokeColor, lineWidth: 0.5)
-                
-                iconView
-                    .frame(width: 20, height: 18)
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                } else {
+                    iconView
+                        .frame(width: 20, height: 18)
+                }
             }
             .frame(width: 32, height: 28)
-            
+
         case .plain:
-            iconView
-                .frame(width: 28, height: 24)
-                
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.6)
+                    .frame(width: 28, height: 24)
+            } else {
+                iconView
+                    .frame(width: 28, height: 24)
+            }
+
         case .overlay:
-            iconView
-                .frame(width: 22, height: 22)
-                .frame(width: 44, height: 44)
-                .background(Color.black.opacity(0.3))
-                .clipShape(Circle())
-            
+            ZStack {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(.white)
+                } else {
+                    iconView
+                        .frame(width: 22, height: 22)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .background(Color.black.opacity(0.3))
+            .clipShape(Circle())
+
         case .whiteBoxed:
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.white)
-                
-                iconView
-                    .frame(width: 20, height: 18)
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                } else {
+                    iconView
+                        .frame(width: 20, height: 18)
+                }
             }
             .frame(width: 32, height: 28)
         }

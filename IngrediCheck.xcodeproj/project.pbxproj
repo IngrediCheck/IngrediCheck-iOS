@@ -91,6 +91,7 @@
 		D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC912ED98EA10088E044 /* CustomSheet.swift */; };
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
 		D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */; };
+		D3BECCA52ED98EA30088E044 /* ChatContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
@@ -185,6 +186,7 @@
 		D3BECC972ED98EA10088E044 /* Temp3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp3.swift; sourceTree = "<group>"; };
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
 		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
+		D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatContextBuilder.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
@@ -257,6 +259,7 @@
 				D3F6ACC72F10E3490019F5C4 /* OnboardingPersistence.swift */,
 				D3BECC8F2ED98EA10088E044 /* BottomSheetRoute.swift */,
 				D3BECC902ED98EA10088E044 /* CanvasRoute.swift */,
+				D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */,
 				D3BECC912ED98EA10088E044 /* CustomSheet.swift */,
 				D3BECC922ED98EA10088E044 /* FlowLayout.swift */,
 				D3BECC932ED98EA10088E044 /* HexColorExtension.swift */,
@@ -575,6 +578,7 @@
 				D3BECC9A2ED98EA10088E044 /* ManropeFontEnum.swift in Sources */,
 				D3BECC9B2ED98EA10088E044 /* BottomSheetRoute.swift in Sources */,
 				D3BECC9C2ED98EA10088E044 /* CanvasRoute.swift in Sources */,
+				D3BECCA52ED98EA30088E044 /* ChatContextBuilder.swift in Sources */,
 				D3BECC9D2ED98EA10088E044 /* FlowLayout.swift in Sources */,
 				D3BED0622ED997490088E044 /* HomeView.swift in Sources */,
 				D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */,
@@ -781,7 +785,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -852,7 +856,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -231,8 +231,9 @@ struct LoginToContinueSheet: View {
             .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 21)
-        .padding(.bottom, 24)
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
     }
 }
 

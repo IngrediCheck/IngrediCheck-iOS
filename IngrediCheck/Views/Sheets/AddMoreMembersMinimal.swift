@@ -46,7 +46,9 @@ struct AddMoreMembersMinimal: View {
             }
             .padding(.horizontal, 20)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
+        .background(.white)
 //        .overlay(
 //            RoundedRectangle(cornerRadius: 4)
 //                .fill(.neutral500)
@@ -54,5 +56,13 @@ struct AddMoreMembersMinimal: View {
 //                .padding(.top, 11)
 //            , alignment: .top
 //        )
+    }
+}
+
+#Preview {
+    AddMoreMembersMinimal {
+        
+    } addMorePressed: {
+        
     }
 }

@@ -43,6 +43,9 @@ final class FoodNotesStore {
     /// Loading state for food notes operations
     var isLoadingFoodNotes: Bool = false
 
+    /// Indicates if food notes have been loaded at least once (prevents showing loading on subsequent navigations)
+    private(set) var hasLoadedFoodNotes: Bool = false
+
     /// Sync management - exposed for UI to show sync indicator
     private(set) var isSyncing: Bool = false
     private var syncDebounceTask: Task<Void, Never>? = nil
@@ -124,6 +127,7 @@ final class FoodNotesStore {
                 rebuildAssociationsAndCanvasFromCache()
                 
                 Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Successfully loaded and cached data")
+                hasLoadedFoodNotes = true
             } else {
                 // No data, init empty
                 familyVersion = 0
@@ -131,6 +135,7 @@ final class FoodNotesStore {
                 memberPreferencesCache = [:]
                 itemMemberAssociations = [:]
                 canvasPreferences = Preferences()
+                hasLoadedFoodNotes = true
             }
         } catch {
             Log.debug("FoodNotesStore", "loadFoodNotesAll: ❌ Failed to load food notes: \(error.localizedDescription)")

@@ -37,7 +37,8 @@ struct AllSetToJoinYourFamily: View {
             
         }
         .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .fill(.neutral500)

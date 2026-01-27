@@ -55,6 +55,10 @@ struct ListsTabState {
     /// All navigation flows through this path via `navigate(to:)`.
     @MainActor var navigationPath = NavigationPath()
 
+    /// Tracks the current navigation route for FAB visibility and context.
+    /// Updated when navigating via `navigate(to:)`.
+    @MainActor var currentRoute: AppRoute? = nil
+
     /// ScanId to scroll to when returning to ScanCameraView (e.g., from ProductDetail "Add Image")
     @MainActor var scrollToScanId: String?
 
@@ -62,8 +66,21 @@ struct ListsTabState {
     /// Used by ProductDetailView to decide whether to pop back or push new camera.
     @MainActor var hasCameraInStack: Bool = false
 
+    /// Tracks whether ScanCameraView is currently the visible/active view.
+    /// Set by ScanCameraView on appear/disappear. Used by AIBot FAB visibility logic.
+    @MainActor var isInScanCameraView: Bool = false
+
+    /// The currently displayed scan ID (set by ProductDetailView on appear).
+    /// Used by AIBot FAB to provide context regardless of navigation method.
+    @MainActor var displayedScanId: String? = nil
+
+    /// The currently displayed analysis ID (set by ProductDetailView on appear).
+    /// Used by AIBot FAB to provide context for analysis feedback.
+    @MainActor var displayedAnalysisId: String? = nil
+
     /// Navigate to a route by pushing it onto the navigation stack.
     @MainActor func navigate(to route: AppRoute) {
+        currentRoute = route
         navigationPath.append(route)
     }
 
@@ -72,11 +89,15 @@ struct ListsTabState {
         if !navigationPath.isEmpty {
             navigationPath.removeLast()
         }
+        if navigationPath.isEmpty {
+            currentRoute = nil
+        }
     }
 
     /// Pop all routes, returning to the root view.
     @MainActor func navigateToRoot() {
         navigationPath = NavigationPath()
+        currentRoute = nil
     }
 
     @MainActor func setHistoryItemFavorited(clientActivityId: String, favorited: Bool) {
@@ -171,6 +192,21 @@ struct ListsTabState {
                 historyDestinationView(for: item)
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowAIBotFAB {
+                AIBotFAB(
+                    onTap: { presentAIBotWithContext() },
+                    showPromptBubble: coordinator.showFeedbackPromptBubble,
+                    onPromptTap: { coordinator.dismissFeedbackPrompt(openChat: true) },
+                    onPromptDismiss: { coordinator.dismissFeedbackPrompt(openChat: false) }
+                )
+                .padding(.trailing, 20)
+//                .padding(.bottom, 100)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: shouldShowAIBotFAB)
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: coordinator.showFeedbackPromptBubble)
         .tint(Color(hex: "#303030"))
         .environment(coordinator)
         .environmentObject(onboarding)
@@ -271,6 +307,57 @@ struct ListsTabState {
                 }
         }
         Spacer()
+    }
+
+    // MARK: - AIBot FAB
+
+    private var shouldShowAIBotFAB: Bool {
+        // Don't show on root (HomeView has its own AIBot buttons)
+        guard !appState.navigationPath.isEmpty else { return false }
+
+        // Hide on camera (check if current route is scanCamera)
+        if let currentRoute = appState.currentRoute {
+            switch currentRoute {
+            case .scanCamera:
+                return false  // Hide during scanning
+            default:
+                break
+            }
+        }
+
+        // Show on all detail screens (AppRoute or HistoryRouteItem navigation)
+        return true
+    }
+
+    private func presentAIBotWithContext() {
+        // Dismiss any feedback prompt bubble first and open chat with pending context
+        // (feedback context includes analysisId, ingredientName, feedbackId as needed)
+        if coordinator.showFeedbackPromptBubble {
+            coordinator.dismissFeedbackPrompt(openChat: true)
+            return
+        }
+
+        // Try to get context from AppRoute navigation
+        // Only pass scanId for product_scan context (not analysisId - that's for feedback)
+        if let currentRoute = appState.currentRoute {
+            switch currentRoute {
+            case .productDetail(let scanId, _):
+                coordinator.showAIBotSheetWithContext(scanId: scanId)
+                return
+            default:
+                break
+            }
+        }
+
+        // Fallback: Check if ProductDetailView has set displayedScanId (for HistoryRouteItem navigation)
+        // Only pass scanId for product_scan context
+        if let displayedScanId = appState.displayedScanId {
+            coordinator.showAIBotSheetWithContext(scanId: displayedScanId)
+            return
+        }
+
+        // No product context available - open chat with home context
+        coordinator.showAIBotSheet()
     }
 
     private func refreshHistory() {

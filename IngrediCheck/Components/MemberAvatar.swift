@@ -114,11 +114,7 @@ struct MemberAvatar: View {
             }
         }
 
-        // Start loading indicator
-        isLoading = true
-        loadFailed = false
-
-        // 1) Try local asset first (for local memojis)
+        // 1) Try local asset first (for local memojis) - NO loading spinner needed
         if hash.hasPrefix("memoji_") {
             if let local = UIImage(named: hash) {
                 let isValid = local.size.width > 0 && local.size.height > 0
@@ -134,6 +130,9 @@ struct MemberAvatar: View {
         }
 
         // 2) Try remote (uses WebService disk cache internally)
+        // Only show loading indicator for remote images
+        isLoading = true
+        loadFailed = false
         Log.debug("MemberAvatar", "Loading avatar for \(member.name), imageFileHash=\(hash)")
         do {
             let uiImage = try await webService.fetchImage(

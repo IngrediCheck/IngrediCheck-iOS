@@ -95,13 +95,13 @@ struct ScanDataCard: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             // Left-side visual: product images or placeholder
             productImageView
                 .frame(width: 68, height: 92)
                 .padding(.leading, 14)
                 .layoutPriority(1)
-            
+
             // Right-side: product info and status
             productInfoView
                 .frame(maxWidth: .infinity,
@@ -109,6 +109,7 @@ struct ScanDataCard: View {
                        maxHeight: 92,
                        alignment: .leading
                 )
+                .padding(.trailing, 14)
                 .onChange(of: errorState) { newErrorState in
                     if newErrorState == nil && product != nil {
                         onRetryHidden?()
@@ -119,19 +120,6 @@ struct ScanDataCard: View {
                         onRetryHidden?()
                     }
                 }
-            
-            // Right disclosure arrow
-            if scan != nil {
-                HStack {
-                    Image("iconamoon_arrow-up-2-duotone")
-                        .resizable()
-                        .renderingMode(.template)
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
-                        .rotationEffect(.degrees(90)) // Rotate to point right
-                }
-                .padding(.trailing, 14)
-            }
         }
         .frame(width: 300, height: 120)
         .contentShape(Rectangle())
@@ -485,30 +473,54 @@ struct ScanDataCard: View {
     @ViewBuilder
     private func productDetailsView(product: DTO.Product) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(product.brand ?? "")
-                .font(ManropeFont.regular.size(12))
-                .foregroundColor(.white)
-                .lineLimit(1)
-            if let productName = product.name, !productName.isEmpty {
-                Text(productName)
-                    .font(NunitoFont.semiBold.size(16))
-                    .foregroundColor(Color.white.opacity(0.85))
-                    .lineLimit(1)
-            }
-            
-            Spacer(minLength: 8)
-            
-            if isAnalyzing && ingredientRecommendations == nil {
-                analyzingBadge
-            } else if let matchStatus = matchStatus {
-                HStack(spacing: 8) {
-                    matchStatusBadge(matchStatus: matchStatus)
-                    heartButton(isFavorited: scan?.is_favorited ?? false)
+            // Top row: Name + Heart button
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let productName = product.name, !productName.isEmpty {
+                        Text(productName)
+                            .font(NunitoFont.semiBold.size(14))
+                            .foregroundColor(Color.white.opacity(0.85))
+                            .lineLimit(2)
+                    }
+                    if let brand = product.brand, !brand.isEmpty {
+                        Text(brand)
+                            .font(ManropeFont.regular.size(12))
+                            .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(1)
+                    }
                 }
-            } else if errorState != nil && product != nil {
-                retryButton
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Heart button (top right)
+                heartButton(isFavorited: scan?.is_favorited ?? false)
+            }
+
+            Spacer(minLength: 4)
+
+            // Bottom row: Status badge + Chevron
+            HStack {
+                if isAnalyzing && ingredientRecommendations == nil {
+                    analyzingBadge
+                } else if let matchStatus = matchStatus {
+                    matchStatusBadge(matchStatus: matchStatus)
+                } else if errorState != nil {
+                    retryButton
+                }
+
+                Spacer()
+
+                // Chevron disclosure icon (bottom right)
+                chevronIcon
             }
         }
+    }
+
+    // MARK: - Chevron Icon
+    @ViewBuilder
+    private var chevronIcon: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 11, weight: .regular))
+            .foregroundColor(.white)
     }
     
     // MARK: - Heart Button

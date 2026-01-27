@@ -73,6 +73,16 @@ class AppNavigationCoordinator {
     // Global state for AI Bot sheet (post-login)
     var isAIBotSheetPresented: Bool = false
 
+    // MARK: - AIBot Context Properties
+    var aibotContextScanId: String? = nil
+    var aibotContextAnalysisId: String? = nil
+    var aibotContextIngredientName: String? = nil
+    var aibotContextFeedbackId: String? = nil
+
+    // MARK: - Feedback Prompt Bubble State
+    var showFeedbackPromptBubble: Bool = false
+    var pendingFeedbackId: String? = nil
+
     /// Optional callback invoked after navigation changes to sync state to Supabase
     var onNavigationChange: (() async -> Void)?
 
@@ -195,8 +205,44 @@ class AppNavigationCoordinator {
         isAIBotSheetPresented = true
     }
 
+    func showAIBotSheetWithContext(
+        scanId: String? = nil,
+        analysisId: String? = nil,
+        ingredientName: String? = nil,
+        feedbackId: String? = nil
+    ) {
+        aibotContextScanId = scanId
+        aibotContextAnalysisId = analysisId
+        aibotContextIngredientName = ingredientName
+        aibotContextFeedbackId = feedbackId
+        isAIBotSheetPresented = true
+    }
+
     func dismissAIBotSheet() {
         isAIBotSheetPresented = false
+        aibotContextScanId = nil
+        aibotContextAnalysisId = nil
+        aibotContextIngredientName = nil
+        aibotContextFeedbackId = nil
+    }
+
+    // MARK: - Feedback Prompt Bubble
+
+    func showFeedbackPrompt(feedbackId: String) {
+        pendingFeedbackId = feedbackId
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            showFeedbackPromptBubble = true
+        }
+    }
+
+    func dismissFeedbackPrompt(openChat: Bool = false) {
+        if openChat, let feedbackId = pendingFeedbackId {
+            showAIBotSheetWithContext(feedbackId: feedbackId)
+        }
+        withAnimation {
+            showFeedbackPromptBubble = false
+        }
+        pendingFeedbackId = nil
     }
 
     // Get bottom sheet route for current canvas route

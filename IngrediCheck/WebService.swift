@@ -73,6 +73,12 @@ struct ScanStreamError: Error, LocalizedError {
     var errorDescription: String? { message }
 }
 
+struct ChatStreamError: Error, LocalizedError {
+    let message: String
+    let statusCode: Int?
+    var errorDescription: String? { message }
+}
+
 @Observable final class WebService {
     
     private let smallImageStore: FileStore
@@ -505,23 +511,34 @@ struct ScanStreamError: Error, LocalizedError {
         }
 
         do {
+            // Use byte accumulation with proper UTF-8 decoding to handle multi-byte characters
+            var byteBuffer = Data()
+            let doubleNewlineData = "\n\n".data(using: .utf8)!
+            let carriageReturnNewlineData = "\r\n\r\n".data(using: .utf8)!
+
             for try await byte in asyncBytes {
                 if shouldTerminate {
                     break
                 }
 
-                let scalar = UnicodeScalar(byte)
-                buffer.append(Character(scalar))
+                byteBuffer.append(byte)
 
+                // Check for event separators in accumulated bytes
                 while true {
-                    if let range = buffer.range(of: doubleNewline) {
-                        let eventString = String(buffer[..<range.lowerBound])
-                        buffer.removeSubrange(buffer.startIndex..<range.upperBound)
-                        await processEvent(eventString)
-                    } else if let range = buffer.range(of: carriageReturnNewline) {
-                        let eventString = String(buffer[..<range.lowerBound])
-                        buffer.removeSubrange(buffer.startIndex..<range.upperBound)
-                        await processEvent(eventString)
+                    var separatorRange: Range<Data.Index>?
+
+                    if let range = byteBuffer.range(of: doubleNewlineData) {
+                        separatorRange = range
+                    } else if let range = byteBuffer.range(of: carriageReturnNewlineData) {
+                        separatorRange = range
+                    }
+
+                    if let range = separatorRange {
+                        let eventData = byteBuffer[..<range.lowerBound]
+                        if let eventString = String(data: eventData, encoding: .utf8) {
+                            await processEvent(eventString)
+                        }
+                        byteBuffer.removeSubrange(..<range.upperBound)
                     } else {
                         break
                     }
@@ -532,8 +549,11 @@ struct ScanStreamError: Error, LocalizedError {
                 }
             }
 
-            if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                await processEvent(buffer)
+            // Process any remaining data
+            if !byteBuffer.isEmpty, let remaining = String(data: byteBuffer, encoding: .utf8) {
+                if !remaining.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    await processEvent(remaining)
+                }
             }
         } catch {
             if !hasReportedError && !(error is CancellationError) {
@@ -772,19 +792,28 @@ struct ScanStreamError: Error, LocalizedError {
         }
         
         do {
+            // Use byte accumulation with proper UTF-8 decoding to handle multi-byte characters
+            var byteBuffer = Data()
+            let doubleNewlineData = "\n\n".data(using: .utf8)!
+
             for try await byte in asyncBytes {
-                let scalar = UnicodeScalar(byte)
-                buffer.append(Character(scalar))
-                
-                while let range = buffer.range(of: doubleNewline) {
-                    let eventString = String(buffer[..<range.lowerBound])
-                    buffer.removeSubrange(buffer.startIndex..<range.upperBound)
-                    await processEvent(eventString)
+                byteBuffer.append(byte)
+
+                // Check for event separator in accumulated bytes
+                while let range = byteBuffer.range(of: doubleNewlineData) {
+                    let eventData = byteBuffer[..<range.lowerBound]
+                    if let eventString = String(data: eventData, encoding: .utf8) {
+                        await processEvent(eventString)
+                    }
+                    byteBuffer.removeSubrange(..<range.upperBound)
                 }
             }
-            
-            if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                await processEvent(buffer)
+
+            // Process any remaining data
+            if !byteBuffer.isEmpty, let remaining = String(data: byteBuffer, encoding: .utf8) {
+                if !remaining.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    await processEvent(remaining)
+                }
             }
         } catch {
             if !hasReportedError && !(error is CancellationError) {
@@ -909,6 +938,305 @@ struct ScanStreamError: Error, LocalizedError {
         } catch {
             Log.error("REANALYZE", "❌ Failed to decode reanalysis response: \(error)")
             throw NetworkError.decodingError
+        }
+    }
+    
+    // MARK: - Chat API
+    
+    func streamChatMessage(
+        message: String,
+        context: any Codable,
+        conversationId: String? = nil,
+        onThinking: @escaping (String, String) -> Void,  // (conversationId, turnId)
+        onResponse: @escaping (String, String, String) -> Void,  // (conversationId, turnId, response)
+        onError: @escaping (ChatStreamError, String?, String?) -> Void  // (error, conversationId, turnId)
+    ) async throws {
+        
+        let requestId = UUID().uuidString
+        let startTime = Date().timeIntervalSince1970
+        var currentConversationId: String?
+        var currentTurnId: String?
+        var hasReportedError = false
+        
+        Log.debug("CHAT", "🔵 Starting chat message - message: \(message.prefix(50))..., request_id: \(requestId)")
+        
+        // Wake up fly.io backend before chat
+        pingFlyIO()
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            Log.error("CHAT", "❌ Auth error - no access token")
+            throw NetworkError.authError
+        }
+        
+        // Encode context to JSON string
+        let contextJson: String
+        do {
+            let encoder = JSONEncoder()
+            let contextData = try encoder.encode(context)
+            contextJson = String(data: contextData, encoding: .utf8) ?? "{}"
+        } catch {
+            Log.error("CHAT", "❌ Failed to encode context: \(error)")
+            throw NetworkError.badUrl
+        }
+        
+        let endpoint = Config.flyIOBaseURL + "/" + SafeEatsEndpoint.chat_send.rawValue
+        
+        var requestBuilder = SupabaseRequestBuilder(endpoint: .chat_send)
+            .setAuthorization(with: token)
+            .setMethod(to: "POST")
+            .setFormData(name: "message", value: message)
+            .setFormData(name: "context", value: contextJson)
+        
+        if let convId = conversationId {
+            requestBuilder = requestBuilder.setFormData(name: "conversation_id", value: convId)
+        }
+        
+        var request = requestBuilder.build()
+        
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 60
+        
+        // Log request details
+        Log.debug("CHAT", "📡 API Call: POST \(endpoint)")
+        Log.debug("CHAT", "📡 Request Headers: Authorization=Bearer ***, Accept=text/event-stream")
+        var requestBodyLog = "📡 Request Body:\n"
+        requestBodyLog += "  message: \(message)\n"
+        requestBodyLog += "  context: \(contextJson)\n"
+        if let convId = conversationId {
+            requestBodyLog += "  conversation_id: \(convId)\n"
+        }
+        Log.debug("CHAT", requestBodyLog)
+        
+        PostHogSDK.shared.capture("Chat Message Started", properties: [
+            "request_id": requestId,
+            "has_conversation_id": conversationId != nil
+        ])
+        
+        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            Log.error("CHAT", "❌ Invalid response type")
+            throw NetworkError.invalidResponse(-1)
+        }
+        
+        switch httpResponse.statusCode {
+        case 200:
+            Log.debug("CHAT", "✅ Connected to SSE stream - Status: 200, starting to receive events...")
+        case 401:
+            Log.error("CHAT", "❌ Status 401 - Unauthorized")
+            throw NetworkError.authError
+        case 404:
+            Log.error("CHAT", "❌ Status 404 - Conversation not found")
+            throw NetworkError.notFound("Conversation not found")
+        case 422:
+            // For 422, we need to read the error response
+            // But we've already started the stream, so we'll handle it in the error event
+            Log.error("CHAT", "❌ Status 422 - Validation error")
+            throw NetworkError.invalidResponse(422)
+        default:
+            Log.error("CHAT", "❌ HTTP Error - Status: \(httpResponse.statusCode)")
+            PostHogSDK.shared.capture("Chat Message Failed - HTTP", properties: [
+                "request_id": requestId,
+                "status_code": httpResponse.statusCode
+            ])
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
+        }
+        
+        var buffer = ""
+        let doubleNewline = "\n\n"
+        
+        func processEvent(_ rawEvent: String) async {
+            let trimmed = rawEvent.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            
+            var eventType: String?
+            var dataLines: [String] = []
+            
+            trimmed.split(whereSeparator: \.isNewline).forEach { line in
+                if line.hasPrefix("event:") {
+                    eventType = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                } else if line.hasPrefix("data:") {
+                    dataLines.append(String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces))
+                }
+            }
+            
+            let payloadString = dataLines.joined(separator: "\n")
+            guard let resolvedEventType = eventType,
+                  let payloadData = payloadString.data(using: .utf8) else { return }
+            
+            // Log raw SSE event
+            Log.debug("CHAT", "📥 SSE Event Received - event: \(resolvedEventType)")
+            Log.debug("CHAT", "📥 SSE Event Data: \(payloadString)")
+            
+            switch resolvedEventType {
+            case "turn":
+                do {
+                    // Try to decode as TurnThinkingEvent or TurnDoneEvent based on state
+                    if let jsonObject = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
+                       let state = jsonObject["state"] as? String {
+                        
+                        if state == "thinking" {
+                            let thinkingEvent = try JSONDecoder().decode(DTO.TurnThinkingEvent.self, from: payloadData)
+                            currentConversationId = thinkingEvent.conversation_id
+                            currentTurnId = thinkingEvent.turn_id
+                            
+                            let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+                            Log.debug("CHAT", "📦 Event: turn (thinking) - conversation_id: \(thinkingEvent.conversation_id), turn_id: \(thinkingEvent.turn_id), latency: \(Int(latency))ms")
+                            
+                            PostHogSDK.shared.capture("Chat Turn Thinking", properties: [
+                                "request_id": requestId,
+                                "conversation_id": thinkingEvent.conversation_id,
+                                "turn_id": thinkingEvent.turn_id
+                            ])
+                            
+                            await MainActor.run {
+                                onThinking(thinkingEvent.conversation_id, thinkingEvent.turn_id)
+                            }
+                        } else if state == "done" {
+                            let doneEvent = try JSONDecoder().decode(DTO.TurnDoneEvent.self, from: payloadData)
+                            currentConversationId = doneEvent.conversation_id
+                            currentTurnId = doneEvent.turn_id
+                            
+                            let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+                            Log.debug("CHAT", "📦 Event: turn (done) - conversation_id: \(doneEvent.conversation_id), turn_id: \(doneEvent.turn_id), response_length: \(doneEvent.response.count), latency: \(Int(latency))ms")
+                            
+                            PostHogSDK.shared.capture("Chat Turn Done", properties: [
+                                "request_id": requestId,
+                                "conversation_id": doneEvent.conversation_id,
+                                "turn_id": doneEvent.turn_id,
+                                "response_length": doneEvent.response.count
+                            ])
+                            
+                            await MainActor.run {
+                                onResponse(doneEvent.conversation_id, doneEvent.turn_id, doneEvent.response)
+                            }
+                        }
+                    }
+                } catch {
+                    Log.error("CHAT", "❌ Failed to decode turn event: \(error)")
+                    if let payloadString = String(data: payloadData, encoding: .utf8) {
+                        Log.debug("CHAT", "📄 Raw turn payload: \(payloadString.prefix(500))")
+                    }
+                }
+                
+            case "error":
+                do {
+                    let errorEvent = try JSONDecoder().decode(DTO.ChatErrorEvent.self, from: payloadData)
+                    hasReportedError = true
+                    currentConversationId = errorEvent.conversation_id
+                    currentTurnId = errorEvent.turn_id
+                    
+                    Log.error("CHAT", "❌ Event: error - conversation_id: \(errorEvent.conversation_id ?? "nil"), turn_id: \(errorEvent.turn_id ?? "nil"), error: \(errorEvent.error)")
+                    
+                    PostHogSDK.shared.capture("Chat Error", properties: [
+                        "request_id": requestId,
+                        "conversation_id": errorEvent.conversation_id ?? "",
+                        "turn_id": errorEvent.turn_id ?? "",
+                        "error": errorEvent.error
+                    ])
+                    
+                    await MainActor.run {
+                        onError(ChatStreamError(message: errorEvent.error, statusCode: nil), errorEvent.conversation_id, errorEvent.turn_id)
+                    }
+                } catch {
+                    Log.error("CHAT", "❌ Failed to decode error event: \(error)")
+                    if let payloadString = String(data: payloadData, encoding: .utf8) {
+                        Log.debug("CHAT", "📄 Raw error payload: \(payloadString.prefix(500))")
+                    }
+                    hasReportedError = true
+                    await MainActor.run {
+                        onError(ChatStreamError(message: "Failed to parse error event", statusCode: nil), nil, nil)
+                    }
+                }
+                
+            default:
+                Log.warning("CHAT", "⚠️ Unknown event type: \(resolvedEventType)")
+                break
+            }
+        }
+        
+        do {
+            // Use byte accumulation with proper UTF-8 decoding to handle multi-byte characters
+            var byteBuffer = Data()
+            let doubleNewlineData = "\n\n".data(using: .utf8)!
+
+            for try await byte in asyncBytes {
+                byteBuffer.append(byte)
+
+                // Check for event separator in accumulated bytes
+                while let range = byteBuffer.range(of: doubleNewlineData) {
+                    let eventData = byteBuffer[..<range.lowerBound]
+                    if let eventString = String(data: eventData, encoding: .utf8) {
+                        await processEvent(eventString)
+                    }
+                    byteBuffer.removeSubrange(..<range.upperBound)
+                }
+            }
+
+            // Process any remaining data
+            if !byteBuffer.isEmpty, let remaining = String(data: byteBuffer, encoding: .utf8) {
+                if !remaining.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    await processEvent(remaining)
+                }
+            }
+        } catch {
+            if !hasReportedError && !(error is CancellationError) {
+                Log.error("CHAT", "❌ Stream error: \(error.localizedDescription)")
+                await MainActor.run {
+                    onError(ChatStreamError(message: error.localizedDescription, statusCode: nil), currentConversationId, currentTurnId)
+                }
+            }
+            throw error
+        }
+        
+        let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
+        Log.debug("CHAT", "✅ Chat message completed - total latency: \(Int(totalLatency))ms")
+    }
+    
+    func getConversation(conversationId: String) async throws -> DTO.ConversationResponse {
+        Log.debug("CHAT", "📥 Fetching conversation - conversation_id: \(conversationId)")
+        
+        guard let token = try? await supabaseClient.auth.session.accessToken else {
+            Log.error("CHAT", "❌ Auth error - no access token")
+            throw NetworkError.authError
+        }
+        
+        let endpoint = Config.flyIOBaseURL + "/" + String(format: SafeEatsEndpoint.chat_get.rawValue, conversationId)
+        let request = SupabaseRequestBuilder(endpoint: .chat_get, itemId: conversationId)
+            .setAuthorization(with: token)
+            .setMethod(to: "GET")
+            .build()
+        
+        // Log request details
+        Log.debug("CHAT", "📡 API Call: GET \(endpoint)")
+        Log.debug("CHAT", "📡 Request Headers: Authorization=Bearer ***")
+        Log.debug("CHAT", "📡 Request Body: (GET request - no body)")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = response as! HTTPURLResponse
+        
+        // Log response details
+        Log.debug("CHAT", "📥 Response Status: \(httpResponse.statusCode)")
+        if let responseBody = String(data: data, encoding: .utf8) {
+            Log.debug("CHAT", "📥 Response Body: \(responseBody)")
+        } else {
+            Log.debug("CHAT", "📥 Response Body: (unable to decode as string, size: \(data.count) bytes)")
+        }
+        
+        switch httpResponse.statusCode {
+        case 200:
+            let conversation = try JSONDecoder().decode(DTO.ConversationResponse.self, from: data)
+            Log.debug("CHAT", "✅ Conversation loaded - conversation_id: \(conversation.conversation_id), turns: \(conversation.turns.count)")
+            return conversation
+        case 401:
+            Log.error("CHAT", "❌ Status 401 - Unauthorized")
+            throw NetworkError.authError
+        case 404:
+            Log.error("CHAT", "❌ Status 404 - Conversation not found")
+            throw NetworkError.notFound("Conversation not found")
+        default:
+            Log.error("CHAT", "❌ HTTP Error - Status: \(httpResponse.statusCode)")
+            throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
     

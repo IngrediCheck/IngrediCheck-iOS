@@ -19,6 +19,7 @@ struct ProductDetailView: View {
     @Environment(UserPreferences.self) private var userPreferences
     @Environment(ScanHistoryStore.self) private var scanHistoryStore
     @Environment(AppState.self) private var appState: AppState?  // Optional - for push navigation
+    @Environment(AppNavigationCoordinator.self) private var coordinator: AppNavigationCoordinator?
 
     @State private var isFavorite = false
     @AppStorage("ingredientsSectionExpanded") private var isIngredientsExpanded = true  // Default: expanded, persists user choice
@@ -34,6 +35,11 @@ struct ProductDetailView: View {
     var initialScan: DTO.Scan? = nil  // Initial scan data (if from cache/SSE)
     @State private var scan: DTO.Scan? = nil  // Current scan data (updates via polling)
     @State private var pollingTask: Task<Void, Never>? = nil
+
+    // Feedback loading states (show spinner on thumb buttons while API responds)
+    @State private var isProductFeedbackLoading = false
+    @State private var loadingIngredientName: String? = nil  // Track which ingredient is loading
+    @State private var loadingImageUrl: String? = nil  // Track which image is loading
 
     // Legacy static data (old approach - kept for backwards compatibility)
     var product: DTO.Product? = nil
@@ -322,7 +328,9 @@ struct ProductDetailView: View {
                                     productVote: scan?.product_info_vote,
                                     onProductFeedback: { voteType in
                                         handleProductFeedback(voteType: voteType)
-                                    }
+                                    },
+                                    isProductFeedbackLoading: isProductFeedbackLoading,
+                                    loadingIngredientName: loadingIngredientName
                                 )
                                 .padding(.horizontal, 20)
                                 .padding(.bottom, 20)
@@ -467,7 +475,8 @@ struct ProductDetailView: View {
                 selectedIndex: $selectedImageIndex,
                 onFeedback: { url, vote in
                     handleImageFeedback(imageUrl: url, voteType: vote)
-                }
+                },
+                loadingImageUrl: loadingImageUrl
             )
         }
         .task(id: scanId) {
@@ -508,11 +517,23 @@ struct ProductDetailView: View {
                 }
             }
         }
+        .onAppear { setDisplayedScanContext() }
         .onDisappear {
             // Cancel polling when view disappears
             pollingTask?.cancel()
             pollingTask = nil
+
+            // Clear displayed scan context
+            appState?.displayedScanId = nil
+            appState?.displayedAnalysisId = nil
         }
+    }
+
+    // MARK: - Displayed Scan Context (for AIBot FAB)
+
+    private func setDisplayedScanContext() {
+        appState?.displayedScanId = scanId
+        appState?.displayedAnalysisId = scan?.analysis_result?.id ?? scan?.analysis_id
     }
 
     // MARK: - Favorite Toggle
@@ -554,7 +575,7 @@ struct ProductDetailView: View {
                         created_at: currentScan.created_at,
                         last_activity_at: currentScan.last_activity_at,
                         is_favorited: newFavoriteState,
-                        analysis_id: currentScan.analysis_id
+                        analysis_id: currentScan.analysis_result?.id ?? currentScan.analysis_id
                     )
 
                     await MainActor.run {
@@ -684,18 +705,22 @@ struct ProductDetailView: View {
     
     private func handleProductFeedback(voteType: String) {
         guard let currentScan = scan else { return }
-        
+        guard !isProductFeedbackLoading else { return }  // Prevent double-tap
+
         // Validate required fields for product_info feedback
         guard !currentScan.id.isEmpty else {
             Log.error("ProductDetailView", "Cannot submit product feedback: scan_id is missing")
             return
         }
-        
+
+        // Start loading
+        isProductFeedbackLoading = true
+
         // 1. Calculate optimistic new vote
         let oldVote = currentScan.product_info_vote
-        
+
         var optimisticVote: DTO.Vote?
-        
+
         if let currentVote = currentScan.product_info_vote, currentVote.value == voteType {
              // Toggle off
              optimisticVote = nil
@@ -703,18 +728,24 @@ struct ProductDetailView: View {
              // Set new vote
              optimisticVote = DTO.Vote(id: oldVote?.id ?? "optimistic-\(UUID().uuidString)", value: voteType)
         }
-        
+
         // 2. Apply optimistic state
         var optimisticScan = currentScan
         optimisticScan.product_info_vote = optimisticVote
         self.scan = optimisticScan
         // Sync to central store
         scanHistoryStore.upsertScan(optimisticScan)
-        
+
         Task {
+            defer {
+                Task { @MainActor in
+                    isProductFeedbackLoading = false
+                }
+            }
+
             do {
                 let updatedScan: DTO.Scan
-                
+
                 // 3. Perform network request
                 if let currentVote = currentScan.product_info_vote, currentVote.value == voteType {
                    updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
@@ -734,12 +765,18 @@ struct ProductDetailView: View {
                     )
                     updatedScan = try await webService.submitFeedback(request: request)
                 }
-                
+
                 // 4. Confirm state with server response (replaces optimistic ID with real one)
                 await MainActor.run {
                     self.scan = updatedScan
                     // Sync confirmed state to central store
                     scanHistoryStore.upsertScan(updatedScan)
+
+                    // Show feedback prompt bubble only for NEW down votes (not when resetting)
+                    let wasToggleOff = currentScan.product_info_vote?.value == voteType
+                    if voteType == "down" && !wasToggleOff, let feedbackId = updatedScan.product_info_vote?.id {
+                        coordinator?.showFeedbackPrompt(feedbackId: feedbackId)
+                    }
                 }
             } catch {
                 Log.error("ProductDetailView", "Error submitting product feedback: \(error.localizedDescription)")
@@ -755,52 +792,55 @@ struct ProductDetailView: View {
     
     private func handleIngredientFeedback(item: IngredientAlertItem, voteType: String) {
         guard let currentScan = scan, let rawName = item.rawIngredientName else { return }
-        
+        guard loadingIngredientName == nil else { return }  // Prevent double-tap
+
         // Validate required fields for flagged_ingredient feedback
         guard !rawName.isEmpty else {
             Log.error("ProductDetailView", "Cannot submit ingredient feedback: ingredient_name is empty")
             return
         }
-        
+
         // Check if we have an existing vote - if so, we can update without analysis_id
         let hasExistingVote = item.vote != nil
-        
+
         // For new feedback, analysis_id is required per API spec
-        // But if we have analysis_result, we should still try (backend will validate)
-        guard hasExistingVote || currentScan.analysis_id != nil || currentScan.analysis_result != nil else {
+        // Get analysis_id from analysis_result.id (primary source) or fallback to top-level analysis_id
+        let analysisId = currentScan.analysis_result?.id ?? currentScan.analysis_id
+        
+        guard hasExistingVote || analysisId != nil || currentScan.analysis_result != nil else {
             Log.error("ProductDetailView", "Cannot submit ingredient feedback: analysis_id is missing and no existing vote to update")
             return
         }
-        
-        // Use analysis_id if available, otherwise we'll let backend handle validation
-        let analysisId = currentScan.analysis_id
-        
+
+        // Start loading for this ingredient
+        loadingIngredientName = rawName
+
         // 1. Calculate optimistic new vote
         let oldVote = item.vote
-        
+
         var optimisticVote: DTO.Vote?
         if let currentVote = item.vote, currentVote.value == voteType {
              optimisticVote = nil // Toggle off
         } else {
              optimisticVote = DTO.Vote(id: oldVote?.id ?? "optimistic-\(UUID().uuidString)", value: voteType)
         }
-        
+
         // 2. Apply optimistic state locally by modifying the scan's analysis result
         // We need to find the specific ingredient in the scan and update its vote
         var optimisticScan = currentScan
         if var analysisResult = optimisticScan.analysis_result {
             var ingredientAnalysis = analysisResult.ingredient_analysis
-            
+
             // Find index of ingredient matching rawName
             if let index = ingredientAnalysis.firstIndex(where: { $0.ingredient == rawName }) {
                 var updatedIngredient = ingredientAnalysis[index]
                 updatedIngredient.vote = optimisticVote
                 ingredientAnalysis[index] = updatedIngredient
-                
+
                 // Assign back nested structs
                 analysisResult.ingredient_analysis = ingredientAnalysis
                 optimisticScan.analysis_result = analysisResult
-                
+
                 // Update state
                 self.scan = optimisticScan
                 // Sync to central store
@@ -809,6 +849,11 @@ struct ProductDetailView: View {
         }
 
         Task {
+            defer {
+                Task { @MainActor in
+                    loadingIngredientName = nil
+                }
+            }
             do {
                 let updatedScan: DTO.Scan
                 
@@ -819,7 +864,9 @@ struct ProductDetailView: View {
                      updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: voteType)
                 } else {
                     // For new feedback, analysis_id is required per API spec
-                    guard let analysisId = analysisId, !analysisId.isEmpty else {
+                    // Get analysis_id from analysis_result.id (primary source) or fallback to top-level analysis_id
+                    let finalAnalysisId = currentScan.analysis_result?.id ?? analysisId
+                    guard let finalAnalysisId = finalAnalysisId, !finalAnalysisId.isEmpty else {
                         Log.error("ProductDetailView", "Cannot create new ingredient feedback: analysis_id is required but missing")
                         // Revert optimistic update
                         await MainActor.run {
@@ -833,7 +880,7 @@ struct ProductDetailView: View {
                         target: "flagged_ingredient",
                         vote: voteType,
                         scan_id: currentScan.id,
-                        analysis_id: analysisId,
+                        analysis_id: finalAnalysisId,
                         image_url: nil,
                         ingredient_name: rawName,
                         comment: nil
@@ -846,6 +893,15 @@ struct ProductDetailView: View {
                     self.scan = updatedScan
                     // Sync confirmed state to central store
                     scanHistoryStore.upsertScan(updatedScan)
+
+                    // Show feedback prompt bubble only for NEW down votes (not when resetting)
+                    let wasToggleOff = item.vote?.value == voteType
+                    if voteType == "down" && !wasToggleOff {
+                        if let feedbackId = updatedScan.analysis_result?.ingredient_analysis
+                            .first(where: { $0.ingredient == rawName })?.vote?.id {
+                            coordinator?.showFeedbackPrompt(feedbackId: feedbackId)
+                        }
+                    }
                 }
             } catch {
                 Log.error("ProductDetailView", "Error submitting ingredient feedback: \(error.localizedDescription)")
@@ -861,18 +917,22 @@ struct ProductDetailView: View {
     
     private func handleImageFeedback(imageUrl: String, voteType: String) {
         guard let currentScan = scan else { return }
-        
+        guard loadingImageUrl == nil else { return }  // Prevent double-tap
+
         // Validate required fields for product_image feedback
         guard !currentScan.id.isEmpty else {
             Log.error("ProductDetailView", "Cannot submit image feedback: scan_id is missing")
             return
         }
-        
+
         guard !imageUrl.isEmpty else {
             Log.error("ProductDetailView", "Cannot submit image feedback: image_url is empty")
             return
         }
-        
+
+        // Start loading for this image
+        loadingImageUrl = imageUrl
+
         // 1. Find the image and current vote
         guard let imageIndex = currentScan.images.firstIndex(where: { img in
             switch img {
@@ -911,9 +971,15 @@ struct ProductDetailView: View {
         }
         
         Task {
+            defer {
+                Task { @MainActor in
+                    loadingImageUrl = nil
+                }
+            }
+
             do {
                 let updatedScan: DTO.Scan
-                
+
                 // 4. Network request
                 if let currentVote = oldVote, currentVote.value == voteType {
                      updatedScan = try await webService.updateFeedback(feedbackId: currentVote.id, vote: "none")
@@ -931,11 +997,24 @@ struct ProductDetailView: View {
                     )
                     updatedScan = try await webService.submitFeedback(request: request)
                 }
-                
+
                 // 5. Confirm state
                 await MainActor.run {
                     self.scan = updatedScan
                     scanHistoryStore.upsertScan(updatedScan)
+
+                    // Show feedback prompt bubble only for NEW down votes (not when resetting)
+                    let wasToggleOff = oldVote?.value == voteType
+                    if voteType == "down" && !wasToggleOff {
+                        if let feedbackId = updatedScan.images.lazy.compactMap({ img -> String? in
+                            switch img {
+                            case .inventory(let i) where i.url == imageUrl: return i.vote?.id
+                            default: return nil
+                            }
+                        }).first {
+                            coordinator?.showFeedbackPrompt(feedbackId: feedbackId)
+                        }
+                    }
                 }
             } catch {
                 Log.error("ProductDetailView", "Error submitting image feedback: \(error.localizedDescription)")

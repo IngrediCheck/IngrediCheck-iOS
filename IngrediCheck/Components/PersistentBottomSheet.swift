@@ -397,27 +397,27 @@ struct PersistentBottomSheet: View {
         let routeToCheck = route ?? coordinator.currentBottomSheetRoute
         switch routeToCheck {
         case .alreadyHaveAnAccount:
-            return 271
+            return 244
         case  .doYouHaveAnInviteCode:
-            return 241
+            return 220
         case .welcomeBack:
-            return 275
+            return 252
         case .enterInviteCode:
-            return 397
+            return 380
         case .whosThisFor:
-            return 284
+            return 264
         case .letsMeetYourIngrediFam:
             return 397
         case .whatsYourName, .addMoreMembers:
             return 438
         case .addMoreMembersMinimal:
-            return 271
+            return 244
         case .editMember:
             return 438
         case .wouldYouLikeToInvite(_, _):
-            return 292
+            return 244
         case .wantToAddPreference:
-            return 250
+            return 244
         case .generateAvatar:
             return 379
         case .bringingYourAvatar:
@@ -431,13 +431,13 @@ struct PersistentBottomSheet: View {
         case .dietaryPreferencesSheet(let isFamilyFlow):
             return nil
         case .allSetToJoinYourFamily:
-            return 284
+            return 264
         // For preference sheets shown from MainCanvasView, let the
         // content determine its own height instead of forcing a static one.
         case .onboardingStep:
             return nil
         case .fineTuneYourExperience:
-            return 271
+            return 244
         case .homeDefault:
             return 0
         case .chatIntro:
@@ -451,15 +451,15 @@ struct PersistentBottomSheet: View {
         case .meetYourProfile:
             return 397
         case .preferencesAddedSuccess:
-            return 285
+            return 264
         case .readyToScanFirstProduct:
-            return 271
+            return 244
         case .seeHowScanningWorks:
-            return 263
+            return 244
         case .quickAccessNeeded:
-            return 253
+            return 220
         case .loginToContinue:
-            return 236
+            return 244
         case .updateAvatar(memberId: let memberId):
             return 492
         }
@@ -553,9 +553,14 @@ struct PersistentBottomSheet: View {
         case .whosThisFor:
             WhosThisFor {
                 // Guest login already happened on .heyThere screen, just proceed
-                await familyStore.createBiteBuddyFamily()
-                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
-                coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                do {
+                    try await familyStore.createBiteBuddyFamily()
+                    coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
+                    coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                } catch {
+                    Log.error("PersistentBottomSheet", "Failed to create Bite Buddy family: \(error)")
+                    // Don't navigate forward on error - user stays on current screen
+                }
             } addFamilyPressed: {
                 // Guest login already happened on .heyThere screen, just proceed
                 coordinator.showCanvas(.letsMeetYourIngrediFam)
@@ -808,9 +813,9 @@ struct PersistentBottomSheet: View {
                         appState.navigateToSettings = true
                     }
                 } else {
-                    // Normal flow (Add Family): show Ready to Scan first product.
-                    coordinator.showCanvas(.readyToScanFirstProduct)
-                    coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    // Normal flow (Add Family): show ScanningHelpSheet
+                    coordinator.showCanvas(.seeHowScanningWorks)
+                    coordinator.navigateInBottomSheet(.seeHowScanningWorks)
                 }
             }
             
@@ -897,11 +902,11 @@ struct PersistentBottomSheet: View {
                         appState.activeSheet = .settings
                     }
                 } else {
-                    // Normal flow - in Just Me flow, show Ready to Scan first product after Meet Your Profile.
+                    // Normal flow - in Just Me flow, show ScanningHelpSheet after Meet Your Profile.
                     // In family flow, skip this and go home.
                     if getOnboardingFlowType() == .individual {
-                        coordinator.showCanvas(.readyToScanFirstProduct)
-                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                        coordinator.showCanvas(.seeHowScanningWorks)
+                        coordinator.navigateInBottomSheet(.seeHowScanningWorks)
                     } else {
                         // Normal onboarding flow - navigate to home
                         OnboardingPersistence.shared.markCompleted()
@@ -924,12 +929,12 @@ struct PersistentBottomSheet: View {
                 } else {
                     // After preferences success:
                     // - Just Me flow: show Meet Your Profile
-                    // - Add Family flow: go directly to Ready to Scan
+                    // - Add Family flow: go directly to ScanningHelpSheet
                     if getOnboardingFlowType() == .individual {
                         coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
                     } else {
-                        coordinator.showCanvas(.readyToScanFirstProduct)
-                        coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                        coordinator.showCanvas(.seeHowScanningWorks)
+                        coordinator.navigateInBottomSheet(.seeHowScanningWorks)
                     }
                 }
             }
@@ -973,8 +978,14 @@ struct PersistentBottomSheet: View {
         case .seeHowScanningWorks:
             ScanningHelpSheet(
                 onBack: {
-                    coordinator.showCanvas(.readyToScanFirstProduct)
-                    coordinator.navigateInBottomSheet(.readyToScanFirstProduct)
+                    // Navigate back based on onboarding flow type
+                    if getOnboardingFlowType() == .individual {
+                        coordinator.showCanvas(.summaryJustMe)
+                        coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
+                    } else {
+                        coordinator.showCanvas(.summaryAddFamily)
+                        coordinator.navigateInBottomSheet(.allSetToJoinYourFamily)
+                    }
                 },
                 onGotIt: {
                     coordinator.showCanvas(.whyWeNeedThesePermissions)

@@ -166,13 +166,6 @@ import os
 @MainActor struct RecentScansPageView: View {
 
     @State private var isSearching: Bool = false
-    @State private var isShowingFilterMenu: Bool = false
-
-    private enum RecentScansFilter {
-        case all
-        case favorites
-    }
-
     @State private var selectedFilter: RecentScansFilter = .all
 
     @Environment(AppState.self) var appState
@@ -192,43 +185,78 @@ import os
         .background(Color.pageBackground)
     }
 
-    private var filterButton: some View {
-        Image("filter")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 24, height: 24)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isShowingFilterMenu.toggle()
-            }
-            .accessibilityAddTraits(.isButton)
+    private var filteredScans: [DTO.Scan] {
+        guard let scans = appState.listsTabState.scans else { return [] }
+        switch selectedFilter {
+        case .all:
+            return scans
+        case .favorites:
+            return scans.filter { $0.is_favorited == true }
+        }
     }
-    
+
     var defaultView: some View {
         Group {
             if let scans = appState.listsTabState.scans, !scans.isEmpty {
-                // Apply filter if favorites is selected
-                let filteredScans: [DTO.Scan] = {
-                    switch selectedFilter {
-                    case .all:
-                        return scans
-                    case .favorites:
-                        return scans.filter { $0.is_favorited == true }
+                if filteredScans.isEmpty {
+                    // Scans exist but filter returns empty (e.g., no favorites)
+                    EmptyStateView(
+                        imageName: "history-emptystate",
+                        title: "No Favorites Yet!",
+                        description: [
+                            "Products you favorite will appear here.",
+                            "Tap the heart icon on any scan to save it."
+                        ],
+                        buttonTitle: nil,
+                        buttonAction: nil
+                    )
+                    .frame(maxWidth: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(Array(filteredScans.enumerated()), id: \.element.id) { index, scan in
+                                NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                                    RecentScanCard(
+                                        scan: scan,
+                                        onFavoriteToggle: { scanId, isFavorited in
+                                            handleFavoriteToggle(scanId: scanId, isFavorited: isFavorited)
+                                        },
+                                        onScanUpdated: { updatedScan in
+                                            handleScanUpdated(updatedScan: updatedScan)
+                                        }
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .onAppear {
+                                    // Load more when reaching the end (3 rows remaining)
+                                    if index >= filteredScans.count - 3 {
+                                        Task {
+                                            await scanHistoryStore.loadMore()
+                                            appState.listsTabState.scans = scanHistoryStore.scans
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Loading indicator at the bottom
+                            if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 20)
                     }
-                }()
-                
-                RecentScansListView(scans: filteredScans)
+                    .scrollIndicators(.hidden)
                     .refreshable {
-                        NSLog("[RecentScansPageView] 🔄 Pull-to-refresh triggered")
-                        // Load via store (single source of truth)
+                        Log.debug("RecentScansPageView", "Pull-to-refresh triggered")
                         await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
-                        NSLog("[RecentScansPageView] ✅ loadHistory completed")
-                        // Sync to AppState for backwards compatibility
                         appState.listsTabState.scans = scanHistoryStore.scans
                     }
-                    .padding(.top)
+                }
             } else if scanHistoryStore.isLoading {
-                // Show loading indicator while loading
                 VStack {
                     Spacer()
                     ProgressView("Loading scans...")
@@ -236,7 +264,6 @@ import os
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                // Empty state
                 EmptyStateView(
                     imageName: "history-emptystate",
                     title: "No Scans !",
@@ -253,86 +280,71 @@ import os
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.horizontal)
         .navigationTitle("Recent Scans")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                filterButton
+                FilterSegmentedControl(selection: $selectedFilter)
             }
         }
         .task {
-            // Load scan history when view appears if not already loaded
             if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {
-                // Wait if store is currently loading
                 if scanHistoryStore.isLoading {
                     while scanHistoryStore.isLoading {
-                        try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+                        try? await Task.sleep(nanoseconds: 100_000_000)
                     }
                 } else if scanHistoryStore.scans.isEmpty {
-                    // Load from API if store is empty
                     await scanHistoryStore.loadHistory(limit: 20, offset: 0)
                 }
-                // Sync store data to AppState
                 await MainActor.run {
                     appState.listsTabState.scans = scanHistoryStore.scans
                 }
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if isShowingFilterMenu {
-                ZStack(alignment: .topTrailing) {
-                    Color.black
-                        .opacity(0.001)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            isShowingFilterMenu = false
-                        }
+    }
 
-                    VStack(spacing: 0) {
-                        Button {
-                            selectedFilter = .all
-                            isShowingFilterMenu = false
-                        } label: {
-                            HStack {
-                                Text("All")
-                                    .font(ManropeFont.regular.size(20))
-                                    .foregroundStyle(.grayScale150)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 22)
-                            .padding(.vertical, 18)
-                        }
-                        .buttonStyle(.plain)
+    // MARK: - Actions
 
-                        Button {
-                            selectedFilter = .favorites
-                            isShowingFilterMenu = false
-                        } label: {
-                            HStack {
-                                Text("Favorites")
-                                    .font(ManropeFont.regular.size(20))
-                                    .foregroundStyle(.grayScale150)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 22)
-                            .padding(.vertical, 18)
-                            .background(Color.grayScale20)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .frame(width: 210)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(Color.grayScale30, lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
-                    .padding(.top, 8)
-                    .padding(.trailing, 6)
-                }
+    private func handleFavoriteToggle(scanId: String, isFavorited: Bool) {
+        // Update in store
+        let scan = appState.listsTabState.scans?.first { $0.id == scanId }
+        if let scan = scan {
+            let updatedScan = DTO.Scan(
+                id: scan.id,
+                scan_type: scan.scan_type,
+                barcode: scan.barcode,
+                state: scan.state,
+                product_info: scan.product_info,
+                product_info_source: scan.product_info_source,
+                product_info_vote: scan.product_info_vote,
+                analysis_result: scan.analysis_result,
+                images: scan.images,
+                latest_guidance: scan.latest_guidance,
+                created_at: scan.created_at,
+                last_activity_at: scan.last_activity_at,
+                is_favorited: isFavorited,
+                analysis_id: scan.analysis_id
+            )
+            scanHistoryStore.upsertScan(updatedScan)
+
+            // Sync to AppState
+            if var scans = appState.listsTabState.scans,
+               let idx = scans.firstIndex(where: { $0.id == scanId }) {
+                scans[idx] = updatedScan
+                appState.listsTabState.scans = scans
             }
+        }
+    }
+
+    private func handleScanUpdated(updatedScan: DTO.Scan) {
+        // Update scan in store
+        scanHistoryStore.upsertScan(updatedScan)
+
+        // Sync to AppState
+        if var scans = appState.listsTabState.scans,
+           let idx = scans.firstIndex(where: { $0.id == updatedScan.id }) {
+            scans[idx] = updatedScan
+            appState.listsTabState.scans = scans
         }
     }
 }

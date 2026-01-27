@@ -279,6 +279,8 @@ struct LetsMeetYourIngrediFamView: View {
             .navigationBarBackButtonHidden(true)
         }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.pageBackground)
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
         }
