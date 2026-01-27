@@ -42,12 +42,8 @@ for arg in "$@"; do
 done
 
 # Kill existing log capture and trimmer for THIS device only, truncate log file
-# Use pgrep -x to match exact process name (avoids matching shell wrappers)
-for pid in $(pgrep -x idevicesyslog 2>/dev/null); do
-    if ps -p "$pid" -o args= 2>/dev/null | grep -q "$DEVICE_UDID"; then
-        kill "$pid" 2>/dev/null || true
-    fi
-done
+# Kill devicectl console processes for this device (uses UUID not UDID)
+pkill -f "devicectl device process launch.*$DEVICE_UUID" 2>/dev/null || true
 for pid in $(pgrep -x bash 2>/dev/null; pgrep -x zsh 2>/dev/null); do
     if ps -p "$pid" -o args= 2>/dev/null | grep -q "log-trimmer.*${LOG_FILE}"; then
         kill "$pid" 2>/dev/null || true
@@ -96,15 +92,18 @@ xcrun devicectl device install app --device "$DEVICE_UUID" "$APP_PATH" 2>&1 || e
 INSTALL_END=$(date +%s)
 log "Install completed in $((INSTALL_END - INSTALL_START))s"
 
-# Launch
-log "Launching app..."
-xcrun devicectl device process launch --device "$DEVICE_UUID" "$BUNDLE_ID" 2>&1 || warn "Launch may have failed"
-
-# Start log capture in background
-nohup idevicesyslog -u "$DEVICE_UDID" > "$LOG_FILE" 2>&1 &
+# Launch with console capture (replaces separate idevicesyslog)
+log "Launching app with console capture..."
+nohup xcrun devicectl device process launch --console --terminate-existing --device "$DEVICE_UUID" "$BUNDLE_ID" > "$LOG_FILE" 2>&1 &
 LOG_PID=$!
 
-# Start log trimmer to keep only last 5 minutes of logs (tied to idevicesyslog PID)
+# Verify launch worked
+sleep 2
+if ! kill -0 $LOG_PID 2>/dev/null; then
+    warn "Console capture may have failed - check device manually"
+fi
+
+# Start log trimmer to keep only last 5 minutes of logs (tied to devicectl PID)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 nohup "$SCRIPT_DIR/log-trimmer.sh" "$LOG_FILE" 5 30 "$LOG_PID" >/dev/null 2>&1 &
 
@@ -136,11 +135,12 @@ if [ -f "$DEBUG_FILE" ]; then
             logfile=$(echo "$line" | cut -d: -f4)
             # Skip current device (we'll re-add it)
             [ "$udid" = "$DEVICE_UDID" ] && continue
-            # Keep if log file exists AND idevicesyslog is running for this UDID
-            # Use precise matching: check actual idevicesyslog processes only
+            # Keep if log file exists AND devicectl console is running for this device
+            # Extract UUID from the debug entry (field 2)
+            device_uuid=$(echo "$line" | cut -d: -f2)
             syslog_running=false
-            for pid in $(pgrep -x idevicesyslog 2>/dev/null); do
-                if ps -p "$pid" -o args= 2>/dev/null | grep -q "$udid"; then
+            for pid in $(pgrep -f "devicectl" 2>/dev/null); do
+                if ps -p "$pid" -o args= 2>/dev/null | grep -q "$device_uuid"; then
                     syslog_running=true
                     break
                 fi

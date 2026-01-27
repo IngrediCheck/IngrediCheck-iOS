@@ -33,14 +33,15 @@ while IFS= read -r line; do
 
     if [ "$type" = "device" ]; then
         # device:<uuid>:<name>:<logfile>:<udid>
+        uuid=$(echo "$line" | cut -d: -f2)
         name=$(echo "$line" | cut -d: -f3)
         logfile=$(echo "$line" | cut -d: -f4)
         udid=$(echo "$line" | cut -d: -f5)
 
-        # Check if active (use precise matching)
+        # Check if active (devicectl console running for this device UUID)
         syslog_running=false
-        for pid in $(pgrep -x idevicesyslog 2>/dev/null); do
-            if ps -p "$pid" -o args= 2>/dev/null | grep -q "$udid"; then
+        for pid in $(pgrep -f "devicectl" 2>/dev/null); do
+            if ps -p "$pid" -o args= 2>/dev/null | grep -q "$uuid"; then
                 syslog_running=true
                 break
             fi

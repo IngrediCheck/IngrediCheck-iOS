@@ -57,4 +57,5 @@ mkdir -p .claude && echo "sim:$SIMID:/tmp/ingredicheck-sim-logs.txt" > .claude/d
 ## Troubleshooting
 - Device must be unlocked and trusted
 - If connection errors: unplug/replug USB, or restart device
-- Logs: `tail -f /tmp/ingredicheck-logs.txt`
+- Logs: `tail -f /tmp/ingredicheck-logs-<UDID>.txt` (replace `<UDID>` with device UDID)
+- Log capture uses `devicectl --console` which reliably captures NSLog on iOS 18+

@@ -71,23 +71,23 @@ If the script shows 0 app logs but user needs logs, suggest:
 
 ### Log Utility Architecture
 The app uses `Log.debug/info/warning/error()` which internally calls NSLog:
-- **Why NSLog?** Apple's os_log/Logger does NOT appear in idevicesyslog due to privacy restrictions
+- **Why NSLog?** Captured reliably via `devicectl --console` on iOS 18+
 - NSLog output format: `IngrediCheck(Foundation)[PID] <Notice>: [Category] message`
 
 ### Key Benefit
 For physical devices, the app **continues running** during debug analysis - no restart, no lost state!
 
 ### Quick Diagnostics Checklist
-Run these in order when logs seem missing or wrong (replace `<UDID>` with actual device UDID):
+Run these in order when logs seem missing or wrong (replace `<UUID>` with device UUID, `<UDID>` with device UDID):
 ```bash
-# 1. Is idevicesyslog running for this device?
-pgrep -f "idevicesyslog.*<UDID>"
+# 1. Is devicectl console running for this device?
+pgrep -f "devicectl.*<UUID>"
 
 # 2. Is the log file being written to?
 ls -lh /tmp/ingredicheck-logs-<UDID>.txt
 
 # 3. Is the device connected?
-idevice_id -l
+xcrun devicectl list devices
 
 # 4. Any app logs at all? (0 = stale logs, need to truncate and wait)
 grep -a -c "IngrediCheck(Foundation)" /tmp/ingredicheck-logs-<UDID>.txt
@@ -97,13 +97,11 @@ grep -a "IngrediCheck(Foundation)" /tmp/ingredicheck-logs-<UDID>.txt | tail -20
 ```
 
 ### Troubleshooting
-- **No logs appearing?** Check if idevicesyslog is running for the device: `pgrep -f "idevicesyslog.*<UDID>"`
-- **Log file empty (0 bytes)?** idevicesyslog may have died immediately - check device connection with `idevice_id -l`
-- **Large file but 0 app logs?** Stale logs from before app launched - truncate with `> /tmp/ingredicheck-logs-<UDID>.txt` and wait
+- **No logs appearing?** Check if devicectl console is running: `pgrep -f "devicectl.*<UUID>"`
+- **Log file empty (0 bytes)?** devicectl may have died immediately - check device connection with `xcrun devicectl list devices`
+- **Large file but 0 app logs?** Stale logs from before app launched - redeploy with `./.claude/skills/ios-deploy/scripts/deploy-device.sh -s`
 - **Only system logs?** Custom Log calls use NSLog; if you see `<private>` that's os_log (shouldn't happen)
 - **Binary file warning from grep?** Use `grep -a` flag for binary mode
-- **Process died?** Restart with: `idevicesyslog -u <UDID> > /tmp/ingredicheck-logs-<UDID>.txt 2>&1 &` (in single bash call with sleep/verify)
-- **Device locked?** Unlock the device - idevicesyslog may not capture logs when locked
-- **Claude Code `run_in_background` breaks redirects?** Do NOT use `run_in_background: true` parameter. Use inline `&` with verification in same bash call.
+- **Process died?** Redeploy app: `./.claude/skills/ios-deploy/scripts/deploy-device.sh -s`
+- **Device locked?** Unlock the device - devicectl may not capture logs when locked
 - **Multiple devices?** Each device has its own log file. Check `.claude/debug.txt` for active devices.
-- **IMPORTANT:** Do NOT use `-m "IngrediCheck"` filter - it incorrectly filters out some NSLog messages
