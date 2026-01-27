@@ -92,20 +92,22 @@ xcrun devicectl device install app --device "$DEVICE_UUID" "$APP_PATH" 2>&1 || e
 INSTALL_END=$(date +%s)
 log "Install completed in $((INSTALL_END - INSTALL_START))s"
 
-# Launch with console capture (replaces separate idevicesyslog)
+# Launch with console capture using script for PTY (devicectl buffers without TTY)
 log "Launching app with console capture..."
-nohup xcrun devicectl device process launch --console --terminate-existing --device "$DEVICE_UUID" "$BUNDLE_ID" > "$LOG_FILE" 2>&1 &
+# Use 'script -F -q' to create a pseudo-TTY with immediate flush
+# -F: flush after each write (real-time output)
+# -q: quiet mode (no start/stop messages)
+nohup script -F -q "$LOG_FILE" xcrun devicectl device process launch --console --terminate-existing --device "$DEVICE_UUID" "$BUNDLE_ID" >/dev/null 2>&1 &
 LOG_PID=$!
 
-# Verify launch worked
+# Give it time to start and verify the process is running
 sleep 2
 if ! kill -0 $LOG_PID 2>/dev/null; then
-    warn "Console capture may have failed - check device manually"
+    warn "Console capture may have failed - script process not running"
 fi
 
-# Start log trimmer to keep only last 5 minutes of logs (tied to devicectl PID)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-nohup "$SCRIPT_DIR/log-trimmer.sh" "$LOG_FILE" 5 30 "$LOG_PID" >/dev/null 2>&1 &
+# Note: log-trimmer disabled for devicectl --console since it captures only NSLog
+# (much less verbose than idevicesyslog which captured all system logs)
 
 # Save debug context (multi-device aware)
 mkdir -p .claude

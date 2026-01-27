@@ -72,7 +72,7 @@ If the script shows 0 app logs but user needs logs, suggest:
 ### Log Utility Architecture
 The app uses `Log.debug/info/warning/error()` which internally calls NSLog:
 - **Why NSLog?** Captured reliably via `devicectl --console` on iOS 18+
-- NSLog output format: `IngrediCheck(Foundation)[PID] <Notice>: [Category] message`
+- Log format: `[Category] message` (e.g., `[FamilyStore] loadCurrentFamily() called`)
 
 ### Key Benefit
 For physical devices, the app **continues running** during debug analysis - no restart, no lost state!

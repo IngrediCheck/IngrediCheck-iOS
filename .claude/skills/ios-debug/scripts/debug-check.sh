@@ -91,8 +91,9 @@ echo ""
 LOG_SIZE_HUMAN=$(ls -lh "$logfile" 2>/dev/null | awk '{print $5}')
 echo -e "${GREEN}Log file:${NC} $logfile ($LOG_SIZE_HUMAN)"
 
-# Count app logs
-APP_LOG_COUNT=$(grep -a -c "IngrediCheck(Foundation)" "$logfile" 2>/dev/null | head -1 || echo 0)
+# Count app logs - devicectl console uses [Category] format (not IngrediCheck(Foundation))
+# Match lines that start with [ followed by alphanumeric/underscore, then ]
+APP_LOG_COUNT=$(grep -aE '^\[[-_A-Za-z0-9]+\]' "$logfile" 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 [ -z "$APP_LOG_COUNT" ] && APP_LOG_COUNT=0
 echo -e "${GREEN}App log lines:${NC} $APP_LOG_COUNT"
 
@@ -100,15 +101,15 @@ echo -e "${GREEN}App log lines:${NC} $APP_LOG_COUNT"
 echo ""
 echo -e "${CYAN}=== App Logs ===${NC}"
 if [ "$APP_LOG_COUNT" -gt 0 ] 2>/dev/null; then
-    grep -a "IngrediCheck(Foundation)" "$logfile" | tail -100
+    grep -aE '^\[[-_A-Za-z0-9]+\]' "$logfile" | tail -100
 else
     echo "(No app logs found - app may not have logged anything yet)"
 fi
 
-# Check for errors (only in our Foundation logs, exclude system noise)
+# Check for errors (only in our app logs, exclude system noise)
 echo ""
 echo -e "${CYAN}=== Errors ===${NC}"
-ERROR_LINES=$(grep -a "IngrediCheck(Foundation)" "$logfile" 2>/dev/null | grep -a -i "error\|failed\|❌" | tail -20 || true)
+ERROR_LINES=$(grep -aE '^\[[-_A-Za-z0-9]+\]' "$logfile" 2>/dev/null | grep -a -i "error\|failed\|❌" | tail -20 || true)
 if [ -n "$ERROR_LINES" ]; then
     echo "$ERROR_LINES"
 else
