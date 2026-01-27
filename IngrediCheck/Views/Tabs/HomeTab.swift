@@ -29,28 +29,26 @@ enum ValidationResult {
     @Environment(AppNavigationCoordinator.self) var coordinator
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                textInputField
-                if dp.preferences.isEmpty && !isFocused {
-                    EmptyPreferencesView()
-                } else {
-                    preferenceListView
-                }
+        // Note: NavigationStack is provided by LoggedInRootView (Single Root NavigationStack)
+        VStack {
+            textInputField
+            if dp.preferences.isEmpty && !isFocused {
+                EmptyPreferencesView()
+            } else {
+                preferenceListView
             }
-            .onAppear {
-                dp.refreshPreferences()
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    settingsButton
-                }
-            }
-            .animation(.linear, value: isFocused)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("Your Dietary Preferences")
         }
-        .tint(Color(hex: "#303030"))
+        .onAppear {
+            dp.refreshPreferences()
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                settingsButton
+            }
+        }
+        .animation(.linear, value: isFocused)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Your Dietary Preferences")
     }
     
     private var validationStatus: some View {
@@ -74,11 +72,8 @@ enum ValidationResult {
     }
     
     private var settingsButton: some View {
-        NavigationLink {
-            SettingsSheet()
-                .environment(userPreferences)
-                .environment(memojiStore)
-                .environment(coordinator)
+        Button {
+            appState.navigate(to: .settings)
         } label: {
             Image(systemName: "gearshape")
         }

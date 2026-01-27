@@ -1,5 +1,104 @@
 import SwiftUI
 
+// MARK: - Custom Swipeable Row
+
+struct SwipeableDeleteRow<Content: View>: View {
+    let content: Content
+    let isJoined: Bool
+    let onDelete: () -> Void
+
+    @State private var offset: CGFloat = 0
+    @State private var isSwiped: Bool = false
+
+    private let deleteButtonWidth: CGFloat = 88
+
+    init(isJoined: Bool, onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.isJoined = isJoined
+        self.onDelete = onDelete
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // Delete button behind
+            HStack {
+                Spacer()
+                deleteButton
+                    .padding(.trailing, 4)
+            }
+
+            // Main content
+            content
+                .offset(x: offset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            let translation = value.translation.width
+                            if translation < 0 {
+                                // Swiping left
+                                offset = max(translation, -deleteButtonWidth)
+                            } else if isSwiped {
+                                // Swiping right to close
+                                offset = min(0, -deleteButtonWidth + translation)
+                            }
+                        }
+                        .onEnded { value in
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                if value.translation.width < -40 {
+                                    // Snap open
+                                    offset = -deleteButtonWidth
+                                    isSwiped = true
+                                } else {
+                                    // Snap closed
+                                    offset = 0
+                                    isSwiped = false
+                                }
+                            }
+                        }
+                )
+        }
+        .clipped()
+    }
+
+    private var deleteButton: some View {
+        Button {
+            if !isJoined {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    offset = 0
+                    isSwiped = false
+                }
+                onDelete()
+            }
+        } label: {
+            HStack {
+                Spacer()
+                
+                VStack(alignment: .center, spacing: 4) {
+                    Image("Delete-icon")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(isJoined ? Color(hex: "#BDBDBD") : Color(hex: "#F04438"))
+                    Text("Remove")
+                        .font(NunitoFont.medium.size(12))
+                        .foregroundStyle(isJoined ? Color(hex: "#BDBDBD") : Color(hex: "#F04438"))
+                }
+                .padding(.trailing)
+            }
+            .frame(height: 72)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(hex: "#F7F7F7"))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(hex: "#E5E5E5"), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isJoined)
+    }
+}
+
 struct ManageFamilyView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FamilyStore.self) private var familyStore
@@ -51,51 +150,39 @@ struct ManageFamilyView: View {
                 }
                 Section {
                     ForEach(members) { member in
-                        MemberRow(member: member, onInvite: handleInviteShare)
+                        let isSelfRow: Bool = {
+                            if let family = familyStore.family {
+                                return member.id == family.selfMember.id
+                            }
+                            return member.id == familyStore.pendingSelfMember?.id
+                        }()
+
+                        if isSelfRow {
+                            // Self row - no swipe action
+                            MemberRow(member: member, onInvite: handleInviteShare)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 0, trailing: 20))
+                                .listRowBackground(Color.clear)
+                        } else {
+                            // Other members - custom swipe to delete
+                            SwipeableDeleteRow(
+                                isJoined: member.joined,
+                                onDelete: {
+                                    Task {
+                                        if familyStore.family != nil {
+                                            await familyStore.deleteMember(id: member.id)
+                                        } else {
+                                            familyStore.removePendingOtherMember(id: member.id)
+                                        }
+                                    }
+                                }
+                            ) {
+                                MemberRow(member: member, onInvite: handleInviteShare)
+                            }
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 0, trailing: 20))
                             .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                let isSelfRow: Bool = {
-                                    if let family = familyStore.family {
-                                        return member.id == family.selfMember.id
-                                    }
-                                    return member.id == familyStore.pendingSelfMember?.id
-                                }()
-                             
-                                    if !isSelfRow {
-                                        Button {
-                                            Task {
-                                                if familyStore.family != nil {
-                                                    await familyStore.deleteMember(id: member.id)
-                                                } else {
-                                                    familyStore.removePendingOtherMember(id: member.id)
-                                                }
-                                            }
-                                        } label: {
-                                            VStack(spacing: 4) {
-                                                Image("Delete-icon")
-                                                    .resizable()
-                                                    .frame(width: 14, height: 14)
-                                                Text("Remove")
-                                                    .font(NunitoFont.regular.size(8))
-                                                    .foregroundStyle(Color(hex: "#F04438"))
-                                            }
-                                            .padding(.vertical, 10)
-                                            .padding(.horizontal, 12)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 24)
-                                                    .fill(Color(hex: "#F7F7F7"))
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 24)
-                                                    .stroke(Color(hex: "#F7F7F7"), lineWidth: 0.75)
-                                            )
-                                        }
-                                        .tint(Color(hex: "#F7F7F7"))
-                                    }
-                               
-                            }
+                        }
                     }
                 }
             }
@@ -105,9 +192,9 @@ struct ManageFamilyView: View {
             }
             .scrollIndicators(.hidden)
             .scrollContentBackground(.hidden)
-            .background(Color(hex: "#FFFFFF"))
+            .background(Color.pageBackground)
         }
-        .background(Color(hex: "#FFFFFF"))
+        .background(Color.pageBackground)
         .navigationTitle("Manage Family")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -316,7 +403,6 @@ struct ManageFamilyView: View {
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color.white)
-                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
@@ -408,8 +494,9 @@ struct ManageFamilyView: View {
                     .clipShape(Capsule())
                     .overlay {
                         Capsule()
-                            .stroke(Color(hex: "#91B640"), lineWidth: 1)
+                            .stroke(Color(hex: "#EEEEEE").opacity(0.4), lineWidth: 1)
                     }
+                    .shadow(color: Color(hex: "#CECECE63").opacity(0.39), radius: 4.8)
                 }
                 .buttonStyle(.plain)
             }
@@ -530,7 +617,7 @@ private struct FamilyCardView: View {
                 Button {
                     onAddMember()
                 } label: {
-                    GreenCapsule(title: "Add Member",icon: "tabler_plus", height: 36, takeFullWidth: true, labelFont: NunitoFont.semiBold.size(12))
+                    GreenCapsule(title: "Add Member",icon: "tabler_plus", width: 111, height: 36, takeFullWidth: false, labelFont: NunitoFont.semiBold.size(12))
                 }
                 .buttonStyle(.plain)
                 .padding(.leading, 16)
@@ -547,7 +634,6 @@ private struct FamilyCardView: View {
                 .stroke(lineWidth: 0.75)
                 .foregroundStyle(Color(hex: "#EEEEEE"))
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 10.1, x: 0, y: 2)
         .padding(.horizontal, 20)
     }
 }
@@ -595,7 +681,52 @@ private struct FamilyCardPreview: View {
     }
 }
 
-//#Preview {
-//    ManageFamilyView()
-//        .environment(FamilyStore())
-//}
+#Preview("With Family") {
+    let familyStore = FamilyStore()
+    let coordinator = AppNavigationCoordinator()
+    let webService = WebService()
+    
+    // Set up mock family data
+    let mockSelfMember = FamilyMember(
+        id: UUID(),
+        name: "Alex",
+        color: "#E0BBE4",
+        joined: true,
+        imageFileHash: nil
+    )
+    
+    let mockOtherMembers: [FamilyMember] = [
+        FamilyMember(id: UUID(), name: "Sarah", color: "#BAE1FF", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Emma", color: "#BAFFC9", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Mike", color: "#FFB3BA", joined: false, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Lisa", color: "#FFDFBA", joined: true, imageFileHash: nil),
+        FamilyMember(id: UUID(), name: "Tom", color: "#FFFFBA", joined: false, imageFileHash: nil, invitePending: true),
+        FamilyMember(id: UUID(), name: "Anna", color: "#B4E4FF", joined: true, imageFileHash: nil)
+    ]
+    
+    let mockFamily = Family(
+        name: "Smith Family",
+        selfMember: mockSelfMember,
+        otherMembers: mockOtherMembers,
+        version: Int64(Date().timeIntervalSince1970)
+    )
+    
+    // Set mock family data for preview
+    familyStore.setMockFamilyForPreview(mockFamily)
+    
+    return NavigationStack {
+        ManageFamilyView()
+            .environment(familyStore)
+            .environment(coordinator)
+            .environment(webService)
+    }
+}
+
+#Preview("Empty State") {
+    NavigationStack {
+        ManageFamilyView()
+            .environment(FamilyStore())
+            .environment(AppNavigationCoordinator())
+            .environment(WebService())
+    }
+}

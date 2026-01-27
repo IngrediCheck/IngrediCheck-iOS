@@ -11,6 +11,8 @@ struct IngredientsAlertCard: View {
     var onFeedback: ((IngredientAlertItem, String) -> Void)? = nil // Item, Vote ("up", "down")
     var productVote: DTO.Vote? = nil  // Current product feedback vote
     var onProductFeedback: ((String) -> Void)? = nil // Product feedback callback ("up", "down")
+    var isProductFeedbackLoading: Bool = false  // Loading state for product feedback
+    var loadingIngredientName: String? = nil  // Which ingredient is currently loading
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -71,7 +73,9 @@ struct IngredientsAlertCard: View {
                     FeedbackButton(
                         type: .up,
                         isSelected: productVote?.value == "up",
-                        style: .boxed
+                        isLoading: isProductFeedbackLoading && productVote?.value == "up",
+                        isDisabled: isProductFeedbackLoading,
+                        style: .whiteBoxed
                     ) {
                         onProductFeedback("up")
                     }
@@ -79,7 +83,9 @@ struct IngredientsAlertCard: View {
                     FeedbackButton(
                         type: .down,
                         isSelected: productVote?.value == "down",
-                        style: .boxed
+                        isLoading: isProductFeedbackLoading && productVote?.value == "down",
+                        isDisabled: isProductFeedbackLoading,
+                        style: .whiteBoxed
                     ) {
                         onProductFeedback("down")
                     }
@@ -213,10 +219,14 @@ struct IngredientsAlertCard: View {
                         avatarStack(for: item)
                         Spacer()
                         HStack(spacing: 12) {
+                            let isThisIngredientLoading = loadingIngredientName == item.rawIngredientName
+
                             FeedbackButton(
                                 type: .up,
                                 isSelected: item.vote?.value == "up",
-                                style: .plain
+                                isLoading: isThisIngredientLoading && item.vote?.value == "up",
+                                isDisabled: isThisIngredientLoading || loadingIngredientName != nil,
+                                style: .boxed
                             ) {
                                 onFeedback?(item, "up")
                             }
@@ -224,7 +234,9 @@ struct IngredientsAlertCard: View {
                             FeedbackButton(
                                 type: .down,
                                 isSelected: item.vote?.value == "down",
-                                style: .plain
+                                isLoading: isThisIngredientLoading && item.vote?.value == "down",
+                                isDisabled: isThisIngredientLoading || loadingIngredientName != nil,
+                                style: .boxed
                             ) {
                                 onFeedback?(item, "down")
                             }

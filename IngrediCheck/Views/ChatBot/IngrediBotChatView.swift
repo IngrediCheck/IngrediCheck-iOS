@@ -8,121 +8,127 @@
 
 import SwiftUI
 
+// Chat message model
+struct ChatMessage: Identifiable {
+    let id: String
+    let isUser: Bool
+    let text: String
+    let timestamp: Date
+}
+
 struct IngrediBotChatView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @State private var message: String = ""
-    var onDismiss: (() -> Void)? = nil
-    @State private var isBotThinking: Bool = false
+    @Environment(AppState.self) private var appState
+    @Environment(WebService.self) private var webService
     
+    // Optional parameters for context-aware chat
+    var scanId: String? = nil
+    var analysisId: String? = nil
+    var ingredientName: String? = nil
+    var feedbackId: String? = nil  // For feedback follow-up context
+
+    var onDismiss: (() -> Void)? = nil
+    
+    @State private var message: String = ""
+    @State private var conversationId: String? = nil
+    @State private var messages: [ChatMessage] = []
+    @State private var isStreaming: Bool = false
+    @State private var currentTurnId: String? = nil
+    @State private var isLoadingHistory: Bool = false
+    @State private var errorMessage: String? = nil
+    @State private var visibleMessageIds: Set<String> = []
+
+    /// Check if user is in onboarding flow (not on home or summary screens)
+    private var isOnboardingFlow: Bool {
+        coordinator.currentCanvasRoute != .home &&
+        coordinator.currentCanvasRoute != .summaryJustMe &&
+        coordinator.currentCanvasRoute != .summaryAddFamily
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                
-                Spacer()
-                
-                VStack(alignment: .center, spacing: 5) {
-                    Image("ai-magic")
-                        .resizable()
-                        .frame(width: 28, height: 28)
-                    
-                    Text("Asking with AI suggestions")
-                        .font(ManropeFont.medium.size(14))
-                        .foregroundStyle(.grayScale110)
-                }
-                
-                Spacer()
-                
-            }
-            .padding(.top, 16)
-            .overlay(alignment: .topTrailing) {
-                Button("Skip") {
-                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
-                    
-                    if let onDismiss {
-                        onDismiss()
-                    } else {
-                        coordinator.dismissChatBot()
-                    }
-                    
-                    if isOnboarding {
-                        if coordinator.onboardingFlow == .individual {
-                            coordinator.showCanvas(.summaryJustMe)
-                        } else {
-                            coordinator.showCanvas(.summaryAddFamily)
-                        }
-                    } else {
-                        coordinator.showCanvas(.home)
-                    }
-                }
-                .font(NunitoFont.semiBold.size(14))
-                .foregroundStyle(.grayScale120)
-            }
+//            HStack {
+//                
+//                Spacer()
+//                
+//                VStack(alignment: .center, spacing: 5) {
+//                    Image("ai-magic")
+//                        .resizable()
+//                        .frame(width: 28, height: 28)
+//                    
+//                    Text("Asking with AI suggestions")
+//                        .font(ManropeFont.medium.size(14))
+//                        .foregroundStyle(.grayScale110)
+//                }
+//                
+//                Spacer()
+//                
+//            }
+//            .padding(.top, 16)
             
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    ConversationBubble(
-                        text: "I usually avoid processed snacks.",
-                        isFirstForSide: true,
-                        leadingIconName: "ingrediBot"
-                    )
-                    ConversationBubble(
-                        text: "What else did you want to avoid?",
-                        isFirstForSide: false
-                    )
-                    ConversationBubble(
-                        text: "Yeah, I follow a mix of ayurvedic and seasonal eating.",
-                        alignment: .trailing,
-                        bubbleColor: Color(hex: "F4F4F4"),
-                        textColor: .grayScale140,
-                        isFirstForSide: true
-                    )
-                    ConversationBubble(text: "That’s wonderful! Thanks for sharing. Anything else about your food habits.",
-                                       isFirstForSide: true,
-                                       leadingIconName: "ingrediBot"
-                    )
-                    ConversationBubble(
-                        text: "Thanks! I also react to whey and casein so I keep dairy limited.",
-                        alignment: .trailing,
-                        bubbleColor: Color(hex: "F4F4F4"),
-                        textColor: .grayScale140,
-                        isFirstForSide: true
-                    )
-                    ConversationBubble(
-                        text: "Got it. I'll mark dairy-heavy items as watchouts and keep you updated.\nWould you like me to flag plant-based alternatives that fit your IngrediFam?",
-                        isFirstForSide: true,
-                        leadingIconName: "ingrediBot"
-                    )
-                    ConversationBubble(
-                        text: "Yes please. Organic when possible, and avoid artificial sweeteners because my son gets headaches.",
-                        alignment: .trailing,
-                        bubbleColor: Color(hex: "F4F4F4"),
-                        textColor: .grayScale140,
-                        isFirstForSide: true
-                    )
-                    ConversationBubble(
-                        text: "Perfect! I’ll look for organic-friendly snacks and skip anything with sucralose, aspartame, or excessive additives.\nNeed me to add reminders before grocery runs?",
-                        isFirstForSide: true,
-                        leadingIconName: "ingrediBot"
-                    )
-                    ConversationBubble(
-                        text: "That would be awesome. Saturdays work best and I usually shop in the morning.",
-                        alignment: .trailing,
-                        bubbleColor: Color(hex: "F4F4F4"),
-                        textColor: .grayScale140,
-                        isFirstForSide: true
-                    )
-                    ConversationBubble(
-                        text: "Great! I’ve queued a Saturday morning prep reminder and saved your updated preferences.\nAnything else you’d like help with right now?",
-                        isFirstForSide: true,
-                        leadingIconName: "ingrediBot"
-                    )
-                    
-                    if isBotThinking {
-                        TypingBubble(side: .bot)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        if isLoadingHistory {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                    .padding()
+                                Spacer()
+                            }
+                        }
+                        
+                        // Display messages with animation
+                        ForEach(messages) { msg in
+                            if visibleMessageIds.contains(msg.id) {
+                                ConversationBubble(
+                                    text: msg.text,
+                                    alignment: msg.isUser ? .trailing : .leading,
+                                    bubbleColor: msg.isUser ? Color(hex: "F4F4F4") : Color(hex: "75990E"),
+                                    textColor: msg.isUser ? .grayScale140 : .white,
+                                    isFirstForSide: false,
+                                    leadingIconName: msg.isUser ? nil : "ingrediBot"
+                                )
+                                .id(msg.id)
+                                .transition(.asymmetric(
+                                    insertion: .scale(scale: 0.8, anchor: msg.isUser ? .bottomTrailing : .bottomLeading)
+                                        .combined(with: .opacity)
+                                        .combined(with: .offset(y: 20)),
+                                    removal: .opacity
+                                ))
+                            }
+                        }
+                        
+                        // Show typing indicator when streaming
+                        if isStreaming {
+                            TypingBubble(side: .bot)
+                        }
+                        
+                        // Show error message if any
+                        if let error = errorMessage {
+                            ConversationBubble(
+                                text: "❌ Error: \(error)",
+                                isFirstForSide: true,
+                                leadingIconName: "ingrediBot"
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Dismiss keyboard when tapping on chat area
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                .onChange(of: messages.count) { _ in
+                    // Scroll to bottom when new messages arrive
+                    if let lastMessage = messages.last {
+                        withAnimation {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
+                    }
+                }
             }
             
             HStack(alignment: .bottom, spacing: 12) {
@@ -137,29 +143,7 @@ struct IngrediBotChatView: View {
                     )
                 
                 Button {
-                    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        message = ""
-                    }
-                    // Navigate to Home screen directly
-                    // Determine if we are in the initial onboarding flow
-                    let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
-                    
-                    if let onDismiss {
-                        onDismiss()
-                    } else {
-                        coordinator.dismissChatBot()
-                    }
-                    
-                    if isOnboarding {
-                        if coordinator.onboardingFlow == .individual {
-                            coordinator.showCanvas(.summaryJustMe)
-                        } else {
-                            coordinator.showCanvas(.summaryAddFamily)
-                        }
-                    } else {
-                        coordinator.showCanvas(.home)
-                    }
+                    sendMessage()
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .resizable()
@@ -187,9 +171,320 @@ struct IngrediBotChatView: View {
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 20)
-        .onChange(of: message) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                // Keep future hook for showing typing previews or suggestions.
+        .onAppear {
+            if conversationId == nil && messages.isEmpty {
+                // New conversation - show contextual greeting with animation
+                let greetings = generateInitialGreeting()
+                messages = greetings
+
+                // Animate each greeting bubble with staggered delay
+                for (index, greeting) in greetings.enumerated() {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.4) {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                            _ = visibleMessageIds.insert(greeting.id)
+                        }
+                    }
+                }
+            } else {
+                // Existing conversation - load history (show all immediately)
+                loadConversationHistoryIfNeeded()
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            // Only show Skip button during onboarding flow
+            if isOnboardingFlow {
+                Button("Skip") {
+                    if let onDismiss {
+                        onDismiss()
+                    } else {
+                        coordinator.dismissChatBot()
+                    }
+
+                    if coordinator.onboardingFlow == .individual {
+                        coordinator.showCanvas(.summaryJustMe)
+                    } else {
+                        coordinator.showCanvas(.summaryAddFamily)
+                    }
+                }
+                .font(NunitoFont.semiBold.size(14))
+                .foregroundStyle(.grayScale120)
+                .padding(.top, 16)
+                .padding(.trailing, 16)
+            }
+        }
+    }
+    
+    // MARK: - Initial Greeting
+
+    private func generateInitialGreeting() -> [ChatMessage] {
+        let context = buildContext()
+
+        switch context {
+        case _ as DTO.FeedbackContext:
+            // Feedback context (product, ingredient, or image feedback)
+            return [
+                ChatMessage(
+                    id: "greeting_1",
+                    isUser: false,
+                    text: "Hi! I see you have feedback about the analysis.",
+                    timestamp: Date()
+                ),
+                ChatMessage(
+                    id: "greeting_2",
+                    isUser: false,
+                    text: "What didn't seem right? I'm here to help improve the accuracy.",
+                    timestamp: Date()
+                )
+            ]
+
+        case _ as DTO.ProductScanContext:
+            // Product scan context
+            return [
+                ChatMessage(
+                    id: "greeting_1",
+                    isUser: false,
+                    text: "Hi! I see you're looking at a product.",
+                    timestamp: Date()
+                ),
+                ChatMessage(
+                    id: "greeting_2",
+                    isUser: false,
+                    text: "I can help explain ingredients, check dietary compatibility, or answer questions about this product.",
+                    timestamp: Date()
+                )
+            ]
+
+        case _ as DTO.FoodNotesContext:
+            // Food notes context
+            return [
+                ChatMessage(
+                    id: "greeting_1",
+                    isUser: false,
+                    text: "Hi! I'm here to help with your food preferences.",
+                    timestamp: Date()
+                ),
+                ChatMessage(
+                    id: "greeting_2",
+                    isUser: false,
+                    text: "Would you like to add or update dietary preferences, or learn how IngrediCheck analyzes products for you?",
+                    timestamp: Date()
+                )
+            ]
+
+        default:
+            // Home context (default)
+            return [
+                ChatMessage(
+                    id: "greeting_1",
+                    isUser: false,
+                    text: "Hi! I'm IngrediBot, your food assistant.",
+                    timestamp: Date()
+                ),
+                ChatMessage(
+                    id: "greeting_2",
+                    isUser: false,
+                    text: "How can I help you today? Ask me about:\n- Understanding ingredients\n- Setting up dietary preferences\n- How to scan products",
+                    timestamp: Date()
+                )
+            ]
+        }
+    }
+
+    // MARK: - Context Building
+
+    private func buildContext() -> any Codable {
+        // Build context based on provided parameters or current screen
+        // Priority: feedbackId > scanId > food_notes > home
+
+        // If feedbackId is provided, use feedback context
+        if let feedbackId = feedbackId {
+            return ChatContextBuilder.buildFeedbackContext(feedbackId: feedbackId)
+        }
+
+        // If scanId is provided (without feedbackId), use product_scan context
+        if let scanId = scanId {
+            return ChatContextBuilder.buildProductScanContext(scanId: scanId)
+        }
+
+        // Check if we're on food notes screen or in onboarding flow
+        // During onboarding, user is setting up food preferences, so use food_notes context
+        let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
+                         coordinator.currentCanvasRoute == .summaryAddFamily ||
+                         coordinator.currentCanvasRoute == .welcomeToYourFamily ||
+                         isOnboardingFlow
+
+        if isFoodNotes {
+            return ChatContextBuilder.buildFoodNotesContext()
+        }
+
+        // Default to home context
+        return ChatContextBuilder.buildHomeContext()
+    }
+    
+    // MARK: - Send Message
+    
+    private func sendMessage() {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !isStreaming else { return }
+        
+        let userMessage = trimmed
+        message = ""
+        errorMessage = nil
+        
+        // Add user message immediately with animation
+        let userMsg = ChatMessage(
+            id: UUID().uuidString,
+            isUser: true,
+            text: userMessage,
+            timestamp: Date()
+        )
+        messages.append(userMsg)
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            _ = visibleMessageIds.insert(userMsg.id)
+        }
+        
+        // Build context
+        let context = buildContext()
+        
+        // Start streaming
+        isStreaming = true
+        currentTurnId = nil
+        
+        Task {
+            do {
+                let contextJson = try ChatContextBuilder.encodeContext(context)
+                
+                try await webService.streamChatMessage(
+                    message: userMessage,
+                    context: context,
+                    conversationId: conversationId,
+                    onThinking: { convId, turnId in
+                        Task { @MainActor in
+                            self.conversationId = convId
+                            self.currentTurnId = turnId
+                            // Typing indicator is already shown via isStreaming
+                        }
+                    },
+                    onResponse: { convId, turnId, response in
+                        Task { @MainActor in
+                            self.conversationId = convId
+                            self.currentTurnId = turnId
+                            self.isStreaming = false
+                            
+                            // Add bot response with animation
+                            let botMsg = ChatMessage(
+                                id: turnId,
+                                isUser: false,
+                                text: response,
+                                timestamp: Date()
+                            )
+                            self.messages.append(botMsg)
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                _ = self.visibleMessageIds.insert(botMsg.id)
+                            }
+                        }
+                    },
+                    onError: { error, convId, turnId in
+                        Task { @MainActor in
+                            self.isStreaming = false
+                            self.conversationId = convId
+                            self.currentTurnId = turnId
+                            self.errorMessage = error.message
+                            
+                            // Add error message to chat with animation
+                            let errorMsg = ChatMessage(
+                                id: UUID().uuidString,
+                                isUser: false,
+                                text: "❌ Error: \(error.message)",
+                                timestamp: Date()
+                            )
+                            self.messages.append(errorMsg)
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                _ = self.visibleMessageIds.insert(errorMsg.id)
+                            }
+                        }
+                    }
+                )
+            } catch {
+                Task { @MainActor in
+                    self.isStreaming = false
+                    self.errorMessage = error.localizedDescription
+
+                    // Add error message to chat with animation
+                    let errorMsg = ChatMessage(
+                        id: UUID().uuidString,
+                        isUser: false,
+                        text: "❌ Error: \(error.localizedDescription)",
+                        timestamp: Date()
+                    )
+                    self.messages.append(errorMsg)
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        _ = self.visibleMessageIds.insert(errorMsg.id)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Load Conversation History
+    
+    private func loadConversationHistoryIfNeeded() {
+        guard let convId = conversationId, !isLoadingHistory else { return }
+        
+        isLoadingHistory = true
+        
+        Task {
+            do {
+                let conversation = try await webService.getConversation(conversationId: convId)
+                
+                await MainActor.run {
+                    // Convert ConversationTurn to ChatMessage
+                    var loadedMessages: [ChatMessage] = []
+                    
+                    // Create ISO8601 formatter with fractional seconds support
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    
+                    for turn in conversation.turns {
+                        let timestamp = formatter.date(from: turn.created_at) ?? Date()
+                        
+                        // Add user message
+                        if !turn.user_message.isEmpty {
+                            loadedMessages.append(ChatMessage(
+                                id: "\(turn.turn_id)_user",
+                                isUser: true,
+                                text: turn.user_message,
+                                timestamp: timestamp
+                            ))
+                        }
+                        
+                        // Add assistant response if available
+                        if let response = turn.assistant_response, !response.isEmpty {
+                            loadedMessages.append(ChatMessage(
+                                id: turn.turn_id,
+                                isUser: false,
+                                text: response,
+                                timestamp: timestamp
+                            ))
+                        }
+                    }
+                    
+                    self.messages = loadedMessages
+                    // Make all loaded messages visible immediately
+                    self.visibleMessageIds = Set(loadedMessages.map { $0.id })
+                    self.isLoadingHistory = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingHistory = false
+                    // Don't show error for 404 - just means no conversation yet
+                    if let networkError = error as? NetworkError,
+                       case .notFound = networkError {
+                        // 404 is expected for new conversations - don't show error
+                    } else {
+                        self.errorMessage = error.localizedDescription
+                    }
+                }
             }
         }
     }
@@ -202,7 +497,16 @@ private struct ConversationBubble: View {
     var textColor: Color = .white
     var isFirstForSide: Bool = false
     var leadingIconName: String?
-    
+
+    /// Parses the text as Markdown and returns an AttributedString
+    private var markdownText: AttributedString {
+        do {
+            return try AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        } catch {
+            return AttributedString(text)
+        }
+    }
+
     var body: some View {
         let isSender = alignment == .trailing
         let baseRadius: CGFloat = 18
@@ -228,7 +532,7 @@ private struct ConversationBubble: View {
                 }
             }
             
-            Text(text)
+            Text(markdownText)
                 .padding(12)
                 .font(ManropeFont.regular.size(14))
                 .foregroundStyle(textColor)
@@ -236,6 +540,7 @@ private struct ConversationBubble: View {
                     RoundedCornerShape(radii: radii)
                         .fill(bubbleColor)
                 )
+                .tint(textColor.opacity(0.8))  // For Markdown links
             
             if alignment == .leading { Spacer() }
         }
@@ -297,6 +602,7 @@ private struct TypingBubble: View {
     NavigationStack {
         IngrediBotChatView()
             .environment(AppNavigationCoordinator())
+            .environment(AppState())
     }
 }
 

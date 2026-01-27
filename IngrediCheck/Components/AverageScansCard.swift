@@ -13,8 +13,13 @@ struct AvgModel: Identifiable {
     // Computed property to scale value to a bar height
     var barHeight: CGFloat {
     let maxBarHeight: CGFloat = 50  // Maximum height
+    let minBarHeight: CGFloat = 8    // Minimum height for no data
     let maxValue: CGFloat = 100   // Maximum value in your data
-    return CGFloat(value) / maxValue * maxBarHeight
+    
+    if value == 0 {
+      return minBarHeight
+    }
+    return max(minBarHeight, CGFloat(value) / maxValue * maxBarHeight)
   }
 }
 struct AverageScansCard: View {
@@ -29,9 +34,15 @@ struct AverageScansCard: View {
   ]
   var playsLaunchAnimation: Bool = false
   var avgScans: Int = 0
+  var weeklyStats: [DTO.WeeklyStat]? = nil
   @State private var weeklyAverage: Int = 0
   @State private var animatedBarHeights: [CGFloat] = []
   @State private var didPlayLaunchAnimation: Bool = false
+
+  // Check if there's no data (all values are 0)
+  private var hasNoData: Bool {
+    avgArray.allSatisfy { $0.value == 0 }
+  }
 
   private var targetBarHeights: [CGFloat] {
     avgArray.map { $0.barHeight }
@@ -63,7 +74,9 @@ struct AverageScansCard: View {
           animatedBarHeights = (0..<count).map { i in
             let phase = Double(i) * phaseStep
             let s = (sin(omega * t + phase) + 1) / 2
-            return CGFloat(s) * maxBarHeight
+            // For no data, animate to minimum height, otherwise use maxBarHeight
+            let targetHeight = hasNoData ? CGFloat(8) : maxBarHeight
+            return CGFloat(s) * targetHeight
           }
         }
 
@@ -89,25 +102,29 @@ struct AverageScansCard: View {
                   .foregroundStyle(.grayScale100)
                   .padding(.bottom, 2)
           }
-          .padding(.horizontal, 12)
+//          .padding(.horizontal, 12)
           
           Spacer()
           
           VStack(spacing: 4) {
               // Bars + Average Line
               ZStack(alignment: .bottom) {
-                  // Weekly Average Line
-                  RoundedRectangle(cornerRadius: 1)
-                      .fill(.primary300)
-                      .frame(width: 140, height: 1.5)
-                      .offset(y: -CGFloat(weeklyAverage) / 100 * 50) // move up from bottom
+                  // Weekly Average Line (only show if there's data)
+                  if !hasNoData {
+                      RoundedRectangle(cornerRadius: 1)
+                          .fill(.primary300)
+                          .frame(width: 140, height: 1.5)
+                          .offset(y: -CGFloat(weeklyAverage) / 100 * 50) // move up from bottom
+                  }
                   // Bars
                   HStack(alignment: .bottom, spacing: 8) {
                       ForEach(Array(avgArray.enumerated()), id: \.element.id) { index, array in
                           let height = (index < animatedBarHeights.count) ? animatedBarHeights[index] : 0
                           RoundedRectangle(cornerRadius: 3)
-                              .foregroundStyle(array.value >= weeklyAverage ? .secondary800 : .secondary400)
-                              .frame(width: 12, height: height)
+                              .foregroundStyle(
+                                hasNoData ? .grayScale60 : (array.value >= weeklyAverage ? .secondary800 : .secondary400)
+                              )
+                              .frame(width: 12, height: max(height, 8)) // Ensure minimum height of 8
                       }
                   }
               }
@@ -123,7 +140,7 @@ struct AverageScansCard: View {
                   }
               }
           }
-          .padding(.horizontal, 14)
+//          .padding(.horizontal, 14)
       }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(.vertical, 12)
@@ -144,11 +161,25 @@ struct AverageScansCard: View {
       // Check if avgScans was explicitly provided by checking if it differs from initial state
       // Since HomeView always passes a value (stats?.avgScans ?? 0), we use avgScans directly
       weeklyAverage = avgScans
+      
+      // Map weeklyStats from backend to avgArray if available
+      if let weeklyStats = weeklyStats, !weeklyStats.isEmpty {
+        avgArray = weeklyStats.map { stat in
+          AvgModel(value: stat.value, day: stat.day)
+        }
+      } else {
+        // If no weeklyStats, ensure we have 7 days with 0 values for no-data state
+        let days = ["M", "T", "W", "T", "F", "S", "S"]
+        avgArray = days.map { day in
+          AvgModel(value: 0, day: day)
+        }
+      }
 
       if animatedBarHeights.isEmpty {
         animatedBarHeights = targetBarHeights
       }
 
+      // Always play animation once, even for no data
       if playsLaunchAnimation {
         playLaunchBarAnimation()
       }

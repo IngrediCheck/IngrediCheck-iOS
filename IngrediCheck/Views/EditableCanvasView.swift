@@ -487,7 +487,6 @@ struct EditableCanvasCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .foregroundStyle(.white)
-                .shadow(color: Color(hex: "EEEEEE"), radius: 5, x: 0, y: 0)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)

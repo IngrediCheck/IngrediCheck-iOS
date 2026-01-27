@@ -49,6 +49,57 @@ struct ListsTabState {
     @MainActor var feedbackConfig: FeedbackConfig?
     @MainActor var navigateToSettings: Bool = false
 
+    // MARK: - Single Root NavigationStack
+
+    /// The unified navigation path for the entire app.
+    /// All navigation flows through this path via `navigate(to:)`.
+    @MainActor var navigationPath = NavigationPath()
+
+    /// Tracks the current navigation route for FAB visibility and context.
+    /// Updated when navigating via `navigate(to:)`.
+    @MainActor var currentRoute: AppRoute? = nil
+
+    /// ScanId to scroll to when returning to ScanCameraView (e.g., from ProductDetail "Add Image")
+    @MainActor var scrollToScanId: String?
+
+    /// Tracks whether ScanCameraView is currently in the navigation stack.
+    /// Used by ProductDetailView to decide whether to pop back or push new camera.
+    @MainActor var hasCameraInStack: Bool = false
+
+    /// Tracks whether ScanCameraView is currently the visible/active view.
+    /// Set by ScanCameraView on appear/disappear. Used by AIBot FAB visibility logic.
+    @MainActor var isInScanCameraView: Bool = false
+
+    /// The currently displayed scan ID (set by ProductDetailView on appear).
+    /// Used by AIBot FAB to provide context regardless of navigation method.
+    @MainActor var displayedScanId: String? = nil
+
+    /// The currently displayed analysis ID (set by ProductDetailView on appear).
+    /// Used by AIBot FAB to provide context for analysis feedback.
+    @MainActor var displayedAnalysisId: String? = nil
+
+    /// Navigate to a route by pushing it onto the navigation stack.
+    @MainActor func navigate(to route: AppRoute) {
+        currentRoute = route
+        navigationPath.append(route)
+    }
+
+    /// Pop the top route from the navigation stack.
+    @MainActor func navigateBack() {
+        if !navigationPath.isEmpty {
+            navigationPath.removeLast()
+        }
+        if navigationPath.isEmpty {
+            currentRoute = nil
+        }
+    }
+
+    /// Pop all routes, returning to the root view.
+    @MainActor func navigateToRoot() {
+        navigationPath = NavigationPath()
+        currentRoute = nil
+    }
+
     @MainActor func setHistoryItemFavorited(clientActivityId: String, favorited: Bool) {
         // Legacy function for backwards compatibility with old HistoryItem API
         // The new API uses scans with id instead of clientActivityId
@@ -102,37 +153,61 @@ struct ListsTabState {
         @Bindable var appState = appState
         @Bindable var coordinator = coordinator
 
-        ZStack(alignment: .bottom) {
-            VStack {
-                switch (appState.activeTab) {
-                case .home:
-                    HomeTab()
-                case .lists:
-                    ListsTab()
+        NavigationStack(path: $appState.navigationPath) {
+            ZStack(alignment: .bottom) {
+                VStack {
+                    switch (appState.activeTab) {
+                    case .home:
+                        HomeTab()
+                    case .lists:
+                        ListsTab()
+                    }
                 }
-            }
-            .tabViewStyle(PageTabViewStyle())
-            .toolbar {
-                ToolbarItemGroup(placement: .bottomBar) {
-                    tabButtons
+                .tabViewStyle(PageTabViewStyle())
+                .toolbar {
+                    ToolbarItemGroup(placement: .bottomBar) {
+                        tabButtons
+                    }
                 }
-            }
 
-            // Dim background when certain sheets are presented (e.g., Invite)
-            Group {
-                switch coordinator.currentBottomSheetRoute {
-                case .wouldYouLikeToInvite(_, _):
-                    Color.black.opacity(0.45)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
-                default:
-                    EmptyView()
+                // Dim background when certain sheets are presented (e.g., Invite)
+                Group {
+                    switch coordinator.currentBottomSheetRoute {
+                    case .wouldYouLikeToInvite(_, _):
+                        Color.black.opacity(0.45)
+                            .ignoresSafeArea()
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    default:
+                        EmptyView()
+                    }
                 }
-            }
 
-            PersistentBottomSheet()
+                PersistentBottomSheet()
+            }
+            .navigationDestination(for: AppRoute.self) { route in
+                destinationView(for: route)
+            }
+            .navigationDestination(for: HistoryRouteItem.self) { item in
+                historyDestinationView(for: item)
+            }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowAIBotFAB {
+                AIBotFAB(
+                    onTap: { presentAIBotWithContext() },
+                    showPromptBubble: coordinator.showFeedbackPromptBubble,
+                    onPromptTap: { coordinator.dismissFeedbackPrompt(openChat: true) },
+                    onPromptDismiss: { coordinator.dismissFeedbackPrompt(openChat: false) }
+                )
+                .padding(.trailing, 20)
+//                .padding(.bottom, 100)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: shouldShowAIBotFAB)
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: coordinator.showFeedbackPromptBubble)
+        .tint(Color(hex: "#303030"))
         .environment(coordinator)
         .environmentObject(onboarding)
         .onAppear {
@@ -169,6 +244,10 @@ struct ListsTabState {
             }
             lastPresentedSheet = newSheet
         }
+        .onChange(of: appState.activeTab) { _, _ in
+            // Reset navigation to root when switching tabs
+            appState.navigateToRoot()
+        }
     }
     
     @ViewBuilder
@@ -190,7 +269,8 @@ struct ListsTabState {
         Spacer()
         Spacer()
         Button(action: {
-            appState.activeSheet = .scan
+            // Navigate to ScanCameraView via push navigation (Single Root NavigationStack)
+            appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
         }) {
             ZStack {
                 Circle()
@@ -229,6 +309,57 @@ struct ListsTabState {
         Spacer()
     }
 
+    // MARK: - AIBot FAB
+
+    private var shouldShowAIBotFAB: Bool {
+        // Don't show on root (HomeView has its own AIBot buttons)
+        guard !appState.navigationPath.isEmpty else { return false }
+
+        // Hide on camera (check if current route is scanCamera)
+        if let currentRoute = appState.currentRoute {
+            switch currentRoute {
+            case .scanCamera:
+                return false  // Hide during scanning
+            default:
+                break
+            }
+        }
+
+        // Show on all detail screens (AppRoute or HistoryRouteItem navigation)
+        return true
+    }
+
+    private func presentAIBotWithContext() {
+        // Dismiss any feedback prompt bubble first and open chat with pending context
+        // (feedback context includes analysisId, ingredientName, feedbackId as needed)
+        if coordinator.showFeedbackPromptBubble {
+            coordinator.dismissFeedbackPrompt(openChat: true)
+            return
+        }
+
+        // Try to get context from AppRoute navigation
+        // Only pass scanId for product_scan context (not analysisId - that's for feedback)
+        if let currentRoute = appState.currentRoute {
+            switch currentRoute {
+            case .productDetail(let scanId, _):
+                coordinator.showAIBotSheetWithContext(scanId: scanId)
+                return
+            default:
+                break
+            }
+        }
+
+        // Fallback: Check if ProductDetailView has set displayedScanId (for HistoryRouteItem navigation)
+        // Only pass scanId for product_scan context
+        if let displayedScanId = appState.displayedScanId {
+            coordinator.showAIBotSheetWithContext(scanId: displayedScanId)
+            return
+        }
+
+        // No product context available - open chat with home context
+        coordinator.showAIBotSheet()
+    }
+
     private func refreshHistory() {
         Log.debug("LoggedInRootView", "📋 refreshHistory called")
         Task {
@@ -248,6 +379,93 @@ struct ListsTabState {
                     appState.listsTabState.listItems = listItems
                 }
             }
+        }
+    }
+
+    // MARK: - Navigation Destination Builder
+
+    /// Builds the destination view for each AppRoute.
+    /// All navigated views receive proper environment objects.
+    @ViewBuilder
+    private func destinationView(for route: AppRoute) -> some View {
+        switch route {
+        case .productDetail(let scanId, let initialScan):
+            ProductDetailView(
+                scanId: scanId,
+                initialScan: initialScan,
+                presentationSource: .pushNavigation
+            )
+
+        case .scanCamera(let initialMode, let initialScanId):
+            ScanCameraView(presentationSource: .pushNavigation)
+                .environment(userPreferences)
+                .environment(appState)
+
+        case .favoritesAll:
+            FavoritesPageView()
+                .environment(appState)
+
+        case .recentScansAll:
+            RecentScansPageView()
+                .environment(appState)
+                .environment(scanHistoryStore)
+
+        case .favoriteDetail(let item):
+            // Show product detail for a favorite list item
+            ProductDetailView(
+                scanId: item.list_item_id,
+                initialScan: nil,
+                presentationSource: .pushNavigation
+            )
+
+        case .settings:
+            SettingsContentView()
+                .environment(userPreferences)
+                .environment(memojiStore)
+                .environment(coordinator)
+
+        case .manageFamily:
+            ManageFamilyView()
+                .environment(coordinator)
+
+        case .editableCanvas(let targetSection):
+            UnifiedCanvasView(mode: .editing, targetSectionName: targetSection)
+                .environment(memojiStore)
+                .environment(coordinator)
+        }
+    }
+
+    // MARK: - History Navigation Destination Builder
+
+    /// Builds the destination view for HistoryRouteItem navigation.
+    /// This supports legacy navigation from ListsTab and related views.
+    @ViewBuilder
+    private func historyDestinationView(for item: HistoryRouteItem) -> some View {
+        switch item {
+        case .scan(let scan):
+            let product = scan.toProduct()
+            let recommendations = scan.analysis_result?.toIngredientRecommendations()
+            ProductDetailView(
+                scanId: scan.id,
+                initialScan: scan,
+                product: product,
+                matchStatus: scan.toProductRecommendation(),
+                ingredientRecommendations: recommendations,
+                isPlaceholderMode: false,
+                presentationSource: .pushNavigation
+            )
+
+        case .listItem(let item):
+            FavoriteItemDetailView(item: item)
+
+        case .favoritesAll:
+            FavoritesPageView()
+                .environment(appState)
+
+        case .recentScansAll:
+            RecentScansPageView()
+                .environment(appState)
+                .environment(scanHistoryStore)
         }
     }
 }

@@ -13,22 +13,27 @@ struct FeedbackButton: View {
         case plain
         /// Full Screen Viewer style: Circular dark background, white unselected icon
         case overlay
+        /// White filled background with gray icons
+        case whiteBoxed
     }
     
     let type: FeedbackType
     let isSelected: Bool
+    var isLoading: Bool = false
+    var isDisabled: Bool = false
     var style: Style = .plain
     let action: () -> Void
-    
+
     @State private var isAnimating = false
-    
+
     var body: some View {
         Button(action: {
+            guard !isLoading && !isDisabled else { return }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 isAnimating = true
             }
             action()
-            
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     isAnimating = false
@@ -38,6 +43,8 @@ struct FeedbackButton: View {
             content
         }
         .buttonStyle(.plain)
+        .disabled(isLoading || isDisabled)
+        .opacity(isDisabled && !isLoading ? 0.5 : 1.0)
     }
     
     @ViewBuilder
@@ -47,22 +54,56 @@ struct FeedbackButton: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(strokeColor, lineWidth: 0.5)
-                
-                iconView
-                    .frame(width: 20, height: 18)
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                } else {
+                    iconView
+                        .frame(width: 20, height: 18)
+                }
             }
             .frame(width: 32, height: 28)
-            
+
         case .plain:
-            iconView
-                .frame(width: 28, height: 24)
-                
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.6)
+                    .frame(width: 28, height: 24)
+            } else {
+                iconView
+                    .frame(width: 28, height: 24)
+            }
+
         case .overlay:
-            iconView
-                .frame(width: 22, height: 22)
-                .frame(width: 44, height: 44)
-                .background(Color.black.opacity(0.3))
-                .clipShape(Circle())
+            ZStack {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(.white)
+                } else {
+                    iconView
+                        .frame(width: 22, height: 22)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .background(Color.black.opacity(0.3))
+            .clipShape(Circle())
+
+        case .whiteBoxed:
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white)
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                } else {
+                    iconView
+                        .frame(width: 20, height: 18)
+                }
+            }
+            .frame(width: 32, height: 28)
         }
     }
     
@@ -115,6 +156,7 @@ struct FeedbackButton: View {
         case .boxed: return .grayScale100
         case .plain: return .grayScale130
         case .overlay: return .white
+        case .whiteBoxed: return .grayScale100
         }
     }
     
@@ -131,20 +173,108 @@ struct FeedbackButton: View {
     }
 }
 
-#Preview {
-    VStack {
-        HStack {
-            FeedbackButton(type: .up, isSelected: false, style: .boxed, action: {})
-            FeedbackButton(type: .up, isSelected: true, style: .boxed, action: {})
-            FeedbackButton(type: .down, isSelected: true, style: .boxed, action: {})
+#Preview("FeedbackButton Styles") {
+    VStack(spacing: 40) {
+        // Boxed style
+        VStack(spacing: 16) {
+            Text("Boxed Style")
+                .font(NunitoFont.bold.size(18))
+                .foregroundStyle(.grayScale150)
             
-            FeedbackButton(type: .up, isSelected: true, style: .plain, action: {})
-            
-            FeedbackButton(type: .up, isSelected: false, style: .overlay, action: {})
-            //            .background(Color.blue)
+            HStack(spacing: 16) {
+                FeedbackButton(type: .up, isSelected: false, style: .boxed) {
+                    print("Thumbs up (unselected)")
+                }
+                FeedbackButton(type: .up, isSelected: true, style: .boxed) {
+                    print("Thumbs up (selected)")
+                }
+                FeedbackButton(type: .down, isSelected: false, style: .boxed) {
+                    print("Thumbs down (unselected)")
+                }
+                FeedbackButton(type: .down, isSelected: true, style: .boxed) {
+                    print("Thumbs down (selected)")
+                }
+            }
         }
         
-        Spacer()
+        // Plain style
+        VStack(spacing: 16) {
+            Text("Plain Style")
+                .font(NunitoFont.bold.size(18))
+                .foregroundStyle(.grayScale150)
+            
+            HStack(spacing: 16) {
+                FeedbackButton(type: .up, isSelected: false, style: .plain) {
+                    print("Thumbs up (unselected)")
+                }
+                FeedbackButton(type: .up, isSelected: true, style: .plain) {
+                    print("Thumbs up (selected)")
+                }
+                FeedbackButton(type: .down, isSelected: false, style: .plain) {
+                    print("Thumbs down (unselected)")
+                }
+                FeedbackButton(type: .down, isSelected: true, style: .plain) {
+                    print("Thumbs down (selected)")
+                }
+            }
+        }
+        
+        // Overlay style
+        VStack(spacing: 16) {
+            Text("Overlay Style")
+                .font(NunitoFont.bold.size(18))
+                .foregroundStyle(.grayScale150)
+            
+            ZStack {
+                Color.gray.opacity(0.3)
+                    .frame(height: 200)
+                    .frame(maxWidth: .infinity)
+                
+                HStack(spacing: 16) {
+                    FeedbackButton(type: .up, isSelected: false, style: .overlay) {
+                        print("Thumbs up (unselected)")
+                    }
+                    FeedbackButton(type: .up, isSelected: true, style: .overlay) {
+                        print("Thumbs up (selected)")
+                    }
+                    FeedbackButton(type: .down, isSelected: false, style: .overlay) {
+                        print("Thumbs down (unselected)")
+                    }
+                    FeedbackButton(type: .down, isSelected: true, style: .overlay) {
+                        print("Thumbs down (selected)")
+                    }
+                }
+            }
+        }
+        
+        // White Boxed style
+        VStack(spacing: 16) {
+            Text("White Boxed Style")
+                .font(NunitoFont.bold.size(18))
+                .foregroundStyle(.grayScale150)
+            
+            ZStack {
+                Color(hex: "#FFE5E5") // Light pink background like in the image
+                    .frame(height: 100)
+                    .frame(maxWidth: .infinity)
+                    .cornerRadius(16)
+                
+                HStack(spacing: 16) {
+                    FeedbackButton(type: .up, isSelected: false, style: .whiteBoxed) {
+                        print("Thumbs up (unselected)")
+                    }
+                    FeedbackButton(type: .down, isSelected: false, style: .whiteBoxed) {
+                        print("Thumbs down (unselected)")
+                    }
+                    FeedbackButton(type: .down, isSelected: true, style: .whiteBoxed) {
+                        print("Thumbs down (unselected)")
+                    }
+
+                }
+            }
+        }
     }
     .padding()
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.pageBackground)
 }

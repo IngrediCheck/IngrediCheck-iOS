@@ -4,7 +4,7 @@ struct CollapsibleSection<Content: View>: View {
     let title: String
     @Binding var isExpanded: Bool
     @ViewBuilder var content: () -> Content
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
@@ -16,24 +16,33 @@ struct CollapsibleSection<Content: View>: View {
                     Text(title)
                         .font(ManropeFont.semiBold.size(16))
                         .foregroundStyle(.grayScale150)
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.grayScale100)
+                        .contentTransition(.symbolEffect(.replace))
                 }
-                .padding(.vertical, 12)
             }
-            
+
             if isExpanded {
                 content()
                     .transition(.opacity.combined(with: .blurReplace))
-                    .padding(.bottom, 16)
+                    .padding(.top, 12)
             }
-            
-            Divider()
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(lineWidth: 2)
+                        .foregroundStyle(Color(hex: "#EEEEEE"))
+                )
+        )
+        .animation(.easeInOut(duration: 0.3), value: isExpanded)
     }
 }
 

@@ -619,20 +619,95 @@ final class FamilyStore {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
-        
+
         do {
             let updatedFamily = try await service.editMember(member)
-            family = updatedFamily
-            Log.debug("FamilyStore", "editMember success for \(member.id)")
-            if let updatedMember = ([updatedFamily.selfMember] + updatedFamily.otherMembers).first(where: { $0.id == member.id }) {
-                Log.debug("FamilyStore", "editMember updated member \(updatedMember.name) has imageFileHash=\(updatedMember.imageFileHash ?? "nil")")
+
+            // Granular update: Only update the specific member that changed
+            // This prevents unnecessary re-renders of other member avatars
+            if var currentFamily = family {
+                // Find the updated member in the API response
+                let updatedMember: FamilyMember?
+                if updatedFamily.selfMember.id == member.id {
+                    updatedMember = updatedFamily.selfMember
+                } else {
+                    updatedMember = updatedFamily.otherMembers.first(where: { $0.id == member.id })
+                }
+
+                if let updatedMember = updatedMember {
+                    // Check if this is the self member
+                    if currentFamily.selfMember.id == member.id {
+                        // Create new family with updated selfMember only
+                        family = Family(
+                            name: currentFamily.name,
+                            selfMember: updatedMember,
+                            otherMembers: currentFamily.otherMembers,
+                            version: updatedFamily.version
+                        )
+                    } else if let idx = currentFamily.otherMembers.firstIndex(where: { $0.id == member.id }) {
+                        // Update only the specific other member
+                        currentFamily.otherMembers[idx] = updatedMember
+                        family = Family(
+                            name: currentFamily.name,
+                            selfMember: currentFamily.selfMember,
+                            otherMembers: currentFamily.otherMembers,
+                            version: updatedFamily.version
+                        )
+                    } else {
+                        // Member not found in current family, fall back to full replacement
+                        family = updatedFamily
+                    }
+                    Log.debug("FamilyStore", "editMember success (granular update) for \(member.id), imageFileHash=\(updatedMember.imageFileHash ?? "nil")")
+                } else {
+                    // Updated member not found in response, fall back to full replacement
+                    family = updatedFamily
+                    Log.debug("FamilyStore", "editMember success (full replacement) for \(member.id)")
+                }
+            } else {
+                // No current family, use the response directly
+                family = updatedFamily
+                Log.debug("FamilyStore", "editMember success (no current family) for \(member.id)")
             }
         } catch {
             errorMessage = (error as NSError).localizedDescription
             Log.error("FamilyStore", "editMember error: \(error)")
         }
     }
-    
+
+    /// Updates a member's avatar (imageFileHash and color)
+    func updateMemberAvatar(memberId: UUID, imageFileHash: String?, color: String?) async throws {
+        Log.debug("FamilyStore", "updateMemberAvatar called for \(memberId), hash=\(imageFileHash ?? "nil"), color=\(color ?? "nil")")
+
+        guard let family = family else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "No family found"])
+        }
+
+        // Find the member to update
+        var memberToUpdate: FamilyMember?
+        if family.selfMember.id == memberId {
+            memberToUpdate = family.selfMember
+        } else {
+            memberToUpdate = family.otherMembers.first(where: { $0.id == memberId })
+        }
+
+        guard var member = memberToUpdate else {
+            throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Member not found"])
+        }
+
+        // Create updated member with new avatar
+        let updatedMember = FamilyMember(
+            id: member.id,
+            name: member.name,
+            color: color ?? member.color,
+            joined: member.joined,
+            imageFileHash: imageFileHash,
+            invitePending: member.invitePending
+        )
+
+        // Call editMember to persist the change
+        await editMember(updatedMember)
+    }
+
     func deleteMember(id: UUID) async {
         Log.debug("FamilyStore", "deleteMember called for id=\(id)")
         isLoading = true
@@ -700,34 +775,33 @@ final class FamilyStore {
     }
 
     /// Creates a default family named "Bite Buddy" for the "Just Me" flow using the standard family endpoint.
-    func createBiteBuddyFamily() async {
+    /// Uses a default avatar (memoji_3) for guest users to match the handling in other onboarding flows.
+    /// Throws error for UI handling (navigation blocking).
+    func createBiteBuddyFamily() async throws {
         Log.debug("FamilyStore", "createBiteBuddyFamily called")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
-        
-        do {
-            let selfMember = FamilyMember(
-                id: UUID(),
-                name: "Me",
-                color: randomColor(),
-                joined: true,
-                imageFileHash: nil
-            )
-            
-            family = try await service.createFamily(
-                name: "Bite Buddy",
-                selfMember: selfMember,
-                otherMembers: nil
-            )
-            if let family = family {
-                selectedMemberId = family.selfMember.id
-            }
-            Log.debug("FamilyStore", "createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
-        } catch {
-            errorMessage = (error as NSError).localizedDescription
-            Log.error("FamilyStore", "createBiteBuddyFamily error: \(error)")
+
+        // Use memoji_3 as default avatar for guest users (consistent with other flows)
+        // Color "#FFFFBA" is the associated background color for memoji_3
+        let selfMember = FamilyMember(
+            id: UUID(),
+            name: "Me",
+            color: "#FFFFBA",
+            joined: true,
+            imageFileHash: "memoji_3"
+        )
+
+        family = try await service.createFamily(
+            name: "Bite Buddy",
+            selfMember: selfMember,
+            otherMembers: nil
+        )
+        if let family = family {
+            selectedMemberId = family.selfMember.id
         }
+        Log.debug("FamilyStore", "createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
     }
     
     // MARK: - Immediate Actions (Throwing)
@@ -911,6 +985,14 @@ final class FamilyStore {
         }
         
         self.family = f
+    }
+    
+    // MARK: - Preview Helpers
+    
+    /// Preview-only helper to set mock family data for SwiftUI previews
+    /// This bypasses the normal API flow and directly sets the family property
+    func setMockFamilyForPreview(_ family: Family) {
+        self.family = family
     }
 }
 

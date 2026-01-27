@@ -155,6 +155,23 @@ struct RootContainerView: View {
                 EmptyView()
             }
         }
+        // Global AI Bot sheet (post-login) - accessible from HomeView and other post-login screens
+        .sheet(isPresented: $coordinator.isAIBotSheetPresented, onDismiss: {
+            // Clear feedback context when sheet is dismissed (swipe down or skip)
+            // This resets to product_scan context for next FAB tap
+            coordinator.dismissAIBotSheet()
+        }) {
+            IngrediBotChatView(
+                scanId: coordinator.aibotContextScanId,
+                analysisId: coordinator.aibotContextAnalysisId,
+                ingredientName: coordinator.aibotContextIngredientName,
+                feedbackId: coordinator.aibotContextFeedbackId
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .environment(coordinator)
+            .environment(appState)
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)

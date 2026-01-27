@@ -58,6 +58,7 @@
 		39F2A87E2A9D3972004EBB9A /* IngrediCheckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F2A87D2A9D3972004EBB9A /* IngrediCheckApp.swift */; };
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
 		635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */; };
+		AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFADBFEDBD6464085931D95 /* AppRoute.swift */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
@@ -90,6 +91,7 @@
 		D3BECCA12ED98EA10088E044 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC912ED98EA10088E044 /* CustomSheet.swift */; };
 		D3BECCA22ED98EA10088E044 /* HexColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC932ED98EA10088E044 /* HexColorExtension.swift */; };
 		D3BECCA32ED98EA20088E044 /* UIImageExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */; };
+		D3BECCA52ED98EA30088E044 /* ChatContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */; };
 		D3BECF6E2ED9970A0088E044 /* MainCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECF632ED9970A0088E044 /* MainCanvasView.swift */; };
 		D3BED0622ED997490088E044 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0612ED997490088E044 /* HomeView.swift */; };
 		D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BED0632ED997490088E044 /* EditableCanvasView.swift */; };
@@ -115,6 +117,7 @@
 		1F5987B32E30E56500381E32 /* TipJarConnectFile.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TipJarConnectFile.storekit; sourceTree = "<group>"; };
 		1F5987B52E30E6DA00381E32 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1F5987B72E30E74D00381E32 /* TipJarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarViewModel.swift; sourceTree = "<group>"; };
+		2CFADBFEDBD6464085931D95 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		390F0CA92BABA45F009081AD /* Fancy3DotsIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fancy3DotsIndexView.swift; sourceTree = "<group>"; };
 		390F0CAE2BACC50D009081AD /* ProductImagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImagesView.swift; sourceTree = "<group>"; };
 		390F0D432BAE0D44009081AD /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
@@ -183,6 +186,7 @@
 		D3BECC972ED98EA10088E044 /* Temp3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp3.swift; sourceTree = "<group>"; };
 		D3BECC982ED98EA10088E044 /* Temp4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Temp4.swift; sourceTree = "<group>"; };
 		D3BECCA42ED98EA20088E044 /* UIImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageExtensions.swift; sourceTree = "<group>"; };
+		D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatContextBuilder.swift; sourceTree = "<group>"; };
 		D3BECF632ED9970A0088E044 /* MainCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCanvasView.swift; sourceTree = "<group>"; };
 		D3BED0612ED997490088E044 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D3BED0632ED997490088E044 /* EditableCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableCanvasView.swift; sourceTree = "<group>"; };
@@ -255,6 +259,7 @@
 				D3F6ACC72F10E3490019F5C4 /* OnboardingPersistence.swift */,
 				D3BECC8F2ED98EA10088E044 /* BottomSheetRoute.swift */,
 				D3BECC902ED98EA10088E044 /* CanvasRoute.swift */,
+				D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */,
 				D3BECC912ED98EA10088E044 /* CustomSheet.swift */,
 				D3BECC922ED98EA10088E044 /* FlowLayout.swift */,
 				D3BECC932ED98EA10088E044 /* HexColorExtension.swift */,
@@ -399,6 +404,7 @@
 		39F2A87C2A9D3972004EBB9A /* IngrediCheck */ = {
 			isa = PBXGroup;
 			children = (
+				D3017FACE7F449A385F47E9B /* Models */,
 				0CBB73342F03B575003ED0F5 /* Resources */,
 				D3BECBE72ED989D40088E044 /* Font Family */,
 				D3BECBCA2ED989B70088E044 /* backend */,
@@ -425,6 +431,14 @@
 				1F5987B52E30E6DA00381E32 /* StoreKit.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D3017FACE7F449A385F47E9B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2CFADBFEDBD6464085931D95 /* AppRoute.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		D35FB7F02E56E704009A5AA1 /* Recovered References */ = {
@@ -543,6 +557,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */,
 				397C85DD2B687FF700FB9DAD /* BarcodeScannerView.swift in Sources */,
 				3976C41B2BBEE1750026991A /* SafariView.swift in Sources */,
 				392D9BF72B72CC8A00166CF1 /* HomeTab.swift in Sources */,
@@ -563,6 +578,7 @@
 				D3BECC9A2ED98EA10088E044 /* ManropeFontEnum.swift in Sources */,
 				D3BECC9B2ED98EA10088E044 /* BottomSheetRoute.swift in Sources */,
 				D3BECC9C2ED98EA10088E044 /* CanvasRoute.swift in Sources */,
+				D3BECCA52ED98EA30088E044 /* ChatContextBuilder.swift in Sources */,
 				D3BECC9D2ED98EA10088E044 /* FlowLayout.swift in Sources */,
 				D3BED0622ED997490088E044 /* HomeView.swift in Sources */,
 				D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */,
@@ -769,7 +785,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -840,7 +856,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

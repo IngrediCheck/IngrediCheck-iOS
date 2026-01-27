@@ -13,6 +13,7 @@ struct FullScreenImageViewer: View {
     let images: [ProductDetailView.ProductImage]
     @Binding var selectedIndex: Int
     var onFeedback: ((String, String) -> Void)?
+    var loadingImageUrl: String? = nil  // Which image URL is currently loading
 
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -23,6 +24,9 @@ struct FullScreenImageViewer: View {
     // Swipe to dismiss state
     @State private var dismissOffset: CGFloat = 0
     @State private var isDismissing: Bool = false
+
+    // Controls visibility
+    @State private var showControls: Bool = true
 
     // Constants
     private let minScale: CGFloat = 1.0
@@ -36,63 +40,101 @@ struct FullScreenImageViewer: View {
                 .opacity(backgroundOpacity)
                 .ignoresSafeArea()
 
-            // Main content
-            VStack(spacing: 0) {
-                // Header with close button and reset
-                header
-
-                Spacer()
-
-                // Image viewer with zoom
-                TabView(selection: $selectedIndex) {
-                    ForEach(images.indices, id: \.self) { index in
-                        GeometryReader { geometry in
-                            ZStack {
-                                // Image content
-                                imageContent(for: images[index])
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: geometry.size.width, height: geometry.size.height)
-                                    .scaleEffect(index == selectedIndex ? scale : 1.0)
-                                    .offset(index == selectedIndex ? offset : .zero)
-                                    .gesture(
-                                        index == selectedIndex ? magnificationGesture() : nil
-                                    )
-                                    .simultaneousGesture(
-                                        index == selectedIndex ? dragGesture() : nil
-                                    )
-                            }
+            // Full screen image viewer (ignores safe area for immersive zoom)
+            TabView(selection: $selectedIndex) {
+                ForEach(images.indices, id: \.self) { index in
+                    GeometryReader { geometry in
+                        imageContent(for: images[index])
+                            .aspectRatio(contentMode: .fit)
                             .frame(width: geometry.size.width, height: geometry.size.height)
-                        }
-                        .tag(index)
+                            .scaleEffect(index == selectedIndex ? scale : 1.0)
+                            .offset(index == selectedIndex ? offset : .zero)
+                            .gesture(
+                                index == selectedIndex ? magnificationGesture() : nil
+                            )
+                            .simultaneousGesture(
+                                index == selectedIndex ? dragGesture() : nil
+                            )
+                            .onTapGesture {
+                                // Toggle controls visibility on tap
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showControls.toggle()
+                                }
+                            }
                     }
+                    .tag(index)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .onChange(of: selectedIndex) { oldValue, newValue in
-                    // Reset zoom when switching images
-                    if oldValue != newValue {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            resetZoom()
-                        }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea()
+            .onChange(of: selectedIndex) { oldValue, newValue in
+                // Reset zoom when switching images
+                if oldValue != newValue {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        resetZoom()
                     }
-                }
-
-//                Spacer()
-
-                // Zoom controls - positioned above thumbnail strip
-                zoomControls
-                    .padding(.bottom, images.count > 1 ? 12 : 40)
-                
-                // Bottom thumbnail strip
-                if images.count > 1 {
-                    thumbnailStrip
-                        .padding(.bottom, 40)
                 }
             }
             .offset(y: dismissOffset)
             .scaleEffect(dismissScale)
             .gesture(swipeToDismissGesture)
+
+            // Overlay controls with material background
+            VStack(spacing: 0) {
+                // Header with material background - hides when zoomed
+                header
+                    .background(
+                        MaterialBlurView()
+                            .ignoresSafeArea(edges: .top)
+                    )
+                    .opacity(controlsOpacity)
+
+                Spacer()
+
+                // Bottom controls container
+                VStack(spacing: 12) {
+                    // Zoom controls - always visible (no blur background)
+                    zoomControls
+
+                    // Thumbnail strip with blur - hides when zoomed
+                    if images.count > 1 {
+                        thumbnailStrip
+                            .background(
+                                MaterialBlurView()
+                                    .ignoresSafeArea(edges: .bottom)
+                            )
+                            .opacity(controlsOpacity)
+                    }
+                }
+                .padding(.bottom, images.count > 1 ? 0 : 32)
+            }
+            .animation(.easeInOut(duration: 0.2), value: showControls)
+            .animation(.easeInOut(duration: 0.2), value: scale)
         }
         .statusBarHidden(true)
+        .onChange(of: scale) { oldValue, newValue in
+            // Auto-hide controls when zoomed in significantly
+            if newValue > 1.5 && showControls {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showControls = false
+                }
+            } else if newValue <= 1.0 && !showControls {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showControls = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Controls Opacity
+
+    private var controlsOpacity: Double {
+        guard showControls else { return 0 }
+        // Fade controls slightly when zoomed
+        if scale > 1.2 {
+            return 0.0
+        }
+        return 1.0
     }
 
     // MARK: - Dismiss Animation Properties
@@ -115,82 +157,99 @@ struct FullScreenImageViewer: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.2))
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.2))
                     .clipShape(Circle())
             }
 
             Spacer()
 
             Text("\(selectedIndex + 1) / \(images.count)")
-                .font(ManropeFont.semiBold.size(16))
+                .font(ManropeFont.semiBold.size(14))
                 .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(.black.opacity(0.3))
+                )
 
             Spacer()
 
-            // Placeholder to maintain layout
-            Color.clear
-                .frame(width: 44, height: 44)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .overlay(alignment: .trailing) {
-            // Feedback buttons
+            // Feedback buttons or placeholder
             if let image = images[safe: selectedIndex], case .api(let locationInfo, let vote) = image, case .url(let url) = locationInfo {
-                HStack(spacing: 12) {
-                    // Thumbs Up
+                let urlString = url.absoluteString
+                let isThisImageLoading = loadingImageUrl == urlString
+
+                HStack(spacing: 8) {
                     FeedbackButton(
                         type: .up,
                         isSelected: vote?.value == "up",
+                        isLoading: isThisImageLoading && vote?.value == "up",
+                        isDisabled: isThisImageLoading || loadingImageUrl != nil,
                         style: .overlay
                     ) {
-                        onFeedback?(url.absoluteString, "up")
+                        onFeedback?(urlString, "up")
                     }
 
-                    // Thumbs Down
                     FeedbackButton(
                         type: .down,
                         isSelected: vote?.value == "down",
+                        isLoading: isThisImageLoading && vote?.value == "down",
+                        isDisabled: isThisImageLoading || loadingImageUrl != nil,
                         style: .overlay
                     ) {
-                        onFeedback?(url.absoluteString, "down")
+                        onFeedback?(urlString, "down")
                     }
                 }
-                .padding(.trailing, 20)
-                .padding(.top, 16)
+            } else {
+                Color.clear
+                    .frame(width: 36, height: 36)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
 
     // MARK: - Thumbnail Strip
 
     private var thumbnailStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(images.indices, id: \.self) { index in
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            selectedIndex = index
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(images.indices, id: \.self) { index in
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                selectedIndex = index
+                            }
+                        } label: {
+                            imageContent(for: images[index])
+                                .frame(width: 52, height: 52)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            selectedIndex == index ? Color.white : Color.white.opacity(0.3),
+                                            lineWidth: selectedIndex == index ? 2 : 1
+                                        )
+                                )
+                                .scaleEffect(selectedIndex == index ? 1.05 : 1.0)
+                                .opacity(selectedIndex == index ? 1.0 : 0.7)
                         }
-                    } label: {
-                        imageContent(for: images[index])
-                            .frame(width: 60, height: 60)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(
-                                        selectedIndex == index ? Color.white : Color.white.opacity(0.3),
-                                        lineWidth: selectedIndex == index ? 3 : 1
-                                    )
-                                    .padding(.all, 1)
-                            )
-                            .opacity(selectedIndex == index ? 1.0 : 0.6)
+                        .id(index)
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, 20)
+            .onChange(of: selectedIndex) { _, newValue in
+                withAnimation {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
         }
     }
 
@@ -301,62 +360,62 @@ struct FullScreenImageViewer: View {
     }
 
     // MARK: - Zoom Controls
-    
+
     private var zoomControls: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
             // Zoom out button
             Button {
                 zoomOut()
             } label: {
                 Image(systemName: "minus.magnifyingglass")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                    .background(.white.opacity(0.2))
                     .clipShape(Circle())
             }
             .disabled(scale <= minScale)
             .opacity(scale <= minScale ? 0.5 : 1.0)
-            
-            // Zoom percentage badge (centered)
+
+            // Zoom percentage badge
             Text("\(Int(scale * 100))%")
-                .font(ManropeFont.semiBold.size(14))
+                .font(ManropeFont.semiBold.size(13))
                 .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
                 .background(
                     Capsule()
-                        .fill(Color.black.opacity(0.6))
+                        .fill(.black.opacity(0.4))
                 )
-                .frame(minWidth: 60)
-            
+                .frame(minWidth: 56)
+
             // Zoom in button
             Button {
                 zoomIn()
             } label: {
                 Image(systemName: "plus.magnifyingglass")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                    .background(.white.opacity(0.2))
                     .clipShape(Circle())
             }
             .disabled(scale >= maxScale)
             .opacity(scale >= maxScale ? 0.5 : 1.0)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
-    
+
     // MARK: - Zoom Actions
-    
+
     private func zoomIn() {
         let increment: CGFloat = 0.5
         let newScale = min(scale + increment, maxScale)
-        
+
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             scale = newScale
             lastScale = 1.0
-            
+
             // Reset offset when zooming in from 1.0
             if scale == increment + 1.0 {
                 offset = .zero
@@ -364,20 +423,20 @@ struct FullScreenImageViewer: View {
             }
         }
     }
-    
+
     private func zoomOut() {
         let decrement: CGFloat = 0.5
         var newScale = max(scale - decrement, minScale)
-        
+
         // If zooming out to 1.0, reset everything
         if newScale <= minScale + 0.1 {
             newScale = minScale
         }
-        
+
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             scale = newScale
             lastScale = 1.0
-            
+
             // Reset offset if zoomed out to 1.0
             if newScale <= minScale {
                 offset = .zero
@@ -393,6 +452,17 @@ struct FullScreenImageViewer: View {
         lastScale = 1.0
         offset = .zero
         lastOffset = .zero
+        showControls = true
+    }
+}
+
+// MARK: - Material Blur View
+
+struct MaterialBlurView: View {
+    var body: some View {
+        Rectangle()
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
     }
 }
 
@@ -414,4 +484,3 @@ struct FullScreenImageViewer: View {
     )
 }
 #endif
-

@@ -10,6 +10,7 @@ import StoreKit
 enum CameraPresentationSource {
     case homeView
     case productDetailView
+    case pushNavigation  // Used when navigating via AppRoute (Single Root NavigationStack)
 }
 
 struct ScanCameraView: View {
@@ -20,6 +21,8 @@ struct ScanCameraView: View {
     @Environment(WebService.self) var webService
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(AppState.self) var appState: AppState?  // Optional - available when in root NavigationStack
+    @Environment(\.dismiss) private var dismiss
     @State private var isCaptured: Bool = false
     @State private var overlayRect: CGRect = .zero
     @State private var overlayContainerSize: CGSize = .zero
@@ -911,7 +914,16 @@ struct ScanCameraView: View {
                         camera.startSession()
                     }
                 }
-            
+                .onAppear {
+                    // Check if we need to scroll to a specific card (coming back from ProductDetail)
+                    if let targetId = appState?.scrollToScanId, !targetId.isEmpty {
+                        Log.debug("SCAN_SCROLL", "🔵 CameraScreen: onAppear - scrollToScanId from AppState: \(targetId)")
+                        scrollTargetScanId = targetId
+                        // Clear the scroll target after using it
+                        appState?.scrollToScanId = nil
+                    }
+                }
+
             if mode == .scanner {
                 BarcodeScannerOverlay(onRectChange: { rect, size in
                     overlayRect = rect
@@ -936,17 +948,8 @@ struct ScanCameraView: View {
             }
             
             VStack {
-                HStack {
-                    ScanBackButton()
-                    Spacer()
-                    if mode == .scanner {
-                        FlashToggleButton(isScannerMode: true)
-                    }
-                }
-                .padding(.horizontal,20)
-                .padding(.bottom, 23)
-                
                 ScanStatusToast(state: toastState)
+                    .padding(.top, 60) // Account for navigation bar space
                     .onAppear {
                         updateToastState()
                     }
@@ -1102,7 +1105,15 @@ struct ScanCameraView: View {
                                         selectedIngredientRecommendations = ingredientRecommendations
                                         selectedOverallAnalysis = overallAnalysis
                                         selectedScanId = tappedScanId
-                                        isProductDetailPresented = true
+
+                                        // Use push navigation ONLY when opened via AppRoute (pushNavigation)
+                                        // Fall back to fullScreenCover when in sheet/cover context
+                                        if presentationSource == .pushNavigation, let appState = appState {
+                                            let initialScan = scanDataCache[tappedScanId]
+                                            appState.navigate(to: .productDetail(scanId: tappedScanId, initialScan: initialScan))
+                                        } else {
+                                            isProductDetailPresented = true
+                                        }
                                     }
                                 )
                         },
@@ -1128,7 +1139,8 @@ struct ScanCameraView: View {
                     )
                     
                     // Add New Product button (photo mode only) - left side, center-aligned with carousel cards
-                    if mode == .photo {
+                    // Hide when skeleton card is already present (no need to add another)
+                    if mode == .photo && !scanIds.contains(skeletonCardId) {
                         VStack {
                             Spacer()
                             HStack(spacing: 0) {
@@ -1259,35 +1271,6 @@ struct ScanCameraView: View {
                 .zIndex(3)
             }
         }
-        .fullScreenCover(isPresented: $isProductDetailPresented) {
-            NavigationStack {
-                if let selectedScanId = selectedScanId {
-                    // Pass scanId for real-time updates
-                    // Get local images for this scanId (if any)
-                    let localImagesForScan = capturedImagesPerScanId[selectedScanId]?.map { $0.image }
-                    let initialScan = scanDataCache[selectedScanId]  // Get cached scan if available
-
-                    ProductDetailView(
-                        scanId: selectedScanId,  // NEW: Pass scanId for real-time updates
-                        initialScan: initialScan,  // NEW: Pass initial scan data
-                        localImages: localImagesForScan,  // Pass local images for photo mode
-                        isPlaceholderMode: false,
-                        presentationSource: .cameraView,
-                        onRequestCameraWithScan: { requestedScanId in
-                            // Handle camera request from ProductDetail
-                            // Mark that we're returning from ProductDetailView programmatically
-                            isProgrammaticModeChange = true
-                            targetScanIdFromProductDetail = requestedScanId
-                            
-                            // Switch to photo mode (this will trigger onChange handler)
-                            mode = .photo
-                        }
-                    )
-                } else {
-                    ProductDetailView(isPlaceholderMode: true)
-                }
-            }
-        }
         .sheet(isPresented: $isShowingPhotoPicker) {
             PhotoPicker(images: $capturedPhotoHistory,
                         didHitLimit: $galleryLimitHit,
@@ -1295,6 +1278,37 @@ struct ScanCameraView: View {
                         onImageSelected: { image in
                             await processPhoto(image: image)
                         })
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                if mode == .scanner {
+                    FlashToggleButton(isScannerMode: true)
+                }
+            }
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Track that camera is in navigation stack (for ProductDetail "Add Photo" navigation)
+            appState?.hasCameraInStack = true
+            // Track that camera is currently visible (for AIBot FAB visibility)
+            appState?.isInScanCameraView = true
+        }
+        .onDisappear {
+            // Camera is being removed from navigation stack
+            appState?.hasCameraInStack = false
+            // Camera is no longer visible
+            appState?.isInScanCameraView = false
         }
     }
 }

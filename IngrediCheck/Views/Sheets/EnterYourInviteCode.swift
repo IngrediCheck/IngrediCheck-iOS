@@ -168,13 +168,16 @@ struct EnterYourInviteCode : View {
             HStack{
                 Image("jam-sheld-half")
                     .frame(width: 16, height: 16)
-                Text("By continuing, you agree to our Terms & Privacy Policy.")
+                Text("By continuing, you are agreeing to my **[Terms of Use](https://www.ingredicheck.app/terms-conditions)** and **[Privacy Policy](https://www.ingredicheck.app/privacy-policy)**.")
+                    .multilineTextAlignment(.center)
                     .font(ManropeFont.regular.size(12))
+                    .tint(.paletteAccent)
                     .foregroundStyle(.grayScale100)
             }
         }
         .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
 //        .overlay(
 //            RoundedRectangle(cornerRadius: 4)
 //                .fill(.neutral500)

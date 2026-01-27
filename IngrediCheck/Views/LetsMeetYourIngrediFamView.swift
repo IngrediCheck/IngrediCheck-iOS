@@ -72,7 +72,7 @@ struct LetsMeetYourIngrediFamView: View {
             VStack {
                Text("Welcome to IngrediFam !")
                     .font(ManropeFont.bold.size(16))
-                    .padding(.top ,32)
+                    .padding(.top, 24)
                     .padding(.bottom ,4)
                 Text("Join your family space and personalize food choices together.")
                     .font(ManropeFont.regular.size(13))
@@ -155,13 +155,10 @@ struct LetsMeetYourIngrediFamView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 24)
                                 .fill(Color.white)
-                                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 24)
                                         .stroke(lineWidth: 0.75)
                                         .foregroundStyle(Color(hex: "#EEEEEE"))
-                                    
-                                    
                                 )
                         )
                         .padding(.horizontal, 20)
@@ -239,7 +236,6 @@ struct LetsMeetYourIngrediFamView: View {
                             .background(
                                 RoundedRectangle(cornerRadius: 24)
                                     .fill(Color.white)
-                                    .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 24)
                                             .stroke(lineWidth: 0.75)
@@ -262,7 +258,7 @@ struct LetsMeetYourIngrediFamView: View {
             VStack {
                Text("Getting Started!")
                     .font(ManropeFont.bold.size(16))
-                    .padding(.top ,32)
+                    .padding(.top, 24)
                     .padding(.bottom ,4)
                 Text("Add profiles so IngredientCheck can personalize results for each person.")
                     .font(ManropeFont.regular.size(13))
@@ -283,6 +279,8 @@ struct LetsMeetYourIngrediFamView: View {
             .navigationBarBackButtonHidden(true)
         }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.pageBackground)
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
         }

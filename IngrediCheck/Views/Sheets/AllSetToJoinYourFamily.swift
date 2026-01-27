@@ -21,7 +21,7 @@ struct AllSetToJoinYourFamily: View {
                     .multilineTextAlignment(.center)
                     .padding(.bottom , 12)
 
-                Text("Welcome to the Patel Family! Your ingredient lists and preferences will now sync automatically.")
+                Text("Your family’s food preferences are already added. You can review them anytime, or edit a specific preference section by tapping Edit.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -37,7 +37,8 @@ struct AllSetToJoinYourFamily: View {
             
         }
         .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .fill(.neutral500)

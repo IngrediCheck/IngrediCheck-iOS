@@ -72,33 +72,31 @@ struct UnifiedCanvasView: View {
         ZStack(alignment: .bottom) {
             mainContent
 
-            // Edit sheet overlay (editing mode only, for fullScreenCover presentation)
-            if mode == .editing {
-                editSheetOverlay
-            }
+            // Edit sheet overlay removed - RootContainerView handles it globally
+            // This prevents double-sheet issue when UnifiedCanvasView is embedded in HomeView
         }
         .modifier(
             ConditionalBottomTabBar(
                 isEnabled: mode.showTabBar && !coordinator.isEditSheetPresented,
                 gradientColors: [
-                    Color.white.opacity(0),
-                    Color.white
+                    Color.pageBackground.opacity(0),
+                    Color.pageBackground
                 ]
             ) {
-                TabBar(isExpanded: $isTabBarExpanded)
-                    .fixedSize(horizontal: false, vertical: true)
+                TabBar(
+                    isExpanded: $isTabBarExpanded,
+                    onChatBotTap: mode == .editing ? {
+                        // Open AI Bot with food_notes context when in editing mode (Food Notes screen)
+                        coordinator.showAIBotSheetWithContext()
+                    } : nil
+                )
+                .fixedSize(horizontal: false, vertical: true)
             }
         )
-        .background(Color.white)
+        .background(Color.pageBackground)
         .navigationTitle(mode == .editing ? (titleOverride ?? "Food Notes") : "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if mode == .editing {
-                ToolbarItem(placement: .topBarTrailing) {
-                    SyncIndicatorView(isSyncing: foodNotesStore?.isSyncing == true || foodNotesStore?.isLoadingFoodNotes == true)
-                }
-            }
-        }
+        // Sync indicator removed - using redacted loading for initial load only
         .onAppear {
             handleOnAppear()
         }
@@ -122,29 +120,6 @@ struct UnifiedCanvasView: View {
             if oldValue == true && newValue == false, let stepId = coordinator.editingStepId {
                 scrollToEditedSection = stepId
             }
-        }
-    }
-
-    // MARK: - Edit Sheet Overlay (for fullScreenCover presentation)
-
-    @ViewBuilder
-    private var editSheetOverlay: some View {
-        if coordinator.isEditSheetPresented, let stepId = coordinator.editingStepId {
-            EditSectionBottomSheet(
-                isPresented: Binding(
-                    get: { coordinator.isEditSheetPresented },
-                    set: { coordinator.isEditSheetPresented = $0 }
-                ),
-                stepId: stepId,
-                currentSectionIndex: coordinator.currentEditingSectionIndex
-            )
-            .transition(AnyTransition.asymmetric(
-                insertion: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity),
-                removal: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity)
-            ))
-            .zIndex(100)
-            .frame(maxWidth: CGFloat.infinity, maxHeight: CGFloat.infinity, alignment: Alignment.bottom)
-            .ignoresSafeArea()
         }
     }
 
@@ -236,30 +211,37 @@ struct UnifiedCanvasView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
-                    // AI Summary Card at top (only show if we have a summary)
-                    if let summary = foodNotesStore?.foodNotesSummary,
-                       !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       summary != "No Food Notes yet." {
-                        AISummaryCard(
-                            summary: summary,
-                            dynamicSteps: store.dynamicSteps
-                        )
-                        .padding(.top, 16)
-                    }
+                    // Show redacted loading skeleton only when store has no data yet (true initial load)
+                    // Once store has data, never show redacted again (background refresh is silent)
+                    let hasStoreData = foodNotesStore?.hasLoadedFoodNotes == true
+                    if !hasStoreData && !didFinishInitialLoad {
+                        redactedLoadingContent
+                    } else {
+                        // AI Summary Card at top (only show if we have a summary)
+                        if let summary = foodNotesStore?.foodNotesSummary,
+                           !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                           summary != "No Food Notes yet." {
+                            AISummaryCard(
+                                summary: summary,
+                                dynamicSteps: store.dynamicSteps
+                            )
+                            .padding(.top, 16)
+                        }
 
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        EditableCanvasCard(
-                            chips: card.chips,
-                            sectionedChips: card.sectionedChips,
-                            title: card.title,
-                            iconName: card.icon,
-                            onEdit: { openEdit(for: card) },
-                            itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
-                            showFamilyIcons: showFamilyIconsOnChips,
-                            activeMemberId: selectedMemberId
-                        )
-                        .padding(.top, index == 0 && foodNotesStore?.foodNotesSummary == nil ? 16 : 0)
-                        .id(card.id)
+                        ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                            EditableCanvasCard(
+                                chips: card.chips,
+                                sectionedChips: card.sectionedChips,
+                                title: card.title,
+                                iconName: card.icon,
+                                onEdit: { openEdit(for: card) },
+                                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                                showFamilyIcons: showFamilyIconsOnChips,
+                                activeMemberId: selectedMemberId
+                            )
+                            .padding(.top, index == 0 && foodNotesStore?.foodNotesSummary == nil ? 16 : 0)
+                            .id(card.id)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -284,6 +266,22 @@ struct UnifiedCanvasView: View {
                         scrollToEditedSection = nil
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Redacted Loading Content
+
+    @ViewBuilder
+    private var redactedLoadingContent: some View {
+        VStack(spacing: 12) {
+            // Skeleton AI Summary Card
+            RedactedSummaryCard()
+                .padding(.top, 16)
+
+            // Skeleton Cards (show 4 placeholder cards)
+            ForEach(0..<4, id: \.self) { _ in
+                RedactedCanvasCard()
             }
         }
     }
@@ -511,41 +509,112 @@ struct UnifiedCanvasView: View {
     }
 }
 
-// MARK: - Sync Indicator View
+// MARK: - Redacted Loading Components
 
-private struct SyncIndicatorView: View {
-    let isSyncing: Bool
-    @State private var rotation: Double = 0
-
+private struct RedactedSummaryCard: View {
     var body: some View {
-        Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill")
-            .font(.system(size: 22))
-            .foregroundStyle(isSyncing ? Color.grayScale50 : .grayScale30)
-            .rotationEffect(.degrees(rotation))
-            .onChange(of: isSyncing) { _, newValue in
-                if newValue {
-                    startRotation()
-                } else {
-                    stopRotation()
+        VStack(alignment: .leading, spacing: 12) {
+            // Header placeholder
+            HStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale40)
+                    .frame(width: 100, height: 16)
+                Spacer()
+            }
+
+            // Summary text placeholder lines
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale40)
+                    .frame(height: 14)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale40)
+                    .frame(width: 200, height: 14)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+        )
+        .redacted(reason: .placeholder)
+        .shimmering()
+    }
+}
+
+private struct RedactedCanvasCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Title row placeholder
+            HStack {
+                Circle()
+                    .fill(Color.grayScale40)
+                    .frame(width: 24, height: 24)
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.grayScale40)
+                    .frame(width: 120, height: 18)
+
+                Spacer()
+
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.grayScale40)
+                    .frame(width: 50, height: 28)
+            }
+
+            // Chips placeholder
+            HStack(spacing: 8) {
+                ForEach(0..<3, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.grayScale40)
+                        .frame(width: CGFloat.random(in: 60...100), height: 28)
                 }
             }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+        )
+        .redacted(reason: .placeholder)
+        .shimmering()
+    }
+}
+
+// MARK: - Shimmer Effect
+
+private struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                GeometryReader { geometry in
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0),
+                            Color.white.opacity(0.5),
+                            Color.white.opacity(0)
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geometry.size.width * 2)
+                    .offset(x: -geometry.size.width + (geometry.size.width * 2 * phase))
+                }
+            )
+            .clipped()
             .onAppear {
-                if isSyncing {
-                    startRotation()
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    phase = 1
                 }
             }
     }
+}
 
-    private func startRotation() {
-        withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
-            rotation = 360
-        }
-    }
-
-    private func stopRotation() {
-        withAnimation(.easeOut(duration: 0.3)) {
-            rotation = 0
-        }
+private extension View {
+    func shimmering() -> some View {
+        modifier(ShimmerModifier())
     }
 }
 
@@ -573,19 +642,12 @@ private struct SyncIndicatorView: View {
 //        .environment(foodNotesStore)
 //}
 
-#Preview("Sync Indicator") {
-    VStack(spacing: 40) {
-        VStack {
-            Text("Syncing")
-                .font(.caption)
-            SyncIndicatorView(isSyncing: true)
-        }
-
-        VStack {
-            Text("Not Syncing")
-                .font(.caption)
-            SyncIndicatorView(isSyncing: false)
-        }
+#Preview("Redacted Loading") {
+    VStack(spacing: 16) {
+        RedactedSummaryCard()
+        RedactedCanvasCard()
+        RedactedCanvasCard()
     }
     .padding()
+    .background(Color.pageBackground)
 }

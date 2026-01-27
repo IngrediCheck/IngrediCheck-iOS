@@ -64,12 +64,15 @@ class DTO {
             vegetarian = try Ingredient.decodeYesNoMaybe(from: container, forKey: .vegetarian)
             
             // Handle both "ingredients" and "contains" fields
-            // API may use "contains" (array of strings) or "ingredients" (array of Ingredient objects)
+            // API sends "contains" as array of Ingredient objects with nested contains
             if let ingredientsArray = try? container.decode([Ingredient].self, forKey: .ingredients) {
                 ingredients = ingredientsArray
-            } else if let containsArray = try? container.decode([String].self, forKey: .contains) {
-                // Convert "contains" array of strings to Ingredient array
-                ingredients = containsArray.map { Ingredient(name: $0, vegan: nil, vegetarian: nil, ingredients: []) }
+            } else if let containsArray = try? container.decode([Ingredient].self, forKey: .contains) {
+                // API uses "contains" field with nested Ingredient objects
+                ingredients = containsArray
+            } else if let containsStrings = try? container.decode([String].self, forKey: .contains) {
+                // Fallback: "contains" as array of strings (legacy format)
+                ingredients = containsStrings.map { Ingredient.parseFromString($0) }
             } else {
                 ingredients = []
             }
@@ -106,6 +109,58 @@ class DTO {
             } else {
                 return nil
             }
+        }
+
+        /// Parse an ingredient from a string, handling nested format like "Chocolate (Sugar, Cocoa)"
+        static func parseFromString(_ text: String) -> Ingredient {
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
+
+            // Check for nested format: "Name (sub1, sub2, sub3)"
+            guard let openParen = trimmed.firstIndex(of: "("),
+                  let closeParen = trimmed.lastIndex(of: ")"),
+                  openParen < closeParen else {
+                // No nested ingredients - return simple ingredient
+                return Ingredient(name: trimmed, vegan: nil, vegetarian: nil, ingredients: [])
+            }
+
+            let name = String(trimmed[..<openParen]).trimmingCharacters(in: .whitespaces)
+            let nestedString = String(trimmed[trimmed.index(after: openParen)..<closeParen])
+
+            // Split by comma, but be careful of nested parentheses
+            let nestedIngredients = splitByCommaRespectingParentheses(nestedString)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .map { Ingredient.parseFromString($0) }  // Recursive for deep nesting
+
+            return Ingredient(name: name, vegan: nil, vegetarian: nil, ingredients: nestedIngredients)
+        }
+
+        /// Split a string by commas while respecting nested parentheses
+        private static func splitByCommaRespectingParentheses(_ text: String) -> [String] {
+            var result: [String] = []
+            var current = ""
+            var parenDepth = 0
+
+            for char in text {
+                if char == "(" {
+                    parenDepth += 1
+                    current.append(char)
+                } else if char == ")" {
+                    parenDepth -= 1
+                    current.append(char)
+                } else if char == "," && parenDepth == 0 {
+                    result.append(current)
+                    current = ""
+                } else {
+                    current.append(char)
+                }
+            }
+
+            if !current.isEmpty {
+                result.append(current)
+            }
+
+            return result
         }
     }
     
@@ -271,7 +326,6 @@ class DTO {
                         ingredientToString(i)
                       }
                       .joined(separator: ", ")
-                      .capitalized
                     + ")"
             }
         }
@@ -517,7 +571,8 @@ class DTO {
             if container.contains(.ingredients) {
                 // Backend now only returns string arrays for ingredients
                 if let stringArray = try? container.decode([String].self, forKey: .ingredients) {
-                    ingredients = stringArray.map { Ingredient(name: $0, vegan: nil, vegetarian: nil, ingredients: []) }
+                    // Parse nested format like "Dark Chocolate (Sugar, Cocoa, Vanilla)"
+                    ingredients = stringArray.map { Ingredient.parseFromString($0) }
                 } else {
                     // Fallback: try decoding as Ingredient objects (for backward compatibility)
                     ingredients = try container.decodeIfPresent([Ingredient].self, forKey: .ingredients) ?? []
@@ -537,6 +592,7 @@ class DTO {
     }
     
     struct ScanAnalysisResult: Codable, Hashable {
+        let id: String?  // UUID - Analysis ID for feedback submission (required per API spec)
         let overall_analysis: String?
         let overall_match: String?  // "matched", "uncertain", "unmatched" - optional as it may be missing in some responses
         var ingredient_analysis: [ScanIngredientAnalysis]
@@ -545,6 +601,9 @@ class DTO {
         
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            // Decode id (required per API spec for feedback submission)
+            id = try container.decodeIfPresent(String.self, forKey: .id)
             
             // Try both camelCase (overallAnalysis) and snake_case (overall_analysis)
             overall_analysis = try container.decodeIfPresent(String.self, forKey: .overall_analysis)
@@ -568,6 +627,7 @@ class DTO {
         
         func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(id, forKey: .id)
             try container.encodeIfPresent(overall_analysis, forKey: .overall_analysis)
             try container.encodeIfPresent(overall_match, forKey: .overall_match)
             try container.encode(ingredient_analysis, forKey: .ingredient_analysis)
@@ -576,6 +636,7 @@ class DTO {
         }
         
         enum CodingKeys: String, CodingKey {
+            case id
             case overall_analysis
             case overallAnalysis  // Support camelCase from API
             case overall_match
@@ -790,9 +851,9 @@ class DTO {
     
     // Feedback Request
     struct FeedbackRequest: Codable {
-        let target: String? // "product_info", "analysis_result", "ingredient_analysis", "image"
+        let target: String // "product_info", "product_image", "analysis", "flagged_ingredient", "other"
         let vote: String // "up", "down", "none"
-        let scan_id: String
+        let scan_id: String?
         let analysis_id: String?
         let image_url: String?
         let ingredient_name: String?
@@ -809,12 +870,19 @@ class DTO {
         let avgScans: Int
         let barcodeScansCount: Int
         let matchingStats: MatchingStats
+        let weeklyStats: [WeeklyStat]?
     }
     
     struct MatchingStats: Codable {
         let matched: Int
         let unmatched: Int
         let uncertain: Int
+    }
+    
+    struct WeeklyStat: Codable {
+        let day: String  // "M", "T", "W", "T", "F", "S", "S"
+        let value: Int   // Scan count for that day
+        let date: String // ISO date string
     }
 
     // MARK: - Food Notes Summary
@@ -998,5 +1066,63 @@ extension DTO.ProductRecommendation {
         case .unknown:
             return [Color(hex: "#9E9E9E"), Color(hex: "#757575")]
         }
+    }
+}
+
+// MARK: - Chat API DTOs
+
+extension DTO {
+    // Context types (discriminated union based on screen field)
+    struct HomeContext: Codable {
+        let screen: String // "home"
+    }
+    
+    struct ProductScanContext: Codable {
+        let screen: String // "product_scan"
+        let scan_id: String // UUID
+    }
+    
+    struct FoodNotesContext: Codable {
+        let screen: String // "food_notes"
+    }
+
+    struct FeedbackContext: Codable {
+        let screen: String // "feedback"
+        let feedback_id: String // UUID
+    }
+    
+    // SSE Events (event name: "turn" for thinking/done, "error" for errors)
+    struct TurnThinkingEvent: Codable {
+        let conversation_id: String // UUID
+        let turn_id: String // UUID
+        let state: String // "thinking" (const)
+    }
+    
+    struct TurnDoneEvent: Codable {
+        let conversation_id: String // UUID
+        let turn_id: String // UUID
+        let state: String // "done" (const)
+        let response: String
+    }
+    
+    struct ChatErrorEvent: Codable {
+        let error: String
+        let conversation_id: String? // UUID (optional)
+        let turn_id: String? // UUID (optional)
+    }
+    
+    // Conversation History
+    struct ConversationTurn: Codable {
+        let turn_id: String // UUID
+        let turn_number: Int
+        let user_message: String
+        let assistant_response: String? // nullable
+        let images: [String] // Array of signed URLs (format: uri, 1hr expiry) - will be ignored in UI
+        let created_at: String // ISO 8601 date-time
+    }
+    
+    struct ConversationResponse: Codable {
+        let conversation_id: String // UUID
+        let turns: [ConversationTurn]
     }
 }

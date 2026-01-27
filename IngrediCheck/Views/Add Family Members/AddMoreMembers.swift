@@ -32,8 +32,12 @@ struct AddMoreMembers: View {
         UserModel(familyMemberName: "Memoji 14", familyMemberImage: "memoji_14", backgroundColor: Color(hex: "F8BBD0"))
     ]
     @State var selectedFamilyMember: UserModel? = nil
-    @State var continuePressed: (String, UIImage?, String?, String?) async throws -> Void = { _, _, _, _ in }
-    
+    private let continuePressed: (String, UIImage?, String?, String?) async throws -> Void
+
+    init(continuePressed: @escaping (String, UIImage?, String?, String?) async throws -> Void = { _, _, _, _ in }) {
+        self.continuePressed = continuePressed
+    }
+
     var body: some View {
         VStack {
             
@@ -82,7 +86,6 @@ struct AddMoreMembers: View {
                                 .stroke(lineWidth: showError ? 2 : 0.5)
                                 .foregroundStyle(showError ? .red : .grayScale60)
                         )
-                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
                         .onChange(of: name) { oldValue, newValue in
                             if showError && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 showError = false
@@ -229,8 +232,17 @@ struct AddMoreMembers: View {
             , alignment: .top
         )
         .onAppear {
-            // Reset all selection state when adding a new member
-            resetMemojiSelectionState()
+            // Check if returning from generate avatar flow
+            if memojiStore.previousRouteForGenerateAvatar == .addMoreMembers {
+                // Restore the name from memojiStore if coming back from avatar generation
+                if let savedName = memojiStore.displayName, !savedName.isEmpty {
+                    name = savedName
+                }
+                // Don't reset - preserve the avatar selection state
+            } else {
+                // Fresh start - reset all selection state when adding a new member
+                resetMemojiSelectionState()
+            }
         }
     }
     
@@ -298,6 +310,9 @@ struct AddMoreMembers: View {
             // On success, clean up UI state
             name = ""
             showError = false
+            selectedFamilyMember = nil
+            // Reset memojiStore state so next member starts fresh
+            resetMemojiSelectionState()
         } catch {
              print("[AddMoreMembers] Error adding member: \(error)")
              ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)

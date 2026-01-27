@@ -55,7 +55,6 @@ struct IngrediFamCanvasView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 10)
                 .frame(height: 700)
-                .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
             
             VStack(spacing: 20) {
                 Button("welcomeBack") {

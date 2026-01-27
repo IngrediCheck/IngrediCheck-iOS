@@ -92,10 +92,10 @@ struct MeetYourProfileView: View {
                     Button {
                          // Sync current name to store before generating
                          commitPrimaryName()
-                         
-                         // Navigation to avatar generation
+
+                         // Navigation to avatar update sheet
                          memojiStore.displayName = primaryMemberName
-                         
+
                          // Set the target member ID so handleAssignAvatar knows who to update
                          if let member = targetMember {
                              familyStore.avatarTargetMemberId = member.id
@@ -107,9 +107,11 @@ struct MeetYourProfileView: View {
                              // For other members, ensure they exist in pending
                              familyStore.avatarTargetMemberId = memberId
                          }
-                         
+
+                         // Navigate to UpdateAvatarSheet, which will allow choosing static avatars or generating a new one
                          memojiStore.previousRouteForGenerateAvatar = .meetYourProfile(memberId: memberId)
-                         coordinator.navigateInBottomSheet(.generateAvatar)
+                         let targetId = targetMember?.id ?? familyStore.pendingSelfMember?.id ?? UUID()
+                         coordinator.navigateInBottomSheet(.updateAvatar(memberId: targetId))
                     } label: {
                         Circle()
                             .fill(Color.white)
@@ -125,7 +127,7 @@ struct MeetYourProfileView: View {
                     .offset(x: 4, y: 4)
                 }
             }
-            .padding(.top, 16)
+            .padding(.top, 24)
 
             // Greeting Title
             HStack(spacing: 8) {
@@ -177,7 +179,7 @@ struct MeetYourProfileView: View {
             // Description
             Text("We've created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
                 .font(ManropeFont.medium.size(12))
-                .foregroundStyle(.grayScale100)
+                .foregroundStyle(.grayScale120)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .padding(.horizontal, 32)

@@ -292,7 +292,7 @@ struct SettingsContentView: View {
                 .environment(familyStore)
                 .environment(foodNotesStore)
             }
-        .background(Color(hex: "#F7F7F7"))
+        .background(Color.pageBackground)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $isFeedbackPresented) {

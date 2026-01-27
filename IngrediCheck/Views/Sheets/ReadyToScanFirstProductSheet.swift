@@ -16,19 +16,19 @@ struct ReadyToScanSheet: View {
                     .padding(.top, 4)
 
                 // LEFT ICON
-                HStack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.grayScale150)
-                            .frame(width: 24, height: 24)
-                            .contentShape(Rectangle())
-                        Spacer()
-                    }
-                    .buttonStyle(.plain)
-
-                    
-                }
+//                HStack {
+//                    Button(action: onBack) {
+//                        Image(systemName: "chevron.left")
+//                            .font(.system(size: 18, weight: .semibold))
+//                            .foregroundStyle(.grayScale150)
+//                            .frame(width: 24, height: 24)
+//                            .contentShape(Rectangle())
+//                        Spacer()
+//                    }
+//                    .buttonStyle(.plain)
+//
+//                    
+//                }
             }
             .padding(.top, 8)
             Text("first product? ")
@@ -43,16 +43,20 @@ struct ReadyToScanSheet: View {
                 .padding(.bottom, 24)
 
             HStack(spacing: 16) {
-                Button(action: onNotRightNow) {
-                    Text("Not right now")
-                        .font(NunitoFont.semiBold.size(16))
-                        .foregroundStyle(.grayScale110)
-                        .frame( width : 159 ,height: 52 )
-                        .background(
-                            Capsule().fill(.grayScale40)
-                        )
+//                Button(action: onNotRightNow) {
+//                    Text("Not right now")
+//                        .font(NunitoFont.semiBold.size(16))
+//                        .foregroundStyle(.grayScale110)
+//                        .frame( width : 159 ,height: 52 )
+//                        .background(
+//                            Capsule().fill(.grayScale40)
+//                        )
+//                }
+//                .buttonStyle(.plain)
+                
+                SecondaryButton(title: "Not right now", takeFullWidth: false) {
+                    onNotRightNow()
                 }
-                .buttonStyle(.plain)
 
                 Button(action: onHaveAProduct) {
                     GreenCapsule(title: "Have a product")
@@ -63,8 +67,9 @@ struct ReadyToScanSheet: View {
             .padding(.bottom, 32)
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 21)
-        .padding(.bottom, 24)
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
     }
 }
 

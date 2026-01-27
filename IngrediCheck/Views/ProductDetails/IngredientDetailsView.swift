@@ -14,7 +14,7 @@ struct IngredientDetailsView: View {
                             .font(NunitoFont.bold.size(15))
                             .foregroundStyle(.grayScale150)
                     }
-                    
+
                     HighlightableParagraph(
                         paragraph: paragraph,
                         activeHighlight: $activeHighlight,
@@ -24,17 +24,6 @@ struct IngredientDetailsView: View {
             }
         }
         .padding(.vertical, 4)
-        .overlay(alignment: .bottomLeading) {
-            if let highlight = activeHighlight {
-                IngredientTooltipView(highlight: highlight)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.top, 12)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: activeHighlight)
-        .onTapGesture {
-            activeHighlight = nil
-        }
     }
 }
 
@@ -65,7 +54,7 @@ struct HighlightableParagraph: View {
                     } label: {
                         Text(value)
                             .font(ManropeFont.semiBold.size(14))
-                            .foregroundStyle(highlightColor)
+                            .foregroundStyle(highlight.color)  // Use per-highlight color
                     }
                     .buttonStyle(.plain)
                 case .lineBreak:
@@ -121,6 +110,13 @@ struct IngredientHighlight: Identifiable, Equatable {
     let id = UUID()
     let phrase: String
     let reason: String
+    let color: Color  // Per-highlight color based on safety recommendation
+
+    init(phrase: String, reason: String, color: Color = .red) {
+        self.phrase = phrase
+        self.reason = reason
+        self.color = color
+    }
 }
 
 private func segmentedText(_ text: String, highlights: [IngredientHighlight]) -> [IngredientSegment] {
@@ -128,8 +124,13 @@ private func segmentedText(_ text: String, highlights: [IngredientHighlight]) ->
     var matches: [(Range<String.Index>, IngredientHighlight)] = []
     
     for highlight in highlights {
-        if let range = lowercased.range(of: highlight.phrase.lowercased()) {
+        let searchPhrase = highlight.phrase.lowercased()
+        var searchStartIndex = lowercased.startIndex
+
+        // Find ALL occurrences of this highlight phrase
+        while let range = lowercased.range(of: searchPhrase, range: searchStartIndex..<lowercased.endIndex) {
             matches.append((range, highlight))
+            searchStartIndex = range.upperBound
         }
     }
     
