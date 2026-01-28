@@ -6,20 +6,18 @@
 # It automatically increments the build number before each upload.
 #
 # Setup Instructions:
-#   1. See publish/README.md for complete setup guide
-#   2. Create publish/.env with your App Store Connect API credentials
-#   3. Ensure you have Apple Distribution certificate and App Store provisioning profile
+#   1. Create .asc/publish.env with your App Store Connect API credentials
+#   2. Ensure you have Apple Distribution certificate and App Store provisioning profile
 #
 # Usage:
-#   ./publish/publish_appstore.sh              # Full build and upload
-#   SKIP_UPLOAD=1 ./publish/publish_appstore.sh  # Build only, skip upload
+#   .claude/skills/asc-publish/scripts/publish_appstore.sh              # Full build and upload
+#   SKIP_UPLOAD=1 .claude/skills/asc-publish/scripts/publish_appstore.sh  # Build only, skip upload
 #
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PUBLISH_DIR="$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 PROJECT="${PROJECT:-IngrediCheck.xcodeproj}"
 SCHEME="${SCHEME:-IngrediCheck}"
 CONFIGURATION="${CONFIGURATION:-Release}"
@@ -27,14 +25,21 @@ ARCHIVE_PATH="${ARCHIVE_PATH:-$PROJECT_ROOT/build/IngrediCheck.xcarchive}"
 EXPORT_PATH="${EXPORT_PATH:-$PROJECT_ROOT/build/AppStoreExport}"
 IPA_NAME="${IPA_NAME:-IngrediCheck}"
 IPA_PATH="$EXPORT_PATH/$IPA_NAME.ipa"
-EXPORT_PLIST_PATH="$EXPORT_PATH/exportOptions.plist"
 PROJECT_PATH="$PROJECT_ROOT/$PROJECT"
 
-if [[ -f "$PUBLISH_DIR/.env" ]]; then
-  # shellcheck disable=SC1090
-  set -a  # auto-export all variables
-  source "$PUBLISH_DIR/.env"
+# Load environment from .asc/publish.env (preferred) or publish/.env (legacy)
+if [[ -f "$PROJECT_ROOT/.asc/publish.env" ]]; then
+  set -a
+  source "$PROJECT_ROOT/.asc/publish.env"
   set +a
+  ENV_FILE="$PROJECT_ROOT/.asc/publish.env"
+elif [[ -f "$PROJECT_ROOT/publish/.env" ]]; then
+  set -a
+  source "$PROJECT_ROOT/publish/.env"
+  set +a
+  ENV_FILE="$PROJECT_ROOT/publish/.env"
+else
+  ENV_FILE=""
 fi
 
 cd "$PROJECT_ROOT"
@@ -75,13 +80,14 @@ fi
 echo "Using team ID: $APPLE_TEAM_ID"
 
 if [[ "${SKIP_UPLOAD:-0}" != "1" ]]; then
-  : "${APP_STORE_CONNECT_API_KEY:?Set APP_STORE_CONNECT_API_KEY to your App Store Connect API key ID}"
-  : "${APP_STORE_CONNECT_API_ISSUER:?Set APP_STORE_CONNECT_API_ISSUER to your App Store Connect issuer ID}"
-  : "${APP_STORE_CONNECT_API_PRIVATE_KEY_PATH:?Set APP_STORE_CONNECT_API_PRIVATE_KEY_PATH to your .p8 key file path}"
+  : "${APP_STORE_CONNECT_API_KEY:?Set APP_STORE_CONNECT_API_KEY in .asc/publish.env}"
+  : "${APP_STORE_CONNECT_API_ISSUER:?Set APP_STORE_CONNECT_API_ISSUER in .asc/publish.env}"
+  : "${APP_STORE_CONNECT_API_PRIVATE_KEY_PATH:?Set APP_STORE_CONNECT_API_PRIVATE_KEY_PATH in .asc/publish.env}"
 
-  # Resolve relative paths against PUBLISH_DIR (where .env lives)
-  if [[ "$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" != /* ]]; then
-    APP_STORE_CONNECT_API_PRIVATE_KEY_PATH="$PUBLISH_DIR/$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH"
+  # Resolve relative paths against the env file's directory
+  if [[ -n "$ENV_FILE" && "$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" != /* ]]; then
+    ENV_DIR="$(dirname "$ENV_FILE")"
+    APP_STORE_CONNECT_API_PRIVATE_KEY_PATH="$ENV_DIR/$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH"
   fi
 
   if [[ ! -f "$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" ]]; then
@@ -174,5 +180,9 @@ echo "Uploading IPA via iTMSTransporter..."
   -assetFile "$IPA_PATH" \
   -v informational
 
-echo "Upload complete. Check App Store Connect for build status."
-
+echo ""
+echo "========================================="
+echo "Upload complete!"
+echo "Build number: $NEW_BUILD"
+echo "Check App Store Connect for build status."
+echo "========================================="
