@@ -1,40 +1,40 @@
 ---
 name: asc-builds
 description: List builds from App Store Connect. Use to check build status, versions, and upload dates.
-argument-hint: [limit]
+argument-hint: [all|NUM]
 allowed-tools:
   - Bash(*)
 ---
 
 # List Builds
 
-List recent builds from App Store Connect.
+List recent builds from App Store Connect, grouped by marketing version.
 
-Arguments: $ARGUMENTS (optional limit, default 10)
+Arguments: $ARGUMENTS
+- (none): Show last 2 marketing versions with 3 builds each
+- `all`: Show flat list of recent builds
+- `NUM`: Show last NUM builds (flat list)
 
-## Prerequisites
+## Default: Builds by Marketing Version
 
-Validate setup first:
 ```bash
-source .claude/skills/scripts/asc-common.sh
-asc_validate || exit 1
+.claude/skills/asc-builds/scripts/list-by-version.sh 2 3
 ```
 
-## Commands
+This shows:
+- Last 2 marketing versions
+- 3 most recent builds for each version
+- Which build was submitted to the App Store
 
-### List Recent Builds
+## Flat List of All Builds
 
 ```bash
-# Load app ID from config
 source .claude/skills/scripts/asc-common.sh
 asc_load_config
-
-# List builds (default limit 10, adjust with argument)
-LIMIT="${1:-10}"
-asc builds list --app "$ASC_APP_ID" --limit "$LIMIT" --output table
+asc builds list --app "$ASC_APP_ID" --limit 10 --output table
 ```
 
-### Latest Build Only
+## Latest Build Only
 
 ```bash
 source .claude/skills/scripts/asc-common.sh
@@ -42,42 +42,42 @@ asc_load_config
 asc builds latest --app "$ASC_APP_ID" --output table
 ```
 
-### Build Details
+## Build Details
 
 ```bash
 # Get details for a specific build
-asc builds info --build "BUILD_ID" --output table
-```
-
-### JSON Output (for parsing)
-
-```bash
-source .claude/skills/scripts/asc-common.sh
-asc_load_config
-asc builds list --app "$ASC_APP_ID" --limit 5
+asc builds info --build "BUILD_ID" --pretty
 ```
 
 ## Build Fields
 
 Key fields in build output:
-- `version`: Marketing version (e.g., 1.2.0)
-- `buildNumber`: Build number (e.g., 42)
+- `version`: Build number (CFBundleVersion)
 - `uploadedDate`: When uploaded to App Store Connect
 - `processingState`: PROCESSING, VALID, INVALID
-- `betaReviewStatus`: WAITING_FOR_BETA_REVIEW, IN_BETA_REVIEW, APPROVED
+- `expirationDate`: When TestFlight build expires
 
-## Common Workflows
+## Argument Routing
 
-### Check if latest build is ready for TestFlight
 ```bash
 source .claude/skills/scripts/asc-common.sh
 asc_load_config
-asc builds latest --app "$ASC_APP_ID" | jq '{version: .data.attributes.version, build: .data.attributes.buildNumber, state: .data.attributes.processingState}'
-```
 
-### List builds awaiting beta review
-```bash
-source .claude/skills/scripts/asc-common.sh
-asc_load_config
-asc builds list --app "$ASC_APP_ID" --paginate | jq '.data[] | select(.attributes.betaReviewStatus == "WAITING_FOR_BETA_REVIEW")'
+ARG="${1:-}"
+
+if [ -z "$ARG" ]; then
+  # Default: grouped by marketing version
+  .claude/skills/asc-builds/scripts/list-by-version.sh 2 3
+elif [ "$ARG" = "all" ]; then
+  # Flat list
+  asc builds list --app "$ASC_APP_ID" --limit 15 --output table
+elif [[ "$ARG" =~ ^[0-9]+$ ]]; then
+  # Specific limit
+  asc builds list --app "$ASC_APP_ID" --limit "$ARG" --output table
+else
+  echo "Usage: /asc-builds [all|NUM]"
+  echo "  (none) - Last 2 versions with 3 builds each"
+  echo "  all    - Flat list of recent builds"
+  echo "  NUM    - Last NUM builds"
+fi
 ```
