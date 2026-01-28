@@ -1397,9 +1397,15 @@ struct ChatStreamError: Error, LocalizedError {
             throw NetworkError.authError
         }
         
+        // Calculate UTC offset in minutes (e.g., -480 for PST, +330 for IST)
+        let utcOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
+        
         let request = SupabaseRequestBuilder(endpoint: .stats_v2)
             .setAuthorization(with: token)
             .setMethod(to: "GET")
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "utcOffset", value: String(utcOffsetMinutes))
+            ])
             .build()
         
         let (data, response) = try await URLSession.shared.data(for: request)

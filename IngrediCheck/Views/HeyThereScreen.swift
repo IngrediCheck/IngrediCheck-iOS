@@ -96,4 +96,6 @@ struct HeyThereScreen: View {
 
 #Preview {
     HeyThereScreen()
+        .environment(AppNavigationCoordinator(initialRoute: .heyThere))
+        .environment(AuthController())
 }

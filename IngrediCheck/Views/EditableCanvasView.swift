@@ -14,7 +14,8 @@ struct EditableCanvasView: View {
     @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var navCoordinator
-    
+    @Environment(AppState.self) private var appState
+
     // Optional: center a specific section when arriving here (e.g., Lifestyle/Nutrition)
     let targetSectionName: String?
     let onBack: (() -> Void)?
@@ -61,7 +62,13 @@ struct EditableCanvasView: View {
                     Color.white
                 ]
             ) {
-                TabBar(isExpanded: $isTabBarExpanded)
+                TabBar(
+                    isExpanded: $isTabBarExpanded,
+                    onRecentScansTap: {
+                        // Navigate to Recent Scans view
+                        appState.navigationPath.append(HistoryRouteItem.recentScansAll)
+                    }
+                )
                     .fixedSize(horizontal: false, vertical: true)
             }
         )
@@ -107,18 +114,32 @@ struct EditableCanvasView: View {
             
             // Optimistically update the canvas summary view from local preferences for this member.
             foodNotesStore?.applyLocalPreferencesOptimistic()
-            
+
             foodNotesStore?.updateFoodNotes()
+
+            // Trigger scan history refresh when user navigates back to HomeView
+            appState.needsScanHistoryRefresh = true
         }
         .onChange(of: familyStore.selectedMemberId) { newValue in
+            // Don't switch members before initial load completes - it would clear preferences
+            guard didFinishInitialLoad else {
+                print("[EditableCanvasView] Member switch ignored - initial load not complete")
+                return
+            }
             // When switching members, prepare preferences locally from associations.
             print("[EditableCanvasView] Member switched to \(newValue?.uuidString ?? "Everyone"), preparing local preferences")
-            
+
             // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
             // for the newly loaded member's existing state.
             isLoadingMemberPreferences = true
             foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
             isLoadingMemberPreferences = false
+        }
+        .onChange(of: navCoordinator.isEditSheetPresented) { oldValue, newValue in
+            // When edit sheet is dismissed, refresh canvas to show updated selections (only after initial load)
+            if oldValue == true && newValue == false && didFinishInitialLoad {
+                foodNotesStore?.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+            }
         }
         .onDisappear {
             // Dismiss bottom sheet when view disappears (handles both back button and system swipe gesture)
@@ -671,6 +692,7 @@ private extension EditableCanvasView {
             store.currentSectionIndex = sectionIndex
         }
         navCoordinator.editingStepId = card.stepId
+        navCoordinator.editingMemberId = selectedMemberId  // Pass selected member to edit sheet
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             navCoordinator.isEditSheetPresented = true
         }

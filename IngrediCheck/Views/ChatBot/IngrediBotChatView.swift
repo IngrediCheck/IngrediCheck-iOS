@@ -37,6 +37,7 @@ struct IngrediBotChatView: View {
     @State private var isLoadingHistory: Bool = false
     @State private var errorMessage: String? = nil
     @State private var visibleMessageIds: Set<String> = []
+    @FocusState private var isInputFocused: Bool
 
     /// Check if user is in onboarding flow (not on home or summary screens)
     private var isOnboardingFlow: Bool {
@@ -118,7 +119,7 @@ struct IngrediBotChatView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         // Dismiss keyboard when tapping on chat area
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        isInputFocused = false
                     }
                 }
                 .onChange(of: messages.count) { _ in
@@ -133,6 +134,7 @@ struct IngrediBotChatView: View {
             
             HStack(alignment: .bottom, spacing: 12) {
                 TextField("\"Type your answer...\"", text: $message, axis: .vertical)
+                    .focused($isInputFocused)
                     .textFieldStyle(.plain)
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
@@ -326,9 +328,10 @@ struct IngrediBotChatView: View {
     private func sendMessage() {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isStreaming else { return }
-        
+
         let userMessage = trimmed
-        message = ""
+        isInputFocused = false  // Dismiss keyboard first
+        message = ""            // Then clear message
         errorMessage = nil
         
         // Add user message immediately with animation

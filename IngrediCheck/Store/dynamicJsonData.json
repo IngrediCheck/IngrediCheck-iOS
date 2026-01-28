@@ -268,7 +268,7 @@
                         "color": "#F9C6D0",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
-                            { "name": "Nightshades (paprika, pappers, etc.)", "icon": "🍅" },
+                            { "name": "Nightshades (paprika, peppers, etc.)", "icon": "🍅" },
                             { "name": "Garlic / Onion", "icon": "🧄" }
                         ]
                     }

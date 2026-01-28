@@ -14,21 +14,24 @@ struct BarcodeScannerOverlay: View {
                     // Dark overlay with a rounded-rect cutout
                     CutoutOverlay(rect: rect)
                     
-                    // Animated yellow scanning line
+                    // Animated yellow scanning line (clipped to scanner frame)
                     Rectangle()
                         .fill(Color.yellow)
                         .frame(width: rect.width - 4, height: 3)
                         .shadow(
                             color: Color.yellow.opacity(1),
-                            radius: 12,          // no blur — keeps shadow sharp
+                            radius: 12,
                             x: 0,
-                            y: 8               // positive = bottom only
+                            y: 8
                         )
-                        .position(x: rect.midX , y: rect.midY + scanY )
+                        .offset(y: scanY)
+                        .frame(width: rect.width, height: rect.height)
+                        .clipped()
+                        .position(x: rect.midX, y: rect.midY)
                         .onAppear {
-                            scanY =  ( -rect.height / 2 ) + 6
+                            scanY = (-rect.height / 2) + 6
                             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                                scanY = ( rect.height / 2 ) - 6
+                                scanY = (rect.height / 2) - 6
                             }
                         }
                     

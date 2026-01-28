@@ -82,6 +82,131 @@ struct ExclusionMultiColorText: UIViewRepresentable {
     }
 }
 
+// MARK: - Exclusion Markdown Text (UIKit-based for markdown **bold** support)
+
+/// A UIViewRepresentable that displays markdown text with **bold** formatting
+/// and an exclusion path for the bottom-right corner cutout
+struct ExclusionMarkdownText: UIViewRepresentable {
+    let text: String
+    var font: UIFont = UIFont(name: "Manrope-Regular", size: 14) ?? .systemFont(ofSize: 14)
+    var containerSize: CGSize = .zero
+    var exclusionRect: CGRect = .zero
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.backgroundColor = .clear
+        textView.isEditable = false
+        textView.isSelectable = false
+        textView.isScrollEnabled = false
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
+        textView.textContainer.lineBreakMode = .byWordWrapping
+        textView.textContainer.maximumNumberOfLines = 0
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        return textView
+    }
+
+    func updateUIView(_ textView: UITextView, context: Context) {
+        // Set the text container size to match available space
+        if containerSize != .zero {
+            textView.textContainer.size = containerSize
+        }
+
+        // Build attributed string with markdown support
+        textView.attributedText = buildMarkdownAttributedString()
+
+        // Set exclusion path for bottom-right corner
+        if exclusionRect != .zero && exclusionRect.origin.y > 0 {
+            let exclusionPath = UIBezierPath(rect: exclusionRect)
+            textView.textContainer.exclusionPaths = [exclusionPath]
+        } else {
+            textView.textContainer.exclusionPaths = []
+        }
+
+        // Force layout update
+        textView.layoutIfNeeded()
+    }
+
+    private func buildMarkdownAttributedString() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+
+        // Paragraph style for proper word wrapping
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        paragraphStyle.lineBreakStrategy = .standard
+
+        let textColor = UIColor(named: "grayScale140") ?? UIColor(red: 0.13, green: 0.15, blue: 0.17, alpha: 1.0)
+
+        // Parse **bold** markdown syntax
+        let pattern = "\\*\\*(.+?)\\*\\*"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            // If regex fails, return plain text
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: textColor,
+                .paragraphStyle: paragraphStyle
+            ]
+            return NSAttributedString(string: text, attributes: attributes)
+        }
+
+        var currentIndex = text.startIndex
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = regex.matches(in: text, options: [], range: range)
+
+        // Create bold font variant
+        let boldFont: UIFont
+        if let fontDescriptor = font.fontDescriptor.withSymbolicTraits(.traitBold) {
+            boldFont = UIFont(descriptor: fontDescriptor, size: font.pointSize)
+        } else {
+            // Fallback to Manrope-Bold or system bold
+            boldFont = UIFont(name: "Manrope-Bold", size: font.pointSize) ?? .boldSystemFont(ofSize: font.pointSize)
+        }
+
+        for match in matches {
+            // Add text before this match (regular font)
+            if let matchRange = Range(match.range, in: text), matchRange.lowerBound > currentIndex {
+                let beforeText = String(text[currentIndex..<matchRange.lowerBound])
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: font,
+                    .foregroundColor: textColor,
+                    .paragraphStyle: paragraphStyle
+                ]
+                result.append(NSAttributedString(string: beforeText, attributes: attributes))
+            }
+
+            // Add the bold text (without the ** markers)
+            if let captureRange = Range(match.range(at: 1), in: text) {
+                let boldText = String(text[captureRange])
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: boldFont,
+                    .foregroundColor: textColor,
+                    .paragraphStyle: paragraphStyle
+                ]
+                result.append(NSAttributedString(string: boldText, attributes: attributes))
+            }
+
+            // Update currentIndex to after this match
+            if let matchRange = Range(match.range, in: text) {
+                currentIndex = matchRange.upperBound
+            }
+        }
+
+        // Add any remaining text after the last match
+        if currentIndex < text.endIndex {
+            let remainingText = String(text[currentIndex...])
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: textColor,
+                .paragraphStyle: paragraphStyle
+            ]
+            result.append(NSAttributedString(string: remainingText, attributes: attributes))
+        }
+
+        return result
+    }
+}
+
 // MARK: - Food Emoji Mapper
 
 /// Utility to map food item names to their emoji icons from dynamicJsonData
@@ -195,53 +320,6 @@ struct FoodEmojiMapper {
 
         return result
     }
-
-    /// Add MultiColorText markers (*word*) around common highlight phrases
-    static func addHighlightMarkers(to text: String) -> String {
-        var result = text
-
-        // Phrases to highlight (will appear in lighter color)
-        let highlightPhrases = [
-            "family",
-            "making meal",
-            "meal choices",
-            "and",
-            "for everyone",
-            "simpler",
-            "safer",
-            "choices"
-        ]
-
-        // Sort by length descending to match longer phrases first
-        let sortedPhrases = highlightPhrases.sorted { $0.count > $1.count }
-
-        for phrase in sortedPhrases {
-            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: phrase))\\b"
-
-            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
-                let range = NSRange(result.startIndex..., in: result)
-                let matches = regex.matches(in: result, options: [], range: range)
-
-                for match in matches.reversed() {
-                    if let swiftRange = Range(match.range, in: result) {
-                        let matchedText = String(result[swiftRange])
-                        // Only wrap if not already wrapped in *
-                        let beforeIndex = swiftRange.lowerBound
-                        let afterIndex = swiftRange.upperBound
-
-                        let hasMarkerBefore = beforeIndex > result.startIndex && result[result.index(before: beforeIndex)] == "*"
-                        let hasMarkerAfter = afterIndex < result.endIndex && result[afterIndex] == "*"
-
-                        if !hasMarkerBefore && !hasMarkerAfter {
-                            result.replaceSubrange(swiftRange, with: "*\(matchedText)*")
-                        }
-                    }
-                }
-            }
-        }
-
-        return result
-    }
 }
 
 // MARK: - AI Summary Card (for UnifiedCanvasView)
@@ -251,11 +329,22 @@ struct AISummaryCard: View {
     let summary: String
     var dynamicSteps: [DynamicStep] = []
 
-    /// Summary text with emoji icons and highlight markers
-    private var formattedSummary: String {
+    /// Summary text with emoji icons injected (server sends **bold** markdown)
+    private var summaryWithEmojis: String {
         let mapping = FoodEmojiMapper.buildMapping(from: dynamicSteps)
-        let withEmojis = FoodEmojiMapper.injectEmojis(in: summary, using: mapping)
-        return FoodEmojiMapper.addHighlightMarkers(to: withEmojis)
+        return FoodEmojiMapper.injectEmojis(in: summary, using: mapping)
+    }
+
+    /// Parses the summary text as Markdown and returns an AttributedString
+    private var markdownSummary: AttributedString {
+        do {
+            return try AttributedString(
+                markdown: "\"\(summaryWithEmojis)\"",
+                options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+            )
+        } catch {
+            return AttributedString("\"\(summaryWithEmojis)\"")
+        }
     }
 
     var body: some View {
@@ -296,8 +385,10 @@ struct AISummaryCard: View {
                     )
             )
 
-            // Summary text with emojis and multi-color formatting
-            MultiColorText(text: "\"\(formattedSummary)\"", font: ManropeFont.bold.size(16))
+            // Summary text with markdown formatting (server sends **bold**)
+            Text(markdownSummary)
+                .font(ManropeFont.regular.size(16))
+                .foregroundStyle(.grayScale140)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
@@ -352,12 +443,11 @@ struct AllergySummaryCard: View {
         return trimmed.isEmpty || trimmed == "No Food Notes yet."
     }
 
-    /// Summary text with emoji icons injected next to food items and highlight markers
+    /// Summary text with emoji icons injected (server sends **bold** markdown)
     private var summaryWithEmojis: String {
         guard let summary = summary else { return "" }
         let mapping = FoodEmojiMapper.buildMapping(from: dynamicSteps)
-        let withEmojis = FoodEmojiMapper.injectEmojis(in: summary, using: mapping)
-        return FoodEmojiMapper.addHighlightMarkers(to: withEmojis)
+        return FoodEmojiMapper.injectEmojis(in: summary, using: mapping)
     }
 
     /// Calculate the text container size based on card geometry
@@ -437,10 +527,10 @@ struct AllergySummaryCard: View {
                                height: textContainerSize(for: geometry.size).height,
                                alignment: .topLeading)
                     } else {
-                        // Has summary: show the AI-generated summary text with emojis
-                        ExclusionMultiColorText(
+                        // Has summary: show the AI-generated summary text with emojis (server sends **bold** markdown)
+                        ExclusionMarkdownText(
                             text: "\"\(summaryWithEmojis)\"",
-                            font: UIFont(name: "Manrope-Bold", size: 14) ?? .boldSystemFont(ofSize: 14),
+                            font: UIFont(name: "Manrope-Regular", size: 14) ?? .systemFont(ofSize: 14),
                             containerSize: textContainerSize(for: geometry.size),
                             exclusionRect: exclusionRect(for: geometry.size)
                         )
@@ -487,11 +577,8 @@ struct AllergySummaryCard: View {
 #Preview("With Summary") {
     ZStack {
         Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
-        /*
-         Your family avoids palm oil, is allergic to peanuts, celery, and fish, follows a vegetarian and vegan lifestyle, loves spicy food, aims for high protein and low carb, and is intolerant to fructose and histamine.
-         */
         AllergySummaryCard(
-            summary: "Your *family* avoids 🥜 peanuts, 🦀 dairy, eggs, gluten, 🥩 red meat, alcohol, *making meal* *choices* *simpler* *and* *safer* *for everyone*."
+            summary: "You embrace a **plant‑focused**, balanced way of eating that highlights Indian flavors while keeping dishes **low in added sugars** and free from unnecessary fats."
         )
         .frame(width: 171, height: 196, alignment: .center)
     }
@@ -501,13 +588,13 @@ struct AllergySummaryCard: View {
     ZStack {
         Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
         AllergySummaryCard(
-            summary: "Your *family* avoids 🥜 peanuts, 🦀 shellfish, 🥛 dairy, 🥚 eggs, 🌾 gluten, 🥩 red meat, 🍺 alcohol, 🥜 tree nuts, 🫘 soy, 🌿 sesame, and many other allergens, *making meal* *choices* *simpler* *and* *safer* *for everyone* in your household."
+            summary: "You embrace a **plant‑focused**, balanced way of eating that highlights Indian flavors while keeping dishes **low in added sugars** and free from unnecessary fats and additives. Your family enjoys **high‑protein**, gentle, **baby‑friendly** meals that are mindful of common allergens."
         )
         .frame(width: 171, height: 196, alignment: .center)
     }
 }
 
 #Preview("AISummaryCard") {
-    AISummaryCard(summary: "Your family avoids peanuts, dairy, eggs, gluten, red meat, alcohol, making meal choices simpler and safer for everyone.")
+    AISummaryCard(summary: "You embrace a **plant‑focused**, balanced way of eating that highlights Indian flavors while keeping dishes **low in added sugars** and free from unnecessary fats.")
         .padding()
 }

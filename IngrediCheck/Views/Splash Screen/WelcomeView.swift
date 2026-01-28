@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import RiveRuntime
 
 struct WelcomeView: View {
     @State private var isFillingComplete: Bool = false
@@ -21,32 +22,14 @@ struct WelcomeView: View {
                 })
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)
+                .zIndex(1)
                 
-                // Main heading
-                Text("TIRED OF INGREDIENT LISTS THAT FEEL LIKE A PUZZLE?")
-                    .font(ManropeFont.bold.size(24))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
-                    .padding(.top, 32)
-                
-                // Subtitle
-                Text("IngrediCheck instantly highlights what's matched and unmatched.")
-                    .font(ManropeFont.regular.size(14))
-                    .foregroundStyle(.grayScale100)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 18)
-                
-                // Central illustration - image contains all visual elements
-                Image("ph")
-                    .resizable()
-                    .scaledToFit()
-//                    .frame(height: 610)
-                    .padding(.bottom, 46)
+                // Central illustration - Rive animation
+                RiveViewModel(fileName: "ingridecheck")
+                    .view()
+                    .scaleEffect(1.2)
+//                    .aspectRatio(contentMode: .fill)
+//                    .padding(.bottom, 46)
                 
                 Spacer()
                 
@@ -60,6 +43,7 @@ struct WelcomeView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)
                     .transition(.scale.combined(with: .opacity))
+                    .zIndex(2)
                 } else {
                     Button {
                         // Disabled - do nothing
@@ -80,7 +64,11 @@ struct WelcomeView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)
                     .transition(.scale.combined(with: .opacity))
+                    .zIndex(2)
                 }
+                
+                LegalDisclaimerView()
+
             }
             .padding(.horizontal, 20)
         }
@@ -110,13 +98,13 @@ struct FillingPipeLine: View {
         .frame(height: 4)
         .onAppear {
             withAnimation(
-                .linear(duration: 5)
+                .linear(duration: 18)
             ) {
                 progress = 1
             }
             // Trigger completion after animation duration
             Task {
-                try? await Task.sleep(nanoseconds: UInt64(5 * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(15 * 1_000_000_000))
                 await MainActor.run {
                     onComplete()
                 }

@@ -9,7 +9,7 @@ struct ScanDataCard: View {
     let scanId: String
     var initialScan: DTO.Scan? = nil  // Optional initial scan data (from SSE or cache)
     var isSubmitting: Bool = false  // If true, image is being submitted to API (prevents premature getScan)
-    var localImages: [UIImage]? = nil  // Locally captured images (shown before API response)
+    var localImages: [(image: UIImage, hash: String)]? = nil  // Locally captured images with hash (shown before API response, hash used for matching)
     var cameraModeType: String = "barcode"  // Current camera mode type ("barcode" or "photo") for skeleton/pending states
     var onRetryShown: (() -> Void)? = nil
     var onRetryHidden: (() -> Void)? = nil
@@ -78,20 +78,46 @@ struct ScanDataCard: View {
     }
     
     // Computed property to determine which images to display
-    // API images (inventory/product catalog images) take priority over local user-uploaded images
-    private var imagesToDisplay: (apiImages: [DTO.ImageLocationInfo]?, localImages: [UIImage]?) {
-        // If API response has images (inventory images from product catalog), use them
-        if let product = product, !product.images.isEmpty {
-            return (apiImages: product.images, localImages: nil)
+    // Returns separate arrays for inventory images, user images, and pending local images
+    // Stack order (front to back): pending local → user → inventory (reversed)
+    private var imagesToDisplay: (
+        inventoryImages: [DTO.ImageLocationInfo],
+        userImages: [DTO.ImageLocationInfo],
+        pendingLocalImages: [UIImage]
+    ) {
+        var inventoryImages: [DTO.ImageLocationInfo] = []
+        var userImages: [DTO.ImageLocationInfo] = []
+        var processedHashes: Set<String> = []  // Track which hashes are already processed
+
+        // Extract images from scan.images (has type information)
+        if let scan = scan {
+            for scanImage in scan.images {
+                switch scanImage {
+                case .inventory(let img):
+                    if let url = URL(string: img.url) {
+                        inventoryImages.append(.url(url))
+                    }
+                case .user(let img):
+                    if img.status == "processed", let storagePath = img.storage_path {
+                        userImages.append(.scanImagePath(storagePath))
+                        processedHashes.insert(img.content_hash)  // Mark as processed
+                    }
+                }
+            }
         }
 
-        // If no API images yet, but local user-uploaded images exist, show them
-        if let localImages = localImages, !localImages.isEmpty {
-            return (apiImages: nil, localImages: localImages)
+        // Filter local images - only show those NOT yet processed by API
+        // This prevents duplicate display of the same image
+        var pendingLocalImages: [UIImage] = []
+        if let locals = localImages {
+            for (image, hash) in locals {
+                if !processedHashes.contains(hash) {
+                    pendingLocalImages.append(image)
+                }
+            }
         }
 
-        // No images available
-        return (apiImages: nil, localImages: nil)
+        return (inventoryImages: inventoryImages, userImages: userImages, pendingLocalImages: pendingLocalImages)
     }
 
     var body: some View {
@@ -230,6 +256,9 @@ struct ScanDataCard: View {
     private var productImageView: some View {
         ZStack {
             let images = imagesToDisplay
+            let hasAnyImages = !images.inventoryImages.isEmpty ||
+                              !images.userImages.isEmpty ||
+                              !images.pendingLocalImages.isEmpty
 
             if isSkeletonMode {
                 // Skeleton mode: show empty state placeholder image
@@ -239,16 +268,17 @@ struct ScanDataCard: View {
                     .scaledToFit()
                     .frame(width: 64, height: 88)
                     .clipped()
-            } else if isPendingMode || (isLoading && scan == nil) {
-                // Loading state: show placeholder
+            } else if isPendingMode || (isLoading && scan == nil && images.pendingLocalImages.isEmpty) {
+                // Loading state: show placeholder (only if no local images to show)
                 ProgressView()
                     .tint(.white.opacity(0.6))
-            } else if let apiImages = images.apiImages, !apiImages.isEmpty {
-                // API images available: use them (priority)
-                apiImagesStackView(images: apiImages)
-            } else if let localImages = images.localImages, !localImages.isEmpty {
-                // Local images available: show them (before API response)
-                localImagesStackView(images: localImages)
+            } else if hasAnyImages {
+                // Combined images stack: local (with loader) → user → inventory (reversed)
+                combinedImagesStackView(
+                    inventoryImages: images.inventoryImages,
+                    userImages: images.userImages,
+                    localImages: images.pendingLocalImages
+                )
             } else if product != nil {
                 // Product found but no images
                 Image("imagenotfound1")
@@ -270,8 +300,10 @@ struct ScanDataCard: View {
     // MARK: - API Images Stack View
     @ViewBuilder
     private func apiImagesStackView(images: [DTO.ImageLocationInfo]) -> some View {
-        let displayedImages = Array(images.prefix(3))
-        let remainingCount = max(images.count - displayedImages.count, 0)
+        // Reverse the images array so the last API image appears at the front of the stack
+        let reversedImages = Array(images.reversed())
+        let displayedImages = Array(reversedImages.prefix(3))
+        let totalCount = images.count
         let stackOffset: CGFloat = 6
         let sizeReduction: CGFloat = 4
 
@@ -298,8 +330,8 @@ struct ScanDataCard: View {
                    height: 92,
                    alignment: .leading)
 
-            if remainingCount > 0 {
-                remainingCountBadge(count: remainingCount)
+            if totalCount > 3 {
+                totalCountBadge(count: totalCount)
             }
         }
     }
@@ -308,7 +340,7 @@ struct ScanDataCard: View {
     @ViewBuilder
     private func localImagesStackView(images: [UIImage]) -> some View {
         let displayedImages = Array(images.prefix(3))
-        let remainingCount = max(images.count - displayedImages.count, 0)
+        let totalCount = images.count
         let stackOffset: CGFloat = 6
         let sizeReduction: CGFloat = 4
 
@@ -337,15 +369,124 @@ struct ScanDataCard: View {
                    height: 92,
                    alignment: .leading)
 
-            if remainingCount > 0 {
-                remainingCountBadge(count: remainingCount)
+            if totalCount > 3 {
+                totalCountBadge(count: totalCount)
             }
         }
     }
-    
-    // MARK: - Remaining Count Badge
+
+    // MARK: - Combined Images Stack View
+    /// Displays images in priority order: local (with loader) → user → inventory (reversed)
     @ViewBuilder
-    private func remainingCountBadge(count: Int) -> some View {
+    private func combinedImagesStackView(
+        inventoryImages: [DTO.ImageLocationInfo],
+        userImages: [DTO.ImageLocationInfo],
+        localImages: [UIImage]
+    ) -> some View {
+        // Reverse inventory images so last appears at front of its section
+        let reversedInventory = Array(inventoryImages.reversed())
+
+        // Build combined display array
+        // Order (front to back): localImages → userImages → reversedInventory
+        let totalCount = localImages.count + userImages.count + inventoryImages.count
+        let displayLimit = 3
+        let stackOffset: CGFloat = 6
+        let sizeReduction: CGFloat = 4
+
+        // Build display items using helper function
+        let displayedItems = Array(buildDisplayItems(
+            localImages: localImages,
+            userImages: userImages,
+            reversedInventory: reversedInventory
+        ).prefix(displayLimit))
+
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .leading) {
+                ForEach(Array(displayedItems.enumerated()), id: \.element.id) { index, item in
+                    let reverseIndex = displayedItems.count - 1 - index
+                    let imageWidth = 68 - CGFloat(reverseIndex) * sizeReduction
+                    let imageHeight = 92 - CGFloat(reverseIndex) * sizeReduction
+
+                    switch item.content {
+                    case .local(let image):
+                        // Local image with loader overlay
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: imageWidth, height: imageHeight)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(
+                                // Loader overlay for uploading images
+                                ZStack {
+                                    Color.black.opacity(0.25)
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                        .tint(.white)
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white, lineWidth: 0.4)
+                            )
+                            .shadow(radius: 4)
+                            .offset(x: CGFloat(index) * stackOffset)
+                            .zIndex(Double(index))
+
+                    case .api(let location):
+                        // API image (user or inventory)
+                        ScanProductImageThumbnail(imageLocation: location, isAnalyzing: isAnalyzing)
+                            .frame(width: imageWidth, height: imageHeight)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white, lineWidth: 0.4)
+                            )
+                            .shadow(radius: 4)
+                            .offset(x: CGFloat(index) * stackOffset)
+                            .zIndex(Double(index))
+                    }
+                }
+            }
+            .frame(width: 68 + CGFloat(max(displayedItems.count - 1, 0)) * stackOffset,
+                   height: 92,
+                   alignment: .leading)
+
+            if totalCount > 3 {
+                totalCountBadge(count: totalCount)
+            }
+        }
+    }
+
+    /// Helper to build display items array (moved outside @ViewBuilder)
+    private func buildDisplayItems(
+        localImages: [UIImage],
+        userImages: [DTO.ImageLocationInfo],
+        reversedInventory: [DTO.ImageLocationInfo]
+    ) -> [CombinedImageDisplayItem] {
+        var displayItems: [CombinedImageDisplayItem] = []
+
+        // First: local images (with loader)
+        for image in localImages {
+            displayItems.append(CombinedImageDisplayItem(content: .local(image), showLoader: true))
+        }
+
+        // Second: user images (processed, no loader)
+        for location in userImages {
+            displayItems.append(CombinedImageDisplayItem(content: .api(location), showLoader: false))
+        }
+
+        // Third: inventory images (reversed, no loader)
+        for location in reversedInventory {
+            displayItems.append(CombinedImageDisplayItem(content: .api(location), showLoader: false))
+        }
+
+        return displayItems
+    }
+    
+    // MARK: - Total Count Badge
+    @ViewBuilder
+    private func totalCountBadge(count: Int) -> some View {
         ZStack {
             Circle()
                 .fill(Color.white)
@@ -353,12 +494,12 @@ struct ScanDataCard: View {
                     Circle()
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 )
-            Text("+\(count)")
-                .font(.system(size: 12, weight: .semibold))
+            Text("\(count)")
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.black)
         }
-        .frame(width: 30, height: 30)
-        .offset(x: 8, y: -8)
+        .frame(width: 22, height: 22)
+        .offset(x: 2, y: -3)
     }
     
     // MARK: - Product Info View
@@ -778,6 +919,18 @@ struct ScanDataCard: View {
             await fetchScan()
         }
     }
+}
+
+// MARK: - Combined Image Display Item
+/// Helper struct for combined image stack display
+private struct CombinedImageDisplayItem: Identifiable {
+    let id = UUID()
+    enum Content {
+        case local(UIImage)
+        case api(DTO.ImageLocationInfo)
+    }
+    let content: Content
+    let showLoader: Bool
 }
 
 // MARK: - Product Image Thumbnail Component

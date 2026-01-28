@@ -493,13 +493,16 @@ struct ScanCameraView: View {
                     // Check if targetId is in allCarouselItems
                     if allCarouselItems.contains(targetId) {
                         Log.debug("SCAN_SCROLL", "✅ CameraScreen: Target scanId found in carousel items, scrolling...")
-                        
+
+                        // Wait for layout to settle before scrolling
+                        try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 seconds
+
                         // Clear scrollTargetScanId first to ensure onChange fires
                         scrollTargetScanId = nil
-                        
+
                         // Wait a frame to ensure the clear is processed
-                        try? await Task.sleep(nanoseconds: 16_666_666)  // ~1 frame at 60fps
-                        
+                        try? await Task.sleep(nanoseconds: 50_000_000)  // ~3 frames at 60fps
+
                         // Now set it to trigger the scroll
                         scrollTargetScanId = targetId
                         Log.debug("SCAN_SCROLL", "✅ CameraScreen: Set scrollTargetScanId to: \(targetId)")
@@ -672,8 +675,12 @@ struct ScanCameraView: View {
             
             // Add scanId to scanIds immediately (for first photo of this product)
             // Subsequent photos for same scanId will just update the localImages
-            let isFirstPhotoForThisScan = !scanIds.contains(scanIdToUse)
+            let isInActiveScanIds = scanIds.contains(scanIdToUse)
+            let isInHistoryScanIds = historyScanIds.contains(scanIdToUse)
+            let isFirstPhotoForThisScan = !isInActiveScanIds && !isInHistoryScanIds
+
             if isFirstPhotoForThisScan {
+                // Truly new scan - add to carousel
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                     if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
                         // Replace skeleton with new scanId
@@ -702,8 +709,11 @@ struct ScanCameraView: View {
                 } else {
                     Log.debug("PHOTO_SCAN", "✅ CameraScreen: Added scanId to scanIds immediately (first photo) - scanId: \(scanIdToUse)")
                 }
+            } else if isInHistoryScanIds {
+                // Adding photo to existing history scan - keep it in place
+                Log.debug("PHOTO_SCAN", "🔄 CameraScreen: Adding photo to history scan (keeping position) - scanId: \(scanIdToUse)")
             } else {
-                Log.debug("PHOTO_SCAN", "🔄 CameraScreen: Reusing existing scanId (subsequent photo) - scanId: \(scanIdToUse)")
+                Log.debug("PHOTO_SCAN", "🔄 CameraScreen: Reusing existing active scanId (subsequent photo) - scanId: \(scanIdToUse)")
             }
             
             // Mark as submitting for EVERY photo (not just first)
@@ -770,9 +780,9 @@ struct ScanCameraView: View {
                     Task {
                         await loadScanHistory()
                         
-                        // If opened from ProductDetailView with initial scroll target, handle scrolling
-                        // This handles the case when view is opened directly from ProductDetailView
-                        if presentationSource == .productDetailView {
+                        // If opened with initial scroll target (from ProductDetailView or push navigation), handle scrolling
+                        // This handles the case when view is opened to add more photos to an existing scan
+                        if presentationSource == .productDetailView || presentationSource == .pushNavigation {
                             // Check if we have an initial scroll target from the initializer
                             // Store it before it might get cleared
                             let initialTarget = scrollTargetScanId
@@ -806,9 +816,12 @@ struct ScanCameraView: View {
                     // Only reset scan state when:
                     // 1. Opened from HomeView (presentationSource == .homeView), OR
                     // 2. Manual toggle (isProgrammaticModeChange == false)
-                    // Do NOT reset when programmatically returning from ProductDetailView
-                    let shouldReset = presentationSource == .homeView || !isProgrammaticModeChange
-                    
+                    // Do NOT reset when:
+                    // - Programmatically returning from ProductDetailView
+                    // - Opened with initial scroll target (adding photos to existing scan)
+                    let hasInitialScrollTarget = scrollTargetScanId != nil && scrollTargetScanId != skeletonCardId
+                    let shouldReset = (presentationSource == .homeView || !isProgrammaticModeChange) && !hasInitialScrollTarget
+
                     if shouldReset {
                         // When toggling between scanner/photo from HomeView or manual toggle, start a fresh session
                         scanId = nil
@@ -1030,7 +1043,7 @@ struct ScanCameraView: View {
                         cardContent: { itemId in
                             // Use ScanDataCard for all cases (skeleton, pending, and actual scans)
                             // ScanDataCard will detect skeleton mode based on scanId
-                            let localImagesArray = capturedImagesPerScanId[itemId]?.map { $0.image }
+                            let localImagesArray = capturedImagesPerScanId[itemId]
                             let isSubmitting = submittingScanIds.contains(itemId)
                             ScanDataCard(
                                 scanId: itemId,

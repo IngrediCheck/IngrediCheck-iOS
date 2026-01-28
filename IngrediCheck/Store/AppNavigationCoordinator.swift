@@ -69,6 +69,7 @@ class AppNavigationCoordinator {
     var editingStepId: String? = nil
     var isEditSheetPresented: Bool = false
     var currentEditingSectionIndex: Int = 0
+    var editingMemberId: UUID? = nil  // Track which member is being edited
 
     // Global state for AI Bot sheet (post-login)
     var isAIBotSheetPresented: Bool = false

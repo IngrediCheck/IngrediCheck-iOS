@@ -470,4 +470,6 @@ func onboardingSheetFamilyMemberSelectNote() -> some View {
         .environmentObject(onboarding)
         .environment(webService)
         .environment(foodNotesStore)
+        .environment(AppNavigationCoordinator(initialRoute: .blankScreen))
+        .environment(FamilyStore())
 }

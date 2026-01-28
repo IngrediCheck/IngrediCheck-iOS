@@ -76,19 +76,32 @@ struct FamilyCarouselView: View {
             }
         }
         .onAppear {
-            // Initialize selection to "Everyone" if not already set
-            // But don't automatically load food notes - let user explicitly select a member
+            // Initialize selection based on familyStore.selectedMemberId if set,
+            // otherwise default to "Everyone"
             if selectedFamilyMember == nil {
-                selectedFamilyMember = UserModel(
-                    id: "everyone",
-                    familyMemberName: "Everyone",
-                    familyMemberImage: "Everyone",
-                    backgroundColor: .clear
-                )
-
-                // Set FamilyStore.selectedMemberId to nil for "Everyone" but don't load food notes
-                // This ensures the UI shows "Everyone" as selected without breaking the flow
-                familyStore.selectedMemberId = nil
+                if let memberId = familyStore.selectedMemberId {
+                    // A specific member was selected (e.g., from Food Notes filter)
+                    // Find and select that member
+                    if let matchingMember = familyMembersList.first(where: { $0.id == memberId.uuidString }) {
+                        selectedFamilyMember = matchingMember
+                    } else {
+                        // Fallback to "Everyone" if member not found
+                        selectedFamilyMember = UserModel(
+                            id: "everyone",
+                            familyMemberName: "Everyone",
+                            familyMemberImage: "Everyone",
+                            backgroundColor: .clear
+                        )
+                    }
+                } else {
+                    // No specific member selected, default to "Everyone"
+                    selectedFamilyMember = UserModel(
+                        id: "everyone",
+                        familyMemberName: "Everyone",
+                        familyMemberImage: "Everyone",
+                        backgroundColor: .clear
+                    )
+                }
             }
         }
     }
@@ -96,7 +109,9 @@ struct FamilyCarouselView: View {
     @MainActor
     func selectFamilyMember(ele: UserModel) async {
         Log.debug("FamilyCarouselView", "selectFamilyMember: Tapped member name=\(ele.name), id=\(ele.id)")
-        selectedFamilyMember = ele
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+            selectedFamilyMember = ele
+        }
         
         // "everyone" is our sentinel ID for the family-level note
         let memberId: String? = (ele.id == "everyone") ? nil : ele.id
@@ -173,12 +188,13 @@ struct FamilyCarouselMemberAvatarView: View {
             
             if let name = name {
                 Text(name)
-                    .font(ManropeFont.regular.size(10))
+                    .font(isSelected ? ManropeFont.bold.size(10) : ManropeFont.regular.size(10))
                     .foregroundStyle(isSelected ? Color(hex: "91B640") : .grayScale130)
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
     }
-    
+
     private var resolvedMember: FamilyMember? {
         guard memberIdentifier != "everyone",
               let uuid = UUID(uuidString: memberIdentifier),
@@ -195,11 +211,49 @@ struct FamilyCarouselMemberAvatarView: View {
 
 #Preview {
     let webService = WebService()
-    let onboarding = Onboarding(onboardingFlowtype: .individual)
+    let onboarding = Onboarding(onboardingFlowtype: .family)
     let foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
 
-    FamilyCarouselView()
-        .environment(FamilyStore())
+    // Create mock family with multiple members
+    let familyStore = FamilyStore()
+    let mockFamily = Family(
+        name: "Smith Family",
+        selfMember: FamilyMember(
+            id: UUID(),
+            name: "Alex",
+            color: "#FFB3BA",
+            joined: true,
+            imageFileHash: "memoji_1"
+        ),
+        otherMembers: [
+            FamilyMember(
+                id: UUID(),
+                name: "Jordan",
+                color: "#BAFFC9",
+                joined: true,
+                imageFileHash: "memoji_2"
+            ),
+            FamilyMember(
+                id: UUID(),
+                name: "Taylor",
+                color: "#BAE1FF",
+                joined: false,
+                imageFileHash: "memoji_3"
+            ),
+            FamilyMember(
+                id: UUID(),
+                name: "Sam",
+                color: "#E0BBE4",
+                joined: true,
+                imageFileHash: "memoji_4"
+            )
+        ],
+        version: 1
+    )
+    familyStore.setMockFamilyForPreview(mockFamily)
+
+    return FamilyCarouselView()
+        .environment(familyStore)
         .environmentObject(onboarding)
         .environment(webService)
         .environment(foodNotesStore)

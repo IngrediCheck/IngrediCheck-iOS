@@ -57,9 +57,8 @@ struct CanvasCardBuilder {
             let memberIdString = filterMemberId.uuidString.lowercased()
             filteredItems = items.filter { itemName in
                 if let memberIds = foodNotesStore.itemMemberAssociations[sectionKey]?[itemName] {
-                    // Only show items explicitly associated with this member
-                    // Exclude any items that are also tagged for "Everyone"
-                    return memberIds.contains(memberIdString) && !memberIds.contains("Everyone")
+                    // Show items explicitly associated with this member
+                    return memberIds.contains(memberIdString)
                 }
                 return false
             }
@@ -113,7 +112,8 @@ struct CanvasCardBuilder {
             let memberIdString = filterMemberId.uuidString.lowercased()
             return items.filter { itemName in
                 if let memberIds = foodNotesStore.itemMemberAssociations[sectionKey]?[itemName] {
-                    return memberIds.contains(memberIdString) && !memberIds.contains("Everyone")
+                    // Show items explicitly associated with this member
+                    return memberIds.contains(memberIdString)
                 }
                 return false
             }

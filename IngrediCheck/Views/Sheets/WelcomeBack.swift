@@ -148,6 +148,9 @@ struct WelcomeBack: View {
 //                        .foregroundStyle(rotatedGradient(colors: [Color(hex: "9DCF10"), Color(hex: "6B8E06")], angle: 88))
 //                }
 //            }
+            
+            LegalDisclaimerView()
+
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)
