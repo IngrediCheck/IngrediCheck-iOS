@@ -603,7 +603,7 @@ private enum AuthFlowMode {
             }
             
             Log.debug("AUTH", "✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
-            
+
             registerDeviceAfterLogin(session: session)
             AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
         } else {
@@ -623,7 +623,7 @@ private enum AuthFlowMode {
             return
         }
         Self.hasRegisteredDevice = true
-        
+
         WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
             guard let self = self, let isInternal = isInternal else { return }
             

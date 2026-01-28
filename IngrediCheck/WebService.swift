@@ -7,6 +7,7 @@ import PostHog
 import Network
 import CoreTelephony
 import os
+import StoreKit
 
 enum NetworkError: Error {
     case invalidResponse(Int)
@@ -2010,11 +2011,21 @@ struct ChatStreamError: Error, LocalizedError {
         }
     }
     
-    func registerDevice(deviceId: String, platform: String? = nil, osVersion: String? = nil, appVersion: String? = nil, markInternal: Bool? = nil) async throws -> Bool {
+    func registerDevice(
+        deviceId: String,
+        platform: String? = nil,
+        osVersion: String? = nil,
+        appVersion: String? = nil,
+        markInternal: Bool? = nil,
+        timezone: String? = nil,
+        localeRegion: String? = nil,
+        preferredLanguage: String? = nil,
+        storeCountry: String? = nil
+    ) async throws -> Bool {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
-        
+
         var requestBody: [String: Any] = ["deviceId": deviceId]
         if let platform = platform {
             requestBody["platform"] = platform
@@ -2027,6 +2038,18 @@ struct ChatStreamError: Error, LocalizedError {
         }
         if let markInternal = markInternal {
             requestBody["markInternal"] = markInternal
+        }
+        if let timezone = timezone {
+            requestBody["timezone"] = timezone
+        }
+        if let localeRegion = localeRegion {
+            requestBody["localeRegion"] = localeRegion
+        }
+        if let preferredLanguage = preferredLanguage {
+            requestBody["preferredLanguage"] = preferredLanguage
+        }
+        if let storeCountry = storeCountry {
+            requestBody["storeCountry"] = storeCountry
         }
         
         let requestBodyData = try JSONSerialization.data(withJSONObject: requestBody, options: [])
@@ -2064,21 +2087,33 @@ struct ChatStreamError: Error, LocalizedError {
                 let platform = UIDevice.current.systemName.lowercased()
                 let osVersion = UIDevice.current.systemVersion
                 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-                
+
+                // Approximate location fields
+                let timezone = TimeZone.current.identifier
+                let localeRegion = Locale.current.region?.identifier
+                let preferredLanguage = Locale.preferredLanguages.first
+                let storeCountry = await Storefront.current?.countryCode
+
                 #if targetEnvironment(simulator) || DEBUG
                 let markInternal = true
                 #else
                 let markInternal: Bool? = nil
                 #endif
-                
+
+                Log.debug("DEVICE", "Registering device - timezone: \(timezone), region: \(localeRegion ?? "nil"), language: \(preferredLanguage ?? "nil"), storeCountry: \(storeCountry ?? "nil")")
+
                 let isInternal = try await self.registerDevice(
                     deviceId: deviceId,
                     platform: platform,
                     osVersion: osVersion,
                     appVersion: appVersion,
-                    markInternal: markInternal
+                    markInternal: markInternal,
+                    timezone: timezone,
+                    localeRegion: localeRegion,
+                    preferredLanguage: preferredLanguage,
+                    storeCountry: storeCountry
                 )
-                
+
                 completion(isInternal)
             } catch {
                 // Silently handle errors - fire-and-forget
