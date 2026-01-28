@@ -1,16 +1,16 @@
 ---
 name: asc-reviews
-description: List App Store customer reviews. Use to see user feedback, filter by star rating.
+description: Show App Store ratings and customer reviews. Use to see overall rating, user feedback, filter by stars.
 argument-hint: [stars]
 allowed-tools:
   - Bash(*)
 ---
 
-# Customer Reviews
+# Ratings & Reviews
 
-List and analyze App Store customer reviews.
+Show App Store ratings summary and customer reviews.
 
-Arguments: $ARGUMENTS (optional star rating 1-5 to filter)
+Arguments: $ARGUMENTS (optional star rating 1-5 to filter reviews)
 
 ## Prerequisites
 
@@ -21,6 +21,37 @@ asc_validate || exit 1
 ```
 
 ## Commands
+
+### Show Ratings Summary
+
+Always show ratings first using iTunes Lookup API:
+
+```bash
+source .claude/skills/scripts/asc-common.sh
+asc_load_config
+
+# Fetch ratings from iTunes Lookup API (use temp file to handle control chars)
+TMPFILE=$(mktemp)
+trap "rm -f $TMPFILE" EXIT
+curl -s "https://itunes.apple.com/lookup?id=$ASC_APP_ID&country=us" > "$TMPFILE"
+AVG_RATING=$(jq -r '.results[0].averageUserRating // "N/A"' "$TMPFILE")
+RATING_COUNT=$(jq -r '.results[0].userRatingCount // "N/A"' "$TMPFILE")
+
+# Format rating with stars
+if [ "$AVG_RATING" != "N/A" ] && [ "$AVG_RATING" != "null" ]; then
+    STARS_DISPLAY=$(printf "%.1f" "$AVG_RATING")
+else
+    STARS_DISPLAY="N/A"
+fi
+
+echo "## App Store Ratings"
+echo ""
+echo "| Metric | Value |"
+echo "|--------|-------|"
+echo "| Average Rating | $STARS_DISPLAY ⭐ |"
+echo "| Total Ratings | $RATING_COUNT |"
+echo ""
+```
 
 ### List Recent Reviews
 
@@ -86,11 +117,39 @@ asc_load_config
 asc reviews --app "$ASC_APP_ID" --stars 1 --sort -createdDate --limit 20 --output markdown
 ```
 
-### Calculate average rating from recent reviews
+### Full Ratings & Reviews Summary (Default)
+
+When running `/asc-reviews` without arguments, show both ratings and recent reviews:
+
 ```bash
 source .claude/skills/scripts/asc-common.sh
 asc_load_config
-asc reviews --app "$ASC_APP_ID" --limit 100 | jq '[.data[].attributes.rating] | add / length'
+
+# 1. Show ratings from iTunes (use temp file to handle control chars)
+TMPFILE=$(mktemp)
+trap "rm -f $TMPFILE" EXIT
+curl -s "https://itunes.apple.com/lookup?id=$ASC_APP_ID&country=us" > "$TMPFILE"
+AVG_RATING=$(jq -r '.results[0].averageUserRating // "N/A"' "$TMPFILE")
+RATING_COUNT=$(jq -r '.results[0].userRatingCount // "N/A"' "$TMPFILE")
+
+if [ "$AVG_RATING" != "N/A" ] && [ "$AVG_RATING" != "null" ]; then
+    STARS_DISPLAY=$(printf "%.1f" "$AVG_RATING")
+else
+    STARS_DISPLAY="N/A"
+fi
+
+echo "## App Store Ratings"
+echo ""
+echo "| Metric | Value |"
+echo "|--------|-------|"
+echo "| Average Rating | $STARS_DISPLAY ⭐ |"
+echo "| Total Ratings | $RATING_COUNT |"
+echo ""
+
+# 2. Show recent reviews
+echo "## Recent Reviews"
+echo ""
+asc reviews --app "$ASC_APP_ID" --sort -createdDate --limit 10 --output markdown
 ```
 
 ### Respond to a review

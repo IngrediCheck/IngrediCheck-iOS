@@ -70,11 +70,21 @@ asc_get_app_id() {
     return 1
 }
 
-# Load config and set ASC_APP_ID
+# Load config and set ASC_APP_ID and ASC_VENDOR_NUMBER
 asc_load_config() {
     local app_id
     app_id=$(asc_get_app_id "$1") || return 1
     export ASC_APP_ID="$app_id"
+
+    # Also load vendor number if available
+    local config_file=".asc/config.json"
+    if [ -f "$config_file" ]; then
+        local vendor_number
+        vendor_number=$(jq -r '.vendor_number // empty' "$config_file" 2>/dev/null)
+        if [ -n "$vendor_number" ]; then
+            export ASC_VENDOR_NUMBER="$vendor_number"
+        fi
+    fi
     return 0
 }
 
