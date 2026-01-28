@@ -3,11 +3,13 @@
 # App Store Distribution Script
 #
 # This script builds, archives, and uploads the IngrediCheck app to App Store Connect.
-# It automatically increments the build number before each upload.
+# Build number is auto-determined from App Store Connect (latest + 1).
+# No local project file changes needed!
 #
 # Setup Instructions:
 #   1. Create .asc/publish.env with your App Store Connect API credentials
 #   2. Ensure you have Apple Distribution certificate and App Store provisioning profile
+#   3. Run: asc auth login (for querying latest build)
 #
 # Usage:
 #   .claude/skills/asc-publish/scripts/publish_appstore.sh              # Full build and upload
@@ -44,12 +46,40 @@ fi
 
 cd "$PROJECT_ROOT"
 
+# Check for required tools
 if ! command -v xcodebuild >/dev/null 2>&1; then
-  echo "xcodebuild not found. Install Xcode command line tools first." >&2
+  echo "❌ xcodebuild not found. Install Xcode command line tools first." >&2
   exit 1
 fi
 
-# Locate iTMSTransporter for upload (used later if not skipping upload)
+if ! command -v asc >/dev/null 2>&1; then
+  echo "❌ asc CLI not found. Install with: brew tap rudrankriyam/tap && brew install asc" >&2
+  exit 1
+fi
+
+# Load ASC app ID from config
+if [[ -f "$PROJECT_ROOT/.asc/config.json" ]]; then
+  ASC_APP_ID=$(jq -r '.app_id // empty' "$PROJECT_ROOT/.asc/config.json" 2>/dev/null)
+fi
+
+if [[ -z "${ASC_APP_ID:-}" ]]; then
+  echo "❌ ASC_APP_ID not configured. Run /asc-setup first." >&2
+  exit 1
+fi
+
+# Get latest build number from App Store Connect
+echo "📡 Fetching latest build from App Store Connect..."
+LATEST_BUILD=$(asc builds latest --app "$ASC_APP_ID" 2>/dev/null | jq -r '.data.attributes.version // "0"')
+
+if [[ ! "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
+  echo "⚠️  Could not parse latest build number ('$LATEST_BUILD'), starting from 1"
+  LATEST_BUILD=0
+fi
+
+NEW_BUILD=$((LATEST_BUILD + 1))
+echo "📦 Latest build in ASC: $LATEST_BUILD → New build: $NEW_BUILD"
+
+# Locate iTMSTransporter for upload
 if [[ "${SKIP_UPLOAD:-0}" != "1" ]]; then
   if [[ -z "${TRANSPORTER_CLI:-}" ]]; then
     if [[ -x /Applications/Transporter.app/Contents/itms/bin/iTMSTransporter ]]; then
@@ -62,36 +92,37 @@ if [[ "${SKIP_UPLOAD:-0}" != "1" ]]; then
   fi
 
   if [[ -z "${TRANSPORTER_CLI:-}" ]]; then
-    echo "iTMSTransporter CLI not found. Install the Transporter app from the Mac App Store." >&2
+    echo "❌ iTMSTransporter CLI not found. Install the Transporter app from the Mac App Store." >&2
     exit 1
   fi
 fi
 
+# Detect team ID
 if [[ -z "${APPLE_TEAM_ID:-}" ]]; then
-  echo "Detecting DEVELOPMENT_TEAM from Xcode project..."
   APPLE_TEAM_ID="$(xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | awk '/DEVELOPMENT_TEAM/ {print $3; exit}')"
 fi
 
 if [[ -z "${APPLE_TEAM_ID:-}" ]]; then
-  echo "Unable to detect DEVELOPMENT_TEAM. Set APPLE_TEAM_ID and retry." >&2
+  echo "❌ Unable to detect DEVELOPMENT_TEAM. Set APPLE_TEAM_ID and retry." >&2
   exit 1
 fi
 
-echo "Using team ID: $APPLE_TEAM_ID"
+echo "🔑 Using team ID: $APPLE_TEAM_ID"
 
+# Validate upload credentials
 if [[ "${SKIP_UPLOAD:-0}" != "1" ]]; then
   : "${APP_STORE_CONNECT_API_KEY:?Set APP_STORE_CONNECT_API_KEY in .asc/publish.env}"
   : "${APP_STORE_CONNECT_API_ISSUER:?Set APP_STORE_CONNECT_API_ISSUER in .asc/publish.env}"
   : "${APP_STORE_CONNECT_API_PRIVATE_KEY_PATH:?Set APP_STORE_CONNECT_API_PRIVATE_KEY_PATH in .asc/publish.env}"
 
-  # Resolve relative paths against the env file's directory
+  # Resolve relative paths
   if [[ -n "$ENV_FILE" && "$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" != /* ]]; then
     ENV_DIR="$(dirname "$ENV_FILE")"
     APP_STORE_CONNECT_API_PRIVATE_KEY_PATH="$ENV_DIR/$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH"
   fi
 
   if [[ ! -f "$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" ]]; then
-    echo "Private key file not found at $APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" >&2
+    echo "❌ Private key file not found at $APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" >&2
     exit 1
   fi
 
@@ -112,66 +143,54 @@ if [[ "${SKIP_UPLOAD:-0}" != "1" ]]; then
   cp -f "$APP_STORE_CONNECT_API_PRIVATE_KEY_PATH" "$TARGET_KEY_PATH"
 fi
 
-echo "Cleaning previous build artifacts..."
+# Clean and prepare
+echo "🧹 Cleaning previous build artifacts..."
 rm -rf "$ARCHIVE_PATH" "$EXPORT_PATH"
 mkdir -p "$EXPORT_PATH"
 
-# Auto-increment build number (like Xcode does on manual upload)
-echo "Incrementing build number..."
-cd "$PROJECT_ROOT/IngrediCheck.xcodeproj/.."
-CURRENT_BUILD=$(agvtool what-version -terse 2>/dev/null || echo "0")
-# Require build number to be a simple integer
-if [[ ! "$CURRENT_BUILD" =~ ^[0-9]+$ ]]; then
-  echo "Error: Current build number '$CURRENT_BUILD' is not a simple integer." >&2
-  echo "Build number must be a simple number (e.g., 1, 2, 3) to auto-increment." >&2
-  exit 1
-fi
-NEW_BUILD=$((CURRENT_BUILD + 1))
-agvtool new-version -all "$NEW_BUILD" >/dev/null 2>&1
-echo "Build number set to: $NEW_BUILD"
-cd "$PROJECT_ROOT"
-
-echo "Archiving $SCHEME from $PROJECT_PATH..."
+# Archive with build number override (no project file changes!)
+echo "🔨 Archiving $SCHEME (build $NEW_BUILD)..."
 xcodebuild archive \
   -project "$PROJECT_PATH" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE_PATH" \
+  CURRENT_PROJECT_VERSION="$NEW_BUILD" \
   SKIP_INSTALL=NO
 
-# Create IPA manually from the archive (workaround for Xcode 26 exportArchive issues)
-echo "Creating IPA from archive..."
+# Create IPA manually (workaround for Xcode 26 exportArchive issues)
+echo "📦 Creating IPA from archive..."
 APP_PATH="$ARCHIVE_PATH/Products/Applications/IngrediCheck.app"
 if [[ ! -d "$APP_PATH" ]]; then
-  echo "App bundle not found at $APP_PATH" >&2
+  echo "❌ App bundle not found at $APP_PATH" >&2
   exit 1
 fi
 
-# Create Payload directory and copy app
 PAYLOAD_DIR="$EXPORT_PATH/Payload"
 mkdir -p "$PAYLOAD_DIR"
 cp -R "$APP_PATH" "$PAYLOAD_DIR/"
 
-# Create the IPA (it's just a zip with .ipa extension)
 cd "$EXPORT_PATH"
 zip -r -q "$IPA_NAME.ipa" Payload
 rm -rf Payload
 cd "$PROJECT_ROOT"
 
 if [[ ! -f "$IPA_PATH" ]]; then
-  echo "Failed to create IPA at $IPA_PATH" >&2
+  echo "❌ Failed to create IPA at $IPA_PATH" >&2
   exit 1
 fi
 
-echo "IPA created at $IPA_PATH"
+echo "✅ IPA created at $IPA_PATH"
 
 if [[ "${SKIP_UPLOAD:-0}" == "1" ]]; then
-  echo "SKIP_UPLOAD=1 set; skipping Transporter upload."
+  echo ""
+  echo "⏭️  SKIP_UPLOAD=1 set; skipping upload."
+  echo "   IPA ready at: $IPA_PATH"
   exit 0
 fi
 
-echo "Uploading IPA via iTMSTransporter..."
+echo "🚀 Uploading IPA via iTMSTransporter..."
 
 "${TRANSPORTER_CLI}" -m upload \
   -apiKey "$APP_STORE_CONNECT_API_KEY" \
@@ -182,7 +201,11 @@ echo "Uploading IPA via iTMSTransporter..."
 
 echo ""
 echo "========================================="
-echo "Upload complete!"
-echo "Build number: $NEW_BUILD"
-echo "Check App Store Connect for build status."
+echo "✅ Upload complete!"
+echo "   Version: 2.0"
+echo "   Build:   $NEW_BUILD"
+echo ""
+echo "Next steps:"
+echo "  • Wait for processing (~5 min)"
+echo "  • Check status: /asc-builds"
 echo "========================================="

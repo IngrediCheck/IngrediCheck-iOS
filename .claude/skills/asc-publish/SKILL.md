@@ -26,10 +26,12 @@ SKIP_UPLOAD=1 .claude/skills/asc-publish/scripts/publish_appstore.sh
 
 ## What It Does
 
-1. **Auto-increments build number** via `agvtool`
-2. **Archives** with `xcodebuild archive`
+1. **Queries App Store Connect** for latest build number
+2. **Archives** with `xcodebuild archive` using build number + 1
 3. **Creates IPA** from archive
 4. **Uploads** via `iTMSTransporter`
+
+**No local project file changes needed!** Build number is determined from ASC and passed to xcodebuild at build time.
 
 ## Prerequisites
 
