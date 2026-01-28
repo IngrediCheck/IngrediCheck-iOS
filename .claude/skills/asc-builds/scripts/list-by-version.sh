@@ -1,5 +1,5 @@
 #!/bin/bash
-# List builds grouped by marketing version
+# List builds grouped by marketing version with TestFlight status
 # Usage: ./list-by-version.sh [num_versions] [builds_per_version]
 
 set -e
@@ -10,59 +10,38 @@ asc_load_config
 NUM_VERSIONS="${1:-2}"
 BUILDS_PER_VERSION="${2:-3}"
 
-# Get recent versions with creation dates
-VERSIONS_JSON=$(asc versions list --app "$ASC_APP_ID" | jq "[.data[:$((NUM_VERSIONS + 1))][] | {id: .id, version: .attributes.versionString, created: .attributes.createdDate}]")
+# Get recent versions
+VERSIONS=$(asc versions list --app "$ASC_APP_ID" | jq -r ".data[:$NUM_VERSIONS][] | \"\(.id)|\(.attributes.versionString)\"")
+BUILDS_JSON=$(asc builds list --app "$ASC_APP_ID" --limit 50)
 
-# Get recent builds
-BUILDS_JSON=$(asc builds list --app "$ASC_APP_ID" --limit 50 | jq '[.data[] | {id: .id, build: .attributes.version, uploaded: .attributes.uploadedDate, state: .attributes.processingState}]')
+echo "Version | Build        | Uploaded   | External"
+echo "--------|--------------|------------|------------------"
 
-# Process each version
-echo "$VERSIONS_JSON" | jq -r ".[:$NUM_VERSIONS][] | \"\(.version)|\(.created)|\(.id)\"" | while IFS='|' read ver created ver_id; do
-  echo ""
-  echo "═══ Version $ver ═══"
+echo "$VERSIONS" | while IFS='|' read vid ver; do
+  # Get version state and creation date
+  VER_INFO=$(asc versions get --version-id "$vid" --include-build 2>/dev/null)
+  STATE=$(echo "$VER_INFO" | jq -r '.state')
+  CREATED=$(asc versions list --app "$ASC_APP_ID" | jq -r --arg v "$ver" '.data[] | select(.attributes.versionString == $v) | .attributes.createdDate')
+  CREATED_TS=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATED:0:19}" "+%s" 2>/dev/null || echo "0")
 
-  # Get the submitted build
-  SUBMITTED_BUILD=$(asc versions get --version-id "$ver_id" --include-build 2>/dev/null | jq -r '.buildVersion // "none"')
-
-  if [ "$SUBMITTED_BUILD" != "none" ] && [ "$SUBMITTED_BUILD" != "null" ]; then
-    echo "  Submitted: Build $SUBMITTED_BUILD"
+  if [ "$STATE" = "PREPARE_FOR_SUBMISSION" ]; then
+    # Current version: get most recent builds
+    echo "$BUILDS_JSON" | jq -r --argjson limit "$BUILDS_PER_VERSION" '.data[:$limit][] | "\(.id)|\(.attributes.version)|\(.attributes.uploadedDate[:10])"'
   else
-    echo "  Submitted: (none yet)"
-  fi
-
-  # Get version state to check if it's the current (unsubmitted) version
-  VERSION_STATE=$(asc versions get --version-id "$ver_id" --include-build 2>/dev/null | jq -r '.state // ""')
-
-  echo ""
-  echo "  Recent builds:"
-
-  if [ "$VERSION_STATE" = "PREPARE_FOR_SUBMISSION" ]; then
-    # Current version: show most recent builds overall
-    FOUND=$(echo "$BUILDS_JSON" | jq -r --argjson limit "$BUILDS_PER_VERSION" '
-      sort_by(.uploaded) | reverse |
-      .[:$limit][] |
-      "    Build \(.build) | \(.uploaded[:10]) | \(.state)"
-    ')
-  else
-    # Released version: find builds uploaded within 45 days before version creation
-    CREATED_TS=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${created:0:19}" "+%s" 2>/dev/null || echo "0")
-    WINDOW_START=$((CREATED_TS - 3888000))  # 45 days
-
-    FOUND=$(echo "$BUILDS_JSON" | jq -r --argjson start "$WINDOW_START" --argjson end "$CREATED_TS" --argjson limit "$BUILDS_PER_VERSION" '
-      [.[] |
-      (.uploaded[:19] | strptime("%Y-%m-%dT%H:%M:%S") | mktime) as $ts |
+    # Released version: get builds from 45 days before version creation
+    WINDOW_START=$((CREATED_TS - 3888000))
+    echo "$BUILDS_JSON" | jq -r --argjson start "$WINDOW_START" --argjson end "$CREATED_TS" --argjson limit "$BUILDS_PER_VERSION" '
+      [.data[] |
+      (.attributes.uploadedDate[:19] | strptime("%Y-%m-%dT%H:%M:%S") | mktime) as $ts |
       select($ts >= $start and $ts <= $end)] |
-      sort_by(.uploaded) | reverse |
+      sort_by(.attributes.uploadedDate) | reverse |
       .[:$limit][] |
-      "    Build \(.build) | \(.uploaded[:10]) | \(.state)"
-    ')
-  fi
-
-  if [ -n "$FOUND" ]; then
-    echo "$FOUND"
-  else
-    echo "    (no builds in this window)"
-  fi
+      "\(.id)|\(.attributes.version)|\(.attributes.uploadedDate[:10])"
+    '
+  fi | while IFS='|' read id build date; do
+    # Get TestFlight beta details
+    beta=$(asc testflight beta-details get --build "$id" 2>/dev/null)
+    external=$(echo "$beta" | jq -r '.data[0].attributes.externalBuildState // "N/A"')
+    printf "%-7s | %-12s | %s | %s\n" "$ver" "$build" "$date" "$external"
+  done
 done
-
-echo ""
