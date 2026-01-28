@@ -443,7 +443,7 @@ struct PersistentBottomSheet: View {
         case .chatIntro:
             return 568
         case .chatConversation:
-            return 738
+            return nil  // Let content determine height dynamically
         case .workingOnSummary:
             return 281
         case .meetYourProfileIntro:

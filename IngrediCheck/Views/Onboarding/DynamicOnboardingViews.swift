@@ -688,10 +688,11 @@ struct EditSectionBottomSheet: View {
 
     let stepId: String
     let currentSectionIndex: Int
-    
+    let initialMemberId: UUID?  // Track which member was selected when opening edit sheet
+
     @State private var dragOffset: CGFloat = 0
     @State private var isDragging: Bool = false
-    
+
     // Determine flow type: use .family if user has a family, otherwise use store's flow type
     private var effectiveFlowType: OnboardingFlowType {
         if let family = familyStore.family, !family.otherMembers.isEmpty {
@@ -768,5 +769,12 @@ struct EditSectionBottomSheet: View {
         .offset(y: dragOffset)
         .animation(isDragging ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: dragOffset)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: stepId)
+        .onAppear {
+            // Only sync familyStore.selectedMemberId if a specific member was selected AND it's different
+            // This prevents triggering unnecessary onChange handlers that could reset preferences
+            if let memberId = initialMemberId, familyStore.selectedMemberId != memberId {
+                familyStore.selectedMemberId = memberId
+            }
+        }
     }
 }

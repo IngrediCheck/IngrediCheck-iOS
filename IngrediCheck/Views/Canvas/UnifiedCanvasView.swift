@@ -24,6 +24,7 @@ struct UnifiedCanvasView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(WebService.self) private var webService
+    @Environment(AppState.self) private var appState
     @Environment(FamilyStore.self) private var familyStore
     @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
 
@@ -85,6 +86,10 @@ struct UnifiedCanvasView: View {
             ) {
                 TabBar(
                     isExpanded: $isTabBarExpanded,
+                    onRecentScansTap: {
+                        // Navigate to Recent Scans view
+                        appState.navigationPath.append(HistoryRouteItem.recentScansAll)
+                    },
                     onChatBotTap: mode == .editing ? {
                         // Open AI Bot with food_notes context when in editing mode (Food Notes screen)
                         coordinator.showAIBotSheetWithContext()
@@ -116,9 +121,13 @@ struct UnifiedCanvasView: View {
             handleMemberSwitch(newValue)
         }
         .onChange(of: coordinator.isEditSheetPresented) { oldValue, newValue in
-            // When edit sheet is dismissed, scroll to the edited section
+            // When edit sheet is dismissed, scroll to the edited section and refresh canvas
             if oldValue == true && newValue == false, let stepId = coordinator.editingStepId {
                 scrollToEditedSection = stepId
+                // Force refresh of canvas cards to show updated selections (only in editing mode and after initial load)
+                if mode == .editing && didFinishInitialLoad {
+                    foodNotesStore?.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+                }
             }
         }
     }
@@ -418,10 +427,20 @@ struct UnifiedCanvasView: View {
 
             foodNotesStore?.applyLocalPreferencesOptimistic()
             foodNotesStore?.updateFoodNotes()
+
+            // Trigger scan history refresh when user navigates back to HomeView
+            await MainActor.run {
+                appState.needsScanHistoryRefresh = true
+            }
         }
     }
 
     private func handleMemberSwitch(_ newValue: UUID?) {
+        // Don't switch members before initial load completes - it would clear preferences
+        guard didFinishInitialLoad else {
+            Log.debug("UnifiedCanvasView", "Member switch ignored - initial load not complete")
+            return
+        }
         Log.debug("UnifiedCanvasView", "Member switched to \(newValue?.uuidString ?? "Everyone")")
         isLoadingMemberPreferences = true
         foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
@@ -503,6 +522,7 @@ struct UnifiedCanvasView: View {
             store.currentSectionIndex = sectionIndex
         }
         coordinator.editingStepId = card.stepId
+        coordinator.editingMemberId = selectedMemberId  // Pass selected member to edit sheet
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             coordinator.isEditSheetPresented = true
         }

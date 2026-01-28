@@ -45,31 +45,37 @@ struct FeedbackPromptBubble: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text("What didn't go well?\nPlease explain")
-                .font(ManropeFont.medium.size(13))
-                .foregroundStyle(.grayScale150)
+        HStack(alignment: .top, spacing: 8) {
+            Text("What didn't go well?\nPlease explain.")
+                .font(NunitoFont.semiBold.size(15))
+                .lineSpacing(5)
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.leading)
                 .lineLimit(2)
 
             Button(action: onDismiss) {
                 ZStack {
                     Circle()
-                        .fill(Color.black.opacity(0.13))
-                        .frame(width: 22, height: 22)
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 24, height: 24)
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
-            .offset(y: -8)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.leading, 16)
+        .padding(.trailing, 12)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+            UnevenRoundedRectangle(
+                topLeadingRadius: 18,
+                bottomLeadingRadius: 18,
+                bottomTrailingRadius: 6,
+                topTrailingRadius: 18
+            )
+            .fill(Color.primary800)
+            .shadow(color: Color.black.opacity(0.23), radius: 9, x: 0, y: 4)
         )
         .onTapGesture {
             onTap()

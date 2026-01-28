@@ -288,13 +288,16 @@ struct HomeView: View {
 
                             Spacer()
 
-                            NavigationLink(value: HistoryRouteItem.recentScansAll) {
-                                Text("View All")
-                                    .underline()
-                                    .font(ManropeFont.bold.size(14))
-                                    .foregroundStyle(Color(hex: "#82B611"))
+                            // Only show "View All" when there are scans
+                            if let scans = appState.listsTabState.scans, !scans.isEmpty {
+                                NavigationLink(value: HistoryRouteItem.recentScansAll) {
+                                    Text("View All")
+                                        .underline()
+                                        .font(ManropeFont.bold.size(14))
+                                        .foregroundStyle(Color(hex: "#82B611"))
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
 
                         // Recent Scans list / empty state
@@ -467,6 +470,24 @@ struct HomeView: View {
                         appState.navigateToSettings = false
                     }
                 }
+            // Refresh scan history when returning from ScanCameraView (push navigation)
+                .onChange(of: appState.isInScanCameraView) { wasInCamera, isInCamera in
+                    // Refresh when leaving camera view (was in camera, now not)
+                    if wasInCamera && !isInCamera {
+                        Task {
+                            await refreshRecentScans()
+                        }
+                    }
+                }
+            // Refresh scan history when food preferences are modified
+                .onChange(of: appState.needsScanHistoryRefresh) { _, needsRefresh in
+                    if needsRefresh {
+                        appState.needsScanHistoryRefresh = false
+                        Task {
+                            await refreshRecentScans()
+                        }
+                    }
+                }
             
             // ------------ SETTINGS SCREEN ------------
             // Use SettingsContentView (without NavigationStack) in navigationDestination
@@ -518,8 +539,8 @@ struct HomeView: View {
             // ------------ APP ROUTE HANDLING (For ScanCamera, ProductDetail, etc.) ------------
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
-                    case .scanCamera(_, _):
-                        ScanCameraView(presentationSource: .pushNavigation)
+                    case .scanCamera(let initialMode, let initialScanId):
+                        ScanCameraView(initialMode: initialMode, initialScrollTarget: initialScanId, presentationSource: .pushNavigation)
                             .environment(userPreferences)
                             .environment(appState)
                             .environment(scanHistoryStore)

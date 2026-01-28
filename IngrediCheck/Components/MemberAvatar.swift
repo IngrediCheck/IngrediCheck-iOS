@@ -123,7 +123,7 @@ struct MemberAvatar: View {
                     loadedHash = hash
                     isLoading = false
                     loadFailed = false
-                    Log.debug("MemberAvatar", "✅ Loaded local memoji for \(member.name) (hash=\(hash))")
+//                    Log.debug("MemberAvatar", "✅ Loaded local memoji for \(member.name) (hash=\(hash))")
                     return
                 }
             }

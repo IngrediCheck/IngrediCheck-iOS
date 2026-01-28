@@ -62,7 +62,7 @@ struct DoYouHaveAnInviteCode: View {
             }
             .padding(.bottom, 20)
 
-         
+            LegalDisclaimerView()
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)

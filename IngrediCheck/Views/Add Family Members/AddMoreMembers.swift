@@ -77,7 +77,7 @@ struct AddMoreMembers: View {
                 
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField("Enter your Name", text: $name)
+                    TextField("Enter member's name", text: $name)
                         .padding(16)
                         .background(.grayScale10)
                         .cornerRadius(16)

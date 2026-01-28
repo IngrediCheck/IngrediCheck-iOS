@@ -100,10 +100,7 @@ struct UseCasesView: View {
             }
             .padding(.horizontal)
 
-            Text("By continuing, you are agreeing to my **[Terms of Use](https://www.ingredicheck.app/terms-conditions)** and **[Privacy Policy](https://www.ingredicheck.app/privacy-policy)**.")
-                .multilineTextAlignment(.center)
-                .font(.footnote)
-                .tint(.paletteAccent)
+            LegalDisclaimerView(showShieldIcon: false)
                 .padding(.horizontal)
                 .padding(.horizontal)
                 .padding(.horizontal)

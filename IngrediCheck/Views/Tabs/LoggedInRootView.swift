@@ -78,6 +78,10 @@ struct ListsTabState {
     /// Used by AIBot FAB to provide context for analysis feedback.
     @MainActor var displayedAnalysisId: String? = nil
 
+    /// Flag to trigger scan history refresh from other views (e.g., after food preferences change).
+    /// Set to true by views that modify data affecting scan results, observed by HomeView.
+    @MainActor var needsScanHistoryRefresh: Bool = false
+
     /// Navigate to a route by pushing it onto the navigation stack.
     @MainActor func navigate(to route: AppRoute) {
         currentRoute = route
@@ -397,7 +401,7 @@ struct ListsTabState {
             )
 
         case .scanCamera(let initialMode, let initialScanId):
-            ScanCameraView(presentationSource: .pushNavigation)
+            ScanCameraView(initialMode: initialMode, initialScrollTarget: initialScanId, presentationSource: .pushNavigation)
                 .environment(userPreferences)
                 .environment(appState)
 

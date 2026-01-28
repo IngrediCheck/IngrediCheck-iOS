@@ -59,6 +59,7 @@
 		39F2A8822A9D3974004EBB9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39F2A8812A9D3974004EBB9A /* Assets.xcassets */; };
 		635E2CF6A2C048BD97E90FAA /* RemoteOnboardingMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */; };
 		AD49592740904EC2B52AE490 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFADBFEDBD6464085931D95 /* AppRoute.swift */; };
+		D35AB5C62F2A17C2002FB36A /* RiveRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = D35AB5C52F2A17C2002FB36A /* RiveRuntime */; };
 		D35BCF262E27D5B600125580 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF252E27D5B600125580 /* Auth */; };
 		D35BCF282E27D5B600125580 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF272E27D5B600125580 /* Storage */; };
 		D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D35BCF292E27D5B600125580 /* Supabase */; };
@@ -230,6 +231,7 @@
 				D35BCF2A2E27D5B600125580 /* Supabase in Frameworks */,
 				D35F3C242E2A25FB0002CDE7 /* GoogleSignIn in Frameworks */,
 				D35BCF282E27D5B600125580 /* Storage in Frameworks */,
+				D35AB5C62F2A17C2002FB36A /* RiveRuntime in Frameworks */,
 				390F0CA42BA73ED7009081AD /* SwiftUIFlowLayout in Frameworks */,
 				0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */,
 				390F0CAD2BACBF14009081AD /* SimpleToast in Frameworks */,
@@ -492,6 +494,7 @@
 				D35F3C252E2A25FB0002CDE7 /* GoogleSignInSwift */,
 				0C51E2F02E335C1E00A3E3A9 /* PostHog */,
 				0CE0D52B2F03A1390050C904 /* DotLottie */,
+				D35AB5C52F2A17C2002FB36A /* RiveRuntime */,
 			);
 			productName = IngrediCheck;
 			productReference = 39F2A87A2A9D3972004EBB9A /* IngrediCheck.app */;
@@ -529,6 +532,7 @@
 				D35F3C222E2A25FB0002CDE7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				0C51E2EF2E335C1E00A3E3A9 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				0CE0D52A2F03A1390050C904 /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
+				D35AB5C42F2A17C2002FB36A /* XCRemoteSwiftPackageReference "rive-ios" */,
 			);
 			productRefGroup = 39F2A87B2A9D3972004EBB9A /* Products */;
 			projectDirPath = "";
@@ -972,6 +976,14 @@
 				minimumVersion = 24.0.0;
 			};
 		};
+		D35AB5C42F2A17C2002FB36A /* XCRemoteSwiftPackageReference "rive-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/rive-app/rive-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.15.1;
+			};
+		};
 		D35BCF242E27D5B600125580 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -1015,6 +1027,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 397C85F62B6B537600FB9DAD /* XCRemoteSwiftPackageReference "keychain-swift" */;
 			productName = KeychainSwift;
+		};
+		D35AB5C52F2A17C2002FB36A /* RiveRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D35AB5C42F2A17C2002FB36A /* XCRemoteSwiftPackageReference "rive-ios" */;
+			productName = RiveRuntime;
 		};
 		D35BCF252E27D5B600125580 /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -18,6 +18,18 @@ struct OnboardingPhoneCanvas: View {
                 Image(phoneImageName)
                     .resizable()
                     .frame(width: 238, height: 460)
+                    .overlay(alignment: .bottom, content: {
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.1),
+                                Color.white,
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 150)
+                        .frame(maxWidth: .infinity)
+                    })
             }
 
             Spacer()
@@ -32,19 +44,6 @@ struct OnboardingPhoneCanvas: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-        )
-        .overlay(
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.1),
-                    Color.white,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 150)
-            .frame(maxWidth: .infinity)
-            .offset(y: 75)
         )
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)

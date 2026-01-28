@@ -485,12 +485,20 @@ struct ProductDetailView: View {
 
             // If initialScan is provided, use it directly
             if let initialScan = initialScan {
-                print("[ProductDetailView] 📦 Using initialScan - scan_id: \(scanId)")
+                print("[ProductDetailView] 📦 Using initialScan - scan_id: \(scanId), state: \(initialScan.state)")
                 await MainActor.run {
                     self.scan = initialScan
                 }
 
-                // If barcode scan (has initialScan), no polling needed - SSE handles updates
+                // If scan is still processing/analyzing, start polling even with initialScan
+                // This ensures ProductDetailView stays in sync when opened during analysis
+                if initialScan.state != "done" {
+                    print("[ProductDetailView] ⏳ initialScan not done, starting polling - scan_id: \(scanId), state: \(initialScan.state)")
+                    await fetchAndPollScan(scanId: scanId)
+                    return
+                }
+
+                // If barcode scan is done, no polling needed - SSE handles updates
                 return
             }
 

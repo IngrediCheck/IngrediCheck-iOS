@@ -280,7 +280,8 @@ struct RootContainerView: View {
             EditSectionBottomSheet(
                 isPresented: $coordinator.isEditSheetPresented,
                 stepId: stepId,
-                currentSectionIndex: coordinator.currentEditingSectionIndex
+                currentSectionIndex: coordinator.currentEditingSectionIndex,
+                initialMemberId: coordinator.editingMemberId
             )
             .transition(AnyTransition.asymmetric(
                 insertion: AnyTransition.move(edge: Edge.bottom).combined(with: AnyTransition.opacity),

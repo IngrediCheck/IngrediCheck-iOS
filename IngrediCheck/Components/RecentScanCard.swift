@@ -45,7 +45,7 @@ struct RecentScanCard: View {
     private var imageSize: CGSize {
         switch style {
         case .compact:
-            return CGSize(width: 55, height: 55)
+            return CGSize(width: 65, height: 78)
         case .full:
             return CGSize(width: 82, height: 98)
         }
@@ -54,7 +54,7 @@ struct RecentScanCard: View {
     private var imageCornerRadius: CGFloat {
         switch style {
         case .compact:
-            return 8
+            return 12
         case .full:
             return 12
         }
@@ -176,7 +176,7 @@ struct RecentScanCard: View {
                     }
                 }
 
-                Spacer(minLength: style == .compact ? 4 : 8)
+                Spacer(minLength: style == .compact ? 0 : 8)
 
                 // Match status badge and time in one HStack with Spacer
                 HStack(alignment: .bottom, spacing: 8) {
@@ -212,10 +212,10 @@ struct RecentScanCard: View {
         case .full:
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color.grayScale30, lineWidth: 1)
-                )
+//                .overlay(
+//                    RoundedRectangle(cornerRadius: 24)
+//                        .stroke(Color.grayScale30, lineWidth: 1)
+//                )
         }
     }
 
@@ -409,8 +409,10 @@ extension DTO.ProductRecommendation {
             return Color.primary600
         case .notMatch:
             return Color(hex: "#FF1100")
-        case .needsReview, .unknown:
+        case .needsReview:
             return Color(hex: "#FCDE00")
+        case .unknown:
+            return Color(hex: "#9E9E9E")
         }
     }
 
@@ -420,8 +422,10 @@ extension DTO.ProductRecommendation {
             return Color.primary600
         case .notMatch:
             return Color(hex: "#FF1100")
-        case .needsReview, .unknown:
+        case .needsReview:
             return Color(hex: "#FF594E")
+        case .unknown:
+            return Color(hex: "#757575")
         }
     }
 
@@ -431,8 +435,10 @@ extension DTO.ProductRecommendation {
             return Color.primary200
         case .notMatch:
             return Color(hex: "#FFE3E2")
-        case .needsReview, .unknown:
+        case .needsReview:
             return Color(hex: "#FFF9CE")
+        case .unknown:
+            return Color(hex: "#F5F5F5")
         }
     }
 }
@@ -542,60 +548,83 @@ private func makeSampleScan(
 }
 #endif
 
-//#Preview("Recent Scan Cards") {
-//    ScrollView {
-//        VStack(spacing: 12) {
-//            // Matched product
-//            RecentScanCard(
-//                scan: makeSampleScan(
-//                    name: "Organic Oat Milk",
-//                    brand: "Oatly",
-//                    isFavorited: true,
-//                    overallMatch: "matched",
-//                    minutesAgo: 15
-//                ),
-//                onFavoriteToggle: { _, _ in }
-//            )
-//
-//            // Unmatched product (with stale indicator)
-//            RecentScanCard(
-//                scan: makeSampleScan(
-//                    name: "Chocolate Chip Cookies - Strawberry flavor",
-//                    brand: "Chips Ahoy",
-//                    isFavorited: false,
-//                    overallMatch: "unmatched",
-//                    minutesAgo: 45,
-//                    isStale: true
-//                ),
-//                onFavoriteToggle: { _, _ in }
-//            )
-//
-//            // Uncertain product
-//            RecentScanCard(
-//                scan: makeSampleScan(
-//                    name: "Protein Bar",
-//                    brand: "Quest",
-//                    isFavorited: false,
-//                    overallMatch: "uncertain",
-//                    minutesAgo: 120
-//                ),
-//                onFavoriteToggle: { _, _ in }
-//            )
-//
-//            // Yesterday's scan
-//            RecentScanCard(
-//                scan: makeSampleScan(
-//                    name: "Greek Yogurt",
-//                    brand: "Chobani",
-//                    isFavorited: true,
-//                    overallMatch: "matched",
-//                    minutesAgo: 1500
-//                ),
-//                onFavoriteToggle: { _, _ in }
-//            )
-//        }
-//        .padding(20)
-//    }
-//    .background(Color.pageBackground)
-//    .environment(WebService())
-//}
+#Preview("Full Style") {
+    ScrollView {
+        VStack(spacing: 12) {
+            RecentScanCard(
+                scan: makeSampleScan(
+                    name: "Organic Oat Milk",
+                    brand: "Oatly",
+                    isFavorited: true,
+                    overallMatch: "matched",
+                    minutesAgo: 15
+                ),
+                style: .full,
+                onFavoriteToggle: { _, _ in }
+            )
+
+            RecentScanCard(
+                scan: makeSampleScan(
+                    name: "Chocolate Chip Cookies - Strawberry flavor",
+                    brand: "Chips Ahoy",
+                    isFavorited: false,
+                    overallMatch: "unmatched",
+                    minutesAgo: 45,
+                    isStale: true
+                ),
+                style: .full,
+                onFavoriteToggle: { _, _ in }
+            )
+
+            RecentScanCard(
+                scan: makeSampleScan(
+                    name: "Protein Bar",
+                    brand: "Quest",
+                    isFavorited: false,
+                    overallMatch: "uncertain",
+                    minutesAgo: 120
+                ),
+                style: .full,
+                onFavoriteToggle: { _, _ in }
+            )
+        }
+        .padding(20)
+    }
+    .background(Color.pageBackground)
+    .environment(WebService())
+}
+
+#Preview("Compact Style") {
+    ScrollView {
+        VStack(spacing: 0) {
+            ForEach(0..<3, id: \.self) { index in
+                RecentScanCard(
+                    scan: makeSampleScan(
+                        name: index == 0 ? "Organic Oat Milk" : index == 1 ? "Chocolate Chip Cookies" : "Protein Bar",
+                        brand: index == 0 ? "Oatly" : index == 1 ? "Chips Ahoy" : "Quest",
+                        isFavorited: index == 0,
+                        overallMatch: index == 0 ? "matched" : index == 1 ? "unmatched" : "uncertain",
+                        minutesAgo: index == 0 ? 15 : index == 1 ? 45 : 120,
+                        isStale: index == 1
+                    ),
+                    style: .compact,
+                    onFavoriteToggle: { _, _ in }
+                )
+                .padding(.vertical, 12)
+
+                if index < 2 {
+                    Divider()
+                        .background(Color.grayScale30)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white)
+        )
+        .padding(20)
+    }
+    .background(Color.pageBackground)
+    .environment(WebService())
+}
