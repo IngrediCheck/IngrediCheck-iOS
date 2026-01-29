@@ -3,6 +3,10 @@
     "XcodeBuildMCP": {
       "command": "npx",
       "args": ["-y", "xcodebuildmcp@latest"]
+    },
+    "posthog": {
+      "type": "http",
+      "url": "https://mcp.posthog.com/mcp"
     }
   }
 }
