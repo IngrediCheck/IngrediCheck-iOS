@@ -81,7 +81,11 @@ struct ChatStreamError: Error, LocalizedError {
 }
 
 @Observable final class WebService {
-    
+
+    /// Tracks image upload start times by content_hash for latency measurement
+    var imageSubmitTimes: [String: TimeInterval] = [:]
+    private var reportedProcessedHashes: Set<String> = []
+
     private let smallImageStore: FileStore
     private let mediumImageStore: FileStore
     private let largeImageStore: FileStore
@@ -732,9 +736,11 @@ struct ChatStreamError: Error, LocalizedError {
                             
                             Log.debug("BARCODE_SCAN", "🎯 Scan complete - no polling needed (SSE stream)")
                             
+                            let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
                             PostHogSDK.shared.capture("Barcode Scan Analysis", properties: [
                                 "request_id": requestId,
-                                "scan_id": scan.id
+                                "scan_id": scan.id,
+                                "total_latency_ms": totalLatency
                             ])
                             
                             await MainActor.run {
@@ -834,7 +840,8 @@ struct ChatStreamError: Error, LocalizedError {
         scanId: String,
         imageData: Data
     ) async throws -> DTO.SubmitImageResponse {
-        
+
+        let submitStartTime = Date().timeIntervalSince1970
         let imageSizeKB = imageData.count / 1024
         Log.debug("PHOTO_SCAN", "📸 Submitting image - scan_id: \(scanId), image_size: \(imageSizeKB)KB")
         
@@ -861,6 +868,7 @@ struct ChatStreamError: Error, LocalizedError {
         switch httpResponse.statusCode {
         case 200:
             let submitResponse = try JSONDecoder().decode(DTO.SubmitImageResponse.self, from: data)
+            imageSubmitTimes[submitResponse.content_hash] = submitStartTime
             Log.debug("PHOTO_SCAN", "✅ Image submitted successfully - scan_id: \(scanId), queued: \(submitResponse.queued), queue_position: \(submitResponse.queue_position)")
             return submitResponse
         case 401:
@@ -1270,6 +1278,22 @@ struct ChatStreamError: Error, LocalizedError {
                 let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
             Log.debug("PHOTO_SCAN", "✅ Poll response - scan_id: \(scanId), state: \(scan.state)")
             
+                // Check for newly processed images and emit latency events
+                for scanImage in scan.images {
+                    if case .user(let userImage) = scanImage,
+                       userImage.status == "processed",
+                       !reportedProcessedHashes.contains(userImage.content_hash),
+                       let submitTime = imageSubmitTimes[userImage.content_hash] {
+                        reportedProcessedHashes.insert(userImage.content_hash)
+                        let latency = (Date().timeIntervalSince1970 - submitTime) * 1000
+                        PostHogSDK.shared.capture("Photo Scan Image Processed", properties: [
+                            "scan_id": scanId,
+                            "content_hash": userImage.content_hash,
+                            "latency_ms": latency
+                        ])
+                    }
+                }
+
                 // Log raw ingredient_analysis data including members_affected if available
                 if let analysisResult = scan.analysis_result {
                     Log.debug("PHOTO_SCAN", "📊 Raw analysis_result - ingredient_analysis count: \(analysisResult.ingredient_analysis.count)")

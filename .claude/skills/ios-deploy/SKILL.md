@@ -59,3 +59,7 @@ mkdir -p .claude && echo "sim:$SIMID:/tmp/ingredicheck-sim-logs.txt" > .claude/d
 - If connection errors: unplug/replug USB, or restart device
 - Logs: `tail -f /tmp/ingredicheck-logs-<UDID>.txt` (replace `<UDID>` with device UDID)
 - Log capture uses `devicectl --console` which reliably captures NSLog on iOS 18+
+- **Missing Config.swift in worktrees**: `Config.swift` is gitignored (contains secrets/keys). When building from a new worktree, copy it from the main worktree:
+  ```bash
+  cp /Users/sanket/GitHub/IngrediCheck-iOS/IngrediCheck/Config.swift <worktree>/IngrediCheck/Config.swift
+  ```
