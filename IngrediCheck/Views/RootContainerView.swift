@@ -221,7 +221,9 @@ struct RootContainerView: View {
             if newValue == .signedIn {
                 Task {
                     await familyStore.loadCurrentFamily()
-                    if !authController.signedInAsGuest && coordinator.currentCanvasRoute != .home {
+                    if !authController.signedInAsGuest &&
+                       OnboardingPersistence.shared.isLocallyCompleted &&
+                       coordinator.currentCanvasRoute != .home {
                         await MainActor.run {
                             coordinator.showCanvas(.home)
                         }

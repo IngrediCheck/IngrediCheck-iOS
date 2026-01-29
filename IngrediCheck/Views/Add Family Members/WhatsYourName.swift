@@ -216,6 +216,7 @@ struct WhatsYourName: View {
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dismissKeyboardOnTap()
 //        .overlay(
 //            RoundedRectangle(cornerRadius: 4)
 //                .fill(.neutral500)

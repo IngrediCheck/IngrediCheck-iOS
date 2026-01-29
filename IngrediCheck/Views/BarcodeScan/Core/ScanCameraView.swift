@@ -1216,67 +1216,11 @@ struct ScanCameraView: View {
                     VStack {
                         Spacer()
                         
-                        ZStack(alignment: .topTrailing) {
-                            VStack(spacing: 24) {
-                                VStack(spacing: 12) {
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color(.systemGray4))
-                                        .frame(width: 72, height: 4)
-                                        .padding(.top, 12)
-                                    
-                                    Text("Capture your product 📸")
-                                        .font(NunitoFont.bold.size(24))
-                                        .foregroundColor(.grayScale150)
-                                        .multilineTextAlignment(.center)
-                                        .frame(maxWidth: .infinity)
-                                    
-                                    Text("We’ll guide you through a few angles so our AI can identify the product and its ingredients accurately.")
-                                        .font(ManropeFont.medium.size(12))
-                                        .foregroundColor(Color(.grayScale120))
-                                        .multilineTextAlignment(.center)
-                                        .frame(maxWidth: .infinity)
-                                }
-                                ZStack{
-                                    Image("systemuiconscapture")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 187, height: 187)
-                                    Image("takeawafood")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 94, height: 110)
-                                }
-                                
-                                Text("You’ll take around 5 photos — front, back, barcode, and ingredient list.")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(Color(.grayScale110))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 24)
-                                    .padding(.bottom, 16)
+                        CaptureYourProductSheet {
+                            withAnimation(.easeInOut) {
+                                isShowingPhotoModeGuide = false
                             }
-                            .frame(maxWidth: .infinity)
-                            
-                            Button(action: {
-                                withAnimation(.easeInOut) {
-                                    isShowingPhotoModeGuide = false
-                                }
-                            }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color(.lightGray))
-                                    .padding(12)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.top, 8)
-                            .padding(.trailing, 8)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 431)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-                        .shadow(radius: 20)
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 0)
                     }
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))

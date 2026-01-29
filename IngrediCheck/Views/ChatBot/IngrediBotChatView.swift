@@ -214,8 +214,9 @@ struct IngrediBotChatView: View {
                 .padding(.trailing, 16)
             }
         }
+        .dismissKeyboardOnTap()
     }
-    
+
     // MARK: - Initial Greeting
 
     private func generateInitialGreeting() -> [ChatMessage] {

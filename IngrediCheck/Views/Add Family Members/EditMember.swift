@@ -176,6 +176,7 @@ struct EditMember: View {
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dismissKeyboardOnTap()
         .background(Color.pageBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 4)

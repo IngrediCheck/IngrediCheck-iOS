@@ -111,4 +111,6 @@ struct UseCasesView: View {
 
 #Preview {
     UseCasesView()
+        .environment(OnboardingState())
+        .environment(AuthController())
 }

@@ -197,6 +197,7 @@ struct ManageFamilyView: View {
         .background(Color.pageBackground)
         .navigationTitle("Manage Family")
         .navigationBarTitleDisplayMode(.inline)
+        .dismissKeyboardOnTap()
         .onAppear {
             // Initialize family name: use existing family name, or generate from self member's first name
             if let family = familyStore.family {
@@ -626,8 +627,15 @@ private struct FamilyCardView: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(Color.white)
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Color.white)
+                
+                Image(systemName: "tree")
+                    .font(.system(size: 134))
+                    .foregroundStyle(.grayScale30)
+                    .offset(x: 60)
+            }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28)

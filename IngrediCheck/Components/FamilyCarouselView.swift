@@ -12,9 +12,14 @@ struct FamilyCarouselView: View {
     @Environment(WebService.self) private var webService
     @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
     @EnvironmentObject private var store: Onboarding
+    @Environment(AppNavigationCoordinator.self) private var coordinator
 
     @State var selectedFamilyMember: UserModel? = nil
-    
+
+    /// When true, only the target member capsule is interactive.
+    private var isLocked: Bool { coordinator.isAddingPreferencesForMember }
+    private var lockedMemberId: String? { coordinator.addPreferencesForMemberId?.uuidString }
+
     // Convert FamilyMember objects to UserModel format
     private var familyMembersList: [UserModel] {
         var members: [UserModel] = []
@@ -61,12 +66,17 @@ struct FamilyCarouselView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 18) {
                 ForEach(familyMembersList, id: \.id) { ele in
+                    let isTarget = isLocked && ele.id == lockedMemberId
+                    let isSelectedState = isLocked ? isTarget : (ele.id == selectedFamilyMember?.id)
+
                     FamilyCarouselMemberAvatarView(
                         memberIdentifier: ele.id,
                         name: ele.name,
                         color: ele.backgroundColor ?? .clear,
-                        isSelected: ele.id == selectedFamilyMember?.id
+                        isSelected: isSelectedState
                     )
+                    .saturation(isLocked && !isTarget ? 0 : 1)
+                    .disabled(isLocked && !isTarget)
                     .onTapGesture {
                         Task {
                             await selectFamilyMember(ele: ele)
@@ -76,6 +86,13 @@ struct FamilyCarouselView: View {
             }
         }
         .onAppear {
+            // When locked to a specific member, force-select that member
+            if isLocked, let lockedId = lockedMemberId,
+               let match = familyMembersList.first(where: { $0.id == lockedId }) {
+                selectedFamilyMember = match
+                return
+            }
+
             // Initialize selection based on familyStore.selectedMemberId if set,
             // otherwise default to "Everyone"
             if selectedFamilyMember == nil {
@@ -255,6 +272,7 @@ struct FamilyCarouselMemberAvatarView: View {
     return FamilyCarouselView()
         .environment(familyStore)
         .environmentObject(onboarding)
+        .environment(AppNavigationCoordinator())
         .environment(webService)
         .environment(foodNotesStore)
 }

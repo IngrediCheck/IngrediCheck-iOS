@@ -178,6 +178,7 @@ struct EnterYourInviteCode : View {
 //            , alignment: .top
 //        )
         .navigationBarBackButtonHidden(true)
+        .dismissKeyboardOnTap()
     }
 
     struct InviteTextField: View {

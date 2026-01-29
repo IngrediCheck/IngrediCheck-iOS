@@ -56,7 +56,7 @@ struct ChatbotTextField: View {
                         .foregroundStyle(.grayScale60)
                 )
         )
-        
+        .dismissKeyboardOnTap()
     }
 }
 

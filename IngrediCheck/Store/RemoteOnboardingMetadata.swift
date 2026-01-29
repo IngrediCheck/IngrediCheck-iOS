@@ -30,7 +30,7 @@ enum BottomSheetRouteIdentifier: String, Codable {
     case addMoreMembers
     case addMoreMembersMinimal
     case wouldYouLikeToInvite
-    case wantToAddPreference
+    case addPreferencesForMember
     case generateAvatar
     case bringingYourAvatar
     case meetYourAvatar

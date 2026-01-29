@@ -27,7 +27,7 @@ struct WelcomeView: View {
                 // Central illustration - Rive animation
                 RiveViewModel(fileName: "ingridecheck")
                     .view()
-                    .scaleEffect(1.2)
+                    .scaleEffect(1.3)
 //                    .aspectRatio(contentMode: .fill)
 //                    .padding(.bottom, 46)
                 

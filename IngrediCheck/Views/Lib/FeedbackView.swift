@@ -145,6 +145,7 @@ struct FeedbackView: View {
                 .scrollIndicators(.hidden)
                 .toolbar(.hidden, for: .navigationBar)
                 .gesture(TapGesture().onEnded { isFocused = false })
+                .dismissKeyboardOnTap()
                 .presentationDetents([.height(479)])
                 .presentationBackground(.regularMaterial)
             case .feedbackAndImages:
@@ -190,6 +191,7 @@ struct FeedbackView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationBarItems(leading: cancelButton, trailing: nextOrSubmitButton)
                 .gesture(TapGesture().onEnded { isFocused = false })
+                .dismissKeyboardOnTap()
                 .navigationDestination(for: String.self) { item in
                     if item == "captureImages" {
                         ImageCaptureView(

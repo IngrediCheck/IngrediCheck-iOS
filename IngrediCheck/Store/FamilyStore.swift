@@ -510,13 +510,6 @@ final class FamilyStore {
             // Sync pending invite status from local persistence
             syncPendingInviteStatus()
             
-            // If this is a single-member family and no member is selected,
-            // auto-select the self member so preferences load correctly.
-            if let family = family, family.otherMembers.isEmpty, selectedMemberId == nil {
-                selectedMemberId = family.selfMember.id
-                Log.debug("FamilyStore", "loadCurrentFamily: Auto-selected self member for single-member family")
-            }
-            
             Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
         } catch {
             // Not being in a family is a valid state; treat errors as UI feedback only.
@@ -751,6 +744,7 @@ final class FamilyStore {
         
         do {
             family = try await service.joinFamily(inviteCode: inviteCode)
+            errorMessage = nil  // Clear any error set by concurrent operations
             Log.debug("FamilyStore", "join success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -798,9 +792,6 @@ final class FamilyStore {
             selfMember: selfMember,
             otherMembers: nil
         )
-        if let family = family {
-            selectedMemberId = family.selfMember.id
-        }
         Log.debug("FamilyStore", "createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
     }
     
@@ -865,8 +856,6 @@ final class FamilyStore {
             
             if let family = family {
                 Log.debug("FamilyStore", "✅ Family created successfully - name: \(family.name)")
-                selectedMemberId = family.selfMember.id
-                Log.debug("FamilyStore", "✅ Selected member ID set to: \(selectedMemberId?.uuidString)")
                 // Clear pending self member as it is now persisted
                 pendingSelfMember = nil
                 Log.debug("FamilyStore", "✅ Cleared pending self member")

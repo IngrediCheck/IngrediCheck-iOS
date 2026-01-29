@@ -47,24 +47,27 @@ struct WelcomeBack: View {
                         switch result {
                         case .success:
                             Task {
-                                // Fetch remote metadata to check onboarding stage
                                 let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
-                                
+                                Log.debug("WelcomeBack", "Google sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                                 await MainActor.run {
                                     if let stage = metadata?.stage, stage == .completed {
-                                        // User has completed onboarding (including food notes), go to home
                                         OnboardingPersistence.shared.markCompleted()
                                         coordinator.showCanvas(.home)
+                                    } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
+                                        let (canvas, sheet) = AppNavigationCoordinator.restoreState(from: metadata)
+                                        Log.debug("WelcomeBack", "Restoring to canvas=\(canvas), sheet=\(sheet)")
+                                        coordinator.showCanvas(canvas)
+                                        coordinator.navigateInBottomSheet(sheet)
                                     } else {
-                                        // User hasn't completed food notes, show "Personalize your Choices"
-                                        coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
-                                        coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                                        Log.debug("WelcomeBack", "No metadata or no progress — navigating to whosThisFor")
+                                        coordinator.showCanvas(.letsGetStarted)
+                                        coordinator.navigateInBottomSheet(.whosThisFor)
                                     }
                                     isSigningIn = false
                                 }
                             }
                         case .failure(let error):
-                            print("Google Sign-In failed: \\(error.localizedDescription)")
+                            Log.error("WelcomeBack", "Google Sign-In failed: \(error.localizedDescription)")
                             isSigningIn = false
                         }
                     }
@@ -93,24 +96,27 @@ struct WelcomeBack: View {
                         switch result {
                         case .success:
                             Task {
-                                // Fetch remote metadata to check onboarding stage
                                 let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
-                                
+                                Log.debug("WelcomeBack", "Apple sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                                 await MainActor.run {
                                     if let stage = metadata?.stage, stage == .completed {
-                                        // User has completed onboarding (including food notes), go to home
                                         OnboardingPersistence.shared.markCompleted()
                                         coordinator.showCanvas(.home)
+                                    } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
+                                        let (canvas, sheet) = AppNavigationCoordinator.restoreState(from: metadata)
+                                        Log.debug("WelcomeBack", "Restoring to canvas=\(canvas), sheet=\(sheet)")
+                                        coordinator.showCanvas(canvas)
+                                        coordinator.navigateInBottomSheet(sheet)
                                     } else {
-                                        // User hasn't completed food notes, show "Personalize your Choices"
-                                        coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
-                                        coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
+                                        Log.debug("WelcomeBack", "No metadata or no progress — navigating to whosThisFor")
+                                        coordinator.showCanvas(.letsGetStarted)
+                                        coordinator.navigateInBottomSheet(.whosThisFor)
                                     }
                                     isSigningIn = false
                                 }
                             }
                         case .failure(let error):
-                            print("Apple Sign-In failed: \\(error.localizedDescription)")
+                            Log.error("WelcomeBack", "Apple Sign-In failed: \(error.localizedDescription)")
                             isSigningIn = false
                         }
                     }

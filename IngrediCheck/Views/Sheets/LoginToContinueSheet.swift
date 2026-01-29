@@ -7,6 +7,9 @@ struct LoginToContinueSheet: View {
     let onSignedIn: () -> Void
     let showAsAlert: Bool
 
+    @State private var showUpgradeError = false
+    @State private var upgradeErrorMessage = ""
+
     init(onBack: @escaping () -> Void, onSignedIn: @escaping () -> Void, showAsAlert: Bool = false) {
         self.onBack = onBack
         self.onSignedIn = onSignedIn
@@ -14,10 +17,36 @@ struct LoginToContinueSheet: View {
     }
 
     var body: some View {
-        if showAsAlert {
-            alertStyleView
-        } else {
-            sheetStyleView
+        Group {
+            if showAsAlert {
+                alertStyleView
+            } else {
+                sheetStyleView
+            }
+        }
+        .overlay(alignment: .center) {
+            if authController.isUpgradingAccount {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .scaleEffect(2)
+                }
+            }
+        }
+        .onChange(of: authController.accountUpgradeError?.localizedDescription ?? "", initial: false) { _, message in
+            guard !message.isEmpty else { return }
+            upgradeErrorMessage = message
+            showUpgradeError = true
+        }
+        .alert("Sign-in Failed", isPresented: $showUpgradeError) {
+            Button("OK", role: .cancel) {
+                Task { @MainActor in
+                    authController.accountUpgradeError = nil
+                }
+            }
+        } message: {
+            Text(upgradeErrorMessage)
         }
     }
     

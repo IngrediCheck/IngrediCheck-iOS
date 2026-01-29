@@ -26,7 +26,7 @@ enum BottomSheetRoute: Hashable {
     case addMoreMembersMinimal
     case editMember(memberId: UUID, isSelf: Bool)
     case wouldYouLikeToInvite(memberId: UUID, name: String)
-    case wantToAddPreference(name: String)
+    case addPreferencesForMember(memberId: UUID, name: String)
     case generateAvatar
     case bringingYourAvatar
     case meetYourAvatar

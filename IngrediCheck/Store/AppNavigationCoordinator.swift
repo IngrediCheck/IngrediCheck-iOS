@@ -64,6 +64,11 @@ class AppNavigationCoordinator {
 
     // Track if user just joined a family via invite code
     var isJoiningViaInviteCode: Bool = false
+
+    // Track if we're in "add preferences for member" flow
+    var isAddingPreferencesForMember: Bool = false
+    var addPreferencesForMemberId: UUID? = nil
+    var addPreferencesOriginIsSettings: Bool = false  // True if started from Settings → Manage Family
     
     // Global state for secondary edit sheet
     var editingStepId: String? = nil
@@ -355,8 +360,8 @@ class AppNavigationCoordinator {
             return (.editMember, "\(memberId.uuidString)|\(isSelf)")
         case .wouldYouLikeToInvite(let memberId, let name):
             return (.wouldYouLikeToInvite, "\(memberId.uuidString)|\(name)")
-        case .wantToAddPreference(let name):
-            return (.wantToAddPreference, name)
+        case .addPreferencesForMember(let memberId, let name):
+            return (.addPreferencesForMember, "\(memberId.uuidString)|\(name)")
         case .generateAvatar:
             return (.generateAvatar, nil)
         case .bringingYourAvatar:
@@ -451,8 +456,13 @@ class AppNavigationCoordinator {
                 return .wouldYouLikeToInvite(memberId: id, name: name)
             }
             return .homeDefault
-        case .wantToAddPreference:
-            return .wantToAddPreference(name: param ?? "")
+        case .addPreferencesForMember:
+            let parts = (param ?? "").split(separator: "|")
+            if parts.count >= 2, let id = UUID(uuidString: String(parts[0])) {
+                let name = String(parts[1])
+                return .addPreferencesForMember(memberId: id, name: name)
+            }
+            return .homeDefault
         case .generateAvatar:
             return .generateAvatar
         case .bringingYourAvatar:
@@ -532,7 +542,7 @@ class AppNavigationCoordinator {
         case .alreadyHaveAnAccount, .welcomeBack, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
              // These sheets all appear on .heyThere canvas (consistent with navigateInBottomSheet logic)
              canvas = .heyThere
-        case .letsMeetYourIngrediFam, .whatsYourName, .addMoreMembers, .addMoreMembersMinimal, .editMember, .wouldYouLikeToInvite, .wantToAddPreference, .generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor:
+        case .letsMeetYourIngrediFam, .whatsYourName, .addMoreMembers, .addMoreMembersMinimal, .editMember, .wouldYouLikeToInvite, .addPreferencesForMember, .generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor:
              canvas = .letsMeetYourIngrediFam
         case .dietaryPreferencesSheet:
              // handled by stage .dietaryIntro usually, but enforce correct canvas

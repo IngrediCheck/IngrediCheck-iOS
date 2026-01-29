@@ -15,7 +15,7 @@ struct IngredientsAlertCard: View {
     var loadingIngredientName: String? = nil  // Which ingredient is currently loading
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 10) {
             header
             summaryText
                 .padding(.horizontal, 20)
@@ -93,7 +93,7 @@ struct IngredientsAlertCard: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 20)
+        .padding(.top, 16)
     }
     
     private var summaryText: some View {
@@ -197,7 +197,7 @@ struct IngredientsAlertCard: View {
     }
     
     private var alertItemsList: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 VStack(alignment: .leading, spacing: 12) {
                     // Ingredient name with status badge on the right
@@ -208,7 +208,7 @@ struct IngredientsAlertCard: View {
                         Spacer()
                         statusChip(for: item.status)
                     }
-                    .padding(.top, index == 0 ? 20 : 0)
+                    .padding(.top, index == 0 ? 12 : 0)
 
                     Text(item.detail)
                         .font(ManropeFont.regular.size(14))
@@ -254,7 +254,7 @@ struct IngredientsAlertCard: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 24))
         .shadow(color: Color(hex: "#D8D8D8").opacity(0.25), radius: 9.8, y: 6)
         .padding(.top, 4)
     }
@@ -360,3 +360,96 @@ enum IngredientAlertStatus {
     }
 }
 
+// MARK: - Previews
+
+#Preview("Unmatched - Collapsed") {
+    IngredientsAlertCard(
+        isExpanded: .constant(false),
+        items: [
+            IngredientAlertItem(
+                name: "Sodium Nitrate",
+                detail: "This preservative is commonly found in processed meats and may not align with your preference to avoid artificial additives.",
+                status: .unmatched,
+                memberIdentifiers: ["Family"],
+                vote: nil,
+                rawIngredientName: "sodium nitrate"
+            ),
+            IngredientAlertItem(
+                name: "High Fructose Corn Syrup",
+                detail: "A sweetener that you've indicated you prefer to avoid.",
+                status: .unmatched,
+                memberIdentifiers: ["Family"],
+                vote: nil,
+                rawIngredientName: "high fructose corn syrup"
+            )
+        ],
+        status: .unmatched,
+        overallAnalysis: "This product contains Sodium Nitrate and High Fructose Corn Syrup which may not be suitable for your dietary preferences.",
+        onProductFeedback: { _ in }
+    )
+    .environment(FamilyStore())
+    .padding()
+}
+
+#Preview("Unmatched - Expanded") {
+    IngredientsAlertCard(
+        isExpanded: .constant(true),
+        items: [
+            IngredientAlertItem(
+                name: "Sodium Nitrate",
+                detail: "This preservative is commonly found in processed meats and may not align with your preference to avoid artificial additives.",
+                status: .unmatched,
+                memberIdentifiers: ["Family"],
+                vote: nil,
+                rawIngredientName: "sodium nitrate"
+            ),
+            IngredientAlertItem(
+                name: "Artificial Colors",
+                detail: "Contains Red 40 and Yellow 5 which you prefer to avoid.",
+                status: .uncertain,
+                memberIdentifiers: ["Family"],
+                vote: nil,
+                rawIngredientName: "artificial colors"
+            )
+        ],
+        status: .unmatched,
+        overallAnalysis: "This product contains Sodium Nitrate which may not be suitable for your dietary preferences.",
+        onFeedback: { _, _ in },
+        onProductFeedback: { _ in }
+    )
+    .environment(FamilyStore())
+    .padding()
+}
+
+#Preview("Matched") {
+    IngredientsAlertCard(
+        isExpanded: .constant(false),
+        items: [],
+        status: .matched,
+        overallAnalysis: "This product aligns with your dietary preferences.",
+        onProductFeedback: { _ in }
+    )
+    .environment(FamilyStore())
+    .padding()
+}
+
+#Preview("Uncertain") {
+    IngredientsAlertCard(
+        isExpanded: .constant(false),
+        items: [
+            IngredientAlertItem(
+                name: "Natural Flavors",
+                detail: "The source of these natural flavors is not specified and may contain ingredients you prefer to avoid.",
+                status: .uncertain,
+                memberIdentifiers: ["Family"],
+                vote: nil,
+                rawIngredientName: "natural flavors"
+            )
+        ],
+        status: .uncertain,
+        overallAnalysis: "This product contains Natural Flavors with uncertain ingredients.",
+        onProductFeedback: { _ in }
+    )
+    .environment(FamilyStore())
+    .padding()
+}

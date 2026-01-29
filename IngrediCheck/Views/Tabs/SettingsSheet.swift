@@ -295,6 +295,7 @@ struct SettingsContentView: View {
         .background(Color.pageBackground)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .dismissKeyboardOnTap()
             .sheet(isPresented: $isFeedbackPresented) {
                 FeedbackView(
                     feedbackData: $settingsFeedbackData,

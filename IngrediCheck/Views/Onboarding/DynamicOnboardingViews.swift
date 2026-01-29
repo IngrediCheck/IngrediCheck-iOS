@@ -610,11 +610,11 @@ struct DynamicOnboardingStepView: View {
     }
 }
 
-#Preview("Dynamic type-1 example") {
-    let steps = DynamicStepsProvider.loadSteps()
-    let step = steps.first { $0.type == .type1 } ?? steps.first!
-    return DynamicOnboardingStepView(step: step, flowType: .individual, preferences: .constant(Preferences()))
-}
+//#Preview("Dynamic type-1 example") {
+//    let steps = DynamicStepsProvider.loadSteps()
+//    let step = steps.first { $0.type == .type1 } ?? steps.first!
+//    return DynamicOnboardingStepView(step: step, flowType: .individual, preferences: .constant(Preferences()))
+//}
 
 // MARK: - Meet Your Profile Intro View
 
@@ -639,21 +639,22 @@ struct MeetYourProfileIntroView: View {
 // MARK: - Preferences Added Success Sheet
 
 struct PreferencesAddedSuccessSheet: View {
+    var title: String = "Preferences added successfully!"
     var onContinue: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 0) {
-          
+
             VStack(spacing: 12) {
-                Text("Preferences added successfully!")
-                    .font(NunitoFont.bold.size(22))
+                Text(title)
+                    .font(NunitoFont.bold.size(20))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                     .padding(.top, 32)
                 
                 Text("Your food preferences are saved. You can review them anytime, or edit a specific preference section by tapping Edit.")
                     .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(.grayScale120)
+                    .foregroundStyle(.grayScale130)
                     .multilineTextAlignment(.center)
                   
                     .padding(.horizontal, 24)
@@ -676,6 +677,12 @@ struct PreferencesAddedSuccessSheet: View {
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 20)
+    }
+}
+
+#Preview("PreferencesAddedSuccessSheet") {
+    PreferencesAddedSuccessSheet {
+        
     }
 }
 

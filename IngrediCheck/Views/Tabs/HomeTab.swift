@@ -49,6 +49,7 @@ enum ValidationResult {
         .animation(.linear, value: isFocused)
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Your Dietary Preferences")
+        .dismissKeyboardOnTap()
     }
     
     private var validationStatus: some View {

@@ -416,8 +416,8 @@ struct PersistentBottomSheet: View {
             return 438
         case .wouldYouLikeToInvite(_, _):
             return 244
-        case .wantToAddPreference:
-            return 244
+        case .addPreferencesForMember(_, _):
+            return 300
         case .generateAvatar:
             return 379
         case .bringingYourAvatar:
@@ -487,6 +487,9 @@ struct PersistentBottomSheet: View {
             await familyStore.waitForPendingUploads()
             
             await MainActor.run {
+                // Reset member filter to "Everyone" for each new onboarding question
+                familyStore.selectedMemberId = nil
+
                 // Get current step ID from route
                 guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
                     return
@@ -660,30 +663,54 @@ struct PersistentBottomSheet: View {
                 isLoading: isGeneratingInviteCode
             ) {
                 Task { @MainActor in
-                    await handleInviteShare(memberId: memberId)
+                    await handleInviteShare(memberId: memberId, name: name)
                 }
             } continuePressed: {
                 // Maybe later -> do NOT mark pending; only invited members should show "Pending"
-                // If this flow was started from Home/Manage Family, dismiss the sheet.
+                // If this flow was started from Home/Manage Family, show "Add preferences?" sheet.
                 // Otherwise, keep onboarding behavior.
                 isGeneratingInviteCode = false
                 if case .home = coordinator.currentCanvasRoute {
-                    coordinator.navigateInBottomSheet(.homeDefault)
+                    // Show "Add preferences?" sheet instead of going home
+                    coordinator.navigateInBottomSheet(.addPreferencesForMember(memberId: memberId, name: name))
                 } else {
                     coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
                 }
             }
-            
-        case .wantToAddPreference(let name):
-            WantToAddPreference(name: name) {
-                // Later button pressed - dismiss sheet back to home
-                coordinator.navigateInBottomSheet(.homeDefault)
-            } yesPressed: {
-                // Yes button pressed - reset onboarding and navigate to MainCanvasView with singleMember flow
-                store.reset(flowType: .singleMember)
-                coordinator.showCanvas(.mainCanvas(flow: .singleMember))
-            }
-            
+
+        case .addPreferencesForMember(let memberId, let name):
+            AddPreferencesForMemberSheet(
+                name: name,
+                laterPressed: {
+                    // Return to origin screen
+                    if coordinator.isCreatingFamilyFromSettings {
+                        appState.navigate(to: .manageFamily)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    } else {
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
+                },
+                yesPressed: {
+                    // 1. Set flags to track this flow and origin
+                    coordinator.isAddingPreferencesForMember = true
+                    coordinator.addPreferencesForMemberId = memberId
+                    coordinator.addPreferencesOriginIsSettings = coordinator.isCreatingFamilyFromSettings
+
+                    // 2. Pre-select the member in FamilyStore
+                    familyStore.selectedMemberId = memberId
+
+                    // 3. Reset onboarding to start fresh with family flow
+                    store.reset(flowType: .family)
+
+                    // 4. Navigate to food notes canvas
+                    let steps = DynamicStepsProvider.loadSteps()
+                    if let firstStepId = steps.first?.id {
+                        coordinator.navigateInBottomSheet(.onboardingStep(stepId: firstStepId))
+                    }
+                    coordinator.showCanvas(.mainCanvas(flow: .family))
+                }
+            )
+
         case .generateAvatar:
             GenerateAvatar(
                 isExpandedMinimal: $isExpandedMinimal,
@@ -801,7 +828,32 @@ struct PersistentBottomSheet: View {
             }
             
         case .allSetToJoinYourFamily:
-            PreferencesAddedSuccessSheet {
+            PreferencesAddedSuccessSheet(title: "All set to join your family!") {
+                // Check if this was "add preferences for member" flow
+                if coordinator.isAddingPreferencesForMember {
+                    let wasFromSettings = coordinator.addPreferencesOriginIsSettings
+
+                    // Reset the flags
+                    coordinator.isAddingPreferencesForMember = false
+                    coordinator.addPreferencesForMemberId = nil
+                    coordinator.addPreferencesOriginIsSettings = false
+
+                    if wasFromSettings {
+                        // Return to Manage Family screen
+                        coordinator.showCanvas(.home)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 250_000_000)
+                            appState.navigate(to: .manageFamily)
+                        }
+                    } else {
+                        // Return to HomeView
+                        coordinator.showCanvas(.home)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
+                    return
+                }
+
                 // Check if family creation was initiated from Settings
                 if coordinator.isCreatingFamilyFromSettings {
                     // Reset the flag
@@ -917,6 +969,31 @@ struct PersistentBottomSheet: View {
             
         case .preferencesAddedSuccess:
             PreferencesAddedSuccessSheet {
+                // Check if this was "add preferences for member" flow
+                if coordinator.isAddingPreferencesForMember {
+                    let wasFromSettings = coordinator.addPreferencesOriginIsSettings
+
+                    // Reset the flags
+                    coordinator.isAddingPreferencesForMember = false
+                    coordinator.addPreferencesForMemberId = nil
+                    coordinator.addPreferencesOriginIsSettings = false
+
+                    if wasFromSettings {
+                        // Return to Manage Family screen
+                        coordinator.showCanvas(.home)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 250_000_000)
+                            appState.navigate(to: .manageFamily)
+                        }
+                    } else {
+                        // Return to HomeView
+                        coordinator.showCanvas(.home)
+                        coordinator.navigateInBottomSheet(.homeDefault)
+                    }
+                    return
+                }
+
                 // If this success sheet was reached while creating family from Settings,
                 // return back to Settings instead of proceeding to Meet Your Profile/Home.
                 if coordinator.isCreatingFamilyFromSettings {
@@ -1030,8 +1107,9 @@ struct PersistentBottomSheet: View {
                     }
                 },
                 onSignedIn: {
-                    OnboardingPersistence.shared.markCompleted()
-                    coordinator.showCanvas(.home)
+                    // Stay on the same canvas — just go back to quickAccessNeeded.
+                    // The login toggle reflects isSignedIn automatically.
+                    coordinator.navigateInBottomSheet(.quickAccessNeeded)
                 },
                 showAsAlert: showAsAlert
             )
@@ -1088,7 +1166,7 @@ struct PersistentBottomSheet: View {
     // MARK: - INVITES / SHARE
 
     @MainActor
-    private func handleInviteShare(memberId: UUID) async {
+    private func handleInviteShare(memberId: UUID, name: String) async {
         guard !isGeneratingInviteCode else { return }
 
         isGeneratingInviteCode = true
@@ -1107,7 +1185,7 @@ struct PersistentBottomSheet: View {
         let items = inviteShareItems(message: message)
         presentShareSheet(items: items)
 
-        routeAfterInviteShare()
+        routeAfterInviteShare(memberId: memberId, name: name)
     }
 
     @MainActor
@@ -1140,10 +1218,11 @@ struct PersistentBottomSheet: View {
     }
 
     @MainActor
-    private func routeAfterInviteShare() {
-        // Return to previous screen or home depending on where we are
+    private func routeAfterInviteShare(memberId: UUID, name: String) {
+        // After sharing invite, show "Add preferences?" sheet if on home screen
         if case .home = coordinator.currentCanvasRoute {
-            coordinator.navigateInBottomSheet(.homeDefault)
+            // Show "Add preferences?" sheet after invite
+            coordinator.navigateInBottomSheet(.addPreferencesForMember(memberId: memberId, name: name))
         } else {
             coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
         }

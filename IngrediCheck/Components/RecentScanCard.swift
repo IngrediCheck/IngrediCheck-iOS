@@ -548,83 +548,83 @@ private func makeSampleScan(
 }
 #endif
 
-#Preview("Full Style") {
-    ScrollView {
-        VStack(spacing: 12) {
-            RecentScanCard(
-                scan: makeSampleScan(
-                    name: "Organic Oat Milk",
-                    brand: "Oatly",
-                    isFavorited: true,
-                    overallMatch: "matched",
-                    minutesAgo: 15
-                ),
-                style: .full,
-                onFavoriteToggle: { _, _ in }
-            )
+//#Preview("Full Style") {
+//    ScrollView {
+//        VStack(spacing: 12) {
+//            RecentScanCard(
+//                scan: makeSampleScan(
+//                    name: "Organic Oat Milk",
+//                    brand: "Oatly",
+//                    isFavorited: true,
+//                    overallMatch: "matched",
+//                    minutesAgo: 15
+//                ),
+//                style: .full,
+//                onFavoriteToggle: { _, _ in }
+//            )
+//
+//            RecentScanCard(
+//                scan: makeSampleScan(
+//                    name: "Chocolate Chip Cookies - Strawberry flavor",
+//                    brand: "Chips Ahoy",
+//                    isFavorited: false,
+//                    overallMatch: "unmatched",
+//                    minutesAgo: 45,
+//                    isStale: true
+//                ),
+//                style: .full,
+//                onFavoriteToggle: { _, _ in }
+//            )
+//
+//            RecentScanCard(
+//                scan: makeSampleScan(
+//                    name: "Protein Bar",
+//                    brand: "Quest",
+//                    isFavorited: false,
+//                    overallMatch: "uncertain",
+//                    minutesAgo: 120
+//                ),
+//                style: .full,
+//                onFavoriteToggle: { _, _ in }
+//            )
+//        }
+//        .padding(20)
+//    }
+//    .background(Color.pageBackground)
+//    .environment(WebService())
+//}
 
-            RecentScanCard(
-                scan: makeSampleScan(
-                    name: "Chocolate Chip Cookies - Strawberry flavor",
-                    brand: "Chips Ahoy",
-                    isFavorited: false,
-                    overallMatch: "unmatched",
-                    minutesAgo: 45,
-                    isStale: true
-                ),
-                style: .full,
-                onFavoriteToggle: { _, _ in }
-            )
-
-            RecentScanCard(
-                scan: makeSampleScan(
-                    name: "Protein Bar",
-                    brand: "Quest",
-                    isFavorited: false,
-                    overallMatch: "uncertain",
-                    minutesAgo: 120
-                ),
-                style: .full,
-                onFavoriteToggle: { _, _ in }
-            )
-        }
-        .padding(20)
-    }
-    .background(Color.pageBackground)
-    .environment(WebService())
-}
-
-#Preview("Compact Style") {
-    ScrollView {
-        VStack(spacing: 0) {
-            ForEach(0..<3, id: \.self) { index in
-                RecentScanCard(
-                    scan: makeSampleScan(
-                        name: index == 0 ? "Organic Oat Milk" : index == 1 ? "Chocolate Chip Cookies" : "Protein Bar",
-                        brand: index == 0 ? "Oatly" : index == 1 ? "Chips Ahoy" : "Quest",
-                        isFavorited: index == 0,
-                        overallMatch: index == 0 ? "matched" : index == 1 ? "unmatched" : "uncertain",
-                        minutesAgo: index == 0 ? 15 : index == 1 ? 45 : 120,
-                        isStale: index == 1
-                    ),
-                    style: .compact,
-                    onFavoriteToggle: { _, _ in }
-                )
-                .padding(.vertical, 12)
-
-                if index < 2 {
-                    Divider()
-                        .background(Color.grayScale30)
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.white)
-        )
-        .padding(20)
-    }
-    .background(Color.pageBackground)
-    .environment(WebService())
-}
+//#Preview("Compact Style") {
+//    ScrollView {
+//        VStack(spacing: 0) {
+//            ForEach(0..<3, id: \.self) { index in
+//                RecentScanCard(
+//                    scan: makeSampleScan(
+//                        name: index == 0 ? "Organic Oat Milk" : index == 1 ? "Chocolate Chip Cookies" : "Protein Bar",
+//                        brand: index == 0 ? "Oatly" : index == 1 ? "Chips Ahoy" : "Quest",
+//                        isFavorited: index == 0,
+//                        overallMatch: index == 0 ? "matched" : index == 1 ? "unmatched" : "uncertain",
+//                        minutesAgo: index == 0 ? 15 : index == 1 ? 45 : 120,
+//                        isStale: index == 1
+//                    ),
+//                    style: .compact,
+//                    onFavoriteToggle: { _, _ in }
+//                )
+//                .padding(.vertical, 12)
+//
+//                if index < 2 {
+//                    Divider()
+//                        .background(Color.grayScale30)
+//                }
+//            }
+//        }
+//        .padding(.horizontal, 16)
+//        .background(
+//            RoundedRectangle(cornerRadius: 24)
+//                .fill(Color.white)
+//        )
+//        .padding(20)
+//    }
+//    .background(Color.pageBackground)
+//    .environment(WebService())
+//}

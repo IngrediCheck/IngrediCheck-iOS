@@ -219,6 +219,7 @@ struct AddMoreMembers: View {
             .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dismissKeyboardOnTap()
         .overlay(
             // Only show drag indicator when sheet is draggable (opened from home screen)
             Group {

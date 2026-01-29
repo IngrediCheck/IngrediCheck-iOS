@@ -196,6 +196,7 @@ struct MeetYourProfileView: View {
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity)
+        .dismissKeyboardOnTap()
         .onAppear {
             if let member = targetMember {
                 // If it's the self member and "Just Me" flow, backend defaults the member name to "Me"

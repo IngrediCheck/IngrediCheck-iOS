@@ -132,6 +132,11 @@ struct GreenCapsule: View {
             GreenCapsule(title: "Continue", isLoading: true)
             GreenCapsule(title: "Disabled", isDisabled: true)
             GreenCapsule(title: "With Icon", icon: "share", iconWidth: 12, iconHeight: 12)
+            
+            HStack {
+                GreenCapsule(title: "Get Started")
+                GreenCapsule(title: "Continue", isLoading: false)
+            }
         }
         .padding()
     }

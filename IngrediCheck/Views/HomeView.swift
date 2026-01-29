@@ -115,39 +115,41 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity)
                     
                     // Food Notes & Allergy Summary...
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Food Notes")
-                                    .font(ManropeFont.semiBold.size(18))
-                                    .foregroundStyle(.grayScale150)
-                                    .frame(height: 15)
+                    GeometryReader { geometry in
+                        let cardWidth = (geometry.size.width - 12) / 2 // 12 is spacing
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Food Notes")
+                                        .font(ManropeFont.semiBold.size(18))
+                                        .foregroundStyle(.grayScale150)
+                                        .frame(height: 15)
 
-                                Text("Here's what your family avoids or needs to watch out for.")
-                                    .font(ManropeFont.medium.size(14))
-                                    .foregroundStyle(.grayScale110)
-                                    .lineLimit(3)
-                            }
+                                    Text("Here's what your family avoids or needs to watch out for.")
+                                        .font(ManropeFont.medium.size(14))
+                                        .foregroundStyle(.grayScale110)
+                                        .lineLimit(3)
+                                }
 
-                            AskIngrediBotButton {
-                                coordinator.showAIBotSheet()
+                                AskIngrediBotButton {
+                                    coordinator.showAIBotSheet()
+                                }
                             }
+                            .frame(width: cardWidth, alignment: .leading)
+
+                            AllergySummaryCard(
+                                summary: foodNotesStore?.foodNotesSummary,
+                                dynamicSteps: onboarding.dynamicSteps,
+                                onTap: {
+                                    editTargetSectionName = nil
+                                    showEditableCanvas = true
+                                }
+                            )
+                            .frame(width: cardWidth, height: 196)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-
-                        AllergySummaryCard(
-                            summary: foodNotesStore?.foodNotesSummary,
-                            dynamicSteps: onboarding.dynamicSteps,
-                            onTap: {
-                                editTargetSectionName = nil
-                                showEditableCanvas = true
-                            }
-                        )
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 196)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.trailing, 12)
+                    .frame(height: 196)
                     
                     // Family + Average scans - use GeometryReader to ensure equal width
                     GeometryReader { geometry in
@@ -228,6 +230,7 @@ struct HomeView: View {
                                 appState.navigate(to: .manageFamily)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(height: 173) // Fixed height for the card row (141 content + 16*2 padding)
 //                    .padding(.bottom, 20)

@@ -539,7 +539,7 @@ struct AllergySummaryCard: View {
                                alignment: .topLeading)
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
                 .padding(.top, 12)
                 .padding(.bottom, 17)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
