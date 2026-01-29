@@ -26,7 +26,7 @@ struct ImageCaptureView: View {
     @State private var showFocusToast = false
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
-    @Environment(CheckTabState.self) var checkTabState: CheckTabState?
+    @Environment(CheckTabState.self) var checkTabState
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -124,7 +124,7 @@ struct ImageCaptureView: View {
             // capturedImages = []  // Commented out - preserve images for navigation
             // checkTabState.scanId = nil  // Commented out - preserve scanId for navigation
             cameraManager.stopSession()
-            Log.debug("PHOTO_SCAN", "📸 ImageCaptureView disappeared - scanId preserved: \(checkTabState?.scanId ?? "nil")")
+            Log.debug("PHOTO_SCAN", "📸 ImageCaptureView disappeared - scanId preserved: \(checkTabState.scanId ?? "nil")")
         }
     }
     
@@ -166,17 +166,10 @@ struct ImageCaptureView: View {
                 // Capture current state before async work
                 let checkTabState = self.checkTabState
                 let currentImageCount = self.capturedImages.count
-
+                
                 Log.debug("PHOTO_SCAN", "📸 Photo captured - current_image_count: \(currentImageCount), new_count: \(currentImageCount + 1)")
-
+                
                 Task { @MainActor in
-                    withAnimation {
-                        self.capturedImages.append(ProductImage(image: image))
-                    }
-
-                    // Only submit to scan API when in CheckTab flow (checkTabState available)
-                    guard let checkTabState else { return }
-
                     // Generate scan_id when first image is captured
                     if checkTabState.scanId == nil {
                         checkTabState.scanId = UUID().uuidString
@@ -184,12 +177,16 @@ struct ImageCaptureView: View {
                     } else {
                         Log.debug("PHOTO_SCAN", "🆔 Using existing scan_id: \(checkTabState.scanId!)")
                     }
-
+                    
                     guard let scanId = checkTabState.scanId else {
                         Log.debug("PHOTO_SCAN", "❌ ERROR: scanId is nil after generation!")
                         return
                     }
-
+                    
+                    withAnimation {
+                        self.capturedImages.append(ProductImage(image: image))
+                    }
+                    
                     // Submit image to scan API - use currentImageCount (0-indexed) before appending
                     Log.debug("PHOTO_SCAN", "🚀 Starting Task to submit image - scanId: \(scanId), imageIndex: \(currentImageCount)")
                     Task {
@@ -223,7 +220,7 @@ struct ImageCaptureView: View {
     func deleteCapturedImages() {
         withAnimation {
             capturedImages = []
-            checkTabState?.scanId = nil  // Reset scanId when clearing images
+            checkTabState.scanId = nil  // Reset scanId when clearing images
         }
         // No need to delete from Supabase storage for scan images
     }
