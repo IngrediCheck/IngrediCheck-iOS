@@ -7,6 +7,7 @@
 
 import UIKit
 import os
+import PostHog
 
 /// Container for a generated memoji image and its storage location.
 struct GeneratedMemoji {
@@ -54,6 +55,8 @@ private func extractMemojiStoragePath(from urlString: String) -> String {
 /// Calls the memoji edge function, returning both the rendered image and its
 /// storage path inside the `memoji-images` bucket.
 func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMemoji {
+    let startTime = Date().timeIntervalSince1970
+
     guard let token = try? await supabaseClient.auth.session.accessToken else {
         throw AIMemojiError.notAuthenticated
     }
@@ -142,7 +145,13 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     guard httpResponse.statusCode == 200 else {
         let message = String(data: responseData, encoding: .utf8) ?? "status \(httpResponse.statusCode)"
         Log.error("AIMemojiService", "❌ Request failed with message: \(message)")
-        
+
+        let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+        PostHogSDK.shared.capture("Memoji Image Generation Failed", properties: [
+            "total_latency_ms": latency,
+            "status_code": httpResponse.statusCode
+        ])
+
         // Try to parse error details from backend response
         if let errorData = try? JSONDecoder().decode(MemojiErrorResponse.self, from: responseData) {
             let errorMessage = errorData.error.message
@@ -200,6 +209,11 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
 
     let storagePath = extractMemojiStoragePath(from: urlString)
     Log.debug("AIMemojiService", "generateMemojiImage: Using storagePath=\(storagePath)")
+
+    let latency = (Date().timeIntervalSince1970 - startTime) * 1000
+    PostHogSDK.shared.capture("Memoji Image Generated", properties: [
+        "total_latency_ms": latency
+    ])
 
     return GeneratedMemoji(image: image, storagePath: storagePath)
 }
