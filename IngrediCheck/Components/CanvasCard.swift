@@ -37,6 +37,18 @@ struct CanvasCard: View {
         return memberIds
     }
     
+    private var hasOtherSelected: Bool {
+        if let chips = chips, chips.contains(where: { $0.name == "Other" }) {
+            return true
+        }
+        if let sectionedChips = sectionedChips, sectionedChips.contains(where: { section in
+            section.chips.contains(where: { $0.name == "Other" })
+        }) {
+            return true
+        }
+        return false
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -89,15 +101,17 @@ struct CanvasCard: View {
                 }
             }
             
-            HStack(spacing: 8) {
-                Image("exlamation")
-                    .resizable()
-                    .frame(width: 16, height: 16)
-                
-                Text("Something else too, don't worry we'll ask later!")
-                    .font(ManropeFont.regular.size(10))
-                    .foregroundStyle(Color(hex: "#7F7F7F"))
-                    .italic()
+            if hasOtherSelected {
+                HStack(spacing: 8) {
+                    Image("exlamation")
+                        .resizable()
+                        .frame(width: 16, height: 16)
+
+                    Text("Something else too, don't worry we'll ask later!")
+                        .font(ManropeFont.regular.size(10))
+                        .foregroundStyle(Color(hex: "#7F7F7F"))
+                        .italic()
+                }
             }
         }
         .padding(.horizontal, 12)

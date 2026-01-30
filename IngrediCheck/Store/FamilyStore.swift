@@ -781,7 +781,7 @@ final class FamilyStore {
         // Color "#FFFFBA" is the associated background color for memoji_3
         let selfMember = FamilyMember(
             id: UUID(),
-            name: "Me",
+            name: "Bite Buddy",
             color: "#FFFFBA",
             joined: true,
             imageFileHash: "memoji_3"

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
+		D3F946B6F45C9CE7AC0B5E2C /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6E6DC0F6EC4EA734D9E172 /* ShimmerModifier.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
 		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
 		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
@@ -69,6 +70,7 @@
 		D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05E2EDEE4B600F139B2 /* FamilyService.swift */; };
 		D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */; };
 		D382E0642EDEE4B600F139B2 /* FoodNotesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E0632EDEE4B600F139B2 /* FoodNotesStore.swift */; };
+		D3CHAT002000000000000000 /* ChatStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CHAT001000000000000000 /* ChatStore.swift */; };
 		D3BECC7D2ED98D320088E044 /* WelcomeToYourFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC7C2ED98D320088E044 /* WelcomeToYourFamilyView.swift */; };
 		D3BECC7E2ED98D320088E044 /* HeyThereScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC782ED98D320088E044 /* HeyThereScreen.swift */; };
 		D3BECC7F2ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC772ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift */; };
@@ -164,6 +166,7 @@
 		D382E05E2EDEE4B600F139B2 /* FamilyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyService.swift; sourceTree = "<group>"; };
 		D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyStore.swift; sourceTree = "<group>"; };
 		D382E0632EDEE4B600F139B2 /* FoodNotesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodNotesStore.swift; sourceTree = "<group>"; };
+		D3CHAT001000000000000000 /* ChatStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStore.swift; sourceTree = "<group>"; };
 		D3BECC752ED98D320088E044 /* AppFlowRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlowRouter.swift; sourceTree = "<group>"; };
 		D3BECC762ED98D320088E044 /* BlankScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlankScreen.swift; sourceTree = "<group>"; };
 		D3BECC772ED98D320088E044 /* DietaryPreferencesAndRestrictions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietaryPreferencesAndRestrictions.swift; sourceTree = "<group>"; };
@@ -180,6 +183,7 @@
 		D3BECC902ED98EA10088E044 /* CanvasRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasRoute.swift; sourceTree = "<group>"; };
 		D3BECC912ED98EA10088E044 /* CustomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSheet.swift; sourceTree = "<group>"; };
 		D3BECC922ED98EA10088E044 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		EA6E6DC0F6EC4EA734D9E172 /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
 		D3BECC932ED98EA10088E044 /* HexColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexColorExtension.swift; sourceTree = "<group>"; };
 		D3BECC942ED98EA10088E044 /* ManropeFontEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManropeFontEnum.swift; sourceTree = "<group>"; };
 		D3BECC952ED98EA10088E044 /* NunitoFontEnum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NunitoFontEnum.swift; sourceTree = "<group>"; };
@@ -272,6 +276,7 @@
 				D3BECC972ED98EA10088E044 /* Temp3.swift */,
 				D3BECC982ED98EA10088E044 /* Temp4.swift */,
 				0C51E2ED2E335B7300A3E3A9 /* Constants.swift */,
+				EA6E6DC0F6EC4EA734D9E172 /* ShimmerModifier.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -296,6 +301,7 @@
 				D382E05E2EDEE4B600F139B2 /* FamilyService.swift */,
 				D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */,
 				D382E0632EDEE4B600F139B2 /* FoodNotesStore.swift */,
+				D3CHAT001000000000000000 /* ChatStore.swift */,
 				D3BECC872ED98E860088E044 /* AppNavigationCoordinator.swift */,
 				D3BECC882ED98E860088E044 /* Onboarding.swift */,
 				D3BECC892ED98E860088E044 /* TempStore.swift */,
@@ -584,6 +590,7 @@
 				D3BECC9C2ED98EA10088E044 /* CanvasRoute.swift in Sources */,
 				D3BECCA52ED98EA30088E044 /* ChatContextBuilder.swift in Sources */,
 				D3BECC9D2ED98EA10088E044 /* FlowLayout.swift in Sources */,
+				D3F946B6F45C9CE7AC0B5E2C /* ShimmerModifier.swift in Sources */,
 				D3BED0622ED997490088E044 /* HomeView.swift in Sources */,
 				D3BED0642ED997490088E044 /* EditableCanvasView.swift in Sources */,
 				D3BED0662ED9974A00088E044 /* RecentScansFullView.swift in Sources */,
@@ -616,6 +623,7 @@
 				D3CE197A2F20EF400097B28D /* ViewExtensions.swift in Sources */,
 				D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */,
 				D382E0642EDEE4B600F139B2 /* FoodNotesStore.swift in Sources */,
+				D3CHAT002000000000000000 /* ChatStore.swift in Sources */,
 				0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */,
 				1F59877A2E30C51E00381E32 /* TipJarView.swift in Sources */,
 				3976C4212BC0B6AF0026991A /* ThreeDotsIndexView.swift in Sources */,

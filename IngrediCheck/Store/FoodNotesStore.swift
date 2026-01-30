@@ -79,6 +79,13 @@ final class FoodNotesStore {
         }
     }
 
+    /// Loads summary directly without debounce. Use from coordinated initial loads (e.g. HomeView).
+    func loadSummaryIfNeeded() async {
+        if foodNotesSummary == nil {
+            await loadFoodNotesSummaryInternal()
+        }
+    }
+
     private func loadFoodNotesSummaryInternal() async {
         isLoadingSummary = true
         defer { isLoadingSummary = false }
@@ -147,7 +154,18 @@ final class FoodNotesStore {
     }
     
     // MARK: - Member Switching
-    
+
+    /// Clears the current preferences owner key without saving.
+    /// Call before Onboarding.reset() to prevent stale state from corrupting the cache.
+    func clearCurrentPreferencesOwner() {
+        currentPreferencesOwnerKey = nil
+    }
+
+    /// Clears cached preferences for a specific member so they start with a clean slate.
+    func clearMemberCache(for memberId: UUID) {
+        memberPreferencesCache[memberId.uuidString.lowercased()] = nil
+    }
+
     /// Switches the active preferences to the specified member.
     /// Saves the current member's state to cache before switching.
     func preparePreferencesForMember(selectedMemberId: UUID?) {

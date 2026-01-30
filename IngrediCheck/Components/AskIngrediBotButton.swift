@@ -10,15 +10,18 @@ import SwiftUI
 struct AskIngrediBotButton: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     var action: (() -> Void)?
-    
+
+    @State private var textShimmerPhase: CGFloat = 0
+    @State private var shimmerTimer: Timer?
+
     var body: some View {
         VStack(alignment: .leading, spacing: -16) {
             Image("ingrediBot")
                 .frame(width: 76, height: 76)
                 .offset(x: -4)
                 .zIndex(1)
-            
-            
+
+
             Button {
                 if let action {
                     action()
@@ -30,11 +33,45 @@ struct AskIngrediBotButton: View {
                     Image("ai-stars")
                         .resizable()
                         .frame(width: 18, height: 18)
-                    
+
                     Text("Ask IngrediBot")
                         .font(NunitoFont.semiBold.size(12))
                         .foregroundStyle(.grayScale10)
+                        .overlay(
+                            GeometryReader { geo in
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0),
+                                        .white.opacity(0.6),
+                                        .white.opacity(0)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                .frame(width: geo.size.width * 0.6)
+                                .offset(x: -geo.size.width * 0.3 + geo.size.width * 1.3 * textShimmerPhase)
+                                .mask(
+                                    Text("Ask IngrediBot")
+                                        .font(NunitoFont.semiBold.size(12))
+                                )
+                            }
+                            .clipped()
+                        )
                 }
+            }
+            .onAppear {
+                shimmerTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
+                    Task { @MainActor in
+                        textShimmerPhase = 0
+                        withAnimation(.easeInOut(duration: 1.0)) {
+                            textShimmerPhase = 1
+                        }
+                    }
+                }
+            }
+            .onDisappear {
+                shimmerTimer?.invalidate()
+                shimmerTimer = nil
             }
             .padding(.vertical, 15)
             .padding(.horizontal, 20)

@@ -13,7 +13,7 @@ struct SettingsContentView: View {
     @Environment(\.openURL) var openURL
     @Environment(AppNavigationCoordinator.self) var coordinator
     @Environment(MemojiStore.self) var memojiStore
-    @Environment(FoodNotesStore.self) var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) var foodNotesStore
     @EnvironmentObject var onboarding: Onboarding
     
     @State private var showInternalModeToast = false

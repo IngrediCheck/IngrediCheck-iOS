@@ -16,30 +16,47 @@ struct DynamicOptionsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
-    
+    @EnvironmentObject private var store: Onboarding
+
+    private var headerVariant: DynamicHeaderVariant {
+        switch flowType {
+        case .individual: return step.header.individual
+        case .family: return step.header.family
+        case .singleMember: return step.header.singleMember ?? step.header.family
+        }
+    }
+
     var body: some View {
-        let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
         let options = step.content.options ?? []
         let selectedNames = currentSelections()
-        
+
         VStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
-                onboardingSheetTitle(title: headerVariant.question)
+                if flowType == .singleMember, let name = store.memberName {
+                    onboardingSheetTitle(
+                        template: headerVariant.question,
+                        memberName: name,
+                        memberColor: Color(hex: "91B640")
+                    )
+                } else {
+                    onboardingSheetTitle(title: headerVariant.question)
+                }
                 if let description = headerVariant.description {
                     onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
                 }
             }
             .padding(.horizontal, 20)
-            
-            if flowType == .family {
+
+            if flowType == .family || flowType == .singleMember {
                 VStack(alignment: .leading, spacing: 8) {
                     FamilyCarouselView()
-                    onboardingSheetFamilyMemberSelectNote()
+                    if flowType == .family {
+                        onboardingSheetFamilyMemberSelectNote()
+                    }
                 }
                 .padding(.leading, 20)
             }
-            // Don't show carousel for singleMember flow (adding specific member from home)
-            
+
             FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
                 ForEach(options) { option in
                     IngredientsChips(
@@ -111,13 +128,21 @@ struct DynamicSubStepsQuestionView: View {
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
     @Environment(UserPreferences.self) var userPreferences
-    
+    @EnvironmentObject private var store: Onboarding
+
     @State private var showTutorial: Bool = false
     @State private var cardFrame: CGRect = .zero
     @State private var isAnimatingHand: Bool = false
-    
+
+    private var headerVariant: DynamicHeaderVariant {
+        switch flowType {
+        case .individual: return step.header.individual
+        case .family: return step.header.family
+        case .singleMember: return step.header.singleMember ?? step.header.family
+        }
+    }
+
     var body: some View {
-        let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
         let subSteps = step.content.subSteps ?? []
         
         let cards: [Card] = subSteps.map { subStep in
@@ -139,21 +164,31 @@ struct DynamicSubStepsQuestionView: View {
         ZStack {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
-                    onboardingSheetTitle(title: headerVariant.question)
+                    if flowType == .singleMember, let name = store.memberName {
+                        onboardingSheetTitle(
+                            template: headerVariant.question,
+                            memberName: name,
+                            memberColor: Color(hex: "91B640")
+                        )
+                    } else {
+                        onboardingSheetTitle(title: headerVariant.question)
+                    }
                     if let description = headerVariant.description {
                         onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
                     }
                 }
                 .padding(.horizontal, 20)
-                
-                if flowType == .family {
+
+                if flowType == .family || flowType == .singleMember {
                     VStack(alignment: .leading, spacing: 8) {
                         FamilyCarouselView()
-                        onboardingSheetFamilyMemberSelectNote()
+                        if flowType == .family {
+                            onboardingSheetFamilyMemberSelectNote()
+                        }
                     }
                     .padding(.leading, 20)
                 }
-                
+
                 StackedCards(
                     cards: cards,
                     isChipSelected: { card, chip in
@@ -297,10 +332,19 @@ struct DynamicRegionsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
     @Binding var preferences: Preferences
-    
+    @EnvironmentObject private var store: Onboarding
+
     @State private var sections: [SectionedChipModel] = []
     @State private var expandedSectionIds: Set<String> = []
-    
+
+    private var headerVariant: DynamicHeaderVariant {
+        switch flowType {
+        case .individual: return step.header.individual
+        case .family: return step.header.family
+        case .singleMember: return step.header.singleMember ?? step.header.family
+        }
+    }
+
     init(step: DynamicStep, flowType: OnboardingFlowType, preferences: Binding<Preferences>) {
         self.step = step
         self.flowType = flowType
@@ -318,26 +362,33 @@ struct DynamicRegionsQuestionView: View {
     }
     
     var body: some View {
-        let headerVariant = (flowType == .individual) ? step.header.individual : step.header.family
-        
         VStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
-                onboardingSheetTitle(title: headerVariant.question)
+                if flowType == .singleMember, let name = store.memberName {
+                    onboardingSheetTitle(
+                        template: headerVariant.question,
+                        memberName: name,
+                        memberColor: Color(hex: "91B640")
+                    )
+                } else {
+                    onboardingSheetTitle(title: headerVariant.question)
+                }
                 if let description = headerVariant.description {
                     onboardingSheetSubtitle(subtitle: description, onboardingFlowType: flowType)
                 }
             }
             .padding(.horizontal, 20)
-            
-            if flowType == .family {
+
+            if flowType == .family || flowType == .singleMember {
                 VStack(alignment: .leading, spacing: 8) {
                     FamilyCarouselView()
-                    onboardingSheetFamilyMemberSelectNote()
+                    if flowType == .family {
+                        onboardingSheetFamilyMemberSelectNote()
+                    }
                 }
                 .padding(.leading, 20)
             }
-            // Don't show carousel for singleMember flow (adding specific member from home)
-            
+
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(sections) { section in
@@ -690,7 +741,7 @@ struct PreferencesAddedSuccessSheet: View {
 struct EditSectionBottomSheet: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
     @Binding var isPresented: Bool
 
     let stepId: String
@@ -782,6 +833,9 @@ struct EditSectionBottomSheet: View {
             if let memberId = initialMemberId, familyStore.selectedMemberId != memberId {
                 familyStore.selectedMemberId = memberId
             }
+        }
+        .onDisappear {
+            familyStore.selectedMemberId = nil
         }
     }
 }

@@ -15,6 +15,7 @@ struct PersistentBottomSheet: View {
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
+    @Environment(FoodNotesStore.self) private var foodNotesStore
     @EnvironmentObject private var store: Onboarding
     @State private var keyboardHeight: CGFloat = 0
     @State private var isExpandedMinimal: Bool = false
@@ -441,9 +442,9 @@ struct PersistentBottomSheet: View {
         case .homeDefault:
             return 0
         case .chatIntro:
-            return 568
+            return nil
         case .chatConversation:
-            return nil  // Let content determine height dynamically
+            return 450  // Let content determine height dynamically
         case .workingOnSummary:
             return 281
         case .meetYourProfileIntro:
@@ -488,7 +489,10 @@ struct PersistentBottomSheet: View {
             
             await MainActor.run {
                 // Reset member filter to "Everyone" for each new onboarding question
-                familyStore.selectedMemberId = nil
+                // but preserve the locked member in singleMember flow
+                if !coordinator.isAddingPreferencesForMember {
+                    familyStore.selectedMemberId = nil
+                }
 
                 // Get current step ID from route
                 guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
@@ -682,6 +686,9 @@ struct PersistentBottomSheet: View {
             AddPreferencesForMemberSheet(
                 name: name,
                 laterPressed: {
+                    // Reset member selection so other flows default to "Everyone"
+                    familyStore.selectedMemberId = nil
+
                     // Return to origin screen
                     if coordinator.isCreatingFamilyFromSettings {
                         appState.navigate(to: .manageFamily)
@@ -699,15 +706,22 @@ struct PersistentBottomSheet: View {
                     // 2. Pre-select the member in FamilyStore
                     familyStore.selectedMemberId = memberId
 
-                    // 3. Reset onboarding to start fresh with family flow
-                    store.reset(flowType: .family)
+                    // 3. Clear FoodNotesStore state BEFORE reset to prevent
+                    // preparePreferencesForMember from saving empty prefs over old cache
+                    // and ensure the member starts with a clean slate
+                    foodNotesStore.clearCurrentPreferencesOwner()
+                    foodNotesStore.clearMemberCache(for: memberId)
+
+                    // 4. Reset onboarding to start fresh for this specific member
+                    let memberColor = familyStore.family?.otherMembers.first(where: { $0.id == memberId })?.color
+                    store.reset(flowType: .singleMember, memberName: name, memberColor: memberColor)
 
                     // 4. Navigate to food notes canvas
                     let steps = DynamicStepsProvider.loadSteps()
                     if let firstStepId = steps.first?.id {
                         coordinator.navigateInBottomSheet(.onboardingStep(stepId: firstStepId))
                     }
-                    coordinator.showCanvas(.mainCanvas(flow: .family))
+                    coordinator.showCanvas(.mainCanvas(flow: .singleMember))
                 }
             )
 
@@ -837,6 +851,7 @@ struct PersistentBottomSheet: View {
                     coordinator.isAddingPreferencesForMember = false
                     coordinator.addPreferencesForMemberId = nil
                     coordinator.addPreferencesOriginIsSettings = false
+                    familyStore.selectedMemberId = nil
 
                     if wasFromSettings {
                         // Return to Manage Family screen
@@ -977,6 +992,7 @@ struct PersistentBottomSheet: View {
                     coordinator.isAddingPreferencesForMember = false
                     coordinator.addPreferencesForMemberId = nil
                     coordinator.addPreferencesOriginIsSettings = false
+                    familyStore.selectedMemberId = nil
 
                     if wasFromSettings {
                         // Return to Manage Family screen

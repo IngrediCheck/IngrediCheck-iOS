@@ -26,7 +26,7 @@ struct UnifiedCanvasView: View {
     @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
 
     // MARK: - Shared State
 
@@ -61,7 +61,7 @@ struct UnifiedCanvasView: View {
     private var showFamilyIconsOnChips: Bool {
         switch mode {
         case .onboarding(let flow):
-            return flow == .family
+            return flow == .family || flow == .singleMember
         case .editing:
             return familyStore.family?.otherMembers.isEmpty == false
         }
@@ -108,7 +108,7 @@ struct UnifiedCanvasView: View {
         .onDisappear {
             handleOnDisappear()
         }
-        .task(id: foodNotesStore != nil) {
+        .task {
             await handleFoodNotesLoad()
         }
         .onChange(of: store.currentSectionIndex) { newIndex in
@@ -126,7 +126,7 @@ struct UnifiedCanvasView: View {
                 scrollToEditedSection = stepId
                 // Force refresh of canvas cards to show updated selections (only in editing mode and after initial load)
                 if mode == .editing && didFinishInitialLoad {
-                    foodNotesStore?.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+                    foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
                 }
             }
         }
@@ -192,7 +192,7 @@ struct UnifiedCanvasView: View {
                 cards: cards,
                 scrollTarget: $cardScrollTarget,
                 showPlaceholder: cards.isEmpty,
-                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                itemMemberAssociations: foodNotesStore.itemMemberAssociations ?? [:],
                 showFamilyIcons: showFamilyIconsOnChips
             )
         } else {
@@ -222,13 +222,13 @@ struct UnifiedCanvasView: View {
                 VStack(spacing: 12) {
                     // Show redacted loading skeleton only when store has no data yet (true initial load)
                     // Once store has data, never show redacted again (background refresh is silent)
-                    let hasStoreData = foodNotesStore?.hasLoadedFoodNotes == true
+                    let hasStoreData = foodNotesStore.hasLoadedFoodNotes
                     if !hasStoreData && !didFinishInitialLoad {
                         redactedLoadingContent
                     } else {
                         // AI Summary Card at top (only show if we have a summary and no member filter applied)
                         if selectedMemberId == nil,
-                           let summary = foodNotesStore?.foodNotesSummary,
+                           let summary = foodNotesStore.foodNotesSummary,
                            !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                            summary != "No Food Notes yet." {
                             AISummaryCard(
@@ -245,11 +245,11 @@ struct UnifiedCanvasView: View {
                                 title: card.title,
                                 iconName: card.icon,
                                 onEdit: { openEdit(for: card) },
-                                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                                itemMemberAssociations: foodNotesStore.itemMemberAssociations ?? [:],
                                 showFamilyIcons: showFamilyIconsOnChips,
                                 activeMemberId: selectedMemberId
                             )
-                            .padding(.top, index == 0 && foodNotesStore?.foodNotesSummary == nil ? 16 : 0)
+                            .padding(.top, index == 0 && foodNotesStore.foodNotesSummary == nil ? 16 : 0)
                             .id(card.id)
                         }
                     }
@@ -389,11 +389,10 @@ struct UnifiedCanvasView: View {
     }
 
     private func handleFoodNotesLoad() async {
-        guard foodNotesStore != nil else { return }
         Log.debug("UnifiedCanvasView", "Food notes load task triggered")
 
-        await foodNotesStore?.loadFoodNotesAll()
-        foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+        await foodNotesStore.loadFoodNotesAll()
+        foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
         didFinishInitialLoad = true
     }
 
@@ -426,8 +425,8 @@ struct UnifiedCanvasView: View {
                 return
             }
 
-            foodNotesStore?.applyLocalPreferencesOptimistic()
-            foodNotesStore?.updateFoodNotes()
+            foodNotesStore.applyLocalPreferencesOptimistic()
+            foodNotesStore.updateFoodNotes()
 
             // Trigger scan history refresh when user navigates back to HomeView
             await MainActor.run {
@@ -444,7 +443,7 @@ struct UnifiedCanvasView: View {
         }
         Log.debug("UnifiedCanvasView", "Member switched to \(newValue?.uuidString ?? "Everyone")")
         isLoadingMemberPreferences = true
-        foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
+        foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
         isLoadingMemberPreferences = false
     }
 
@@ -603,41 +602,7 @@ private struct RedactedCanvasCard: View {
 }
 
 // MARK: - Shimmer Effect
-
-private struct ShimmerModifier: ViewModifier {
-    @State private var phase: CGFloat = 0
-
-    func body(content: Content) -> some View {
-        content
-            .overlay(
-                GeometryReader { geometry in
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(0),
-                            Color.white.opacity(0.5),
-                            Color.white.opacity(0)
-                        ]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: geometry.size.width * 2)
-                    .offset(x: -geometry.size.width + (geometry.size.width * 2 * phase))
-                }
-            )
-            .clipped()
-            .onAppear {
-                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                    phase = 1
-                }
-            }
-    }
-}
-
-private extension View {
-    func shimmering() -> some View {
-        modifier(ShimmerModifier())
-    }
-}
+// ShimmerModifier is now in Utilities/ShimmerModifier.swift
 
 // MARK: - Preview
 

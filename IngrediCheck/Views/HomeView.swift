@@ -28,6 +28,7 @@ struct HomeView: View {
     @State private var stats: DTO.StatsResponse? = nil
     @State private var isLoadingStats: Bool = false
     @State private var hasCheckedAutoScan: Bool = false
+    @State private var didFinishInitialLoad: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -48,7 +49,7 @@ struct HomeView: View {
     @Environment(ScanHistoryStore.self) var scanHistoryStore
     @Environment(UserPreferences.self) var userPreferences
     @Environment(AuthController.self) private var authController
-    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
     @EnvironmentObject private var onboarding: Onboarding
     // ---------------------------
     // MERGED FROM DEVELOP BRANCH
@@ -86,26 +87,32 @@ struct HomeView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 // IMPORTANT: GeometryReader must be attached to the inner content
                 VStack(spacing: 12) {
-                                        
+                    if !didFinishInitialLoad {
+                        // Shimmer skeleton placeholders
+                        RedactedGreetingSection()
+                        RedactedCardsRow()
+                        RedactedStatsRow()
+                        RedactedRecentScansSection()
+                    } else {
                     // Greeting section
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
                             Text("Hello 👋")
                                 .font(NunitoFont.regular.size(14))
                                 .foregroundStyle(.grayScale150)
-                            
+
                             Text(primaryMemberName)
                                 .font(NunitoFont.semiBold.size(32))
                                 .foregroundStyle(.grayScale150)
                                 .offset(x: -2)
-                            
+
                             Text("Your food notes, personalized for you.")
                                 .font(ManropeFont.regular.size(14))
                                 .foregroundStyle(.grayScale130)
                         }
-                        
+
                         Spacer()
-                        
+
                         ProfileCard(isProfileCompleted: true)
                             .onTapGesture {
                                 isSettingsPresented = true
@@ -113,7 +120,7 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 24)
                     .frame(maxWidth: .infinity)
-                    
+
                     // Food Notes & Allergy Summary...
                     GeometryReader { geometry in
                         let cardWidth = (geometry.size.width - 12) / 2 // 12 is spacing
@@ -138,7 +145,7 @@ struct HomeView: View {
                             .frame(width: cardWidth, alignment: .leading)
 
                             AllergySummaryCard(
-                                summary: foodNotesStore?.foodNotesSummary,
+                                summary: foodNotesStore.foodNotesSummary,
                                 dynamicSteps: onboarding.dynamicSteps,
                                 onTap: {
                                     editTargetSectionName = nil
@@ -150,7 +157,7 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(height: 196)
-                    
+
                     // Family + Average scans - use GeometryReader to ensure equal width
                     GeometryReader { geometry in
                         let cardWidth = (geometry.size.width - 12) / 2 // 12 is spacing
@@ -233,16 +240,7 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(height: 173) // Fixed height for the card row (141 content + 16*2 padding)
-//                    .padding(.bottom, 20)
-                    
-                    //                    Image(.homescreenbanner)
-                    //                        .resizable()
-                    //                        .scaledToFit()
-                    //                        .frame(maxWidth: .infinity)
-                    //                        .cornerRadius(20)
-                    //                        .shadow(color: Color(hex: "ECECEC"), radius: 9, x: 0, y: 0)
-                    //                        .padding(.bottom, 20)
-                    
+
                     HStack(spacing: 12) {
                         YourBarcodeScans(barcodeScansCount: stats?.barcodeScansCount ?? 0)
                             .frame(maxWidth: .infinity)
@@ -252,17 +250,15 @@ struct HomeView: View {
 
                     }
                     .frame(maxWidth: .infinity)
-//                    .padding(.bottom, 20)
-                    
+
                     MatchingRateCard(
                         matchedCount: stats?.matchingStats.matched ?? 0,
                         uncertainCount: stats?.matchingStats.uncertain ?? 0,
                         unmatchedCount: stats?.matchingStats.unmatched ?? 0
                     )
-//                    .padding(.bottom, 20)
-                    
+
                     CreateYourAvatarCard()
-                    
+
                         .onTapGesture {
                             // If family has more than one member, show SetUpAvatarFor first
                             // Otherwise, go directly to YourCurrentAvatar
@@ -272,9 +268,8 @@ struct HomeView: View {
                                 coordinator.navigateInBottomSheet(.yourCurrentAvatar)
                             }
                         }
-//                        .padding(.bottom, 20)
-                    
-                    
+
+
                     // Recent Scans Card
                     VStack(alignment: .leading, spacing: 16) {
                         // Header
@@ -355,6 +350,7 @@ struct HomeView: View {
                                     .foregroundStyle(Color(hex: "#EEEEEE"))
                             )
                     )
+                    } // end else (real content)
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 20)
@@ -454,17 +450,29 @@ struct HomeView: View {
             //            .background(Color.red)
             
             
-            // ------------ HISTORY LOADING ------------
+            // ------------ COORDINATED INITIAL LOAD ------------
                 .task {
-                    if appState.listsTabState.scans == nil {
-                        await refreshRecentScans()
+                    guard !didFinishInitialLoad else { return }
+                    let needsScans = appState.listsTabState.scans == nil
+                    defer {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            didFinishInitialLoad = true
+                        }
                     }
-                }
-            // ------------ FOOD NOTES SUMMARY ------------
-            // Use task(id:) so it re-runs when foodNotesStore becomes available
-                .task(id: foodNotesStore != nil) {
-                    Log.debug("HomeView", "Food notes summary task triggered, store exists: \(foodNotesStore != nil)")
-                    foodNotesStore?.refreshSummary()
+                    await withTaskGroup(of: Void.self) { group in
+                        group.addTask { @MainActor in
+                            if needsScans {
+                                await refreshRecentScans()
+                            }
+                        }
+                        group.addTask { @MainActor in
+                            await loadStats()
+                        }
+                        group.addTask { @MainActor in
+                            await foodNotesStore.loadSummaryIfNeeded()
+                        }
+                        await group.waitForAll()
+                    }
                 }
             // Trigger a push navigation to Settings when requested by app state
                 .onChange(of: appState.navigateToSettings) { _, newValue in
@@ -580,8 +588,13 @@ struct HomeView: View {
                             .environment(coordinator)
                     }
                 }
-                .task {
-                    await loadStats()
+                .onAppear {
+                    // Skip shimmer if data is already cached (e.g. returning to tab)
+                    if !didFinishInitialLoad {
+                        if appState.listsTabState.scans != nil || stats != nil {
+                            didFinishInitialLoad = true
+                        }
+                    }
                 }
                 .onAppear {
                     // Check if we should auto-open scan camera on app start
@@ -776,6 +789,123 @@ struct HomeView: View {
             appState.listsTabState.scans = scans
         }
     }
+
+    // MARK: - Redacted Shimmer Placeholders
+
+    private struct RedactedGreetingSection: View {
+        var body: some View {
+            HStack {
+                VStack(alignment: .leading, spacing: 8) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 80, height: 14)
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 160, height: 28)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 220, height: 14)
+                }
+                Spacer()
+                Circle()
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(width: 48, height: 48)
+            }
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
+            .redacted(reason: .placeholder)
+            .shimmering()
+        }
+    }
+
+    private struct RedactedCardsRow: View {
+        var body: some View {
+            GeometryReader { geometry in
+                let cardWidth = (geometry.size.width - 12) / 2
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.gray.opacity(0.10))
+                        .frame(width: cardWidth, height: 196)
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.gray.opacity(0.10))
+                        .frame(width: cardWidth, height: 196)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 196)
+            .redacted(reason: .placeholder)
+            .shimmering()
+        }
+    }
+
+    private struct RedactedStatsRow: View {
+        var body: some View {
+            GeometryReader { geometry in
+                let cardWidth = (geometry.size.width - 12) / 2
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.gray.opacity(0.10))
+                        .frame(width: cardWidth, height: 173)
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.gray.opacity(0.10))
+                        .frame(width: cardWidth, height: 173)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 173)
+            .redacted(reason: .placeholder)
+            .shimmering()
+        }
+    }
+
+    private struct RedactedRecentScansSection: View {
+        var body: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header placeholder
+                VStack(alignment: .leading, spacing: 4) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 120, height: 18)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 240, height: 12)
+                }
+
+                // Row placeholders
+                ForEach(0..<3, id: \.self) { index in
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.10))
+                            .frame(width: 56, height: 56)
+                        VStack(alignment: .leading, spacing: 6) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.gray.opacity(0.15))
+                                .frame(width: 140, height: 14)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.gray.opacity(0.10))
+                                .frame(width: 100, height: 12)
+                        }
+                        Spacer()
+                    }
+                    if index < 2 {
+                        Divider()
+                    }
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(lineWidth: 0.75)
+                            .foregroundStyle(Color(hex: "#EEEEEE"))
+                    )
+            )
+            .redacted(reason: .placeholder)
+            .shimmering()
+        }
+    }
 }
 
 #Preview {
@@ -790,4 +920,5 @@ struct HomeView: View {
         .environment(FamilyStore())
         .environment(AppNavigationCoordinator(initialRoute: .home))
         .environment(MemojiStore())
+        .environment(ChatStore())
 }

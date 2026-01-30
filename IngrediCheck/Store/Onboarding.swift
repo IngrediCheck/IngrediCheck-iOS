@@ -68,6 +68,8 @@ class Onboarding: ObservableObject {
     @Published var currentSectionIndex: Int = 0
     @Published var currentScreenIndex: Int = 0
     @Published var maxVisitedSectionIndex: Int = 0
+    @Published var memberName: String? = nil
+    @Published var memberColor: String? = nil
     @Published var isUploading: Bool = false
     @Published var uploadError: String?
     @Published var preferences: Preferences = Preferences() {
@@ -184,8 +186,10 @@ class Onboarding: ObservableObject {
     }
     
     /// Reset onboarding state to start from the beginning
-    func reset(flowType: OnboardingFlowType) {
+    func reset(flowType: OnboardingFlowType, memberName: String? = nil, memberColor: String? = nil) {
         onboardingFlowtype = flowType
+        self.memberName = memberName
+        self.memberColor = memberColor
         currentSectionIndex = 0
         currentScreenIndex = 0
         maxVisitedSectionIndex = 0

@@ -8,19 +8,12 @@
 
 import SwiftUI
 
-// Chat message model
-struct ChatMessage: Identifiable {
-    let id: String
-    let isUser: Bool
-    let text: String
-    let timestamp: Date
-}
-
 struct IngrediBotChatView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(AppState.self) private var appState
     @Environment(WebService.self) private var webService
-    
+    @Environment(ChatStore.self) private var chatStore
+
     // Optional parameters for context-aware chat
     var scanId: String? = nil
     var analysisId: String? = nil
@@ -28,15 +21,15 @@ struct IngrediBotChatView: View {
     var feedbackId: String? = nil  // For feedback follow-up context
 
     var onDismiss: (() -> Void)? = nil
-    
+
     @State private var message: String = ""
-    @State private var conversationId: String? = nil
     @State private var messages: [ChatMessage] = []
+    @State private var conversationId: String? = nil
+    @State private var visibleMessageIds: Set<String> = []
     @State private var isStreaming: Bool = false
     @State private var currentTurnId: String? = nil
     @State private var isLoadingHistory: Bool = false
     @State private var errorMessage: String? = nil
-    @State private var visibleMessageIds: Set<String> = []
     @FocusState private var isInputFocused: Bool
 
     /// Check if user is in onboarding flow (not on home or summary screens)
@@ -44,6 +37,25 @@ struct IngrediBotChatView: View {
         coordinator.currentCanvasRoute != .home &&
         coordinator.currentCanvasRoute != .summaryJustMe &&
         coordinator.currentCanvasRoute != .summaryAddFamily
+    }
+
+    private var contextKey: String {
+        if let feedbackId { return "feedback:\(feedbackId)" }
+        if let scanId { return "product_scan:\(scanId)" }
+        let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
+                          coordinator.currentCanvasRoute == .summaryAddFamily ||
+                          coordinator.currentCanvasRoute == .welcomeToYourFamily ||
+                          isOnboardingFlow
+        if isFoodNotes { return "food_notes" }
+        return "home"
+    }
+
+    private func syncToStore() {
+        chatStore.update(for: contextKey) {
+            $0.messages = messages
+            $0.conversationId = conversationId
+            $0.visibleMessageIds = visibleMessageIds
+        }
     }
 
     var body: some View {
@@ -174,8 +186,14 @@ struct IngrediBotChatView: View {
         .padding(.top, 8)
         .padding(.bottom, 20)
         .onAppear {
-            if conversationId == nil && messages.isEmpty {
-                // New conversation - show contextual greeting with animation
+            let conv = chatStore.conversation(for: contextKey)
+            if !conv.messages.isEmpty {
+                // Restore conversation from store (reopening after dismiss)
+                messages = conv.messages
+                conversationId = conv.conversationId
+                visibleMessageIds = conv.visibleMessageIds
+            } else {
+                // First open for this context — generate & animate greetings
                 let greetings = generateInitialGreeting()
                 messages = greetings
 
@@ -187,10 +205,10 @@ struct IngrediBotChatView: View {
                         }
                     }
                 }
-            } else {
-                // Existing conversation - load history (show all immediately)
-                loadConversationHistoryIfNeeded()
             }
+        }
+        .onDisappear {
+            syncToStore()
         }
         .overlay(alignment: .topTrailing) {
             // Only show Skip button during onboarding flow
@@ -346,18 +364,19 @@ struct IngrediBotChatView: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
             _ = visibleMessageIds.insert(userMsg.id)
         }
-        
+        syncToStore()
+
         // Build context
         let context = buildContext()
-        
+
         // Start streaming
         isStreaming = true
         currentTurnId = nil
-        
+
         Task {
             do {
                 let contextJson = try ChatContextBuilder.encodeContext(context)
-                
+
                 try await webService.streamChatMessage(
                     message: userMessage,
                     context: context,
@@ -374,7 +393,7 @@ struct IngrediBotChatView: View {
                             self.conversationId = convId
                             self.currentTurnId = turnId
                             self.isStreaming = false
-                            
+
                             // Add bot response with animation
                             let botMsg = ChatMessage(
                                 id: turnId,
@@ -386,6 +405,7 @@ struct IngrediBotChatView: View {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 _ = self.visibleMessageIds.insert(botMsg.id)
                             }
+                            self.syncToStore()
                         }
                     },
                     onError: { error, convId, turnId in
@@ -394,7 +414,7 @@ struct IngrediBotChatView: View {
                             self.conversationId = convId
                             self.currentTurnId = turnId
                             self.errorMessage = error.message
-                            
+
                             // Add error message to chat with animation
                             let errorMsg = ChatMessage(
                                 id: UUID().uuidString,
@@ -406,6 +426,7 @@ struct IngrediBotChatView: View {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 _ = self.visibleMessageIds.insert(errorMsg.id)
                             }
+                            self.syncToStore()
                         }
                     }
                 )
@@ -425,6 +446,7 @@ struct IngrediBotChatView: View {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                         _ = self.visibleMessageIds.insert(errorMsg.id)
                     }
+                    self.syncToStore()
                 }
             }
         }
@@ -434,24 +456,24 @@ struct IngrediBotChatView: View {
     
     private func loadConversationHistoryIfNeeded() {
         guard let convId = conversationId, !isLoadingHistory else { return }
-        
+
         isLoadingHistory = true
-        
+
         Task {
             do {
                 let conversation = try await webService.getConversation(conversationId: convId)
-                
+
                 await MainActor.run {
                     // Convert ConversationTurn to ChatMessage
                     var loadedMessages: [ChatMessage] = []
-                    
+
                     // Create ISO8601 formatter with fractional seconds support
                     let formatter = ISO8601DateFormatter()
                     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    
+
                     for turn in conversation.turns {
                         let timestamp = formatter.date(from: turn.created_at) ?? Date()
-                        
+
                         // Add user message
                         if !turn.user_message.isEmpty {
                             loadedMessages.append(ChatMessage(
@@ -461,7 +483,7 @@ struct IngrediBotChatView: View {
                                 timestamp: timestamp
                             ))
                         }
-                        
+
                         // Add assistant response if available
                         if let response = turn.assistant_response, !response.isEmpty {
                             loadedMessages.append(ChatMessage(
@@ -472,11 +494,12 @@ struct IngrediBotChatView: View {
                             ))
                         }
                     }
-                    
+
                     self.messages = loadedMessages
                     // Make all loaded messages visible immediately
                     self.visibleMessageIds = Set(loadedMessages.map { $0.id })
                     self.isLoadingHistory = false
+                    self.syncToStore()
                 }
             } catch {
                 await MainActor.run {
@@ -607,6 +630,7 @@ private struct TypingBubble: View {
         IngrediBotChatView()
             .environment(AppNavigationCoordinator())
             .environment(AppState())
+            .environment(ChatStore())
     }
 }
 

@@ -20,7 +20,7 @@ struct EditableCanvasView: View {
     let targetSectionName: String?
     let onBack: (() -> Void)?
 
-    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
     @State private var didFinishInitialLoad: Bool = false
     
     let titleOverride: String?
@@ -82,16 +82,14 @@ struct EditableCanvasView: View {
             // Update completion status for all sections based on their data
             store.updateSectionCompletionStatus()
         }
-        // Use task(id:) so it re-runs when foodNotesStore becomes available (fixes race with RootContainerView init)
-        .task(id: foodNotesStore != nil) {
-            guard foodNotesStore != nil else { return }
-            Log.debug("EditableCanvasView", "Food notes load task triggered, store exists: \(foodNotesStore != nil)")
+        .task {
+            Log.debug("EditableCanvasView", "Food notes load task triggered")
 
             // Fetch and load food notes data when view appears
-            await foodNotesStore?.loadFoodNotesAll()
+            await foodNotesStore.loadFoodNotesAll()
 
             // Prepare preferences for the current selection locally from the loaded data
-            foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+            foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
             didFinishInitialLoad = true
         }
         .onChange(of: store.preferences) { _ in
@@ -113,9 +111,9 @@ struct EditableCanvasView: View {
             print("[EditableCanvasView] Preferences changed, saving section \(changedSectionName) immediately")
             
             // Optimistically update the canvas summary view from local preferences for this member.
-            foodNotesStore?.applyLocalPreferencesOptimistic()
+            foodNotesStore.applyLocalPreferencesOptimistic()
 
-            foodNotesStore?.updateFoodNotes()
+            foodNotesStore.updateFoodNotes()
 
             // Trigger scan history refresh when user navigates back to HomeView
             appState.needsScanHistoryRefresh = true
@@ -132,13 +130,13 @@ struct EditableCanvasView: View {
             // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
             // for the newly loaded member's existing state.
             isLoadingMemberPreferences = true
-            foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
+            foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
             isLoadingMemberPreferences = false
         }
         .onChange(of: navCoordinator.isEditSheetPresented) { oldValue, newValue in
             // When edit sheet is dismissed, refresh canvas to show updated selections (only after initial load)
             if oldValue == true && newValue == false && didFinishInitialLoad {
-                foodNotesStore?.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+                foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
             }
         }
         .onDisappear {
@@ -163,8 +161,7 @@ struct EditableCanvasView: View {
     // Helper function to get member identifiers for an item
     // Returns "Everyone" or member UUID strings for use in ChipMemberAvatarView
     private func getMemberIdentifiers(for sectionName: String, itemName: String) -> [String] {
-        guard let foodNotesStore = foodNotesStore,
-              let memberIds = foodNotesStore.itemMemberAssociations[sectionName]?[itemName] else {
+        guard let memberIds = foodNotesStore.itemMemberAssociations[sectionName]?[itemName] else {
             return []
         }
         
@@ -179,8 +176,7 @@ struct EditableCanvasView: View {
         
         // Use canvasPreferences so scroll cards always show the union view
         // (Everyone + all members) and do not change when switching member.
-        guard let foodNotesStore = foodNotesStore,
-              let value = foodNotesStore.canvasPreferences.sections[sectionName],
+        guard let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .list(let items) = value else {
             return nil
         }
@@ -220,8 +216,7 @@ struct EditableCanvasView: View {
         let sectionName = step.header.name
         
         // Use canvasPreferences for union view
-        guard let foodNotesStore = foodNotesStore,
-              let value = foodNotesStore.canvasPreferences.sections[sectionName],
+        guard let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .nested(let nestedDict) = value else {
             return nil
         }
@@ -535,7 +530,7 @@ private extension EditableCanvasView {
             }
             
             // Selected items scroll view
-            if foodNotesStore?.isLoadingFoodNotes == true {
+            if foodNotesStore.isLoadingFoodNotes {
                 loadingView
             } else {
                 // Always show all sections (even empty) so users can add later.
@@ -585,7 +580,7 @@ private extension EditableCanvasView {
                             title: card.title,
                             iconName: card.icon,
                             onEdit: { openEdit(for: card) },
-                            itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
+                            itemMemberAssociations: foodNotesStore.itemMemberAssociations ?? [:],
                         showFamilyIcons: familyStore.family?.otherMembers.isEmpty == false,
                         activeMemberId: selectedMemberId
                         )
