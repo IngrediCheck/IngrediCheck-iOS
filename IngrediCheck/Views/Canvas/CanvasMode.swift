@@ -57,7 +57,7 @@ enum CanvasMode: Equatable {
     var showFamilyIcons: Bool {
         switch self {
         case .onboarding(let flow):
-            return flow == .family
+            return flow == .family || flow == .singleMember
         case .editing:
             return true // Always show in editing mode (if family exists)
         }

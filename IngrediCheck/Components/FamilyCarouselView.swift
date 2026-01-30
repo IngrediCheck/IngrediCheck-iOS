@@ -10,7 +10,7 @@ import SwiftUI
 struct FamilyCarouselView: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(WebService.self) private var webService
-    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
     @EnvironmentObject private var store: Onboarding
     @Environment(AppNavigationCoordinator.self) private var coordinator
 
@@ -76,7 +76,7 @@ struct FamilyCarouselView: View {
                         isSelected: isSelectedState
                     )
                     .saturation(isLocked && !isTarget ? 0 : 1)
-                    .disabled(isLocked && !isTarget)
+                    .allowsHitTesting(!(isLocked && !isTarget))
                     .onTapGesture {
                         Task {
                             await selectFamilyMember(ele: ele)
@@ -145,9 +145,9 @@ struct FamilyCarouselView: View {
         
         // Load food notes for the selected member using FoodNotesStore
         if let memberId = memberId {
-            await foodNotesStore?.loadFoodNotesForMember(memberId: memberId)
+            await foodNotesStore.loadFoodNotesForMember(memberId: memberId)
         } else {
-            await foodNotesStore?.loadFoodNotesForFamily()
+            await foodNotesStore.loadFoodNotesForFamily()
         }
     }
 }

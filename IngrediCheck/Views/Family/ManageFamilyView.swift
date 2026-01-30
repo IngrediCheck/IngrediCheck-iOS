@@ -31,8 +31,11 @@ struct SwipeableDeleteRow<Content: View>: View {
             content
                 .offset(x: offset)
                 .gesture(
-                    DragGesture()
+                    DragGesture(minimumDistance: 20)
                         .onChanged { value in
+                            let horizontal = abs(value.translation.width)
+                            let vertical = abs(value.translation.height)
+                            guard horizontal > vertical else { return }
                             let translation = value.translation.width
                             if translation < 0 {
                                 // Swiping left
@@ -43,6 +46,14 @@ struct SwipeableDeleteRow<Content: View>: View {
                             }
                         }
                         .onEnded { value in
+                            let horizontal = abs(value.translation.width)
+                            let vertical = abs(value.translation.height)
+                            guard horizontal > vertical else {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    offset = isSwiped ? -deleteButtonWidth : 0
+                                }
+                                return
+                            }
                             withAnimation(.easeOut(duration: 0.2)) {
                                 if value.translation.width < -40 {
                                     // Snap open
@@ -361,6 +372,13 @@ struct ManageFamilyView: View {
             return member.id == familyStore.pendingSelfMember?.id
         }
 
+        private var isSingleMember: Bool {
+            if let family = familyStore.family {
+                return family.otherMembers.isEmpty
+            }
+            return familyStore.pendingOtherMembers.isEmpty
+        }
+
         var body: some View {
             HStack(spacing: 12) {
                 // Info Section: Avatar + Name + Status (Tapping this triggers Edit)
@@ -457,16 +475,17 @@ struct ManageFamilyView: View {
                 } label: {
                     Text("Leave Family")
                         .font(NunitoFont.semiBold.size(12))
-                        .foregroundStyle(Color(hex: "#F04438"))
+                        .foregroundStyle(isSingleMember ? Color(hex: "#F04438").opacity(0.4) : Color(hex: "#F04438"))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
                         .background(Color.clear, in: Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(Color(hex: "#F04438"), lineWidth: 1)
+                                .stroke(isSingleMember ? Color(hex: "#F04438").opacity(0.4) : Color(hex: "#F04438"), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(isSingleMember)
                 .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {
                     Button("Leave Family", role: .destructive) {
                         Task { await familyStore.leave() }
@@ -609,19 +628,18 @@ private struct FamilyCardView: View {
                                     .foregroundStyle(Color.white)
                             )
                     }
-                    
-                    Spacer()
                 }
-                
-                Spacer()
-                
+                .fixedSize(horizontal: true, vertical: false)
+
+                Spacer(minLength: 8)
+
                 Button {
                     onAddMember()
                 } label: {
                     GreenCapsule(title: "Add Member",icon: "tabler_plus", width: 111, height: 36, takeFullWidth: false, labelFont: NunitoFont.semiBold.size(12))
                 }
                 .buttonStyle(.plain)
-                .padding(.leading, 16)
+                .layoutPriority(1)
 
             }
         }
@@ -636,12 +654,13 @@ private struct FamilyCardView: View {
                     .foregroundStyle(.grayScale30)
                     .offset(x: 60)
             }
+            .clipShape(RoundedRectangle(cornerRadius: 28))
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(lineWidth: 0.75)
-                .foregroundStyle(Color(hex: "#EEEEEE"))
-        )
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 28)
+//                .stroke(lineWidth: 0.75)
+//                .foregroundStyle(Color(hex: "#EEEEEE"))
+//        )
         .padding(.horizontal, 20)
     }
 }

@@ -73,6 +73,7 @@ struct CanvasTagBar: View {
                             visited: $visited,
                             forceDarkGreen: forceDarkGreen
                         )
+                        .zIndex(index == currentSelectedSectionIndex ? 1 : 0)
                         .id(store.sections[safe: index]?.id)
                         .onTapGesture {
                             handleTap(index: index, proxy: proxy)
@@ -158,6 +159,21 @@ struct CanvasTagBar: View {
     }
 }
 
+#Preview("CanvasTagBar") {
+    struct PreviewWrapper: View {
+        @StateObject private var store = Onboarding(onboardingFlowtype: .individual)
+        @State private var scrollTarget: UUID?
+
+        var body: some View {
+            CanvasTagBar(
+                store: store,
+                scrollTarget: $scrollTarget
+            )
+        }
+    }
+    return PreviewWrapper()
+}
+
 extension Collection {
     subscript(safe index: Index) -> Element? {
         return indices.contains(index) ? self[index] : nil
@@ -205,7 +221,3 @@ struct TagIconCapsule : View {
         .foregroundStyle((forceDarkGreen || visited.contains(title)) ? Color.white : Color(hex: "#4A4A4A"))
     }
 }
-
-//#Preview {
-//    CanvasTagBar()
-//}

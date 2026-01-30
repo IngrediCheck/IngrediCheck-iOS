@@ -13,6 +13,10 @@
                 "family": {
                     "question": "Does anyone in your IngrediFam have allergies we should know ?",
                     "description": "Select all that apply to keep meals worry-free."
+                },
+                "singleMember": {
+                    "question": "Does {name} have any allergies we should keep in mind?",
+                    "description": "Choose all that apply so we can give smarter food tips."
                 }
             },
             "content": {
@@ -47,7 +51,11 @@
                 },
                 "family": {
                     "question": "Any sensitivities or intolerances in your IngrediFam?",
-                    "description": "We’ll avoid foods that cause discomfort."
+                    "description": "We'll avoid foods that cause discomfort."
+                },
+                "singleMember": {
+                    "question": "Does {name} have any food sensitivities?",
+                    "description": "We'll make sure food suggestions avoid these."
                 }
             },
             "content": {
@@ -74,6 +82,10 @@
                 "family": {
                     "question": "Any doctor diets or health conditions in your IngrediFam?",
                     "description": "This helps us tailor recommendations better."
+                },
+                "singleMember": {
+                    "question": "Does {name} follow any special diets or have any health conditions?",
+                    "description": "This helps us recommend meals that work better."
                 }
             },
             "content": {
@@ -102,6 +114,10 @@
                 "family": {
                     "question": "Does anyone in your IngrediFam have special life stage needs?",
                     "description": "Select all that apply so tips match every life stage."
+                },
+                "singleMember": {
+                    "question": "Any specific needs for {name}?",
+                    "description": "Select all that apply so tips match their life stage."
                 }
             },
             "content": {
@@ -128,6 +144,10 @@
                 "family": {
                     "question": "Where does your IngrediFam draw its food traditions from?",
                     "description": "Select your region or cultural roots."
+                },
+                "singleMember": {
+                    "question": "Where is {name} from? It helps us personalize the experience.",
+                    "description": "Pick region(s) or cultural practices."
                 }
             },
             "content": {
@@ -201,6 +221,9 @@
                 },
                 "family": {
                     "question": "Anything your IngrediFam avoids?"
+                },
+                "singleMember": {
+                    "question": "Anything to avoid in {name}'s diet?"
                 }
             },
             "content": {
@@ -285,7 +308,10 @@
                     "question": "What’s your way of eating?"
                 },
                 "family": {
-                    "question": "What’s your IngrediFam’s food lifestyle?"
+                    "question": "What's your IngrediFam's food lifestyle?"
+                },
+                "singleMember": {
+                    "question": "How does {name} prefer to eat?"
                 }
             },
             "content": {
@@ -293,7 +319,7 @@
                     {
                         "id": "lifestyle_plant_balance",
                         "title": "Plant & Balance",
-                        "description": "Do you follow a lant-forward or flexible eating style?",
+                        "description": "Do you follow a plant-forward or flexible eating style?",
                         "color": "#FFF6B3",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
@@ -342,7 +368,10 @@
                     "question": "What’s your nutrition focus right now?"
                 },
                 "family": {
-                    "question": "What’s your IngrediFam’s nutrition focus?"
+                    "question": "What's your IngrediFam's nutrition focus?"
+                },
+                "singleMember": {
+                    "question": "What's {name}'s nutrition focus right now?"
                 }
             },
             "content": {
@@ -404,6 +433,10 @@
                 "family": {
                     "question": "What ethical or environmental values matter to your IngrediFam?",
                     "description": "Select causes that shape your food choices."
+                },
+                "singleMember": {
+                    "question": "What ethical or environmental priorities does {name} have?",
+                    "description": "Select causes that shape food choices."
                 }
             },
             "content": {
@@ -431,6 +464,10 @@
                 },
                 "family": {
                     "question": "What tastes and textures does your family prefer?",
+                    "description": "Customize tastes so every plate feels just right."
+                },
+                "singleMember": {
+                    "question": "What tastes and textures does {name} prefer?",
                     "description": "Customize tastes so every plate feels just right."
                 }
             },

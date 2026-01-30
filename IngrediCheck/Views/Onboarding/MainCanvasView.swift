@@ -13,7 +13,7 @@ struct MainCanvasView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(FoodNotesStore.self) private var foodNotesStore: FoodNotesStore?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
 
     private let flow: OnboardingFlowType
     @State private var cardScrollTarget: UUID? = nil
@@ -49,8 +49,8 @@ struct MainCanvasView: View {
                 cards: cards ?? [],
                 scrollTarget: $cardScrollTarget,
                 showPlaceholder: cards?.isEmpty ?? true,
-                itemMemberAssociations: foodNotesStore?.itemMemberAssociations ?? [:],
-                showFamilyIcons: flow == .family
+                itemMemberAssociations: foodNotesStore.itemMemberAssociations ?? [:],
+                showFamilyIcons: flow == .family || flow == .singleMember
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -63,17 +63,15 @@ struct MainCanvasView: View {
             // Initialize previous section index
             previousSectionIndex = store.currentSectionIndex
 		}
-        // Use task(id:) so it re-runs when foodNotesStore becomes available (fixes race with RootContainerView init)
-        .task(id: foodNotesStore != nil) {
-            guard foodNotesStore != nil else { return }
-            Log.debug("MainCanvasView", "Food notes load task triggered, store exists: \(foodNotesStore != nil)")
+        .task {
+            Log.debug("MainCanvasView", "Food notes load task triggered")
 
             // Fetch and load food notes data when view appears
             // This loads the union view (Everyone + all members) for display
-            await foodNotesStore?.loadFoodNotesAll()
+            await foodNotesStore.loadFoodNotesAll()
 
             // Prepare preferences for the current selection locally from the loaded data
-            foodNotesStore?.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+            foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
         }
 		.onChange(of: store.currentSectionIndex) { newIndex in
             // Update previous section index
@@ -115,10 +113,10 @@ struct MainCanvasView: View {
                 let changedSections: Set<String> = [changedSectionName]
                 
                 // Optimistically update the canvas summary view from local preferences for this member.
-                foodNotesStore?.applyLocalPreferencesOptimistic()
+                foodNotesStore.applyLocalPreferencesOptimistic()
                 
                 // Build content structure for the changed section(s) and call API in the background.
-                foodNotesStore?.updateFoodNotes()
+                foodNotesStore.updateFoodNotes()
             }
         }
         .onChange(of: familyStore.selectedMemberId) { newValue in
@@ -128,7 +126,7 @@ struct MainCanvasView: View {
             // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
             // for the newly loaded member's existing state.
             isLoadingMemberPreferences = true
-            foodNotesStore?.preparePreferencesForMember(selectedMemberId: newValue)
+            foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
             isLoadingMemberPreferences = false
         }
         .navigationBarBackButtonHidden(true)
@@ -165,11 +163,10 @@ struct MainCanvasView: View {
     private func chips(for stepId: String) -> [ChipsModel]? {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
-        
+
         // Use canvasPreferences so scroll cards always show the union view
         // (Everyone + all members) and do not change when switching member.
-        guard let foodNotesStore = foodNotesStore,
-              let value = foodNotesStore.canvasPreferences.sections[sectionName],
+        guard let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .list(let items) = value else {
             return nil
         }
@@ -187,10 +184,9 @@ struct MainCanvasView: View {
     private func sectionedChips(for stepId: String) -> [SectionedChipModel]? {
         guard let step = store.step(for: stepId) else { return nil }
         let sectionName = step.header.name
-        
+
         // Use canvasPreferences for union view
-        guard let foodNotesStore = foodNotesStore,
-              let value = foodNotesStore.canvasPreferences.sections[sectionName],
+        guard let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .nested(let nestedDict) = value else {
             return nil
         }
@@ -431,7 +427,31 @@ func onboardingSheetTitle(title: String) -> some View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true) // <-- important
     }
-    
+
+}
+
+func onboardingSheetTitle(template: String, memberName: String, memberColor: Color) -> some View {
+    let parts = template.components(separatedBy: "{name}")
+    return Group {
+        (Text("Q. ")
+            .font(ManropeFont.bold.size(20))
+            .foregroundStyle(.grayScale70)
+        +
+        Text(parts.first ?? "")
+            .font(NunitoFont.bold.size(20))
+            .foregroundStyle(.grayScale150)
+        +
+        Text(memberName)
+            .font(NunitoFont.bold.size(20))
+            .foregroundStyle(memberColor)
+        +
+        Text(parts.count > 1 ? parts[1] : "")
+            .font(NunitoFont.bold.size(20))
+            .foregroundStyle(.grayScale150))
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+    }
 }
 
 func onboardingSheetSubtitle(subtitle: String, onboardingFlowType: OnboardingFlowType) -> some View {

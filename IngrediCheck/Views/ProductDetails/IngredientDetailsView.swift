@@ -37,33 +37,47 @@ struct HighlightableParagraph: View {
     }
     
     var body: some View {
-        FlowLayout(horizontalSpacing: 0, verticalSpacing: 6) {
-            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
-                switch segment {
-                case .text(let value):
-                    Text(value)
-                        .font(ManropeFont.regular.size(14))
-                        .foregroundStyle(.grayScale120)
-                case .highlight(let value, let highlight):
-                    Button {
-                        if activeHighlight?.id == highlight.id {
-                            activeHighlight = nil
-                        } else {
-                            activeHighlight = highlight
-                        }
-                    } label: {
-                        Text(value)
-                            .font(ManropeFont.semiBold.size(14))
-                            .foregroundStyle(highlight.color)  // Use per-highlight color
+        Text(buildAttributedString())
+            .font(ManropeFont.regular.size(14))
+            .foregroundStyle(.grayScale120)
+            .environment(\.openURL, OpenURLAction { url in
+                if url.scheme == "ingredihighlight",
+                   let indexStr = url.host(),
+                   let index = Int(indexStr),
+                   index < paragraph.highlights.count {
+                    let highlight = paragraph.highlights[index]
+                    if activeHighlight?.id == highlight.id {
+                        activeHighlight = nil
+                    } else {
+                        activeHighlight = highlight
                     }
-                    .buttonStyle(.plain)
-                case .lineBreak:
-                    Color.clear
-                        .frame(width: 0, height: 0)
                 }
+                return .handled
+            })
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func buildAttributedString() -> AttributedString {
+        var result = AttributedString()
+        for segment in segments {
+            switch segment {
+            case .text(let value):
+                result += AttributedString(value)
+            case .highlight(let value, let highlight):
+                var attr = AttributedString(value)
+                attr.font = ManropeFont.semiBold.size(14)
+                attr.foregroundColor = highlight.color
+                attr.underlineStyle = .init(pattern: .solid, color: .clear)
+                if let idx = paragraph.highlights.firstIndex(where: { $0.phrase.lowercased() == highlight.phrase.lowercased() }),
+                   let url = URL(string: "ingredihighlight://\(idx)") {
+                    attr.link = url
+                }
+                result += attr
+            case .lineBreak:
+                result += AttributedString("\n")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        return result
     }
 }
 

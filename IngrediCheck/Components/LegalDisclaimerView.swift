@@ -7,13 +7,18 @@ struct LegalDisclaimerView: View {
     private let termsURL = "https://www.ingredicheck.app/terms-conditions"
     private let privacyURL = "https://www.ingredicheck.app/privacy-policy"
 
+    private var legalAttributedString: AttributedString {
+        let markdown = "Review my **[Terms of Use](\(termsURL))** and **[Privacy Policy](\(privacyURL))**."
+        return (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
+    }
+
     var body: some View {
         HStack {
             if showShieldIcon {
                 Image("jam-sheld-half")
                     .frame(width: 16, height: 16)
             }
-            Text("Review my **[Terms of Use](\(termsURL))** and **[Privacy Policy](\(privacyURL))**.")
+            Text(legalAttributedString)
                 .multilineTextAlignment(.center)
                 .font(showShieldIcon ? ManropeFont.regular.size(12) : .footnote)
                 .tint(.paletteAccent)

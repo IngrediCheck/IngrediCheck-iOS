@@ -12,9 +12,7 @@ struct IngrediBotView: View {
     @State var other: Bool = true
     var body: some View {
         VStack(spacing: 0) {
-            
-            Spacer()
-            
+
             // Bot illustration
             Image("ingrediBot")
                 .resizable()

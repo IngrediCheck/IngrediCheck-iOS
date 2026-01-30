@@ -10,25 +10,35 @@ import Observation
 
 struct RootContainerView: View {
     @State private var coordinator: AppNavigationCoordinator
-    @StateObject private var onboarding = Onboarding(onboardingFlowtype: .individual)
-    @State private var webService = WebService()
+    @StateObject private var onboarding: Onboarding
+    @State private var webService: WebService
     @State private var memojiStore = MemojiStore()
-    @State private var foodNotesStore: FoodNotesStore?
+    @State private var chatStore = ChatStore()
+    @State private var foodNotesStore: FoodNotesStore
 
     init(restoredState: (canvas: CanvasRoute, sheet: BottomSheetRoute)? = nil) {
+        // Create shared instances eagerly so FoodNotesStore is available
+        // before any child view .task fires (fixes race condition where
+        // HomeView.task could run while foodNotesStore was still nil).
+        let ws = WebService()
+        _webService = State(initialValue: ws)
+
+        // Determine onboarding flow type from restored state
+        let flowType: OnboardingFlowType
+        if let state = restoredState, case .mainCanvas(let flow) = state.canvas {
+            flowType = flow
+        } else {
+            flowType = .individual
+        }
+        let onb = Onboarding(onboardingFlowtype: flowType)
+        _onboarding = StateObject(wrappedValue: onb)
+        _foodNotesStore = State(initialValue: FoodNotesStore(webService: ws, onboardingStore: onb))
+
         if let state = restoredState {
             let coordinator = AppNavigationCoordinator(initialRoute: state.canvas)
             // Force the sheet immediately without animation for launch
             coordinator.navigateInBottomSheet(state.sheet)
             _coordinator = State(initialValue: coordinator)
-            
-            // Also sync the Onboarding view model if we are in main canvas
-            if case .mainCanvas(let flow) = state.canvas {
-                 _onboarding = StateObject(wrappedValue: Onboarding(onboardingFlowtype: flow))
-            }
-             // Should we restore step ID? Onboarding model needs it.
-             // We can do that in .task since Onboarding is a StateObject and accessing it int init is tricky if we want to call methods.
-             // But initializing with flow type is good.
         } else {
             _coordinator = State(initialValue: AppNavigationCoordinator(initialRoute: .heyThere))
         }
@@ -141,6 +151,7 @@ struct RootContainerView: View {
         .environment(userPreferences)
         .environment(authController)
         .environment(memojiStore)
+        .environment(chatStore)
         .environment(foodNotesStore)
         // Allow presenting SettingsSheet from anywhere in this container
         .sheet(item: $appState.activeSheet) { sheet in
@@ -186,12 +197,6 @@ struct RootContainerView: View {
             }
         }
         .task {
-            // Initialize shared FoodNotesStore FIRST (before any child view tasks run)
-            if foodNotesStore == nil {
-                foodNotesStore = FoodNotesStore(webService: webService, onboardingStore: onboarding)
-                Log.debug("RootContainerView", "FoodNotesStore initialized")
-            }
-
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
             // Always attempt to restore onboarding position on launch from Supabase metadata.

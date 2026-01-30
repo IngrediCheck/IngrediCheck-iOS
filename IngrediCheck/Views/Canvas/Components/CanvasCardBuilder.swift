@@ -37,7 +37,7 @@ struct CanvasCardBuilder {
     static func chips(
         for stepId: String,
         sectionKey: String,
-        foodNotesStore: FoodNotesStore?,
+        foodNotesStore: FoodNotesStore,
         store: Onboarding,
         filterMemberId: UUID? = nil
     ) -> [ChipsModel]? {
@@ -45,8 +45,7 @@ struct CanvasCardBuilder {
         let sectionName = step.header.name
 
         // Use canvasPreferences for union view (Everyone + all members)
-        guard let foodNotesStore = foodNotesStore,
-              let value = foodNotesStore.canvasPreferences.sections[sectionName],
+        guard let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .list(let items) = value else {
             return nil
         }
@@ -92,7 +91,7 @@ struct CanvasCardBuilder {
     static func sectionedChips(
         for stepId: String,
         sectionKey: String,
-        foodNotesStore: FoodNotesStore?,
+        foodNotesStore: FoodNotesStore,
         store: Onboarding,
         filterMemberId: UUID? = nil
     ) -> [SectionedChipModel]? {
@@ -100,8 +99,7 @@ struct CanvasCardBuilder {
         let sectionName = step.header.name
 
         // Use canvasPreferences for union view
-        guard let foodNotesStore = foodNotesStore,
-              let value = foodNotesStore.canvasPreferences.sections[sectionName],
+        guard let value = foodNotesStore.canvasPreferences.sections[sectionName],
               case .nested(let nestedDict) = value else {
             return nil
         }
@@ -196,7 +194,7 @@ struct CanvasCardBuilder {
     /// - Returns: True if the section has any selected items
     static func hasSelections(
         for section: OnboardingSection,
-        foodNotesStore: FoodNotesStore?,
+        foodNotesStore: FoodNotesStore,
         store: Onboarding,
         filterMemberId: UUID? = nil
     ) -> Bool {
@@ -218,7 +216,7 @@ struct CanvasCardBuilder {
     /// - Returns: Array of CanvasCardModel
     static func buildCards(
         store: Onboarding,
-        foodNotesStore: FoodNotesStore?,
+        foodNotesStore: FoodNotesStore,
         filterMemberId: UUID? = nil,
         showAllSections: Bool = false,
         sortBySelection: Bool = true

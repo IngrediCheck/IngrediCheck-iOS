@@ -15,12 +15,12 @@ struct AddPreferencesForMemberSheet: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Do you want to add preferences for \(name)?")
+                Text("Do you want to add foodnote for \(name)?")
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
 
-                Text("Don't worry, \(name) can add or edit their preferences once they join IngrediFam")
+                Text("Don't worry, \(name) can add or edit their foodnote once they join IngrediFam")
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)

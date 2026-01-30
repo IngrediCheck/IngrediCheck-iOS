@@ -54,12 +54,14 @@ struct DynamicStepHeader: Codable {
     let name: String
     let individual: DynamicHeaderVariant
     let family: DynamicHeaderVariant
+    let singleMember: DynamicHeaderVariant?
 
     enum CodingKeys: String, CodingKey {
         case iconURL = "iconUrl"
         case name
         case individual
         case family
+        case singleMember
     }
 }
 
