@@ -77,6 +77,11 @@ struct HeyThereScreen: View {
                 OnboardingPhoneCanvas(phoneImageName: "Iphone-image")
             }
         }
+        .onAppear {
+            if OnboardingPersistence.shared.localStage != .completed {
+                AnalyticsService.shared.trackOnboarding("Onboarding Started")
+            }
+        }
         .task(id: coordinator.currentBottomSheetRoute) {
             // Trigger anonymous sign-in only when explicitly asking "Who's this for?"
             // This prevents "Get Started" or other pre-onboarding states from creating sessions.

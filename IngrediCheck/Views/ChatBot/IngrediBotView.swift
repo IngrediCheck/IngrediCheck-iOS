@@ -76,8 +76,11 @@ struct IngrediBotView: View {
                     takeFullWidth: false,
                     action: {
                         let isOnboarding = coordinator.currentCanvasRoute != .home && coordinator.currentCanvasRoute != .summaryJustMe && coordinator.currentCanvasRoute != .summaryAddFamily
-                        
+
                         if isOnboarding {
+                            AnalyticsService.shared.trackOnboarding("Onboarding Chat Skipped", properties: [
+                                "flow_type": coordinator.onboardingFlow.rawValue
+                            ])
                             if coordinator.onboardingFlow == .individual {
                                 coordinator.showCanvas(.summaryJustMe)
                             } else {
