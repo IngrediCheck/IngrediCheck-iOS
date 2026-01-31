@@ -214,6 +214,10 @@ struct IngrediBotChatView: View {
             // Only show Skip button during onboarding flow
             if isOnboardingFlow {
                 Button("Skip") {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Chat Dismissed", properties: [
+                        "flow_type": coordinator.onboardingFlow.rawValue
+                    ])
+
                     if let onDismiss {
                         onDismiss()
                     } else {

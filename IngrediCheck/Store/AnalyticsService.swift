@@ -41,14 +41,27 @@ final class AnalyticsService {
         }
     }
     
-    func refreshAnalyticsIdentity(session: Session, isInternalUser: Bool) {
+    func trackOnboarding(_ event: String, properties: [String: Any] = [:]) {
+        Task.detached {
+            PostHogSDK.shared.capture(event, properties: properties)
+        }
+    }
+
+    func refreshAnalyticsIdentity(session: Session, isInternalUser: Bool, authProvider: String) {
         Task.detached {
             var properties: [String: Any] = [:]
-            
+
             // Only add is_internal when it's true (from API responses)
             if isInternalUser {
                 properties["is_internal"] = true
             }
+
+            if let email = session.user.email {
+                properties["email"] = email
+            }
+
+            properties["auth_provider"] = authProvider
+
             let distinctId = session.user.id.uuidString
             PostHogSDK.shared.identify(distinctId, userProperties: properties)
         }

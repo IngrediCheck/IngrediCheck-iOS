@@ -569,6 +569,31 @@ private enum AuthFlowMode {
         }
     }
     
+    private func authProvider(for session: Session) -> String {
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider.lowercased() == "apple" }) {
+                return "Social Login (Apple)"
+            } else if identities.contains(where: { $0.provider.lowercased() == "google" }) {
+                return "Social Login (Google)"
+            } else if identities.contains(where: { $0.provider == "anonymous" }) {
+                return "Guest Login"
+            }
+        }
+        if let provider = session.user.appMetadata["provider"] as? String {
+            if provider.lowercased() == "apple" {
+                return "Social Login (Apple)"
+            } else if provider.lowercased() == "google" {
+                return "Social Login (Google)"
+            } else if provider == "email" || provider == "anonymous" {
+                return "Guest Login"
+            }
+        }
+        if session.user.isAnonymous == true {
+            return "Guest Login"
+        }
+        return "Unknown"
+    }
+
     @MainActor
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
         self.session = session
@@ -580,32 +605,12 @@ private enum AuthFlowMode {
             // Log user ID and login type
             let userId = session.user.id
             
-            // Determine login type by checking session directly
-            var loginType = "Unknown"
-            if let identities = session.user.identities {
-                if identities.contains(where: { $0.provider.lowercased() == "apple" }) {
-                    loginType = "Social Login (Apple)"
-                } else if identities.contains(where: { $0.provider.lowercased() == "google" }) {
-                    loginType = "Social Login (Google)"
-                } else if identities.contains(where: { $0.provider == "anonymous" }) {
-                    loginType = "Guest Login"
-                }
-            } else if let provider = session.user.appMetadata["provider"] as? String {
-                if provider.lowercased() == "apple" {
-                    loginType = "Social Login (Apple)"
-                } else if provider.lowercased() == "google" {
-                    loginType = "Social Login (Google)"
-                } else if provider == "email" || provider == "anonymous" {
-                    loginType = "Guest Login"
-                }
-            } else if session.user.isAnonymous == true {
-                loginType = "Guest Login"
-            }
-            
+            let loginType = authProvider(for: session)
+
             Log.debug("AUTH", "✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
 
-            registerDeviceAfterLogin(session: session)
-            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
+            registerDeviceAfterLogin(session: session, authProvider: loginType)
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser, authProvider: loginType)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
@@ -618,7 +623,7 @@ private enum AuthFlowMode {
     
     
     @MainActor
-    private func registerDeviceAfterLogin(session: Session) {
+    private func registerDeviceAfterLogin(session: Session, authProvider: String) {
         guard !Self.hasRegisteredDevice else {
             return
         }
@@ -626,11 +631,11 @@ private enum AuthFlowMode {
 
         WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
             guard let self = self, let isInternal = isInternal else { return }
-            
+
             Task { @MainActor in
                 if isInternal != self.isInternalUser {
                     self.isInternalUser = isInternal
-                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
+                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal, authProvider: authProvider)
                 }
             }
         }
@@ -641,7 +646,7 @@ private enum AuthFlowMode {
         guard value != isInternalUser else { return }
         isInternalUser = value
         if let session = session {
-            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value)
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value, authProvider: authProvider(for: session))
         }
     }
     

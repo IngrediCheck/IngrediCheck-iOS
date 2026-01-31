@@ -51,6 +51,7 @@ struct WelcomeBack: View {
                                 Log.debug("WelcomeBack", "Google sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                                 await MainActor.run {
                                     if let stage = metadata?.stage, stage == .completed {
+                                        AnalyticsService.shared.trackOnboarding("Onboarding Existing User Completed", properties: ["sign_in_method": "google"])
                                         OnboardingPersistence.shared.markCompleted()
                                         coordinator.showCanvas(.home)
                                     } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
@@ -100,6 +101,7 @@ struct WelcomeBack: View {
                                 Log.debug("WelcomeBack", "Apple sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                                 await MainActor.run {
                                     if let stage = metadata?.stage, stage == .completed {
+                                        AnalyticsService.shared.trackOnboarding("Onboarding Existing User Completed", properties: ["sign_in_method": "apple"])
                                         OnboardingPersistence.shared.markCompleted()
                                         coordinator.showCanvas(.home)
                                     } else if let metadata = metadata, let stage = metadata.stage, stage != .none {

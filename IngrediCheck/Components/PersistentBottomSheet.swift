@@ -91,6 +91,8 @@ struct PersistentBottomSheet: View {
         .padding(.bottom, keyboardHeight)
         .ignoresSafeArea(edges: .bottom)
         .onChange(of: coordinator.currentBottomSheetRoute) { oldValue, newValue in
+            trackOnboardingRouteChange(to: newValue)
+
             // Cancel generation task only when leaving avatar-related routes
             // Don't cancel when transitioning between avatar routes (generateAvatar -> bringingYourAvatar -> meetYourAvatar)
             let avatarRoutes: Set<BottomSheetRoute> = [.generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor]
@@ -498,13 +500,25 @@ struct PersistentBottomSheet: View {
                 guard case .onboardingStep(let currentStepId) = coordinator.currentBottomSheetRoute else {
                     return
                 }
-                
+
+                // Fire step completed BEFORE advancing state
+                if let stepIndex = store.dynamicSteps.firstIndex(where: { $0.id == currentStepId }),
+                   let step = store.step(for: currentStepId) {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Step Completed", properties: [
+                        "step_id": currentStepId,
+                        "step_index": stepIndex,
+                        "step_name": step.header.name,
+                        "flow_type": getOnboardingFlowType().rawValue,
+                        "has_selections": hasSelections(for: step)
+                    ])
+                }
+
                 // Check if current step is "lifeStyle" → show FineTuneYourExperience
                 if currentStepId == "lifeStyle" {
                     coordinator.navigateInBottomSheet(.fineTuneYourExperience)
                     return
                 }
-                
+
                 // Check if this is the last step → mark as complete, show summary, then IngrediBotView (stay on MainCanvasView)
                 if store.isLastStep {
                     // Mark the last section as complete to show 100% progress
@@ -512,7 +526,7 @@ struct PersistentBottomSheet: View {
                     coordinator.navigateInBottomSheet(.workingOnSummary)
                     return
                 }
-                
+
                 // Advance logical onboarding progress (for progress bar & tag bar)
                 store.next()
                 
@@ -529,8 +543,10 @@ struct PersistentBottomSheet: View {
         switch route {
         case .alreadyHaveAnAccount:
             AlreadyHaveAnAccount {
+                AnalyticsService.shared.trackOnboarding("Onboarding Existing User")
                 coordinator.navigateInBottomSheet(.welcomeBack)
             } noPressed: {
+                AnalyticsService.shared.trackOnboarding("Onboarding New User")
                 coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
             }
             
@@ -539,14 +555,17 @@ struct PersistentBottomSheet: View {
             
         case .doYouHaveAnInviteCode:
             DoYouHaveAnInviteCode {
+                AnalyticsService.shared.trackOnboarding("Onboarding Has Invite Code")
                 coordinator.navigateInBottomSheet(.enterInviteCode)
             } noPressed: {
+                AnalyticsService.shared.trackOnboarding("Onboarding No Invite Code")
                 coordinator.navigateInBottomSheet(.whosThisFor)
             }
             
         case .enterInviteCode:
             EnterYourInviteCode(
                 yesPressed: {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Invite Code Entered")
                     // Show profile screen first before welcome screen
                     coordinator.isJoiningViaInviteCode = true
                     coordinator.showCanvas(.letsMeetYourIngrediFam)
@@ -559,6 +578,7 @@ struct PersistentBottomSheet: View {
             
         case .whosThisFor:
             WhosThisFor {
+                AnalyticsService.shared.trackOnboarding("Onboarding Flow Selected", properties: ["flow_type": "individual"])
                 // Guest login already happened on .heyThere screen, just proceed
                 do {
                     try await familyStore.createBiteBuddyFamily()
@@ -569,6 +589,7 @@ struct PersistentBottomSheet: View {
                     // Don't navigate forward on error - user stays on current screen
                 }
             } addFamilyPressed: {
+                AnalyticsService.shared.trackOnboarding("Onboarding Flow Selected", properties: ["flow_type": "family"])
                 // Guest login already happened on .heyThere screen, just proceed
                 coordinator.showCanvas(.letsMeetYourIngrediFam)
             }
@@ -597,6 +618,7 @@ struct PersistentBottomSheet: View {
             WhatsYourName { name in
                  // Async closure wrapper for immediate family creation
                  try await familyStore.createFamilyImmediate(selfName: name)
+                 AnalyticsService.shared.trackOnboarding("Onboarding Family Member Added", properties: ["member_count": 1])
                  coordinator.navigateInBottomSheet(.addMoreMembers)
             }
             
@@ -610,7 +632,9 @@ struct PersistentBottomSheet: View {
                     color: color,
                     webService: webService
                 )
-                
+                let memberCount = (familyStore.family?.otherMembers.count ?? 0) + 1
+                AnalyticsService.shared.trackOnboarding("Onboarding Family Member Added", properties: ["member_count": memberCount])
+
                 // If coming from home screen, navigate to WouldYouLikeToInvite
                 // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
                 if case .home = coordinator.currentCanvasRoute {
@@ -622,6 +646,11 @@ struct PersistentBottomSheet: View {
             
         case .addMoreMembersMinimal:
             AddMoreMembersMinimal {
+                let memberCount = (familyStore.family?.otherMembers.count ?? 0) + 1
+                AnalyticsService.shared.trackOnboarding("Onboarding Family Members Choice", properties: [
+                    "choice": "all_set",
+                    "member_count": memberCount
+                ])
                 Task {
                     // If creating family from Settings, add members to existing family
                     // Otherwise, just proceed (family already created incrementally)
@@ -652,9 +681,14 @@ struct PersistentBottomSheet: View {
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
                 }
             } addMorePressed: {
+                let memberCount = (familyStore.family?.otherMembers.count ?? 0) + 1
+                AnalyticsService.shared.trackOnboarding("Onboarding Family Members Choice", properties: [
+                    "choice": "add_more",
+                    "member_count": memberCount
+                ])
                 coordinator.navigateInBottomSheet(.addMoreMembers)
             }
-        
+
         case .editMember(let memberId, let isSelf):
             EditMember(memberId: memberId, isSelf: isSelf) {
                 coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
@@ -889,9 +923,17 @@ struct PersistentBottomSheet: View {
         case .fineTuneYourExperience:
             FineTuneExperience(
                 allSetPressed: {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Fine Tune Choice", properties: [
+                        "flow_type": getOnboardingFlowType().rawValue,
+                        "choice": "skip"
+                    ])
                     coordinator.navigateInBottomSheet(.workingOnSummary)
                 },
                 addPreferencesPressed: {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Fine Tune Choice", properties: [
+                        "flow_type": getOnboardingFlowType().rawValue,
+                        "choice": "continue"
+                    ])
                     // Check if there's a next step available before advancing
                     // If lifeStyle is the final step, clicking "Add Preferences" should complete onboarding
                     guard let nextStepId = store.nextStepId else {
@@ -976,12 +1018,17 @@ struct PersistentBottomSheet: View {
                         coordinator.navigateInBottomSheet(.seeHowScanningWorks)
                     } else {
                         // Normal onboarding flow - navigate to home
+                        AnalyticsService.shared.trackOnboarding("Onboarding Completed", properties: [
+                            "flow_type": getOnboardingFlowType().rawValue,
+                            "completion_source": "family_complete",
+                            "steps_with_selections": stepsWithSelections()
+                        ])
                         OnboardingPersistence.shared.markCompleted()
                         coordinator.showCanvas(.home)
                     }
                 }
             }
-            
+
         case .preferencesAddedSuccess:
             PreferencesAddedSuccessSheet {
                 // Check if this was "add preferences for member" flow
@@ -1059,6 +1106,11 @@ struct PersistentBottomSheet: View {
                     }
                 },
                 onHaveAProduct: {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Completed", properties: [
+                        "flow_type": getOnboardingFlowType().rawValue,
+                        "completion_source": "scan_shortcut",
+                        "steps_with_selections": stepsWithSelections()
+                    ])
                     OnboardingPersistence.shared.markCompleted()
                     coordinator.showCanvas(.home)
                     Task { @MainActor in
@@ -1105,6 +1157,11 @@ struct PersistentBottomSheet: View {
                     }
                 },
                 onGoToHome: {
+                    AnalyticsService.shared.trackOnboarding("Onboarding Completed", properties: [
+                        "flow_type": getOnboardingFlowType().rawValue,
+                        "completion_source": "permissions_complete",
+                        "steps_with_selections": stepsWithSelections()
+                    ])
                     OnboardingPersistence.shared.markCompleted()
                     coordinator.showCanvas(.home)
                 }
@@ -1141,6 +1198,99 @@ struct PersistentBottomSheet: View {
         }
     }
     
+    // MARK: - Onboarding Analytics
+
+    private var isInOnboardingFlow: Bool {
+        switch coordinator.currentCanvasRoute {
+        case .heyThere, .blankScreen, .letsGetStarted, .letsMeetYourIngrediFam,
+             .dietaryPreferencesAndRestrictions, .mainCanvas, .seeHowScanningWorks,
+             .whyWeNeedThesePermissions, .welcomeToYourFamily, .summaryJustMe, .summaryAddFamily,
+             .readyToScanFirstProduct:
+            return true
+        default:
+            return coordinator.isAddingPreferencesForMember
+        }
+    }
+
+    private func onboardingFlowTypeString() -> String {
+        if case .dietaryPreferencesSheet(let isFamilyFlow) = coordinator.currentBottomSheetRoute {
+            return isFamilyFlow ? "family" : "individual"
+        }
+        return getOnboardingFlowType().rawValue
+    }
+
+    private func hasSelections(for step: DynamicStep) -> Bool {
+        guard let value = store.preferences.sections[step.header.name] else { return false }
+        switch value {
+        case .list(let items): return !items.isEmpty
+        case .nested(let dict): return dict.values.contains { !$0.isEmpty }
+        }
+    }
+
+    private func stepsWithSelections() -> [String] {
+        store.dynamicSteps.compactMap { step in
+            hasSelections(for: step) ? step.header.name : nil
+        }
+    }
+
+    private func trackOnboardingRouteChange(to route: BottomSheetRoute) {
+        guard isInOnboardingFlow else { return }
+
+        let flowType = onboardingFlowTypeString()
+
+        switch route {
+        case .dietaryPreferencesSheet(let isFamilyFlow):
+            AnalyticsService.shared.trackOnboarding("Onboarding Dietary Intro Viewed", properties: [
+                "flow_type": isFamilyFlow ? "family" : "individual"
+            ])
+
+        case .onboardingStep(let stepId):
+            guard let stepIndex = store.dynamicSteps.firstIndex(where: { $0.id == stepId }),
+                  let step = store.step(for: stepId) else { return }
+            AnalyticsService.shared.trackOnboarding("Onboarding Step: \(step.header.name)", properties: [
+                "step_id": stepId,
+                "step_index": stepIndex,
+                "flow_type": flowType
+            ])
+
+        case .fineTuneYourExperience:
+            AnalyticsService.shared.trackOnboarding("Onboarding Fine Tune Viewed", properties: ["flow_type": flowType])
+
+        case .workingOnSummary:
+            AnalyticsService.shared.trackOnboarding("Onboarding Summary Loading", properties: ["flow_type": flowType])
+
+        case .chatIntro:
+            AnalyticsService.shared.trackOnboarding("Onboarding Chat Intro Viewed", properties: ["flow_type": flowType])
+
+        case .chatConversation:
+            AnalyticsService.shared.trackOnboarding("Onboarding Chat Started", properties: ["flow_type": flowType])
+
+        case .meetYourProfile:
+            AnalyticsService.shared.trackOnboarding("Onboarding Meet Profile", properties: ["flow_type": flowType])
+
+        case .allSetToJoinYourFamily:
+            AnalyticsService.shared.trackOnboarding("Onboarding Family Welcome", properties: ["flow_type": flowType])
+
+        case .readyToScanFirstProduct:
+            AnalyticsService.shared.trackOnboarding("Onboarding Ready To Scan", properties: ["flow_type": flowType])
+
+        case .seeHowScanningWorks:
+            AnalyticsService.shared.trackOnboarding("Onboarding Demo Video Viewed", properties: ["flow_type": flowType])
+
+        case .quickAccessNeeded:
+            AnalyticsService.shared.trackOnboarding("Onboarding Permissions Viewed", properties: ["flow_type": flowType])
+
+        case .loginToContinue:
+            AnalyticsService.shared.trackOnboarding("Onboarding Login Prompted", properties: ["flow_type": flowType])
+
+        case .meetYourAvatar:
+            AnalyticsService.shared.trackOnboarding("Onboarding Avatar Generated")
+
+        default:
+            break
+        }
+    }
+
     private func getOnboardingFlowType() -> OnboardingFlowType {
         // If we are in the main canvas onboarding flow, use the flow type from the route.
         // This ensures that "Just Me" (individual flow) doesn't show family UI even if a family exists.
