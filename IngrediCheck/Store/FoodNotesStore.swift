@@ -46,6 +46,9 @@ final class FoodNotesStore {
     /// Indicates if food notes have been loaded at least once (prevents showing loading on subsequent navigations)
     private(set) var hasLoadedFoodNotes: Bool = false
 
+    /// Misc notes set by IngrediBot, keyed by member UUID or "Everyone"
+    private(set) var memberMiscNotes: [String: [String]] = [:]
+
     /// Sync management - exposed for UI to show sync indicator
     private(set) var isSyncing: Bool = false
     private var syncDebounceTask: Task<Void, Never>? = nil
@@ -118,16 +121,19 @@ final class FoodNotesStore {
                     familyVersion = familyNote.version
                     let prefs = convertContentToPreferences(content: familyNote.content, dynamicSteps: onboardingStore.dynamicSteps)
                     memberPreferencesCache["Everyone"] = prefs
+                    memberMiscNotes["Everyone"] = extractMiscNotes(from: familyNote.content)
                 } else {
                     memberPreferencesCache["Everyone"] = Preferences()
+                    memberMiscNotes["Everyone"] = []
                 }
-                
+
                 // 2. Parse Member Notes
                 for (memberId, memberNote) in response.memberNotes {
                     let normalizedId = memberId.lowercased()
                     memberVersions[normalizedId] = memberNote.version
                     let prefs = convertContentToPreferences(content: memberNote.content, dynamicSteps: onboardingStore.dynamicSteps)
                     memberPreferencesCache[normalizedId] = prefs
+                    memberMiscNotes[normalizedId] = extractMiscNotes(from: memberNote.content)
                 }
                 
                 // 3. Rebuild Associations and Canvas from the cache
@@ -367,13 +373,21 @@ final class FoodNotesStore {
     
     private func syncMember(_ memberKey: String) async {
         guard let prefs = memberPreferencesCache[memberKey] else { return }
-        
+
         Log.debug("FoodNotesStore", "📤 [FoodNotesStore] syncMember: Syncing \(memberKey)")
-        
-        let content = buildContentFromPreferences(preferences: prefs, dynamicSteps: onboardingStore.dynamicSteps)
+
+        var content = buildContentFromPreferences(preferences: prefs, dynamicSteps: onboardingStore.dynamicSteps)
+
+        // Preserve misc notes that were set by IngrediBot
+        if let miscNotes = memberMiscNotes[memberKey], !miscNotes.isEmpty {
+            var preferencesDict = content["preferences"] as? [String: Any] ?? [:]
+            preferencesDict["misc"] = miscNotes
+            content["preferences"] = preferencesDict
+        }
+
         let isEveryone = (memberKey == "Everyone")
         var version = isEveryone ? familyVersion : (memberVersions[memberKey] ?? 0)
-        
+
         do {
             let response: WebService.FoodNotesResponse
             if !isEveryone {
@@ -390,6 +404,8 @@ final class FoodNotesStore {
             Log.debug("FoodNotesStore", "✅ [FoodNotesStore] syncMember: Success \(memberKey) v\(response.version)")
         } catch let error as WebService.VersionMismatchError {
             Log.warning("FoodNotesStore", "⚠️ [FoodNotesStore] syncMember: Version mismatch \(memberKey)")
+            // Re-extract misc from server's current content before retrying
+            memberMiscNotes[memberKey] = extractMiscNotes(from: error.currentNote.content)
             if isEveryone { familyVersion = error.currentNote.version }
             else { memberVersions[memberKey] = error.currentNote.version }
             await syncMember(memberKey) // Retry
@@ -457,6 +473,14 @@ final class FoodNotesStore {
         return content
     }
     
+    private func extractMiscNotes(from content: [String: Any]) -> [String] {
+        guard let preferences = content["preferences"] as? [String: Any],
+              let misc = preferences["misc"] as? [String] else {
+            return []
+        }
+        return misc
+    }
+
     // Stub for loadFoodNotesForMember/Family if views still call them (they shouldn't with new logic)
     func loadFoodNotesForMember(memberId: String) async {}
     func loadFoodNotesForFamily() async {}

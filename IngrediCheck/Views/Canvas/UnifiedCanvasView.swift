@@ -130,6 +130,14 @@ struct UnifiedCanvasView: View {
                 }
             }
         }
+        .onChange(of: coordinator.isAIBotSheetPresented) { oldValue, newValue in
+            // When AI bot sheet is dismissed, reload food notes to pick up misc notes changes
+            if oldValue == true && newValue == false && mode == .editing {
+                Task {
+                    await foodNotesStore.loadFoodNotesAll()
+                }
+            }
+        }
     }
 
     // MARK: - Main Content
@@ -251,6 +259,15 @@ struct UnifiedCanvasView: View {
                             )
                             .padding(.top, index == 0 && foodNotesStore.foodNotesSummary == nil ? 16 : 0)
                             .id(card.id)
+                        }
+
+                        // Misc notes card (free-text notes from IngrediBot)
+                        let miscKey = selectedMemberId?.uuidString.lowercased() ?? "Everyone"
+                        if let miscNotes = foodNotesStore.memberMiscNotes[miscKey],
+                           !miscNotes.isEmpty {
+                            MiscNotesCard(notes: miscNotes) {
+                                coordinator.showAIBotSheetWithContext()
+                            }
                         }
                     }
                 }

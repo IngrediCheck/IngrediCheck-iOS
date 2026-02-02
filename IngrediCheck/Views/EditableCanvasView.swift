@@ -512,6 +512,79 @@ struct EditableCanvasCard: View {
     }
 }
 
+// MARK: - Misc Notes Card
+
+struct MiscNotesCard: View {
+    let notes: [String]
+    var onEdit: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .resizable()
+                        .foregroundStyle(.grayScale110)
+                        .frame(width: 16, height: 18)
+
+                    Text("Notes")
+                        .font(NunitoFont.semiBold.size(14))
+                        .foregroundStyle(.grayScale110)
+                }
+                .fontWeight(.semibold)
+
+                Spacer()
+
+                if let onEdit = onEdit {
+                    Button(action: onEdit) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bubble.left")
+                                .resizable()
+                                .foregroundStyle(.grayScale110)
+                                .frame(width: 14, height: 14)
+
+                            Text("Chat")
+                                .font(NunitoFont.medium.size(14))
+                                .foregroundStyle(Color(.grayScale110))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .foregroundStyle(.grayScale30)
+                        )
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
+                    HStack(alignment: .top, spacing: 6) {
+                        Text("•")
+                            .font(NunitoFont.regular.size(14))
+                            .foregroundStyle(.grayScale100)
+                        Text(note)
+                            .font(NunitoFont.regular.size(14))
+                            .foregroundStyle(.grayScale100)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .foregroundStyle(.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(lineWidth: 0.25)
+                .foregroundStyle(.grayScale60)
+        )
+    }
+}
+
 // MARK: - Edit Section Bottom Sheet
 
 
