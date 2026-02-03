@@ -948,7 +948,7 @@ struct ScanCameraView: View {
                 // Photo mode overlay: capture guide frame
                 GeometryReader { geo in
                     let centerX = geo.size.width / 2
-                    let guideTop: CGFloat = 146
+                    let guideTop: CGFloat = 126
                     let guideSize: CGFloat = 244
                     let guideCenterY = guideTop + guideSize / 2
                     
@@ -962,7 +962,7 @@ struct ScanCameraView: View {
             
             VStack {
                 ScanStatusToast(state: toastState)
-                    .padding(.top, 60) // Account for navigation bar space
+                    .padding(.top, 40) // Account for navigation bar space
                     .onAppear {
                         updateToastState()
                     }
@@ -1186,7 +1186,7 @@ struct ScanCameraView: View {
                     }
                 }
             }
-            .padding(.top, 243)
+            .padding(.top, 203)
             
             if cameraStatus == .denied || cameraStatus == .restricted {
                 VStack(spacing: 12) {
@@ -1226,6 +1226,7 @@ struct ScanCameraView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.easeInOut, value: isShowingPhotoModeGuide)
                 .zIndex(3)
+                .ignoresSafeArea(edges: .bottom)
             }
         }
         .sheet(isPresented: $isShowingPhotoPicker) {

@@ -176,6 +176,16 @@ struct ProductDetailView: View {
         let hasNoIngredients = product.ingredients.isEmpty
         return hasProductInfo && hasNoIngredients && !isPlaceholderMode && !isAnalyzing
     }
+
+    // Check if product exists but has no name, no brand, and no ingredients (not in our database)
+    private var hasEmptyProductDetails: Bool {
+        guard let product = resolvedProduct else { return false }
+        let hasNoName = product.name == nil || product.name?.isEmpty == true
+        let hasNoBrand = product.brand == nil || product.brand?.isEmpty == true
+        let hasNoIngredients = product.ingredients.isEmpty
+        return hasNoName && hasNoBrand && hasNoIngredients && !isPlaceholderMode && !isAnalyzing
+    }
+
     // Removed hardcoded descriptionText - now using resolvedDescriptionText computed property
     
     // Removed hardcoded ingredientAlertItems - now using resolvedIngredientAlertItems computed property
@@ -301,64 +311,71 @@ struct ProductDetailView: View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Gallery section - never redacted, shows placeholder images
-                    productGallery
-                        .unredacted()
-                        .padding(.top, 16)
-                    
-                    // Content sections - redacted in placeholder mode
-                    Group {
-                        productInformation
-                        dietaryTagsRow
-                        
-                        // Show Missing Ingredients UI or regular content
-                        if hasMissingIngredients {
-                            missingIngredientsView
-                        } else {
-                            if !resolvedIngredientAlertItems.isEmpty || resolvedStatus == .matched {
-                                IngredientsAlertCard(
-                                    isExpanded: $isIngredientsAlertExpanded,
-                                    items: resolvedIngredientAlertItems,
-                                    status: resolvedStatus,
-                                    overallAnalysis: resolvedOverallAnalysis,
-                                    ingredientRecommendations: resolvedIngredientRecommendations,
-                                    onFeedback: { item, voteType in
-                                        handleIngredientFeedback(item: item, voteType: voteType)
-                                    },
-                                    productVote: scan?.product_info_vote,
-                                    onProductFeedback: { voteType in
-                                        handleProductFeedback(voteType: voteType)
-                                    },
-                                    isProductFeedbackLoading: isProductFeedbackLoading,
-                                    loadingIngredientName: loadingIngredientName
-                                )
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 20)
-                            }
-                            
+                    if hasEmptyProductDetails {
+                        // Empty product state: no gallery, no product info — just centered empty state
+                        emptyProductDetailsView
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 60)
+                    } else {
+                        // Gallery section - never redacted, shows placeholder images
+                        productGallery
+                            .unredacted()
+                            .padding(.top, 16)
 
-                            CollapsibleSection(
-                                title: "Ingredients",
-                                isExpanded: $isIngredientsExpanded
-                            ) {
-                                if resolvedIngredientParagraphs.isEmpty {
-                                    Text("No ingredients available")
-                                        .font(ManropeFont.regular.size(14))
-                                        .foregroundStyle(.grayScale100)
-                                        .lineSpacing(4)
-                                } else {
-                                    IngredientDetailsView(
-                                        paragraphs: resolvedIngredientParagraphs,
-                                        activeHighlight: $activeIngredientHighlight,
-                                        highlightColor: resolvedStatus.color
+                        // Content sections - redacted in placeholder mode
+                        Group {
+                            productInformation
+                            dietaryTagsRow
+
+                            // Show Missing Ingredients UI or regular content
+                            if hasMissingIngredients {
+                                missingIngredientsView
+                            } else {
+                                if !resolvedIngredientAlertItems.isEmpty || resolvedStatus == .matched {
+                                    IngredientsAlertCard(
+                                        isExpanded: $isIngredientsAlertExpanded,
+                                        items: resolvedIngredientAlertItems,
+                                        status: resolvedStatus,
+                                        overallAnalysis: resolvedOverallAnalysis,
+                                        ingredientRecommendations: resolvedIngredientRecommendations,
+                                        onFeedback: { item, voteType in
+                                            handleIngredientFeedback(item: item, voteType: voteType)
+                                        },
+                                        productVote: scan?.product_info_vote,
+                                        onProductFeedback: { voteType in
+                                            handleProductFeedback(voteType: voteType)
+                                        },
+                                        isProductFeedbackLoading: isProductFeedbackLoading,
+                                        loadingIngredientName: loadingIngredientName
                                     )
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 20)
                                 }
+
+
+                                CollapsibleSection(
+                                    title: "Ingredients",
+                                    isExpanded: $isIngredientsExpanded
+                                ) {
+                                    if resolvedIngredientParagraphs.isEmpty {
+                                        Text("No ingredients available")
+                                            .font(ManropeFont.regular.size(14))
+                                            .foregroundStyle(.grayScale100)
+                                            .lineSpacing(4)
+                                    } else {
+                                        IngredientDetailsView(
+                                            paragraphs: resolvedIngredientParagraphs,
+                                            activeHighlight: $activeIngredientHighlight,
+                                            highlightColor: resolvedStatus.color
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 40)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 40)
                         }
+                        .redacted(reason: isPlaceholderMode ? .placeholder : [])
                     }
-                    .redacted(reason: isPlaceholderMode ? .placeholder : [])
                 }
             }
         }
@@ -1077,7 +1094,51 @@ struct ProductDetailView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
     }
-    
+
+    // MARK: - Empty Product Details View
+
+    /// Shows when product exists but has no name, no brand, and no ingredients (not in our database)
+    private var emptyProductDetailsView: some View {
+        VStack(spacing: 12) {
+            Spacer()
+                .frame(height: 20)
+
+            // Bot Logo (black and white)
+            Image("ingrediBot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 117, height: 106)
+                .saturation(0) // Grayscale effect
+
+            // Title
+            Text("Product Not Found")
+                .font(NunitoFont.bold.size(20))
+                .foregroundStyle(Color(hex: "#303030"))
+                .multilineTextAlignment(.center)
+
+            // Description
+            Text("We couldn't find this product. Capture photos from different angles so we can analyze it for you.")
+                .font(ManropeFont.medium.size(14))
+                .foregroundStyle(Color(hex: "#949494"))
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+
+            // Capture photos button
+            Button {
+                handleCameraButtonTap()
+            } label: {
+                GreenCapsule(title: "Capture photos", takeFullWidth: false)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 40)
+
+            Spacer()
+                .frame(height: 40)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+    }
+
     // MARK: - Gallery Helper Components
     
     /// Resolves ProductImage enum to actual SwiftUI Image view

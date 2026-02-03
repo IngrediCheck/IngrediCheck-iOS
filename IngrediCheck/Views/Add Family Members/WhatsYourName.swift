@@ -134,6 +134,7 @@ struct WhatsYourName: View {
                             } else {
                                 // Proceed to generate avatar
                                 memojiStore.displayName = trimmed
+                                memojiStore.previousRouteForGenerateAvatar = .whatsYourName
                                 coordinator.navigateInBottomSheet(.generateAvatar)
                             }
                         } label: {
@@ -225,9 +226,17 @@ struct WhatsYourName: View {
 //            , alignment: .top
 //        )
         .onAppear {
-            // Restore the name from memojiStore if available
-            if let displayName = memojiStore.displayName, !displayName.isEmpty {
-                name = displayName
+            // Only restore name if returning from generate avatar flow
+            if memojiStore.previousRouteForGenerateAvatar == .whatsYourName {
+                if let savedName = memojiStore.displayName, !savedName.isEmpty {
+                    name = savedName
+                }
+            } else {
+                // Fresh start - reset local state
+                name = ""
+                selectedFamilyMember = nil
+                showError = false
+                memojiStore.displayName = nil
             }
         }
     }

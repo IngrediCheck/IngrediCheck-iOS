@@ -6,13 +6,13 @@ struct ScanningHelpSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
+//            ZStack {
                 // CENTER TEXT
-                Text("See how scanning works")
-                    .font(NunitoFont.bold.size(22))
-                    .foregroundStyle(.grayScale150)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 4)
+//                Text("See how scanning works")
+//                    .font(NunitoFont.bold.size(22))
+//                    .foregroundStyle(.grayScale150)
+//                    .multilineTextAlignment(.center)
+//                    .padding(.top, 4)
 
 //                // LEFT ICON
 //                HStack {
@@ -28,30 +28,30 @@ struct ScanningHelpSheet: View {
 //
 //                    
 //                }
-            }
-            .padding(.top, 8)
+//            }
+//            .padding(.top, 8)
 
           
 
-            Text("Here’s a quick look at how you can scan products\nwhen you’re ready.")
-                .font(ManropeFont.medium.size(12))
-                .foregroundStyle(.grayScale120)
+            Text("Here’s a quick look at how you can scan products when you’re ready.")
+                .font(NunitoFont.bold.size(14))
+                .foregroundStyle(.grayScale150)
                 .multilineTextAlignment(.center)
-                .padding(.top, 12)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
+                .lineLimit(2)
 
             Button(action: onGotIt) {
                 GreenCapsule(title: "Got it", width: 159, takeFullWidth: false)
                     .frame(width: 156, height: 52)
             }
             .buttonStyle(.plain)
-            .padding(.bottom, 32)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
-        .padding(.top, 24)
-        .padding(.bottom, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 10)
     }
 }
 
