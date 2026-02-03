@@ -116,7 +116,12 @@ struct IngrediBotChatView: View {
                         if isStreaming {
                             TypingBubble(side: .bot)
                         }
-                        
+
+                        // Bottom anchor for reliable scrolling
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottomAnchor")
+
                         // Show error message if any
                         if let error = errorMessage {
                             ConversationBubble(
@@ -136,9 +141,27 @@ struct IngrediBotChatView: View {
                 }
                 .onChange(of: messages.count) { _ in
                     // Scroll to bottom when new messages arrive
-                    if let lastMessage = messages.last {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: isStreaming) { streaming in
+                    // Scroll to show typing indicator when streaming starts
+                    if streaming {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation {
+                                proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+                .onChange(of: visibleMessageIds.count) { _ in
+                    // Scroll when messages become visible (after animation)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation {
+                            proxy.scrollTo("bottomAnchor", anchor: .bottom)
                         }
                     }
                 }
@@ -210,6 +233,7 @@ struct IngrediBotChatView: View {
         .onDisappear {
             syncToStore()
         }
+        .dismissKeyboardOnTap()
         .overlay(alignment: .topTrailing) {
             // Only show Skip button during onboarding flow
             if isOnboardingFlow {
@@ -236,7 +260,6 @@ struct IngrediBotChatView: View {
                 .padding(.trailing, 16)
             }
         }
-        .dismissKeyboardOnTap()
     }
 
     // MARK: - Initial Greeting

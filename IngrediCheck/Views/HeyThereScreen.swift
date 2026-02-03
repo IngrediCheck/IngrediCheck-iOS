@@ -93,6 +93,9 @@ struct HeyThereScreen: View {
                     // Sync initial state to Supabase immediately after session is created
                     print("[OnboardingMeta] Syncing initial state after guest login")
                     await OnboardingPersistence.shared.sync(from: coordinator)
+
+                    // Pre-download tutorial video in background
+                    Task { await TutorialVideoManager.shared.downloadIfNeeded() }
                 }
             }
         }

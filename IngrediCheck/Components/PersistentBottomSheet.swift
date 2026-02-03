@@ -458,7 +458,7 @@ struct PersistentBottomSheet: View {
         case .readyToScanFirstProduct:
             return 244
         case .seeHowScanningWorks:
-            return 244
+            return 176
         case .quickAccessNeeded:
             return 220
         case .loginToContinue:

@@ -241,7 +241,10 @@ struct AddMoreMembers: View {
                 }
                 // Don't reset - preserve the avatar selection state
             } else {
-                // Fresh start - reset all selection state when adding a new member
+                // Fresh start - reset all local state when adding a new member
+                name = ""
+                selectedFamilyMember = nil
+                showError = false
                 resetMemojiSelectionState()
             }
         }
