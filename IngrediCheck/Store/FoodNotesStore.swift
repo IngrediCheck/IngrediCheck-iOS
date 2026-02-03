@@ -146,6 +146,7 @@ final class FoodNotesStore {
                 familyVersion = 0
                 memberVersions = [:]
                 memberPreferencesCache = [:]
+                memberMiscNotes = [:]
                 itemMemberAssociations = [:]
                 canvasPreferences = Preferences()
                 hasLoadedFoodNotes = true
@@ -154,6 +155,7 @@ final class FoodNotesStore {
             Log.debug("FoodNotesStore", "loadFoodNotesAll: ❌ Failed to load food notes: \(error.localizedDescription)")
             // Init empty on error to prevent crash
             memberPreferencesCache = [:]
+            memberMiscNotes = [:]
             itemMemberAssociations = [:]
             canvasPreferences = Preferences()
         }

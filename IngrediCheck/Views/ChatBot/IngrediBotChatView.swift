@@ -42,6 +42,10 @@ struct IngrediBotChatView: View {
     private var contextKey: String {
         if let feedbackId { return "feedback:\(feedbackId)" }
         if let scanId { return "product_scan:\(scanId)" }
+        // Check explicit screen override first (e.g., from food notes editing screen)
+        if let screenOverride = coordinator.aibotContextScreenOverride {
+            return screenOverride
+        }
         let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
                           coordinator.currentCanvasRoute == .summaryAddFamily ||
                           coordinator.currentCanvasRoute == .welcomeToYourFamily ||
