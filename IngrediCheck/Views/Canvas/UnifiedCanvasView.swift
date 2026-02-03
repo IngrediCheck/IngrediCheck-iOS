@@ -262,9 +262,17 @@ struct UnifiedCanvasView: View {
                         }
 
                         // Misc notes card (free-text notes from IngrediBot)
-                        let miscKey = selectedMemberId?.uuidString.lowercased() ?? "Everyone"
-                        if let miscNotes = foodNotesStore.memberMiscNotes[miscKey],
-                           !miscNotes.isEmpty {
+                        // When a member is selected, show only their misc notes.
+                        // When no filter (showing "Everyone" union view), aggregate all misc notes.
+                        let miscNotes: [String] = {
+                            if let selectedId = selectedMemberId {
+                                return foodNotesStore.memberMiscNotes[selectedId.uuidString.lowercased()] ?? []
+                            } else {
+                                // Aggregate all misc notes from all members + family ("Everyone")
+                                return foodNotesStore.memberMiscNotes.values.flatMap { $0 }
+                            }
+                        }()
+                        if !miscNotes.isEmpty {
                             MiscNotesCard(notes: miscNotes) {
                                 coordinator.showAIBotSheetWithContext(contextKeyOverride: "food_notes")
                             }
