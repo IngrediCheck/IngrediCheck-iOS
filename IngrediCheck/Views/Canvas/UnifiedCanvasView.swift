@@ -235,15 +235,37 @@ struct UnifiedCanvasView: View {
                         redactedLoadingContent
                     } else {
                         // AI Summary Card at top (only show if we have a summary and no member filter applied)
-                        if selectedMemberId == nil,
-                           let summary = foodNotesStore.foodNotesSummary,
-                           !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                           summary != "No Food Notes yet." {
+                        let hasSummary = selectedMemberId == nil &&
+                            foodNotesStore.foodNotesSummary != nil &&
+                            !foodNotesStore.foodNotesSummary!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                            foodNotesStore.foodNotesSummary != "No Food Notes yet."
+
+                        if hasSummary {
                             AISummaryCard(
-                                summary: summary,
+                                summary: foodNotesStore.foodNotesSummary!,
                                 dynamicSteps: store.dynamicSteps
                             )
                             .padding(.top, 16)
+                        }
+
+                        // Misc notes card (free-text notes from IngrediBot)
+                        // Shown at top (after AI summary) when non-empty, similar to how
+                        // sections with selections are sorted to the top.
+                        let miscNotes: [String] = {
+                            if let selectedId = selectedMemberId {
+                                return foodNotesStore.memberMiscNotes[selectedId.uuidString.lowercased()] ?? []
+                            } else {
+                                // Aggregate all misc notes from all members + family ("Everyone")
+                                return foodNotesStore.memberMiscNotes.values.flatMap { $0 }
+                            }
+                        }()
+                        let hasMiscNotes = !miscNotes.isEmpty
+
+                        if hasMiscNotes {
+                            MiscNotesCard(notes: miscNotes) {
+                                coordinator.showAIBotSheetWithContext(contextKeyOverride: "food_notes")
+                            }
+                            .padding(.top, hasSummary ? 0 : 16)
                         }
 
                         ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
@@ -257,25 +279,8 @@ struct UnifiedCanvasView: View {
                                 showFamilyIcons: showFamilyIconsOnChips,
                                 activeMemberId: selectedMemberId
                             )
-                            .padding(.top, index == 0 && foodNotesStore.foodNotesSummary == nil ? 16 : 0)
+                            .padding(.top, index == 0 && !hasSummary && !hasMiscNotes ? 16 : 0)
                             .id(card.id)
-                        }
-
-                        // Misc notes card (free-text notes from IngrediBot)
-                        // When a member is selected, show only their misc notes.
-                        // When no filter (showing "Everyone" union view), aggregate all misc notes.
-                        let miscNotes: [String] = {
-                            if let selectedId = selectedMemberId {
-                                return foodNotesStore.memberMiscNotes[selectedId.uuidString.lowercased()] ?? []
-                            } else {
-                                // Aggregate all misc notes from all members + family ("Everyone")
-                                return foodNotesStore.memberMiscNotes.values.flatMap { $0 }
-                            }
-                        }()
-                        if !miscNotes.isEmpty {
-                            MiscNotesCard(notes: miscNotes) {
-                                coordinator.showAIBotSheetWithContext(contextKeyOverride: "food_notes")
-                            }
                         }
                     }
                 }
