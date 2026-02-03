@@ -266,7 +266,7 @@ struct UnifiedCanvasView: View {
                         if let miscNotes = foodNotesStore.memberMiscNotes[miscKey],
                            !miscNotes.isEmpty {
                             MiscNotesCard(notes: miscNotes) {
-                                coordinator.showAIBotSheetWithContext(screenOverride: "food_notes")
+                                coordinator.showAIBotSheetWithContext(contextKeyOverride: "food_notes")
                             }
                         }
                     }
