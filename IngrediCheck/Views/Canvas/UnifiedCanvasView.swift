@@ -253,10 +253,25 @@ struct UnifiedCanvasView: View {
                         // sections with selections are sorted to the top.
                         let miscNotes: [String] = {
                             if let selectedId = selectedMemberId {
+                                // Single member selected - show their notes without prefix
                                 return foodNotesStore.memberMiscNotes[selectedId.uuidString.lowercased()] ?? []
                             } else {
-                                // Aggregate all misc notes from all members + family ("Everyone")
-                                return foodNotesStore.memberMiscNotes.values.flatMap { $0 }
+                                // Aggregate all misc notes from all members + family
+                                // Prefix member-level notes with member name for clarity
+                                var allNotes: [String] = []
+                                for (key, notes) in foodNotesStore.memberMiscNotes {
+                                    if key == "Everyone" {
+                                        // Family-level notes - no prefix needed
+                                        allNotes.append(contentsOf: notes)
+                                    } else {
+                                        // Member-level notes - prefix with member name
+                                        let memberName = memberName(for: key)
+                                        for note in notes {
+                                            allNotes.append("\(memberName): \(note)")
+                                        }
+                                    }
+                                }
+                                return allNotes
                             }
                         }()
                         let hasMiscNotes = !miscNotes.isEmpty
@@ -540,6 +555,24 @@ struct UnifiedCanvasView: View {
         }
 
         return nil
+    }
+
+    // MARK: - Member Name Helper
+
+    private func memberName(for memberKey: String) -> String {
+        guard let family = familyStore.family else { return "Unknown" }
+
+        // Check selfMember
+        if family.selfMember.id.uuidString.lowercased() == memberKey {
+            return family.selfMember.name
+        }
+
+        // Check otherMembers
+        if let member = family.otherMembers.first(where: { $0.id.uuidString.lowercased() == memberKey }) {
+            return member.name
+        }
+
+        return "Unknown"
     }
 
     // MARK: - Edit Helpers (Editing)
