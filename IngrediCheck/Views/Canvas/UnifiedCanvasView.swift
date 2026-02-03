@@ -92,7 +92,7 @@ struct UnifiedCanvasView: View {
                     },
                     onChatBotTap: mode == .editing ? {
                         // Open AI Bot with food_notes context when in editing mode (Food Notes screen)
-                        coordinator.showAIBotSheetWithContext()
+                        coordinator.showAIBotSheetWithContext(contextKeyOverride: "food_notes")
                     } : nil
                 )
                 .fixedSize(horizontal: false, vertical: true)
