@@ -176,7 +176,8 @@ struct RootContainerView: View {
                 scanId: coordinator.aibotContextScanId,
                 analysisId: coordinator.aibotContextAnalysisId,
                 ingredientName: coordinator.aibotContextIngredientName,
-                feedbackId: coordinator.aibotContextFeedbackId
+                feedbackId: coordinator.aibotContextFeedbackId,
+                contextKeyOverride: coordinator.aibotContextKeyOverride
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)

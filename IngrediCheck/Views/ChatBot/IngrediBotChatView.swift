@@ -19,6 +19,7 @@ struct IngrediBotChatView: View {
     var analysisId: String? = nil
     var ingredientName: String? = nil
     var feedbackId: String? = nil  // For feedback follow-up context
+    var contextKeyOverride: String? = nil  // Explicit context key (e.g., "food_notes" from editing screen)
 
     var onDismiss: (() -> Void)? = nil
 
@@ -42,6 +43,8 @@ struct IngrediBotChatView: View {
     private var contextKey: String {
         if let feedbackId { return "feedback:\(feedbackId)" }
         if let scanId { return "product_scan:\(scanId)" }
+        // Check explicit context override first (e.g., "food_notes" from editing screen)
+        if let contextKeyOverride { return contextKeyOverride }
         let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
                           coordinator.currentCanvasRoute == .summaryAddFamily ||
                           coordinator.currentCanvasRoute == .welcomeToYourFamily ||

@@ -84,6 +84,7 @@ class AppNavigationCoordinator {
     var aibotContextAnalysisId: String? = nil
     var aibotContextIngredientName: String? = nil
     var aibotContextFeedbackId: String? = nil
+    var aibotContextKeyOverride: String? = nil  // Explicit context key (e.g., "food_notes")
 
     // MARK: - Feedback Prompt Bubble State
     var showFeedbackPromptBubble: Bool = false
@@ -215,12 +216,14 @@ class AppNavigationCoordinator {
         scanId: String? = nil,
         analysisId: String? = nil,
         ingredientName: String? = nil,
-        feedbackId: String? = nil
+        feedbackId: String? = nil,
+        contextKeyOverride: String? = nil
     ) {
         aibotContextScanId = scanId
         aibotContextAnalysisId = analysisId
         aibotContextIngredientName = ingredientName
         aibotContextFeedbackId = feedbackId
+        aibotContextKeyOverride = contextKeyOverride
         isAIBotSheetPresented = true
     }
 
@@ -230,6 +233,7 @@ class AppNavigationCoordinator {
         aibotContextAnalysisId = nil
         aibotContextIngredientName = nil
         aibotContextFeedbackId = nil
+        aibotContextKeyOverride = nil
     }
 
     // MARK: - Feedback Prompt Bubble
