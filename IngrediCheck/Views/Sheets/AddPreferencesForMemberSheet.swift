@@ -15,12 +15,12 @@ struct AddPreferencesForMemberSheet: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Do you want to add foodnote for \(name)?")
+                Text(Microcopy.formatted(Microcopy.Key.Onboarding.AddFoodNotesForMember.title, name))
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
 
-                Text("Don't worry, \(name) can add or edit their foodnote once they join IngrediFam")
+                Text(Microcopy.formatted(Microcopy.Key.Onboarding.AddFoodNotesForMember.subtitle, name))
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -28,7 +28,7 @@ struct AddPreferencesForMemberSheet: View {
 
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "Later",
+                    title: Microcopy.string(Microcopy.Key.Common.maybeLater),
                     takeFullWidth: true,
                     action: laterPressed
                 )
@@ -36,7 +36,7 @@ struct AddPreferencesForMemberSheet: View {
                 Button {
                     yesPressed()
                 } label: {
-                    GreenCapsule(title: "Yes")
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Onboarding.AddFoodNotesForMember.ctaAdd))
                 }
             }
         }

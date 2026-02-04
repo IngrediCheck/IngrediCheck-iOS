@@ -50,7 +50,7 @@ struct CameraSwipeButton: View {
                                 .foregroundColor(.white)
                                 .font(.system(size: 28))
                             
-                            Text("Scanner")
+                            Microcopy.text(Microcopy.Key.Scan.Mode.scan)
                                 .font(ManropeFont.regular.size(11))
                                 .foregroundStyle(.white)
                                 .offset(y: UIScreen.main.bounds.height * 0.05)
@@ -100,7 +100,7 @@ struct CameraSwipeButton: View {
                                     .foregroundColor(.white)
                                     .font(.system(size: 20))
                                 
-                                Text("Photo")
+                                Microcopy.text(Microcopy.Key.Scan.Mode.photo)
                                     .font(ManropeFont.regular.size(11))
                                     .foregroundStyle(.white)
                                     .offset(y: UIScreen.main.bounds.height * 0.05)
@@ -112,7 +112,7 @@ struct CameraSwipeButton: View {
                         // Callout bubble above the photo circle when retry is shown
                         if showRetryCallout {
                             VStack(spacing: 0) {
-                                CalloutBubble(text: "Try again or switch\n to photo mode .")
+                                CalloutBubble(text: Microcopy.string(Microcopy.Key.Scan.Callout.retryOrSwitchToPhoto))
                                     .onTapGesture {
                                         withAnimation(.easeInOut) {
                                             showRetryCallout = false

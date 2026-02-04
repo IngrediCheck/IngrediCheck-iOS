@@ -39,8 +39,8 @@ struct LoginToContinueSheet: View {
             upgradeErrorMessage = message
             showUpgradeError = true
         }
-        .alert("Sign-in Failed", isPresented: $showUpgradeError) {
-            Button("OK", role: .cancel) {
+        .alert(Microcopy.string(Microcopy.Key.Auth.signInFailedTitle), isPresented: $showUpgradeError) {
+            Button(Microcopy.string(Microcopy.Key.Common.ok), role: .cancel) {
                 Task { @MainActor in
                     authController.accountUpgradeError = nil
                 }
@@ -78,14 +78,14 @@ struct LoginToContinueSheet: View {
                 .padding(.trailing, 16)
                 
                 // Title
-                Text("Log in to continue")
+                Microcopy.text(Microcopy.Key.Auth.signInToContinueTitle)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                     .padding(.top, 8)
                 
                 // Subtitle
-                Text("Sign in to save your preferences and scans, and keep\n them in sync across devices.")
+                Microcopy.text(Microcopy.Key.Auth.signInToContinueSubtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -167,7 +167,7 @@ struct LoginToContinueSheet: View {
         VStack(spacing: 0) {
             ZStack {
                 // CENTER TEXT
-                Text("Log in to continue")
+                Microcopy.text(Microcopy.Key.Auth.signInToContinueTitle)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
@@ -190,7 +190,7 @@ struct LoginToContinueSheet: View {
             }
             .padding(.top, 8)
 
-            Text("Sign in to save your preferences and scans, and keep\n them in sync across devices.")
+            Microcopy.text(Microcopy.Key.Auth.signInToContinueSubtitle)
                 .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale120)
                 .multilineTextAlignment(.center)

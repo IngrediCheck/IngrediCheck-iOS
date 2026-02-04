@@ -319,7 +319,7 @@ struct AddMoreMembers: View {
             resetMemojiSelectionState()
         } catch {
              print("[AddMoreMembers] Error adding member: \(error)")
-             ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+             ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Family.addMember), type: .error)
         }
     }
 }

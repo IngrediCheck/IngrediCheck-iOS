@@ -18,12 +18,12 @@ struct PermissionsCanvas: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
-                Text("Why we need these permissions")
+                Microcopy.text(Microcopy.Key.Permissions.title)
                     .font(ManropeFont.bold.size(16))
                     .foregroundStyle(.grayScale150)
                     .padding(.top,20)
 
-                Text("They help us scan products accurately and\nimprove your experience.")
+                Microcopy.text(Microcopy.Key.Permissions.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -34,8 +34,8 @@ struct PermissionsCanvas: View {
             VStack(spacing: 18) {
                 permissionRow(
                     icon: "camera-image",
-                    title: "Camera",
-                    subtitle: "Used only to scan barcodes and product photos.",
+                    title: Microcopy.string(Microcopy.Key.Permissions.Camera.title),
+                    subtitle: Microcopy.string(Microcopy.Key.Permissions.Camera.subtitle),
                     isOn: Binding(
                         get: { cameraEnabled },
                         set: { newValue in
@@ -47,8 +47,8 @@ struct PermissionsCanvas: View {
 
                 permissionRow(
                     icon: "bell-on-image",
-                    title: "Notifications",
-                    subtitle: "Get alerts for scan results, tips and product updates.",
+                    title: Microcopy.string(Microcopy.Key.Permissions.Notifications.title),
+                    subtitle: Microcopy.string(Microcopy.Key.Permissions.Notifications.subtitle),
                     isOn: Binding(
                         get: { notificationsEnabled },
                         set: { newValue in
@@ -60,8 +60,8 @@ struct PermissionsCanvas: View {
 
                 permissionRow(
                     icon: "lock-image",
-                    title: "Login Google or Apple account",
-                    subtitle: "Save your scans and preferences securely across devices.",
+                    title: Microcopy.string(Microcopy.Key.Permissions.SignIn.title),
+                    subtitle: Microcopy.string(Microcopy.Key.Permissions.SignIn.subtitle),
                     isOn: Binding(
                         get: { isSignedIn },
                         set: { newValue in
@@ -83,25 +83,25 @@ struct PermissionsCanvas: View {
         .task {
             refreshPermissionStates()
         }
-        .alert("Camera Permission", isPresented: $showCameraPermissionAlert) {
-            Button("Open Settings") {
+        .alert(Microcopy.string(Microcopy.Key.Permissions.Alert.Camera.title), isPresented: $showCameraPermissionAlert) {
+            Button(Microcopy.string(Microcopy.Key.Common.openSettings)) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(Microcopy.string(Microcopy.Key.Common.cancel), role: .cancel) {}
         } message: {
-            Text("Please allow camera access in Settings to scan products.")
+            Microcopy.text(Microcopy.Key.Permissions.Alert.Camera.message)
         }
-        .alert("Notifications Permission", isPresented: $showNotificationsPermissionAlert) {
-            Button("Open Settings") {
+        .alert(Microcopy.string(Microcopy.Key.Permissions.Alert.Notifications.title), isPresented: $showNotificationsPermissionAlert) {
+            Button(Microcopy.string(Microcopy.Key.Common.openSettings)) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(Microcopy.string(Microcopy.Key.Common.cancel), role: .cancel) {}
         } message: {
-            Text("Please allow notifications in Settings to receive updates.")
+            Microcopy.text(Microcopy.Key.Permissions.Alert.Notifications.message)
         }
     }
 

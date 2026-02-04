@@ -38,7 +38,7 @@ struct WelcomeView: View {
                     Button {
                         onGetStarted()
                     } label: {
-                        GreenCapsule(title: "Get Started")
+                        GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.getStarted))
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)
@@ -49,7 +49,7 @@ struct WelcomeView: View {
                         // Disabled - do nothing
                     } label: {
                         HStack(spacing: 8) {
-                            Text("Get Started")
+                            Microcopy.text(Microcopy.Key.Common.getStarted)
                                 .font(NunitoFont.semiBold.size(16))
                                 .foregroundStyle(.grayScale80)
                         }

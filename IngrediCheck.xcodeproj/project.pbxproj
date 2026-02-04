@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0C51E2EE2E335B7300A3E3A9 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C51E2ED2E335B7300A3E3A9 /* Constants.swift */; };
+		B0B1C2D3E4F5A6B7C8D9E0F4 /* Microcopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B1C2D3E4F5A6B7C8D9E0F3 /* Microcopy.swift */; };
 		0C51E2F12E335C1E00A3E3A9 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0C51E2F02E335C1E00A3E3A9 /* PostHog */; };
 		0CE0D52C2F03A1390050C904 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 0CE0D52B2F03A1390050C904 /* DotLottie */; };
 		0CF25DF12EDD9C9500C582FA /* DynamicOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */; };
@@ -114,6 +115,7 @@
 
 /* Begin PBXFileReference section */
 		0C51E2ED2E335B7300A3E3A9 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		B0B1C2D3E4F5A6B7C8D9E0F3 /* Microcopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Microcopy.swift; sourceTree = "<group>"; };
 		0CF25DF02EDD9C9500C582FA /* DynamicOnboardingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicOnboardingViews.swift; sourceTree = "<group>"; };
 		0CF25DF32EDD9C9600C582FA /* MeetYourProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetYourProfileView.swift; sourceTree = "<group>"; };
 		0CF25DF42EDD9ECA00C582FA /* DynamicSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicSteps.swift; sourceTree = "<group>"; };
@@ -265,6 +267,7 @@
 				D3CE19792F20EF400097B28D /* ViewExtensions.swift */,
 				D3F6ACCB2F1102EC0019F5C4 /* ToastManager.swift */,
 				D3F6ACC72F10E3490019F5C4 /* OnboardingPersistence.swift */,
+				B0B1C2D3E4F5A6B7C8D9E0F3 /* Microcopy.swift */,
 				D3BECC8F2ED98EA10088E044 /* BottomSheetRoute.swift */,
 				D3BECC902ED98EA10088E044 /* CanvasRoute.swift */,
 				D3BECCA42ED98EA30088E044 /* ChatContextBuilder.swift */,
@@ -575,6 +578,7 @@
 				3976C41B2BBEE1750026991A /* SafariView.swift in Sources */,
 				392D9BF72B72CC8A00166CF1 /* HomeTab.swift in Sources */,
 				D3F6ACC82F10E3490019F5C4 /* OnboardingPersistence.swift in Sources */,
+				B0B1C2D3E4F5A6B7C8D9E0F4 /* Microcopy.swift in Sources */,
 				392D9BF92B72CCA200166CF1 /* CheckTab.swift in Sources */,
 				397C85DB2B686DF000FB9DAD /* CaptureView.swift in Sources */,
 				39397AED2BC6DA320096C5E3 /* SearchBar.swift in Sources */,

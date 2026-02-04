@@ -9,3 +9,4 @@ This folder contains app-level documentation such as API integration guides, fea
   - API Integration Guides
   - Feature Architecture Specs
   - Design Decisions
+  - Microcopy standards (`MicrocopyStyleGuide.md`, `MicrocopyGlossary.md`)

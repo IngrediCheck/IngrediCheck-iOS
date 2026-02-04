@@ -9,7 +9,7 @@ struct ReadyToScanSheet: View {
         VStack(spacing: 0) {
             ZStack {
                 // CENTER TEXT
-                Text("Ready to scan your ")
+                Text("Ready to scan your")
                     .font(NunitoFont.bold.size(22))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.grayScale150)
@@ -31,7 +31,7 @@ struct ReadyToScanSheet: View {
 //                }
             }
             .padding(.top, 8)
-            Text("first product? ")
+            Text("first product?")
                 .font(NunitoFont.bold.size(22))
                 .foregroundStyle(.grayScale150)
                 

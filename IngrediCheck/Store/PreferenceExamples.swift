@@ -11,15 +11,15 @@ import SwiftUI
     private var timer: Timer?
     
     public static let inputPrompt =
-        "Enter dietary preference here"
+        "Add a Food Note"
 
     public static let examples = [
         "Avoid **Gluten**",
         "No **Palm oil** for me",
-        "No **animal products**, but **eggs** & **dairy** are ok",
-        "No **peanuts** but other **nuts** are ok",
-        "I don't like **pine nuts**",
-        "I can't stand **garlic**"
+        "No **animal products**, but **eggs** & **dairy** are OK",
+        "No **peanuts**, but other **nuts** are OK",
+        "I don’t like **pine nuts**",
+        "I can’t stand **garlic**"
     ]
 
     func startAnimatingExamples() {

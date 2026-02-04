@@ -22,9 +22,10 @@ struct IngrediBotView: View {
 
             // Greeting line
             (
-                Text("Hey! 👋 I'm ")
+                Text("Hey! 👋 I’m")
                     .font(NunitoFont.semiBold.size(16))
                     .foregroundStyle(.grayScale100)
+                + Text(" ")
                 + Text("IngrediBot,")
                     .font(NunitoFont.semiBold.size(16))
                     .foregroundStyle(.primary700)
@@ -51,11 +52,19 @@ struct IngrediBotView: View {
                         .font(NunitoFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                          +
-                         Text(" \"Other\" ")
+                         Text(" ")
+                        .font(NunitoFont.regular.size(14))
+                        .foregroundStyle(.grayScale110)
+                         +
+                         Text("“Other”")
                         .font(NunitoFont.bold.size(14))
                         .foregroundStyle(.grayScale140)
                          +
-                         Text("earlier, that's great!\nCould you tell me a bit more about it?")
+                         Text(" ")
+                        .font(NunitoFont.regular.size(14))
+                        .foregroundStyle(.grayScale110)
+                         +
+                         Text("earlier, that’s great! Could you tell me a bit more about it?")
                         .font(NunitoFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                 }

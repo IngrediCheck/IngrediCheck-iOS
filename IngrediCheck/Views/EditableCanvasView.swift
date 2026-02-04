@@ -620,7 +620,7 @@ private extension EditableCanvasView {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.2)
-            Text("Loading your preferences...")
+            Text("Loading your Food Notes…")
                 .font(ManropeFont.medium.size(16))
                 .foregroundStyle(.grayScale100)
                 .padding(.top, 8)

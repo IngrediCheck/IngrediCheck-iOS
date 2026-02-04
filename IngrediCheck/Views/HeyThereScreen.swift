@@ -27,11 +27,11 @@ struct HeyThereScreen: View {
                     switch coordinator.currentBottomSheetRoute {
                     case .whosThisFor:
                         VStack {
-                            Text("Welcome to IngrediFam !")
+                            Microcopy.text(Microcopy.Key.Onboarding.IngrediFamWelcome.title)
                                 .font(ManropeFont.bold.size(16))
                                 .padding(.top ,32)
                                 .padding(.bottom ,4)
-                            Text("Join your family space and personalize food choices together.")
+                            Microcopy.text(Microcopy.Key.Onboarding.IngrediFamWelcome.subtitle)
                                 .font(ManropeFont.regular.size(13))
                                 .foregroundColor(Color(hex: "#BDBDBD"))
                                 .lineLimit(2)
@@ -47,11 +47,11 @@ struct HeyThereScreen: View {
                         }
                     case .doYouHaveAnInviteCode, .enterInviteCode:
                         VStack {
-                            Text("Welcome to IngrediFam !")
+                            Microcopy.text(Microcopy.Key.Onboarding.IngrediFamWelcome.title)
                                 .font(ManropeFont.bold.size(16))
                                 .padding(.top ,32)
                                 .padding(.bottom ,4)
-                            Text("Join your family space and personalize food choices together.")
+                            Microcopy.text(Microcopy.Key.Onboarding.IngrediFamWelcome.subtitle)
                                 .font(ManropeFont.regular.size(13))
                                 .foregroundColor(Color(hex: "#BDBDBD"))
                                 .lineLimit(2)

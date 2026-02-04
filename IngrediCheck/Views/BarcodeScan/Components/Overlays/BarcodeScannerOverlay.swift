@@ -44,7 +44,7 @@ struct BarcodeScannerOverlay: View {
                 
                 VStack {
                     // Hint text below scanner frame
-                    Text("Align the barcode within the frame to scan")
+                    Microcopy.text(Microcopy.Key.Scan.Overlay.alignBarcode)
                         .frame(width: 220, height: 42)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)

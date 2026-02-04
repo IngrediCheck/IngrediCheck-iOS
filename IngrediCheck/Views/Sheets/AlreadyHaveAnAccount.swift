@@ -24,7 +24,7 @@ struct AlreadyHaveAnAccount: View {
                     .multilineTextAlignment(.center)
                     .padding(.bottom ,12)
 
-                Text("Have you used IngrediCheck earlier? If yes, continue. ")
+                Text("Have you used IngrediCheck before? If yes, continue.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)

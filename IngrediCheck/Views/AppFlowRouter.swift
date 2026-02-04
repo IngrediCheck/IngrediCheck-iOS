@@ -82,11 +82,90 @@ private struct ProductionFlowView: View {
 // MARK: - Preview/Testing Flow
 private struct PreviewFlowView: View {
     var body: some View {
+        #if DEBUG
+        if let qaState = QALaunchOverrides.microcopyQAState {
+            RootContainerView(restoredState: qaState)
+                .preferredColorScheme(.light)
+        } else if ProcessInfo.processInfo.arguments.contains("--qa-skip-welcome") {
+            RootContainerView(restoredState: nil)
+                .preferredColorScheme(.light)
+        } else {
+            SplashScreen()
+                .preferredColorScheme(.light)
+        }
+        #else
         SplashScreen()
             .preferredColorScheme(.light)
+        #endif
     }
 }
 
 #Preview {
     AppFlowRouter()
 }
+
+#if DEBUG
+private enum QALaunchOverrides {
+    static var microcopyQAState: (canvas: CanvasRoute, sheet: BottomSheetRoute)? {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("--microcopy-qa") else { return nil }
+
+        let canvasRaw = value(after: "--qa-canvas", in: args) ?? "heyThere"
+        let sheetRaw = value(after: "--qa-sheet", in: args) ?? "alreadyHaveAnAccount"
+
+        guard let canvas = canvasRoute(from: canvasRaw),
+              let sheet = sheetRoute(from: sheetRaw) else {
+            return nil
+        }
+
+        return (canvas: canvas, sheet: sheet)
+    }
+
+    private static func value(after flag: String, in args: [String]) -> String? {
+        guard let idx = args.firstIndex(of: flag), idx + 1 < args.count else { return nil }
+        return args[idx + 1]
+    }
+
+    private static func canvasRoute(from raw: String) -> CanvasRoute? {
+        switch raw {
+        case "heyThere":
+            return .heyThere
+        case "blankScreen":
+            return .blankScreen
+        case "letsGetStarted":
+            return .letsGetStarted
+        case "letsMeetYourIngrediFam":
+            return .letsMeetYourIngrediFam
+        case "home":
+            return .home
+        case "whyWeNeedThesePermissions":
+            return .whyWeNeedThesePermissions
+        default:
+            return nil
+        }
+    }
+
+    private static func sheetRoute(from raw: String) -> BottomSheetRoute? {
+        switch raw {
+        case "alreadyHaveAnAccount":
+            return .alreadyHaveAnAccount
+        case "welcomeBack":
+            return .welcomeBack
+        case "doYouHaveAnInviteCode":
+            return .doYouHaveAnInviteCode
+        case "enterInviteCode":
+            return .enterInviteCode
+        case "whosThisFor":
+            return .whosThisFor
+        case "homeDefault":
+            return .homeDefault
+        case "quickAccessNeeded":
+            return .quickAccessNeeded
+        case "loginToContinue":
+            return .loginToContinue
+        default:
+            return nil
+        }
+    }
+}
+#endif

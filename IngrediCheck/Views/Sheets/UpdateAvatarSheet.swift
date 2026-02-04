@@ -295,7 +295,7 @@ struct UpdateAvatarSheet: View {
                 colorHex = memojiStore.backgroundColorHex
             } catch {
                 Log.error("UpdateAvatarSheet", "Failed to upload custom avatar: \(error)")
-                ToastManager.shared.show(message: "Failed to upload avatar", type: .error)
+                ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Avatar.upload), type: .error)
                 return
             }
         } else if let selected = selectedStaticAvatar {
@@ -322,7 +322,7 @@ struct UpdateAvatarSheet: View {
             onBack()
         } catch {
             Log.error("UpdateAvatarSheet", "Failed to update avatar: \(error)")
-            ToastManager.shared.show(message: "Failed to save avatar", type: .error)
+            ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Avatar.save), type: .error)
         }
     }
 }

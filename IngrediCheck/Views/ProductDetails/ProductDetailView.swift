@@ -354,11 +354,11 @@ struct ProductDetailView: View {
 
 
                                 CollapsibleSection(
-                                    title: "Ingredients",
+                                    title: Microcopy.string(Microcopy.Key.Labels.ingredients),
                                     isExpanded: $isIngredientsExpanded
                                 ) {
                                     if resolvedIngredientParagraphs.isEmpty {
-                                        Text("No ingredients available")
+                                        Microcopy.text(Microcopy.Key.Product.Ingredients.noneAvailable)
                                             .font(ManropeFont.regular.size(14))
                                             .foregroundStyle(.grayScale100)
                                             .lineSpacing(4)
@@ -418,7 +418,7 @@ struct ProductDetailView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: activeIngredientHighlight)
-        .navigationTitle(resolvedBrand.isEmpty ? "Product Detail" : resolvedBrand)
+        .navigationTitle(resolvedBrand.isEmpty ? Microcopy.string(Microcopy.Key.Product.Detail.title) : resolvedBrand)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
@@ -431,7 +431,7 @@ struct ProductDetailView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Back")
+                            Microcopy.text(Microcopy.Key.Common.back)
                                 .font(ManropeFont.medium.size(16))
                         }
                         .foregroundStyle(.grayScale150)
@@ -1067,13 +1067,13 @@ struct ProductDetailView: View {
                 .saturation(0) // Grayscale effect
             
             // Title
-            Text("Missing Ingredients")
+            Microcopy.text(Microcopy.Key.Product.MissingIngredients.title)
                 .font(NunitoFont.bold.size(20))
                 .foregroundStyle(Color(hex: "#303030"))
                 .multilineTextAlignment(.center)
             
             // Description
-            Text("Add photos to help us analyze it.")
+            Microcopy.text(Microcopy.Key.Product.MissingIngredients.subtitle)
                 .font(ManropeFont.medium.size(14))
                 .foregroundStyle(Color(hex: "#949494"))
                 .multilineTextAlignment(.center)
@@ -1083,7 +1083,7 @@ struct ProductDetailView: View {
             Button {
                 handleCameraButtonTap()
             } label: {
-                GreenCapsule(title: "Upload photos", takeFullWidth: false)
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Product.Cta.addPhotos), takeFullWidth: false)
             }
             .buttonStyle(.plain)
             .padding(.top, 40)
@@ -1111,13 +1111,13 @@ struct ProductDetailView: View {
                 .saturation(0) // Grayscale effect
 
             // Title
-            Text("Product Not Found")
+            Microcopy.text(Microcopy.Key.Product.NotFound.title)
                 .font(NunitoFont.bold.size(20))
                 .foregroundStyle(Color(hex: "#303030"))
                 .multilineTextAlignment(.center)
 
             // Description
-            Text("We couldn't find this product. Capture photos from different angles so we can analyze it for you.")
+            Microcopy.text(Microcopy.Key.Product.NotFound.subtitle)
                 .font(ManropeFont.medium.size(14))
                 .foregroundStyle(Color(hex: "#949494"))
                 .multilineTextAlignment(.center)
@@ -1127,7 +1127,7 @@ struct ProductDetailView: View {
             Button {
                 handleCameraButtonTap()
             } label: {
-                GreenCapsule(title: "Capture photos", takeFullWidth: false)
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Product.Cta.addPhotos), takeFullWidth: false)
             }
             .buttonStyle(.plain)
             .padding(.top, 40)

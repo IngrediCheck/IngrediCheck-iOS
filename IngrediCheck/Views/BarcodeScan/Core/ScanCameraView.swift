@@ -742,7 +742,7 @@ struct ScanCameraView: View {
                         Image(systemName: "camera")
                             .font(.system(size: 44, weight: .medium))
                             .foregroundColor(.secondary)
-                        Text("Camera not available in Preview/Simulator")
+                        Microcopy.text(Microcopy.Key.Scan.Permissions.cameraNotAvailableSimulator)
                             .font(.callout)
                             .foregroundColor(.secondary)
                     }
@@ -1190,9 +1190,9 @@ struct ScanCameraView: View {
             
             if cameraStatus == .denied || cameraStatus == .restricted {
                 VStack(spacing: 12) {
-                    Text("Camera access is required")
+                    Microcopy.text(Microcopy.Key.Scan.Permissions.cameraAccessRequired)
                         .font(.headline)
-                    Button("Open Settings") {
+                    Button(Microcopy.string(Microcopy.Key.Common.openSettings)) {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }

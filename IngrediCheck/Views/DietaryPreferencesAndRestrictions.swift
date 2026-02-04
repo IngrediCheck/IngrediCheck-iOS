@@ -36,13 +36,14 @@ struct DietaryPreferencesAndRestrictions: View {
         VStack {
             HStack {
                 VStack(alignment:.leading, spacing: 0) {
-                    Text("Fine-Tune")
+                    Text("Fine-tune")
                         .font(ManropeFont.extraBold.size(36))
                         .foregroundStyle(Color(hex: "D3D3D3"))
-                    Text("   your Food")
+                    Text("your Food")
                         .font(ManropeFont.extraBold.size(36))
                         .foregroundStyle(Color(hex: "D3D3D3"))
-                    Text("Choices!!")
+                        .padding(.leading, 24)
+                    Text("Choices")
                         .font(ManropeFont.extraBold.size(36))
                         .foregroundStyle(Color(hex: "D3D3D3"))
                 }

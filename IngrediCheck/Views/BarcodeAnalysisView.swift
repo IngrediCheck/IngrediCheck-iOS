@@ -302,8 +302,8 @@ struct BarcodeAnalysisView: View {
         @Bindable var userPreferencesBindable = userPreferences
         @Bindable var viewModelBindable = viewModel
         Group {
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
+            if viewModel.errorMessage != nil {
+                Microcopy.text(Microcopy.Key.Errors.genericToast)
                     .padding()
             } else if let _ = viewModel.notFound {
                 notFoundView
@@ -341,7 +341,7 @@ struct BarcodeAnalysisView: View {
                                 }
                                 
                                 if product.ingredients.isEmpty {
-                                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                                    Microcopy.text(Microcopy.Key.Product.MissingIngredients.message)
                                         .font(.subheadline)
                                         .padding()
                                         .multilineTextAlignment(.center)
@@ -352,13 +352,14 @@ struct BarcodeAnalysisView: View {
                                         Image(systemName: "photo.badge.plus")
                                             .font(.largeTitle)
                                     })
-                                    Text("Product will be analyzed instantly!")
+                                    Microcopy.text(Microcopy.Key.Product.MissingIngredients.analyzeHint)
                                         .font(.subheadline)
+                                        .multilineTextAlignment(.center)
                                 } else {
                                     AnalysisResultView(product: product, ingredientRecommendations: viewModel.ingredientRecommendations)
                                     
                                     HStack {
-                                        Text("Ingredients") .font(.headline)
+                                        Microcopy.text(Microcopy.Key.Labels.ingredients) .font(.headline)
                                         Spacer()
                                     }
                                     .padding(.horizontal)
@@ -411,7 +412,7 @@ struct BarcodeAnalysisView: View {
                 } else {
                     VStack {
                         Spacer()
-                        Text("Looking up \(barcode)")
+                        Microcopy.text(Microcopy.Key.Scan.Status.lookingUpProduct)
                         Spacer()
                         ProgressView()
                         Spacer()

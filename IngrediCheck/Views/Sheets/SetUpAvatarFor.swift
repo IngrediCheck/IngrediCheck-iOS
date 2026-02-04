@@ -27,7 +27,7 @@ struct SetUpAvatarFor: View {
         VStack(spacing: 24) {
             
             VStack(spacing: 10) {
-                Text("Whom do you want to set up\nan avatar for?")
+                Text("Who do you want to set up an avatar for?")
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)

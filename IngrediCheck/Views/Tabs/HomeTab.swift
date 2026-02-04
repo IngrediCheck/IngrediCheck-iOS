@@ -48,7 +48,7 @@ enum ValidationResult {
         }
         .animation(.linear, value: isFocused)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Your Dietary Preferences")
+        .navigationTitle(Microcopy.string(Microcopy.Key.FoodNotes.title))
         .dismissKeyboardOnTap()
     }
     
@@ -56,7 +56,7 @@ enum ValidationResult {
         HStack(spacing: 5) {
             switch dp.validationResult {
             case .validating:
-                Text("Thinking")
+                Microcopy.text(Microcopy.Key.FoodNotes.Validation.thinking)
                     .foregroundStyle(.paletteAccent)
                 ProgressView()
             case .failure(let string):
@@ -135,7 +135,7 @@ enum ValidationResult {
                             dp.cancelInEditPreference()
                             isFocused = false
                         }, label: {
-                            Text("Cancel")
+                            Microcopy.text(Microcopy.Key.Common.cancel)
                                 .fontWeight(.bold)
                         })
                     }
@@ -231,7 +231,7 @@ struct EmptyPreferencesView: View {
                 Image("EmptyPreferenceList")
                     .resizable()
                     .scaledToFit()
-                Text("You don't have any dietary preferences entered yet")
+                Microcopy.text(Microcopy.Key.FoodNotes.EmptyState.title)
                     .font(.subheadline)
                     .fontWeight(.light)
                     .multilineTextAlignment(.center)
@@ -241,7 +241,7 @@ struct EmptyPreferencesView: View {
             .frame(width: UIScreen.main.bounds.width / 2)
             Spacer()
             VStack(spacing: 8) {
-                Text("Try the following")
+                Microcopy.text(Microcopy.Key.FoodNotes.EmptyState.tryFollowing)
                     .foregroundStyle(.gray)
                 TabView(selection: $currentTabViewIndex.animation()) {
                     ForEach(0 ..< PreferenceExamples.examples.count, id:\.self) { index in

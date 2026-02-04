@@ -101,13 +101,13 @@ struct TabBar: View {
                 .buttonStyle(.plain)
                 .padding(.bottom, 18)
             }
-            .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
-                Button("Later", role: .cancel) { }
-                Button("Open Settings") {
+            .alert(Microcopy.string(Microcopy.Key.Permissions.Alert.Camera.title), isPresented: $showCameraPermissionAlert) {
+                Button(Microcopy.string(Microcopy.Key.Common.notNow), role: .cancel) { }
+                Button(Microcopy.string(Microcopy.Key.Common.openSettings)) {
                     openAppSettings()
                 }
             } message: {
-                Text("To scan products, please allow camera access in Settings.")
+                Microcopy.text(Microcopy.Key.Permissions.Alert.Camera.message)
             }
             .onChange(of: isExpanded) { oldValue, newValue in
                 something()

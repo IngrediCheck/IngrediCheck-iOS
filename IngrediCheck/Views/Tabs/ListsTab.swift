@@ -34,7 +34,7 @@ import os
         }
         .padding(.horizontal)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarTitle("Lists")
+        .navigationBarTitle(Microcopy.string(Microcopy.Key.Lists.title))
         .toolbar {
             Group {
                 if let scans = appState.listsTabState.scans,
@@ -85,7 +85,7 @@ import os
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarTitle("Favorites")
+        .navigationBarTitle(Microcopy.string(Microcopy.Key.Lists.Favorites.title))
         .background(Color.pageBackground)
     }
 }
@@ -99,13 +99,13 @@ import os
         
         VStack {
             HStack {
-                Text("Favorites")
+                Microcopy.text(Microcopy.Key.Lists.Favorites.title)
                     .font(.headline)
                 Spacer()
                 if let favoriteItems = appState.listsTabState.listItems,
                    !favoriteItems.isEmpty {
                     NavigationLink(value: HistoryRouteItem.favoritesAll) {
-                        Text("View all")
+                        Microcopy.text(Microcopy.Key.Common.viewAll)
                     }
                 }
             }
@@ -141,7 +141,7 @@ import os
                                             .clipShape(RoundedRectangle(cornerRadius: 10))
                                     }
                                 }
-                                Text("No Favorite products yet")
+                                Microcopy.text(Microcopy.Key.Lists.Favorites.emptyTitle)
                                     .font(.subheadline)
                                     .fontWeight(.light)
                                     .multilineTextAlignment(.center)
@@ -202,11 +202,8 @@ import os
                     // Scans exist but filter returns empty (e.g., no favorites)
                     EmptyStateView(
                         imageName: "history-emptystate",
-                        title: "No Favorites Yet!",
-                        description: [
-                            "Products you favorite will appear here.",
-                            "Tap the heart icon on any scan to save it."
-                        ],
+                        title: Microcopy.string(Microcopy.Key.Lists.Favorites.emptyTitle),
+                        description: [Microcopy.string(Microcopy.Key.Lists.Favorites.emptyDescription)],
                         buttonTitle: nil,
                         buttonAction: nil
                     )
@@ -259,19 +256,16 @@ import os
             } else if scanHistoryStore.isLoading {
                 VStack {
                     Spacer()
-                    ProgressView("Loading scans...")
+                    ProgressView(Microcopy.string(Microcopy.Key.Scans.loading))
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
             } else {
                 EmptyStateView(
                     imageName: "history-emptystate",
-                    title: "No Scans !",
-                    description: [
-                        "Your recent scans will appear here once",
-                        "you start scanning products."
-                    ],
-                    buttonTitle: "Start Scanning",
+                    title: Microcopy.string(Microcopy.Key.Scans.Empty.title),
+                    description: [Microcopy.string(Microcopy.Key.Scans.Empty.description)],
+                    buttonTitle: Microcopy.string(Microcopy.Key.Scans.Cta.startScanning),
                     buttonAction: {
                         appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                     }
@@ -280,7 +274,7 @@ import os
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .navigationTitle("Recent Scans")
+        .navigationTitle(Microcopy.string(Microcopy.Key.Lists.RecentScans.title))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -365,12 +359,12 @@ import os
     var body: some View {
         VStack {
             HStack {
-                Text("Recent Scans")
+                Microcopy.text(Microcopy.Key.Lists.RecentScans.title)
                     .font(.headline)
                 Spacer()
                 if showViewAll {
                     NavigationLink(value: HistoryRouteItem.recentScansAll) {
-                        Text("View all")
+                        Microcopy.text(Microcopy.Key.Common.viewAll)
                     }
                 }
             }
@@ -394,7 +388,7 @@ import os
                             Image("EmptyRecentScans")
                                 .resizable()
                                 .scaledToFit()
-                            Text("No products scanned yet")
+                            Microcopy.text(Microcopy.Key.Scans.Empty.title)
                                 .font(.subheadline)
                                 .fontWeight(.light)
                                 .multilineTextAlignment(.center)
@@ -427,12 +421,9 @@ import os
             if scans.isEmpty {
                 EmptyStateView(
                     imageName: "history-emptystate",
-                    title: "No Scans !",
-                    description: [
-                        "Your recent scans will appear here once",
-                        "you start scanning products."
-                    ],
-                    buttonTitle: "Start Scanning",
+                    title: Microcopy.string(Microcopy.Key.Scans.Empty.title),
+                    description: [Microcopy.string(Microcopy.Key.Scans.Empty.description)],
+                    buttonTitle: Microcopy.string(Microcopy.Key.Scans.Cta.startScanning),
                     buttonAction: {
                         appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                     }
@@ -697,7 +688,7 @@ struct HistoryItemDetailView: View {
                     )
                 }
                 if item.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                    Microcopy.text(Microcopy.Key.Product.MissingIngredients.message)
                         .font(.subheadline)
                         .padding()
                         .multilineTextAlignment(.center)
@@ -708,8 +699,9 @@ struct HistoryItemDetailView: View {
                         Image(systemName: "photo.badge.plus")
                             .font(.largeTitle)
                     })
-                    Text("Product will be analyzed instantly!")
+                    Microcopy.text(Microcopy.Key.Product.MissingIngredients.analyzeHint)
                         .font(.subheadline)
+                        .multilineTextAlignment(.center)
                 } else {
                     let product = DTO.Product(
                         barcode: item.barcode,
@@ -722,7 +714,7 @@ struct HistoryItemDetailView: View {
                     AnalysisResultView(product: product, ingredientRecommendations: item.ingredient_recommendations)
                     
                     HStack {
-                        Text("Ingredients").font(.headline)
+                        Microcopy.text(Microcopy.Key.Labels.ingredients).font(.headline)
                         Spacer()
                     }
                     .padding(.horizontal)
@@ -827,7 +819,7 @@ struct ScanDetailView: View {
                     )
                 }
                 if scan.product_info.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                    Microcopy.text(Microcopy.Key.Product.MissingIngredients.message)
                         .font(.subheadline)
                         .padding()
                         .multilineTextAlignment(.center)
@@ -838,14 +830,15 @@ struct ScanDetailView: View {
                         Image(systemName: "photo.badge.plus")
                             .font(.largeTitle)
                     })
-                    Text("Product will be analyzed instantly!")
+                    Microcopy.text(Microcopy.Key.Product.MissingIngredients.analyzeHint)
                         .font(.subheadline)
+                        .multilineTextAlignment(.center)
                 } else {
                     let recommendations = scan.analysis_result?.toIngredientRecommendations()
                     AnalysisResultView(product: product, ingredientRecommendations: recommendations)
                     
                     HStack {
-                        Text("Ingredients").font(.headline)
+                        Microcopy.text(Microcopy.Key.Labels.ingredients).font(.headline)
                         Spacer()
                     }
                     .padding(.horizontal)
@@ -1026,7 +1019,7 @@ struct FavoriteItemDetailView: View {
                 )
                 
                 HStack {
-                    Text("Ingredients").font(.headline)
+                    Microcopy.text(Microcopy.Key.Labels.ingredients).font(.headline)
                     Spacer()
                 }
                 .padding(.horizontal)

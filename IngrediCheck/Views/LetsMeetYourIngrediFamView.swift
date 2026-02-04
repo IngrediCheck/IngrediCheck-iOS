@@ -70,11 +70,11 @@ struct LetsMeetYourIngrediFamView: View {
         Group {
             if shouldShowWelcomeFamily {
             VStack {
-               Text("Welcome to IngrediFam !")
+               Microcopy.text(Microcopy.Key.Onboarding.IngrediFamWelcome.title)
                     .font(ManropeFont.bold.size(16))
                     .padding(.top, 24)
                     .padding(.bottom ,4)
-                Text("Join your family space and personalize food choices together.")
+                Microcopy.text(Microcopy.Key.Onboarding.IngrediFamWelcome.subtitle)
                     .font(ManropeFont.regular.size(13))
                     .foregroundColor(Color(hex: "#BDBDBD"))
                     .lineLimit(2)
@@ -93,7 +93,7 @@ struct LetsMeetYourIngrediFamView: View {
             .navigationBarBackButtonHidden(true)
         } else if let me = familyStore.family?.selfMember ?? familyStore.pendingSelfMember {
             VStack(spacing: 0) {
-                Text("Your Family Overview")
+                Microcopy.text(Microcopy.Key.Family.overviewTitle)
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
 //                    .padding(.top, 32)
@@ -109,7 +109,7 @@ struct LetsMeetYourIngrediFamView: View {
                                 Text(me.name)
                                     .font(NunitoFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
-                                Text("(You)")
+                                Microcopy.text(Microcopy.Key.Family.youTag)
                                     .font(NunitoFont.regular.size(12))
                                     .foregroundStyle(.grayScale110)
                             }
@@ -120,7 +120,7 @@ struct LetsMeetYourIngrediFamView: View {
                                 Button {
                                     showLeaveConfirm = true
                                 } label: {
-                                    Text("Leave Family")
+                                    Microcopy.text(Microcopy.Key.Family.leaveFamily)
                                         .font(NunitoFont.semiBold.size(12))
                                         .foregroundStyle(.grayScale110)
                                         .padding(.vertical, 8)
@@ -128,8 +128,8 @@ struct LetsMeetYourIngrediFamView: View {
                                         .background(Color.clear, in: Capsule())
                                 }
                                 .buttonStyle(.plain)
-                                .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {
-                                    Button("Leave Family", role: .destructive) {
+                                .confirmationDialog(Microcopy.string(Microcopy.Key.Family.leaveFamilyConfirmTitle), isPresented: $showLeaveConfirm) {
+                                    Button(Microcopy.string(Microcopy.Key.Family.leaveFamily), role: .destructive) {
                                         print("[LetsMeetYourIngrediFamView] Leave Family confirmed")
                                         Task {
                                             print("[LetsMeetYourIngrediFamView] Calling familyStore.leave()")
@@ -147,7 +147,7 @@ struct LetsMeetYourIngrediFamView: View {
                                         }
                                     }
                                 } message: {
-                                    Text("Are you sure you want to leave?")
+                                    Microcopy.text(Microcopy.Key.Family.leaveFamilyConfirmMessage)
                                 }
                             }
                         }
@@ -187,7 +187,7 @@ struct LetsMeetYourIngrediFamView: View {
                                             Image(systemName: "exclamationmark.circle.fill")
                                                 .font(.system(size: 12, weight: .semibold))
                                                 .foregroundStyle(Color(hex: "F4A100"))
-                                            Text("Pending")
+                                            Microcopy.text(Microcopy.Key.Family.statusPending)
                                                 .font(ManropeFont.semiBold.size(12))
                                                 .foregroundStyle(Color(hex: "F4A100"))
                                         }
@@ -198,7 +198,7 @@ struct LetsMeetYourIngrediFamView: View {
                                                 .fill(Color(hex: "FFF7E6"))
                                         )
                                     } else {
-                                        Text("Not joined yet !")
+                                        Microcopy.text(Microcopy.Key.Family.statusNotJoinedYet)
                                             .font(NunitoFont.regular.size(12))
                                             .foregroundStyle(.grayScale100)
                                     }
@@ -215,7 +215,7 @@ struct LetsMeetYourIngrediFamView: View {
                                         Image( "share")
                                             .font(.system(size: 12, weight: .semibold))
                                             .foregroundStyle(Color(hex: "91B640"))
-                                        Text("Invite")
+                                        Microcopy.text(Microcopy.Key.Common.invite)
                                             .font(NunitoFont.semiBold.size(12))
                                             .foregroundStyle(Color(hex: "91B640"))
                                     }
@@ -256,11 +256,11 @@ struct LetsMeetYourIngrediFamView: View {
             .navigationBarBackButtonHidden(true)
         } else {
             VStack {
-               Text("Getting Started!")
+               Microcopy.text(Microcopy.Key.Family.gettingStartedTitle)
                     .font(ManropeFont.bold.size(16))
                     .padding(.top, 24)
                     .padding(.bottom ,4)
-                Text("Add profiles so IngredientCheck can personalize results for each person.")
+                Microcopy.text(Microcopy.Key.Family.gettingStartedSubtitle)
                     .font(ManropeFont.regular.size(13))
                     .foregroundColor(Color(hex: "#BDBDBD"))
                     .lineLimit(2)
@@ -318,7 +318,7 @@ struct LetsMeetYourIngrediFamView: View {
     
     private func inviteShareMessage(inviteCode: String) -> String {
         let formattedCode = formattedInviteCode(inviteCode)
-        return "You've been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
+        return "You've been invited to join my IngrediCheck family.\nSet up your Food Notes and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
     }
     
     private func formattedInviteCode(_ inviteCode: String) -> String {

@@ -416,7 +416,11 @@ struct SkeletonCanvasCard: View {
 
 func onboardingSheetTitle(title: String) -> some View {
     Group {
-        (Text("Q. ")
+        (Text("Q.")
+            .font(ManropeFont.bold.size(20))
+            .foregroundStyle(.grayScale70)
+        +
+        Text(" ")
             .font(ManropeFont.bold.size(20))
             .foregroundStyle(.grayScale70)
         +
@@ -433,7 +437,11 @@ func onboardingSheetTitle(title: String) -> some View {
 func onboardingSheetTitle(template: String, memberName: String, memberColor: Color) -> some View {
     let parts = template.components(separatedBy: "{name}")
     return Group {
-        (Text("Q. ")
+        (Text("Q.")
+            .font(ManropeFont.bold.size(20))
+            .foregroundStyle(.grayScale70)
+        +
+        Text(" ")
             .font(ManropeFont.bold.size(20))
             .foregroundStyle(.grayScale70)
         +

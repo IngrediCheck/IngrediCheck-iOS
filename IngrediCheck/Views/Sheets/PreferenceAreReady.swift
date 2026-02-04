@@ -10,7 +10,7 @@ struct PreferenceAreReady: View {
     var body: some View {
         VStack(spacing: 32) {
             VStack(spacing: 12) {
-                Text("All set! Your IngrediFam’s\npreferences are ready.")
+                Text("All set! Your IngrediFam’s Food Notes are ready.")
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)

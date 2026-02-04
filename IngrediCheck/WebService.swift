@@ -24,15 +24,15 @@ extension NetworkError: LocalizedError {
             if code == 201 {
                 return "The request was successful, but we couldn't verify the result. Please check your connection and try again."
             }
-            return "Server error occurred. Please try again."
+            return "Something went wrong. Please try again."
         case .badUrl:
-            return "Invalid request. Please try again."
+            return "Something went wrong. Please try again."
         case .decodingError:
-            return "We received an unexpected response. Please try again."
+            return "Something went wrong. Please try again."
         case .authError:
             return "Please sign in to continue."
         case .notFound(let message):
-            return message.isEmpty ? "Resource not found. Please try again." : message
+            return message.isEmpty ? "We couldn’t find that. Please try again." : message
         }
     }
 }
@@ -477,7 +477,7 @@ struct ChatStreamError: Error, LocalizedError {
             case "error":
                 guard !payloadString.isEmpty else { return }
                 hasReportedError = true
-                var errorMessage = "Server error occurred."
+                var errorMessage = "Something went wrong. Please try again."
                 var statusCode: Int?
 
                 if let errorData = payloadString.data(using: .utf8) {

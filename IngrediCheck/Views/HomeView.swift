@@ -97,7 +97,7 @@ struct HomeView: View {
                     // Greeting section
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text("Hello 👋")
+                            Microcopy.text(Microcopy.Key.Home.greeting)
                                 .font(NunitoFont.regular.size(14))
                                 .foregroundStyle(.grayScale150)
 
@@ -106,7 +106,7 @@ struct HomeView: View {
                                 .foregroundStyle(.grayScale150)
                                 .offset(x: -2)
 
-                            Text("Your food notes, personalized for you.")
+                            Microcopy.text(Microcopy.Key.Home.subtitle)
                                 .font(ManropeFont.regular.size(14))
                                 .foregroundStyle(.grayScale130)
                         }
@@ -127,12 +127,12 @@ struct HomeView: View {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Food Notes")
+                                    Microcopy.text(Microcopy.Key.Labels.foodNotes)
                                         .font(ManropeFont.semiBold.size(18))
                                         .foregroundStyle(.grayScale150)
                                         .frame(height: 15)
 
-                                    Text("Here's what your family avoids or needs to watch out for.")
+                                    Microcopy.text(Microcopy.Key.Home.FoodNotes.familySubtitle)
                                         .font(ManropeFont.medium.size(14))
                                         .foregroundStyle(.grayScale110)
                                         .lineLimit(3)
@@ -173,13 +173,13 @@ struct HomeView: View {
                             .frame(width: cardWidth)
 
                             VStack(alignment: .leading) {
-                                Text("Your IngrediFam")
+                                Microcopy.text(Microcopy.Key.Home.Family.title)
                                     .font(ManropeFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
                                     .padding(.bottom, 4)
                                     .lineLimit(2)
 
-                                Text("Your people, their choices.")
+                                Microcopy.text(Microcopy.Key.Home.Family.subtitle)
                                     .font(ManropeFont.regular.size(14))
                                     .foregroundStyle(.grayScale110)
                                     .lineLimit(2)
@@ -275,11 +275,11 @@ struct HomeView: View {
                         // Header
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Recent Scans")
+                                Microcopy.text(Microcopy.Key.Home.RecentScans.title)
                                     .font(ManropeFont.semiBold.size(18))
                                     .foregroundStyle(.grayScale150)
 
-                                Text("Here's what you checked last in past 2 days")
+                                Microcopy.text(Microcopy.Key.Home.RecentScans.subtitle)
                                     .font(ManropeFont.regular.size(12))
                                     .foregroundStyle(.grayScale100)
                             }
@@ -289,7 +289,7 @@ struct HomeView: View {
                             // Only show "View All" when there are scans
                             if let scans = appState.listsTabState.scans, !scans.isEmpty {
                                 NavigationLink(value: HistoryRouteItem.recentScansAll) {
-                                    Text("View All")
+                                    Microcopy.text(Microcopy.Key.Home.RecentScans.ctaViewAll)
                                         .underline()
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(Color(hex: "#82B611"))
@@ -331,7 +331,7 @@ struct HomeView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 120, height: 120)
-                                Text("Ooops, No scans yet!")
+                                Microcopy.text(Microcopy.Key.Home.RecentScans.emptyTitle)
                                     .font(NunitoFont.semiBold.size(16))
                                     .foregroundStyle(.grayScale100)
                                     .multilineTextAlignment(.center)

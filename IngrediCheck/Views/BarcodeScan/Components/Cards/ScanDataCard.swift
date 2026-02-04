@@ -545,17 +545,17 @@ struct ScanDataCard: View {
     @ViewBuilder
     private var submittingStateView: some View {
         VStack(alignment: .leading) {
-            Text("Submitting your photo…")
+            Microcopy.text(Microcopy.Key.Scan.Status.submittingPhoto)
                 .font(ManropeFont.bold.size(12))
                 .foregroundColor(Color.white)
                 .padding(.bottom, 2)
-            Text("We're uploading the image to analyze")
+            Microcopy.text(Microcopy.Key.Scan.Status.uploadingPhotoSubtitle)
                 .multilineTextAlignment(.leading)
                 .lineLimit(2)
                 .font(ManropeFont.semiBold.size(10))
                 .foregroundColor(Color.white)
             Spacer(minLength: 8)
-            statusBadge(text: "Submitting", colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")], width: 110)
+            statusBadge(text: Microcopy.string(Microcopy.Key.Scan.Badge.submitting), colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")], width: 110)
         }
     }
     
@@ -563,17 +563,17 @@ struct ScanDataCard: View {
     @ViewBuilder
     private var loadingStateView: some View {
         VStack(alignment: .leading) {
-            Text("Looking up this product…")
+            Microcopy.text(Microcopy.Key.Scan.Status.lookingUpProduct)
                 .font(ManropeFont.bold.size(12))
                 .foregroundColor(Color.white)
                 .padding(.bottom, 2)
-            Text("We're checking our database for this Product")
+            Microcopy.text(Microcopy.Key.Scan.Status.checkingDatabaseSubtitle)
                 .multilineTextAlignment(.leading)
                 .lineLimit(2)
                 .font(ManropeFont.semiBold.size(10))
                 .foregroundColor(Color.white)
             Spacer(minLength: 8)
-            statusBadge(text: "Fetching details", colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")], width: 130)
+            statusBadge(text: Microcopy.string(Microcopy.Key.Scan.Badge.fetchingDetails), colors: [Color(hex: "#A6A6A6"), Color(hex: "#818181")], width: 130)
         }
     }
     
@@ -688,7 +688,7 @@ struct ScanDataCard: View {
         HStack(spacing: 4) {
             Image("analysisicon")
                 .frame(width: 18, height: 18)
-            Text("Analyzing")
+            Microcopy.text(Microcopy.Key.Scan.Status.analyzing)
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
         }
@@ -741,7 +741,7 @@ struct ScanDataCard: View {
             HStack(spacing: 4) {
                 Image("stasharrow-retry")
                     .frame(width: 18, height: 18)
-                Text("Retry")
+                Microcopy.text(Microcopy.Key.Common.tryAgain)
                     .font(NunitoFont.bold.size(12))
                     .foregroundColor(.white)
             }
@@ -769,13 +769,13 @@ struct ScanDataCard: View {
     private var notFoundView: some View {
         VStack(alignment: .leading, spacing: 4) {
             Spacer(minLength: 0)
-            Text("We couldn't identify this product")
+            Microcopy.text(Microcopy.Key.Scan.Error.couldNotIdentifyTitle)
                 .font(ManropeFont.bold.size(11))
                 .foregroundColor(Color.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             
-            Text("Help us identify it, add a few photos of the product.")
+            Microcopy.text(Microcopy.Key.Scan.Error.couldNotIdentifySubtitle)
                 .font(ManropeFont.semiBold.size(10))
                 .foregroundColor(Color.white.opacity(0.9))
                 .lineLimit(2)
@@ -789,10 +789,10 @@ struct ScanDataCard: View {
     private func errorView(error: String) -> some View {
         VStack(spacing: 4) {
             Spacer(minLength: 0)
-            Text("Something went wrong")
+            Microcopy.text(Microcopy.Key.Scan.Error.somethingWentWrong)
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color.white)
-            Text(error)
+            Microcopy.text(Microcopy.Key.Errors.genericSubtitle)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(Color.white.opacity(0.9))
                 .lineLimit(2)

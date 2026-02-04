@@ -26,9 +26,9 @@ struct EnterYourInviteCode : View {
     // Computed property for button title
     private var buttonTitle: String {
         if isError && isCodeComplete {
-            return "Start Over"
+            return Microcopy.string(Microcopy.Key.Onboarding.InviteCode.ctaClearCode)
         }
-        return "Verify & Continue"
+        return Microcopy.string(Microcopy.Key.Onboarding.InviteCode.ctaVerifyContinue)
     }
     
     init(yesPressed: (() -> Void)? = nil, noPressed: (() -> Void)? = nil) {
@@ -40,7 +40,7 @@ struct EnterYourInviteCode : View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Enter your invite code")
+                    Microcopy.text(Microcopy.Key.Onboarding.InviteCode.title)
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -59,7 +59,7 @@ struct EnterYourInviteCode : View {
                     .buttonStyle(.plain)
                 }
 
-                Text("This connects you to your family or shared\nIngrediCheck space.")
+                Microcopy.text(Microcopy.Key.Onboarding.InviteCode.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -70,12 +70,12 @@ struct EnterYourInviteCode : View {
                 .padding(.bottom, 12)
             
             if isError {
-                Text("We couldn't verify your code. Please try again..")
+                Microcopy.text(Microcopy.Key.Onboarding.InviteCode.error)
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(.red)
                     .padding(.bottom, 44)
             } else {
-                Text("You can add this later if you receive one.")
+                Microcopy.text(Microcopy.Key.Onboarding.InviteCode.helper)
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(.grayScale100)
                     .padding(.bottom, 44)

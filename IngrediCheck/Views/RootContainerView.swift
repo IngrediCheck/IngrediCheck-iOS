@@ -198,6 +198,12 @@ struct RootContainerView: View {
             }
         }
         .task {
+            #if DEBUG
+            // QA harness: keep the UI stable for screenshots by avoiding network restores.
+            if ProcessInfo.processInfo.arguments.contains("--microcopy-qa") {
+                return
+            }
+            #endif
             // Load family state when the container becomes active.
             await familyStore.loadCurrentFamily()
             // Always attempt to restore onboarding position on launch from Supabase metadata.

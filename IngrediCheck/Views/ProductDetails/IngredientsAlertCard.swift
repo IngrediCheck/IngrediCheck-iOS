@@ -24,7 +24,7 @@ struct IngredientsAlertCard: View {
                 if isExpanded {
                     alertItemsList
                 } else {
-                    readMoreRow(text: "Read More")
+                    readMoreRow(text: Microcopy.string(Microcopy.Key.Product.AlertCard.readMore))
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
                 }
@@ -107,10 +107,10 @@ struct IngredientsAlertCard: View {
         guard let overallAnalysisText = overallAnalysis, !overallAnalysisText.isEmpty else {
             // Fallback to generic message if no analysis
             if status == .matched {
-                return Text("This product aligns with your dietary preferences.")
+                return Microcopy.text(Microcopy.Key.Product.AlertCard.Fallback.matched)
                     .foregroundStyle(.grayScale150)
             }
-            return Text("This product contains ingredients that may not be suitable for your family's dietary preferences.")
+            return Microcopy.text(Microcopy.Key.Product.AlertCard.Fallback.unmatched)
                 .foregroundStyle(.grayScale150)
         }
         
@@ -250,7 +250,7 @@ struct IngredientsAlertCard: View {
                 }
             }
 
-            readMoreRow(text: "Read Less")
+            readMoreRow(text: Microcopy.string(Microcopy.Key.Product.AlertCard.readLess))
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)

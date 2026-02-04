@@ -165,8 +165,9 @@ struct LabelAnalysisView: View {
         Group {
             if let viewModel {
                 @Bindable var viewModelBindable = viewModel
-                if let error = viewModel.error {
-                    Text("Error: \(error.localizedDescription)")
+                if viewModel.error != nil {
+                    Microcopy.text(Microcopy.Key.Errors.genericToast)
+                        .padding()
                 } else if let product = viewModel.product {
                     ScrollView {
                         VStack(spacing: 15) {
@@ -239,7 +240,7 @@ struct LabelAnalysisView: View {
                 } else {
                     VStack {
                         Spacer()
-                        Text("Analyzing Image...")
+                        Text("Analyzing image…")
                         Spacer()
                         ProgressView()
                         Spacer()
@@ -254,7 +255,7 @@ struct LabelAnalysisView: View {
                             .foregroundStyle(.secondary)
                             .padding()
                     } else {
-                        Text("Analyzing Image...")
+                        Text("Analyzing image…")
                     }
                     Spacer()
                     ProgressView()

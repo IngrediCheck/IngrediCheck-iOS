@@ -1380,7 +1380,7 @@ struct PersistentBottomSheet: View {
 
     private func inviteShareMessage(inviteCode: String) -> String {
         let formattedCode = formattedInviteCode(inviteCode)
-        return "You've been invited to join my IngrediCheck family.\nSet up your food profile and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
+        return "You've been invited to join my IngrediCheck family.\nSet up your Food Notes and get personalized ingredient guidance tailored just for you.\n\n📲 Download from the App Store \(appStoreURL) and enter this invite code:\n\(formattedCode)"
     }
 
     private func formattedInviteCode(_ inviteCode: String) -> String {
@@ -1516,7 +1516,7 @@ private func handleAssignAvatar(
                     return (newMember.id, newMember.name)
                 } catch {
                     Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to create new member: \(error.localizedDescription)")
-                    ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+                    ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Family.addMember), type: .error)
                     return nil
                 }
             } else {
@@ -1572,7 +1572,7 @@ private func handleAssignAvatar(
                     return nil
                 } catch {
                     Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to create member: \(error.localizedDescription)")
-                    ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+                    ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Family.addMember), type: .error)
                     return nil
                 }
             } else {
@@ -1590,7 +1590,7 @@ private func handleAssignAvatar(
     
     guard let targetMemberId = targetMemberId else {
         Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No avatarTargetMemberId set and couldn't create member, skipping upload")
-        ToastManager.shared.show(message: "Unable to assign avatar. Please enter a name and try again.", type: .error)
+        ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Avatar.missingName), type: .error)
         return nil
     }
     
@@ -1639,7 +1639,7 @@ private func handleAssignAvatar(
                 return nil
             } catch {
                 Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to add pending member to family: \(error.localizedDescription)")
-                ToastManager.shared.show(message: "Failed to add member: \(error.localizedDescription)", type: .error)
+                ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Family.addMember), type: .error)
                 return nil
             }
         } else {
@@ -1659,14 +1659,14 @@ private func handleAssignAvatar(
         // 1. Get the member first to access their color for compositing - use captured data
         guard let family = currentFamily else {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ No family loaded, cannot update member")
-            ToastManager.shared.show(message: "Unable to assign avatar. Family not found.", type: .error)
+            ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Avatar.assign), type: .error)
             return nil
         }
         
         let allMembers = [family.selfMember] + family.otherMembers
         guard let member = allMembers.first(where: { $0.id == targetMemberId }) else {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Member \(targetMemberId) not found in family")
-            ToastManager.shared.show(message: "Unable to assign avatar. Member not found.", type: .error)
+            ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Avatar.assign), type: .error)
             return nil
         }
 
@@ -1702,13 +1702,13 @@ private func handleAssignAvatar(
         if let errorMsg = familyStore.errorMessage {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Failed to update member in backend: \(errorMsg)")
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ⚠️ Avatar uploaded but member update failed - imageFileHash may not be persisted")
-            ToastManager.shared.show(message: "Failed to update member: \(errorMsg)", type: .error)
+            ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Family.updateMember), type: .error)
         } else {
             Log.debug("PersistentBottomSheet", "handleAssignAvatar: ✅ Avatar assigned and member updated successfully")
         }
     } catch {
         Log.debug("PersistentBottomSheet", "handleAssignAvatar: ❌ Failed to assign avatar: \(error.localizedDescription)")
-        ToastManager.shared.show(message: "Failed to assign avatar: \(error.localizedDescription)", type: .error)
+        ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Avatar.assign), type: .error)
     }
 
     return nil
@@ -1801,7 +1801,7 @@ private struct TutorialOverlayPreview: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Oils & Fats")
                             .font(.system(size: 20, weight: .regular))
-                        Text("Mark oils you prefer to avoid...")
+                        Text("Mark oils you prefer to avoid…")
                             .font(.system(size: 12))
                             .opacity(0.8)
                     }

@@ -11,7 +11,7 @@
                     "description": "Choose all that apply so we can give you smarter food tips."
                 },
                 "family": {
-                    "question": "Does anyone in your IngrediFam have allergies we should know ?",
+                    "question": "Does anyone in your IngrediFam have allergies we should know?",
                     "description": "Select all that apply to keep meals worry-free."
                 },
                 "singleMember": {
@@ -35,7 +35,7 @@
                     { "name": "Sulphites", "icon": "🧂" },
                     { "name": "Mustard", "icon": "🟡" },
                     { "name": "Molluscs", "icon": "🐚" },
-                    { "name": "Other", "icon": "✏" }
+                    { "name": "Other", "icon": "✏️" }
                 ]
             }
         },
@@ -94,7 +94,7 @@
                     { "name": "Hypertension", "icon": "💊" },
                     { "name": "Kidney Disease", "icon": "🩺" },
                     { "name": "Heart Health", "icon": "🫀" },
-                    { "name": "PKU (phenyalanine-sensitive)", "icon": "🧬" },
+                    { "name": "PKU (phenylalanine-sensitive)", "icon": "🧬" },
                     { "name": "Anti-inflammatory medical diet", "icon": "🥗" },
                     { "name": "Celiac disease", "icon": "🥖" },
                     { "name": "Other", "icon": "✏️" }
@@ -123,7 +123,7 @@
             "content": {
                 "options": [
                     { "name": "Kids Baby-friendly foods", "icon": "👶" },
-                    { "name": "Toddler pickey-eating adaptations", "icon": "🙄" },
+                    { "name": "Toddler picky-eating adaptations", "icon": "🙄" },
                     { "name": "Pregnancy Prenatal nutrition", "icon": "🤰" },
                     { "name": "Breastfeeding diets", "icon": "🍼" },
                     { "name": "Senior-friendly", "icon": "👴" },
@@ -238,7 +238,7 @@
                             { "name": "Hydrogenated oils / Trans fats", "icon": "🧈" },
                             { "name": "Canola / Seed oils", "icon": "🌾" },
                             { "name": "Palm oil", "icon": "🌴" },
-                            { "name": "Corn / High-frectose corn syrup", "icon": "🌽" }
+                            { "name": "Corn syrup / high-fructose corn syrup", "icon": "🌽" }
                         ]
                     },
                     {
@@ -281,7 +281,7 @@
                             { "name": "Preservatives", "icon": "🧂" },
                             { "name": "Refined sugar", "icon": "🍚" },
                             { "name": "Corn syrup / HFCS", "icon": "🌽" },
-                            { "name": "Stevia ? Monk fruit", "icon": "🍈" }
+                            { "name": "Stevia / monk fruit", "icon": "🍈" }
                         ]
                     },
                     {
@@ -351,7 +351,7 @@
                         "color": "#D7EEB2",
                         "bgImageUrl": "leaf-recycle",
                         "options": [
-                            { "name": "Zero-Waste / Minimal Packing", "icon": "🌍" },
+                            { "name": "Zero-waste / minimal packaging", "icon": "🌍" },
                             { "name": "Clean Label", "icon": "✅" }
                         ]
                     }
@@ -404,7 +404,7 @@
                     {
                         "id": "nutrition_diet_frameworks_patterns",
                         "title": "Diet Frameworks & Patterns",
-                        "description": "Do you follow a structured eating pan or experiment with fasting?",
+                        "description": "Do you follow a structured eating plan or experiment with fasting?",
                         "color": "#FFD9B5",
                         "bgImageUrl": "leaf-recycle",
                         "options": [

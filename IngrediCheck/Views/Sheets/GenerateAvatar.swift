@@ -336,7 +336,7 @@ struct GenerateAvatar: View {
                                     }
                                     .buttonStyle(.plain)
                                     
-                                    Text("Generate Avatar For : @" + (memojiStore.displayName ?? ""))
+                                    Text("Generate avatar for @\(memojiStore.displayName ?? "")")
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     

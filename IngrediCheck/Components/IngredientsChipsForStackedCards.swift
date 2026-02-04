@@ -30,7 +30,7 @@ struct IngredientsChipsForStackedCards: View {
                         .frame(width: 24, height: 24)
                 }
                 
-                Text(familyList.isEmpty ? title : String(title.prefix(25)) + (title.count > 25 ? "..." : ""))
+                Text(familyList.isEmpty ? title : String(title.prefix(25)) + (title.count > 25 ? "…" : ""))
                     .font(ManropeFont.medium.size(14))
                     .foregroundStyle(isSelected ? .primary100 : Color(hex: fontColor))
                     .lineLimit(1)

@@ -29,7 +29,7 @@ struct FineTuneExperience: View {
                     .font(NunitoFont.bold.size(20))
                     .foregroundStyle(.grayScale150)
                 
-                Text("Add extra preferences to tailor your experience.\n Jump in or skip!")
+                Text("Add extra preferences to tailor your experience. Jump in or skip!")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)

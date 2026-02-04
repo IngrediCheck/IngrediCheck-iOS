@@ -126,9 +126,9 @@ struct IngrediBotChatView: View {
                             .id("bottomAnchor")
 
                         // Show error message if any
-                        if let error = errorMessage {
+                        if errorMessage != nil {
                             ConversationBubble(
-                                text: "❌ Error: \(error)",
+                                text: Microcopy.string(Microcopy.Key.Errors.genericToast),
                                 isFirstForSide: true,
                                 leadingIconName: "ingrediBot"
                             )
@@ -171,7 +171,7 @@ struct IngrediBotChatView: View {
             }
             
             HStack(alignment: .bottom, spacing: 12) {
-                TextField("\"Type your answer...\"", text: $message, axis: .vertical)
+                TextField("Type your answer…", text: $message, axis: .vertical)
                     .focused($isInputFocused)
                     .textFieldStyle(.plain)
                     .padding(.vertical, 12)
@@ -449,7 +449,7 @@ struct IngrediBotChatView: View {
                             let errorMsg = ChatMessage(
                                 id: UUID().uuidString,
                                 isUser: false,
-                                text: "❌ Error: \(error.message)",
+                                text: Microcopy.string(Microcopy.Key.Errors.genericToast),
                                 timestamp: Date()
                             )
                             self.messages.append(errorMsg)
@@ -469,7 +469,7 @@ struct IngrediBotChatView: View {
                     let errorMsg = ChatMessage(
                         id: UUID().uuidString,
                         isUser: false,
-                        text: "❌ Error: \(error.localizedDescription)",
+                        text: Microcopy.string(Microcopy.Key.Errors.genericToast),
                         timestamp: Date()
                     )
                     self.messages.append(errorMsg)

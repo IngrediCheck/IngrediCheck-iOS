@@ -290,7 +290,7 @@ struct WhatsYourName: View {
             try await continuePressed(trimmed)
         } catch {
             print("[WhatsYourName] Error creating family: \(error)")
-            ToastManager.shared.show(message: "Failed to create family: \(error.localizedDescription)", type: .error)
+            ToastManager.shared.show(message: Microcopy.string(Microcopy.Key.Errors.Family.createFamily), type: .error)
         }
     }
 }

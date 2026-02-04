@@ -49,7 +49,7 @@ struct SettingsContentView: View {
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.paletteAccent)
                 }
-                Text("Feedback Submitted")
+                Microcopy.text(Microcopy.Key.Settings.Toast.feedbackSubmitted)
                     .font(NunitoFont.semiBold.size(12))
                     .foregroundStyle(.grayScale10)
             }
@@ -94,7 +94,7 @@ struct SettingsContentView: View {
                     VStack(spacing: 24) {
                     // Account
                     VStack(spacing: 8) {
-                        Text("ACCOUNT")
+                        Microcopy.text(Microcopy.Key.Settings.Section.account)
                             .font(ManropeFont.semiBold.size(14))
                             .foregroundStyle(Color(hex: "#9EA19B"))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -109,14 +109,14 @@ struct SettingsContentView: View {
                     
                     // Settings
                     VStack(spacing: 8) {
-                        Text("SETTINGS")
+                        Microcopy.text(Microcopy.Key.Settings.Section.settings)
                             .font(ManropeFont.semiBold.size(14))
                             .foregroundStyle(Color(hex: "#9EA19B"))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 4)
                         sectionCard {
                             HStack {
-                                Text("Start Scanning on App Start")
+                                Microcopy.text(Microcopy.Key.Settings.Row.startScanningOnLaunch)
                                     .font(NunitoFont.medium.size(16))
                                     .foregroundStyle(.grayScale150)
                                 Spacer()
@@ -146,14 +146,14 @@ struct SettingsContentView: View {
                                 } label: {
                                     rowContent(
                                         image: Image("create-family-icon"),
-                                        title: hasExistingFamily ? "Manage Family" : "Create Family",
+                                        title: hasExistingFamily ? Microcopy.string(Microcopy.Key.Settings.Row.manageFamily) : Microcopy.string(Microcopy.Key.Settings.Row.createFamily),
                                         iconColor: Color(hex: "#75990E")
                                     )
                                 }
                                 .buttonStyle(.plain)
                                 Divider()
                                     .padding(.horizontal, 16)
-                                settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {
+                                settingsRow(icon: "Pen-Line-2", title: Microcopy.string(Microcopy.Key.Labels.foodNotes), iconColor: Color(hex: "#75990E")) {
                                     editTargetSectionName = nil
                                     showEditableCanvas = true
                                 }
@@ -163,7 +163,7 @@ struct SettingsContentView: View {
                     
                     // About
                     VStack(spacing: 8) {
-                        Text("ABOUT")
+                        Microcopy.text(Microcopy.Key.Settings.Section.about)
                             .font(ManropeFont.semiBold.size(14))
                             .foregroundStyle(Color(hex: "#9EA19B"))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -173,7 +173,7 @@ struct SettingsContentView: View {
                             NavigationLink {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/about")!)
                             } label: {
-                                rowContent(image: Image("About-Me"), title: "About me")
+                                rowContent(image: Image("About-Me"), title: Microcopy.string(Microcopy.Key.Settings.Row.aboutMe))
                             }
                             .buttonStyle(.plain)
                         }
@@ -181,7 +181,7 @@ struct SettingsContentView: View {
                     
                     // Support us
                     VStack(spacing: 8) {
-                        Text("SUPPORT US")
+                        Microcopy.text(Microcopy.Key.Settings.Section.supportUs)
                             .font(ManropeFont.semiBold.size(14))
                             .foregroundStyle(Color(hex: "#9EA19B"))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -190,24 +190,24 @@ struct SettingsContentView: View {
                         sectionCard {
                             Button {
                                 isFeedbackPresented = true
-                            } label: { rowContent(image: Image("Feedback-icon"), title: "Feedback") }
+                            } label: { rowContent(image: Image("Feedback-icon"), title: Microcopy.string(Microcopy.Key.Settings.Row.feedback)) }
                                 .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
-                            ShareLink(item: URL(string: "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615")!, subject: Text("IngrediCheck"), message: Text("Check out IngrediCheck, it helps you and your family check food ingredients easily!")) {
-                                rowContent(image: Image("share") , title: "Share us", iconColor: Color(hex: "#75990E"))
+                            ShareLink(item: URL(string: "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615")!, subject: Text("IngrediCheck"), message: Microcopy.text(Microcopy.Key.Settings.Share.message)) {
+                                rowContent(image: Image("share") , title: Microcopy.string(Microcopy.Key.Settings.Row.share), iconColor: Color(hex: "#75990E"))
                             }
                             .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
-                            NavigationLink { TipJarView() } label: { rowContent(image: Image("Tip-Jar-icon"), title: "Tip Jar") }
+                            NavigationLink { TipJarView() } label: { rowContent(image: Image("Tip-Jar-icon"), title: Microcopy.string(Microcopy.Key.Settings.Row.tipJar)) }
                                 .buttonStyle(.plain)
                         }
                     }
                     
                     // Others
                     VStack(spacing: 8) {
-                        Text("OTHERS")
+                        Microcopy.text(Microcopy.Key.Settings.Section.others)
                             .font(ManropeFont.semiBold.size(14))
                             .foregroundStyle(Color(hex: "#9EA19B"))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -216,19 +216,19 @@ struct SettingsContentView: View {
                         sectionCard {
                             NavigationLink {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/about")!)
-                            } label: { rowContent(image: Image("Help-icon"), title: "Help") }
+                            } label: { rowContent(image: Image("Help-icon"), title: Microcopy.string(Microcopy.Key.Settings.Row.help)) }
                                 .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
                             NavigationLink {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/terms-conditions")!)
-                            } label: { rowContent(image: Image("Terms-of-use"), title: "Terms of use") }
+                            } label: { rowContent(image: Image("Terms-of-use"), title: Microcopy.string(Microcopy.Key.Settings.Row.termsOfUse)) }
                                 .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
                             NavigationLink {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/privacy-policy")!)
-                            } label: { rowContent(image: Image("Privacy-polices"), title: "Privacy policy") }
+                            } label: { rowContent(image: Image("Privacy-polices"), title: Microcopy.string(Microcopy.Key.Settings.Row.privacyPolicy)) }
                                 .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
@@ -293,7 +293,7 @@ struct SettingsContentView: View {
                 .environment(foodNotesStore)
             }
         .background(Color.pageBackground)
-            .navigationTitle("Profile")
+            .navigationTitle(Microcopy.string(Microcopy.Key.Settings.Profile.title))
             .navigationBarTitleDisplayMode(.inline)
             .dismissKeyboardOnTap()
             .sheet(isPresented: $isFeedbackPresented) {
@@ -397,7 +397,7 @@ struct SettingsContentView: View {
 
                         if showSignOutConfirm {
                             VStack(spacing: 6) {
-                                Text("Are you sure you want to Sign out?")
+                                Microcopy.text(Microcopy.Key.Settings.SignOutConfirm.title)
                                     .multilineTextAlignment(.center)
                                     .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -420,7 +420,7 @@ struct SettingsContentView: View {
                                         }
                                     }
                                 } label: {
-                                    Text("Sign out")
+                                    Microcopy.text(Microcopy.Key.Common.signOut)
                                         .font(ManropeFont.medium.size(16))
                                         .foregroundStyle(Color(hex: "#FF1100"))
                                         .frame(maxWidth: .infinity)
@@ -431,7 +431,7 @@ struct SettingsContentView: View {
                                 Button {
                                     showSignOutConfirm = false
                                 } label: {
-                                    Text("Not now")
+                                    Microcopy.text(Microcopy.Key.Common.notNow)
                                         .font(ManropeFont.medium.size(16))
                                         .foregroundStyle(.grayScale150)
                                         .frame(maxWidth: .infinity)
@@ -445,12 +445,12 @@ struct SettingsContentView: View {
 
                         if showDeleteConfirm {
                             VStack(spacing: 12) {
-                                Text("Type \"DELETE\" to confirm")
+                                Microcopy.text(Microcopy.Key.Settings.DeleteConfirm.title)
                                     .multilineTextAlignment(.center)
                                     .font(ManropeFont.medium.size(17))
                                     .foregroundStyle(.grayScale150)
 
-                                Text("This action can not be undone")
+                                Microcopy.text(Microcopy.Key.Settings.DeleteConfirm.subtitle)
                                     .font(ManropeFont.medium.size(14))
                                     .foregroundStyle(.grayScale110)
                                     .multilineTextAlignment(.center)
@@ -472,7 +472,7 @@ struct SettingsContentView: View {
                                         deleteConfirmText = ""
                                         showDeleteConfirm = false
                                     } label: {
-                                        Text("Cancel")
+                                        Microcopy.text(Microcopy.Key.Common.cancel)
                                             .font(ManropeFont.medium.size(16))
                                             .foregroundStyle(.grayScale150)
                                             .frame(maxWidth: .infinity)
@@ -497,7 +497,7 @@ struct SettingsContentView: View {
                                             }
                                         }
                                     } label: {
-                                        Text("Confirm")
+                                        Microcopy.text(Microcopy.Key.Common.confirm)
                                             .font(ManropeFont.medium.size(16))
                                             .foregroundStyle(Color(hex: "#FF1100"))
                                             .frame(maxWidth: .infinity)
@@ -666,7 +666,7 @@ struct SettingsContentView: View {
         func accountGuestCard() -> some View {
             sectionCard {
                 VStack(spacing: 12) {
-                    Text("Sign-in to avoid losing data")
+                    Microcopy.text(Microcopy.Key.Settings.Account.signInToAvoidLosingData)
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(.grayScale120)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -753,14 +753,14 @@ struct SettingsContentView: View {
             
             var body: some View {
                 Group {
-                    Text("Sign-in to avoid losing data.")
+                    Microcopy.text(Microcopy.Key.Settings.Account.signInToAvoidLosingData)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     
                     if authController.isUpgradingAccount {
                         HStack {
                             Spacer()
-                            ProgressView("Signing in...")
+                            ProgressView(Microcopy.string(Microcopy.Key.Settings.Account.signingIn))
                             Spacer()
                         }
                     }
@@ -771,7 +771,7 @@ struct SettingsContentView: View {
                         }
                     } label: {
                         Label {
-                            Text("Sign-in with Apple")
+                            Microcopy.text(Microcopy.Key.Settings.Account.signInWithApple)
                         } icon: {
                             Image(systemName: "applelogo")
                         }
@@ -784,7 +784,7 @@ struct SettingsContentView: View {
                         }
                     } label: {
                         Label {
-                            Text("Sign-in with Google")
+                            Microcopy.text(Microcopy.Key.Settings.Account.signInWithGoogle)
                         } icon: {
                             Image("google_logo")
                         }
@@ -798,8 +798,8 @@ struct SettingsContentView: View {
                     upgradeErrorMessage = message
                     showUpgradeError = true
                 }
-                .alert("Upgrade Failed", isPresented: $showUpgradeError) {
-                    Button("OK", role: .cancel) {
+                .alert(Microcopy.string(Microcopy.Key.Auth.signInFailedTitle), isPresented: $showUpgradeError) {
+                    Button(Microcopy.string(Microcopy.Key.Common.ok), role: .cancel) {
                         Task { @MainActor in
                             authController.accountUpgradeError = nil
                         }
@@ -945,7 +945,7 @@ struct SettingsContentView: View {
                 showConfirm = true
             } label: {
                 ZStack {
-                    Text("Sign out")
+                    Microcopy.text(Microcopy.Key.Common.signOut)
                         .font(NunitoFont.semiBold.size(12))
                         .foregroundStyle(.grayScale10)
                 }

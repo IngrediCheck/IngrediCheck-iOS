@@ -15,7 +15,7 @@ struct WelcomeBack: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Welcome back !")
+                    Text("Welcome back!")
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .multilineTextAlignment(.center)
@@ -34,7 +34,7 @@ struct WelcomeBack: View {
                     }
                     .buttonStyle(.plain)
                 }
-                Text("Log in to your existing IngrediCheck account.")
+                Text("Sign in to your existing IngrediCheck account.")
                     .font(ManropeFont.medium.size(12))                    .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
