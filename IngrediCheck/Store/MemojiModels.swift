@@ -219,9 +219,7 @@ struct MemojiSelection {
             model: "gpt-image-1",
             subscriptionTier: "monthly_basic",
             colorTheme: mapColorThemeToAPIFormat(colorThemeIcon),
-            // TODO: Re-enable when backend supports mood field
-            // mood: generateVisualMood()
-            mood: nil // Temporarily disabled - backend not ready yet
+            mood: nil
         )
     }
     
