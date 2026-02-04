@@ -163,15 +163,15 @@ struct WelcomeBack: View {
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 20)
-        .overlay(alignment: .center) {
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay {
             if isSigningIn {
                 ZStack {
                     Color.black.opacity(0.4)
-                        .ignoresSafeArea()
                     ProgressView()
                         .scaleEffect(2)
-
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
 //        .overlay(

@@ -47,10 +47,15 @@ struct PersistentBottomSheet: View {
             }
         }()
         
-        // Block background interaction when addMoreMembers is open from home screen
+        // Block background interaction when add member flow sheets are open from home screen
         let shouldBlockBackgroundInteraction: Bool = {
             guard case .home = coordinator.currentCanvasRoute else { return false }
-            return coordinator.currentBottomSheetRoute == .addMoreMembers
+            switch coordinator.currentBottomSheetRoute {
+            case .addMoreMembers, .wouldYouLikeToInvite, .addPreferencesForMember:
+                return true
+            default:
+                return false
+            }
         }()
         
         ZStack(alignment: .bottom) {
@@ -64,7 +69,7 @@ struct PersistentBottomSheet: View {
                     }
             }
             
-            // Block all background interactions when addMoreMembers is open from home
+            // Block all background interactions when add member flow sheets are open from home
             if shouldBlockBackgroundInteraction {
                 Color.black
                     .opacity(0.01) // Minimal opacity but still blocks touches
