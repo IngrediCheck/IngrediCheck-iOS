@@ -339,11 +339,11 @@ struct AISummaryCard: View {
     private var markdownSummary: AttributedString {
         do {
             return try AttributedString(
-                markdown: "\"\(summaryWithEmojis)\"",
+                markdown: summaryWithEmojis,
                 options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
             )
         } catch {
-            return AttributedString("\"\(summaryWithEmojis)\"")
+            return AttributedString(summaryWithEmojis)
         }
     }
 
@@ -529,7 +529,7 @@ struct AllergySummaryCard: View {
                     } else {
                         // Has summary: show the AI-generated summary text with emojis (server sends **bold** markdown)
                         ExclusionMarkdownText(
-                            text: "\"\(summaryWithEmojis)\"",
+                            text: summaryWithEmojis,
                             font: UIFont(name: "Manrope-Regular", size: 14) ?? .systemFont(ofSize: 14),
                             containerSize: textContainerSize(for: geometry.size),
                             exclusionRect: exclusionRect(for: geometry.size)
