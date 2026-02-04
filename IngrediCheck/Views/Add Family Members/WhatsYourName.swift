@@ -46,7 +46,7 @@ struct WhatsYourName: View {
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
                     HStack {
-                        Text("What's your name?")
+                        Microcopy.text(Microcopy.Key.Family.Setup.WhatsYourName.title)
                             .font(NunitoFont.bold.size(22))
                             .foregroundStyle(.grayScale150)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -65,7 +65,7 @@ struct WhatsYourName: View {
                         .buttonStyle(.plain)
                     }
 
-                    Text("This helps us personalize your experience and scan tips—just for you!")
+                    Microcopy.text(Microcopy.Key.Family.Setup.WhatsYourName.subtitle)
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(.grayScale120)
                         .multilineTextAlignment(.center)
@@ -74,7 +74,7 @@ struct WhatsYourName: View {
                 
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField("Enter your Name", text: $name)
+                    TextField(LocalizedStringKey(Microcopy.Key.Family.Setup.WhatsYourName.namePlaceholder), text: $name)
                         .padding(16)
                         .background(.grayScale10)
                         .cornerRadius(16)
@@ -110,7 +110,7 @@ struct WhatsYourName: View {
                         }
                     
                     if showError {
-                        Text("Enter a name.")
+                        Microcopy.text(Microcopy.Key.Validation.enterName)
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -119,7 +119,7 @@ struct WhatsYourName: View {
                 .padding(.horizontal, 20)
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Choose Avatar (Optional)")
+                    Microcopy.text(Microcopy.Key.Labels.chooseAvatarOptional)
                         .font(ManropeFont.bold.size(14))
                         .foregroundStyle(.grayScale150)
                         .padding(.leading, 20)
@@ -206,7 +206,7 @@ struct WhatsYourName: View {
                 }
             } label: {
                 GreenCapsule(
-                    title: "Continue",
+                    title: Microcopy.string(Microcopy.Key.Common.continue),
                     width: 159,
                     isLoading: isLoading,
                     isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

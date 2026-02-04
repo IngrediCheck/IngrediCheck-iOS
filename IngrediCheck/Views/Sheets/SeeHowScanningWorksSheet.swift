@@ -32,8 +32,7 @@ struct ScanningHelpSheet: View {
 //            .padding(.top, 8)
 
           
-
-            Text("Here’s a quick look at how you can scan products when you’re ready.")
+            Microcopy.text(Microcopy.Key.Onboarding.ScanningHelp.subtitle)
                 .font(NunitoFont.bold.size(14))
                 .foregroundStyle(.grayScale150)
                 .multilineTextAlignment(.center)
@@ -42,7 +41,7 @@ struct ScanningHelpSheet: View {
                 .lineLimit(2)
 
             Button(action: onGotIt) {
-                GreenCapsule(title: "Got it", width: 159, takeFullWidth: false)
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.gotIt), width: 159, takeFullWidth: false)
                     .frame(width: 156, height: 52)
             }
             .buttonStyle(.plain)

@@ -22,25 +22,25 @@ struct IngrediBotView: View {
 
             // Greeting line
             (
-                Text("Hey! 👋 I’m")
+                Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.greetingPrefix)
                     .font(NunitoFont.semiBold.size(16))
                     .foregroundStyle(.grayScale100)
                 + Text(" ")
-                + Text("IngrediBot,")
+                + Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.name)
                     .font(NunitoFont.semiBold.size(16))
                     .foregroundStyle(.primary700)
             )
             .padding(.top, 4)
 
             // Title
-            Text("How about making food choices easier together?")
+            Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.title)
                 .font(NunitoFont.bold.size(20))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.grayScale150)
                 .padding(.top, 12)
                 .padding(.bottom, 40)
             
-            Text("Shall we get started?")
+            Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.question)
                 .font(NunitoFont.medium.size(20))
                 .foregroundStyle(.grayScale110)
                 .padding(.bottom, 8)
@@ -48,7 +48,7 @@ struct IngrediBotView: View {
             // Sub header
             if other {
                 Group {
-                    Text("I noticed you selected")
+                    Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.OtherSelected.prefix)
                         .font(NunitoFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                          +
@@ -56,7 +56,7 @@ struct IngrediBotView: View {
                         .font(NunitoFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                          +
-                         Text("“Other”")
+                         Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.OtherSelected.keyword)
                         .font(NunitoFont.bold.size(14))
                         .foregroundStyle(.grayScale140)
                          +
@@ -64,13 +64,13 @@ struct IngrediBotView: View {
                         .font(NunitoFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                          +
-                         Text("earlier, that’s great! Could you tell me a bit more about it?")
+                         Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.OtherSelected.suffix)
                         .font(NunitoFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                 }
                 .multilineTextAlignment(.center)
             } else {
-                Text("\"Tell me a bit about what kind of food experience you'd love here.\"")
+                Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.prompt)
                     .font(NunitoFont.regular.size(14))
                     .foregroundStyle(.grayScale110)
                     .multilineTextAlignment(.center)
@@ -80,7 +80,7 @@ struct IngrediBotView: View {
             // Action buttons
             HStack(spacing: 12) {
                 SecondaryButton(
-                    title: "Maybe later",
+                    title: Microcopy.string(Microcopy.Key.Common.maybeLater),
                     width: 159,
                     takeFullWidth: false,
                     action: {
@@ -104,13 +104,13 @@ struct IngrediBotView: View {
                 Button {
                     coordinator.navigateInBottomSheet(.chatConversation)
                 } label: {
-                    GreenCapsule(title: "Yes, let's go", icon: nil, width: 152, height: 52)
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Chat.IngrediBotIntro.ctaYesLetsGo), icon: nil, width: 152, height: 52)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.top, 33)
 
-            Text("No problem! You can come back anytime — I'll be here when you're ready.")
+            Microcopy.text(Microcopy.Key.Chat.IngrediBotIntro.footer)
                 
                 .font(ManropeFont.regular.size(12))
                 .frame(maxWidth: .infinity)

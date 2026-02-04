@@ -340,8 +340,8 @@ enum IngredientAlertStatus {
     
     var title: String {
         switch self {
-        case .unmatched: return "Unmatched"
-        case .uncertain: return "Uncertain"
+        case .unmatched: return Microcopy.string(Microcopy.Key.Common.MatchStatus.unmatched)
+        case .uncertain: return Microcopy.string(Microcopy.Key.Common.MatchStatus.uncertain)
         }
     }
     

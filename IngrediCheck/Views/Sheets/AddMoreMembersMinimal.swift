@@ -17,12 +17,12 @@ struct AddMoreMembersMinimal: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Add more members?")
+                Microcopy.text(Microcopy.Key.Family.Setup.AddMembers.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                 
-                Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
+                Microcopy.text(Microcopy.Key.Family.Setup.AddMembers.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -31,7 +31,7 @@ struct AddMoreMembersMinimal: View {
             
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "All Set!",
+                    title: Microcopy.string(Microcopy.Key.Common.allSet),
                     takeFullWidth: true,
                     action: allSetPressed
                 )
@@ -39,7 +39,7 @@ struct AddMoreMembersMinimal: View {
                 Button {
                     addMorePressed()
                 } label: {
-                    GreenCapsule(title: "Add Member")
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Family.Setup.AddMembers.ctaAddMember))
                 }
 
                 

@@ -416,7 +416,7 @@ struct SkeletonCanvasCard: View {
 
 func onboardingSheetTitle(title: String) -> some View {
     Group {
-        (Text("Q.")
+        (Microcopy.text(Microcopy.Key.Onboarding.questionPrefix)
             .font(ManropeFont.bold.size(20))
             .foregroundStyle(.grayScale70)
         +
@@ -437,7 +437,7 @@ func onboardingSheetTitle(title: String) -> some View {
 func onboardingSheetTitle(template: String, memberName: String, memberColor: Color) -> some View {
     let parts = template.components(separatedBy: "{name}")
     return Group {
-        (Text("Q.")
+        (Microcopy.text(Microcopy.Key.Onboarding.questionPrefix)
             .font(ManropeFont.bold.size(20))
             .foregroundStyle(.grayScale70)
         +
@@ -483,7 +483,7 @@ func onboardingSheetFamilyMemberSelectNote() -> some View {
             .resizable()
             .frame(width: 22, height: 26)
         
-        Text("Select members one by one to personalize their choices.")
+        Microcopy.text(Microcopy.Key.Onboarding.familyMemberSelectNote)
             .font(ManropeFont.regular.size(12))
             .foregroundStyle(.grayScale100)
     }

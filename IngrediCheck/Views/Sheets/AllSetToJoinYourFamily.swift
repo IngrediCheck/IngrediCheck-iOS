@@ -15,13 +15,13 @@ struct AllSetToJoinYourFamily: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("All set to join your family!")
+                Microcopy.text(Microcopy.Key.Onboarding.JoinFamilyReady.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                     .padding(.bottom , 12)
 
-                Text("Your family’s food preferences are already added. You can review them anytime, or edit a specific preference section by tapping Edit.")
+                Microcopy.text(Microcopy.Key.Onboarding.JoinFamilyReady.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -31,7 +31,7 @@ struct AllSetToJoinYourFamily: View {
             Button {
                 goToHomePressed()
             } label: {
-                GreenCapsule(title: "Go to Home")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.goToHome))
                     .frame(width: 156)
             }
             

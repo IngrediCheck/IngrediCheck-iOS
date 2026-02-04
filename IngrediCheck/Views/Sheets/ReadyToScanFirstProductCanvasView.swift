@@ -5,12 +5,12 @@ struct ReadyToScanCanvas: View {
     var body: some View {
         VStack (spacing : 0){
           
-            Text("Got a product handy?")
+            Microcopy.text(Microcopy.Key.Onboarding.ReadyToScanCanvas.title)
                 .font(ManropeFont.bold.size(16))
                 .foregroundStyle(Color.grayScale150)
                 
                 .padding(.top ,34)
-            Text("Scan it to see what’s inside.")
+            Microcopy.text(Microcopy.Key.Onboarding.ReadyToScanCanvas.subtitle)
                 .font(ManropeFont.regular.size(13))
                 .foregroundStyle(Color.grayScale100)
              

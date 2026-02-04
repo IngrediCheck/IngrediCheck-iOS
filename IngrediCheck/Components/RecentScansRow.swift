@@ -43,7 +43,13 @@ struct RecentScansRow: View {
                     .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
                     .frame(width: 10, height: 10)
                 
-                Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
+                Microcopy.text(
+                    feedback == nil
+                        ? Microcopy.Key.Common.MatchStatus.uncertain
+                        : feedback == true
+                            ? Microcopy.Key.Common.MatchStatus.matched
+                            : Microcopy.Key.Common.MatchStatus.unmatched
+                )
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(feedback == nil ? Color(hex: "#FAB222") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
             }
@@ -87,7 +93,7 @@ struct ScanRow: View {
         if let brand, !brand.isEmpty, let name, !name.isEmpty {
             return "\(brand) \(name)"
         }
-        return name ?? brand ?? "not available"
+        return name ?? brand ?? Microcopy.string(Microcopy.Key.Common.Value.notAvailable)
     }
     
     var body: some View {
@@ -122,7 +128,13 @@ struct ScanRow: View {
                         .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
                         .frame(width: 10, height: 10)
                     
-                    Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
+                Microcopy.text(
+                    feedback == nil
+                        ? Microcopy.Key.Common.MatchStatus.uncertain
+                        : feedback == true
+                            ? Microcopy.Key.Common.MatchStatus.matched
+                            : Microcopy.Key.Common.MatchStatus.unmatched
+                )
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(feedback == nil ? Color(hex: "#FF594E") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
                 }

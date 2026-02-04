@@ -19,13 +19,13 @@ struct QuickAccessSheet: View {
 //            }
 //            .padding(.top, 8)
 
-            Text("Quick access needed")
+            Microcopy.text(Microcopy.Key.Onboarding.QuickAccessNeeded.title)
                 .font(NunitoFont.bold.size(22))
                 .foregroundStyle(.grayScale150)
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
 
-            Text("So we can scan products and personalize results for you.")
+            Microcopy.text(Microcopy.Key.Onboarding.QuickAccessNeeded.subtitle)
                 .font(ManropeFont.regular.size(13))
                 .foregroundStyle(Color(hex: "#BDBDBD"))
                 .multilineTextAlignment(.center)
@@ -33,7 +33,7 @@ struct QuickAccessSheet: View {
                 .padding(.horizontal, 24)
 
             Button(action: onGoToHome) {
-                GreenCapsule(title: "Go to Home", width: 159, takeFullWidth: false)
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.goToHome), width: 159, takeFullWidth: false)
                     .frame(width: 159, height: 52)
             }
             .buttonStyle(.plain)

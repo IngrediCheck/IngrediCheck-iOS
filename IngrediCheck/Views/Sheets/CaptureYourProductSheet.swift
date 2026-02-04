@@ -30,38 +30,38 @@ struct CaptureYourProductSheet: View {
             imageName: "botwithgrid",
             isIntro: true,
             subtitlePrefix: "", subtitleKeyword: "", subtitleSuffix: "",
-            description: "We'll guide you through a few angles so our AI can identify the product and its ingredients accurately."
+            description: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.introDescription)
         ),
         SlideData(
             imageName: "front-product",
             isIntro: false,
-            subtitlePrefix: "First, take a photo of the ",
-            subtitleKeyword: "front",
-            subtitleSuffix: " of the product.",
+            subtitlePrefix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.Front.prefix),
+            subtitleKeyword: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.Front.keyword),
+            subtitleSuffix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.Front.suffix),
             description: ""
         ),
         SlideData(
             imageName: "back-product",
             isIntro: false,
-            subtitlePrefix: "Next, capture the ",
-            subtitleKeyword: "back side",
-            subtitleSuffix: ".",
+            subtitlePrefix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.Back.prefix),
+            subtitleKeyword: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.Back.keyword),
+            subtitleSuffix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.Back.suffix),
             description: ""
         ),
         SlideData(
             imageName: "nutrition-product",
             isIntro: false,
-            subtitlePrefix: "Then, take photo of ",
-            subtitleKeyword: "Nutrition facts",
-            subtitleSuffix: ".",
+            subtitlePrefix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.NutritionFacts.prefix),
+            subtitleKeyword: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.NutritionFacts.keyword),
+            subtitleSuffix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.NutritionFacts.suffix),
             description: ""
         ),
         SlideData(
             imageName: "ingredients-product",
             isIntro: false,
-            subtitlePrefix: "Finally, take a clear photo of the ",
-            subtitleKeyword: "Ingredient list",
-            subtitleSuffix: ".",
+            subtitlePrefix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.IngredientsList.prefix),
+            subtitleKeyword: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.IngredientsList.keyword),
+            subtitleSuffix: Microcopy.string(Microcopy.Key.Scan.CaptureGuide.IngredientsList.suffix),
             description: ""
         ),
     ]
@@ -85,7 +85,7 @@ struct CaptureYourProductSheet: View {
 
                 VStack(spacing: 12) {
                     // Title
-                    Text("Guide to capture photos")
+                    Microcopy.text(Microcopy.Key.Scan.CaptureGuide.title)
                         .font(NunitoFont.bold.size(24))
                         .foregroundColor(.grayScale150)
                         .multilineTextAlignment(.center)
@@ -115,7 +115,7 @@ struct CaptureYourProductSheet: View {
                 }
 
                 // Footer
-                Text("Capture the front, back, barcode, and ingredient details of the product.")
+                Microcopy.text(Microcopy.Key.Scan.CaptureGuide.footer)
                     .font(NunitoFont.regular.size(10))
                     .foregroundColor(Color(.grayScale110))
                     .multilineTextAlignment(.center)
@@ -174,17 +174,27 @@ struct CaptureYourProductSheet: View {
     }
 
     private func subtitleView(for slide: SlideData) -> Text {
-        Text(slide.subtitlePrefix)
-            .font(NunitoFont.medium.size(14))
-            .foregroundColor(Color(.grayScale140))
-        +
-        Text(slide.subtitleKeyword)
-            .font(NunitoFont.extraBold.size(14))
-            .foregroundColor(Color(hex: "91B640"))
-        +
-        Text(slide.subtitleSuffix)
-            .font(NunitoFont.medium.size(14))
-            .foregroundColor(Color(.grayScale140))
+        let needsSpaceBeforeSuffix = !slide.subtitleSuffix.isEmpty && !".,!?;:".contains(slide.subtitleSuffix.first ?? ".")
+
+        var t =
+            Text(slide.subtitlePrefix)
+                .font(NunitoFont.medium.size(14))
+                .foregroundColor(Color(.grayScale140))
+            + Text(" ")
+            + Text(slide.subtitleKeyword)
+                .font(NunitoFont.extraBold.size(14))
+                .foregroundColor(Color(hex: "91B640"))
+
+        if needsSpaceBeforeSuffix {
+            t = t + Text(" ")
+        }
+
+        t = t
+            + Text(slide.subtitleSuffix)
+                .font(NunitoFont.medium.size(14))
+                .foregroundColor(Color(.grayScale140))
+
+        return t
     }
 }
 

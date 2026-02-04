@@ -131,7 +131,7 @@ struct MeetYourProfileView: View {
 
             // Greeting Title
             HStack(spacing: 8) {
-                Text("Hello,")
+                Microcopy.text(Microcopy.Key.Onboarding.MeetYourProfile.greetingPrefix)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
@@ -169,7 +169,7 @@ struct MeetYourProfileView: View {
                 .fixedSize(horizontal: true, vertical: false)
                 .onTapGesture { isEditingPrimaryName = true }
                 
-                Text("!")
+                Microcopy.text(Microcopy.Key.Onboarding.MeetYourProfile.greetingSuffix)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
             }
@@ -177,7 +177,7 @@ struct MeetYourProfileView: View {
             .padding(.bottom, 16)
             
             // Description
-            Text("We've created a profile name and avatar based on your preferences. You can edit the name or avatar anytime to make it truly yours.")
+            Microcopy.text(Microcopy.Key.Onboarding.MeetYourProfile.description)
                 .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale120)
                 .multilineTextAlignment(.center)
@@ -190,7 +190,12 @@ struct MeetYourProfileView: View {
                 commitPrimaryName()
                 onContinue()
             }) {
-                GreenCapsule(title: isFromFamilyOverview ? "Done" : "Continue", width: 159)
+                GreenCapsule(
+                    title: isFromFamilyOverview
+                        ? Microcopy.string(Microcopy.Key.Common.done)
+                        : Microcopy.string(Microcopy.Key.Common.continue),
+                    width: 159
+                )
                     .frame(width: 159)
             }
             .padding(.bottom, 24)

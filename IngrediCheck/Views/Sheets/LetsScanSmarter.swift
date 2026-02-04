@@ -10,11 +10,11 @@ struct LetsScanSmarter: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Let's scan smarter")
+                Microcopy.text(Microcopy.Key.Permissions.LetsScanSmarter.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
-                Text("Your camera helps you quickly add products by scanning labels — it’s safe and private. We never record or share anything without your permission.")
+                Microcopy.text(Microcopy.Key.Permissions.LetsScanSmarter.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -22,14 +22,14 @@ struct LetsScanSmarter: View {
             
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "Later",
+                    title: Microcopy.string(Microcopy.Key.Common.notNow),
                     takeFullWidth: true,
                     action: {}
                 )
 
                 
                 
-                GreenCapsule(title: "Enable")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.enable))
             }
         }
         .padding(.horizontal, 20)

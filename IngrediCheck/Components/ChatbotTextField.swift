@@ -15,7 +15,7 @@ struct ChatbotTextField: View {
         HStack(spacing: 10) {
             ZStack(alignment: .leading) {
                 if text.isEmpty {
-                    Text("“Type your answer…”")
+                    Microcopy.text(Microcopy.Key.Chat.inputPlaceholder)
                         .font(NunitoFont.italic.size(16))
                         .foregroundStyle(.grayScale100)
                 }

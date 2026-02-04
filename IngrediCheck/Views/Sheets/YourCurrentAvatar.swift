@@ -46,7 +46,7 @@ struct YourCurrentAvatar: View {
                     .padding(.bottom, 26)
             }
             
-            Text("Here's your current avatar. would you like to make a new one?")
+            Microcopy.text(Microcopy.Key.Avatar.Current.message)
                 .font(NunitoFont.bold.size(20))
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 23)
@@ -58,7 +58,7 @@ struct YourCurrentAvatar: View {
                 }
                 createNewPressed()
             } label: {
-                GreenCapsule(title: "Create New")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Avatar.Current.ctaCreateNew))
                     .frame(width: 159)
             }
         }

@@ -12,16 +12,16 @@ extension CapsuleState {
     var textView: some View {
         switch self {
         case .analyzing:
-            Text("Analyzing")
+            Microcopy.text(Microcopy.Key.Common.MatchStatus.analyzing)
                 .foregroundStyle(Color.primary100)
         case .fail:
-            Text("Unmatched")
+            Microcopy.text(Microcopy.Key.Common.MatchStatus.unmatched)
                 .foregroundStyle(Color.fail200)
         case .success:
-            Text("Matched")
+            Microcopy.text(Microcopy.Key.Common.MatchStatus.matched)
                 .foregroundStyle(Color.success200)
         case .warning:
-            Text("Uncertain")
+            Microcopy.text(Microcopy.Key.Common.MatchStatus.uncertain)
                 .foregroundStyle(Color.warning200)
         }
     }

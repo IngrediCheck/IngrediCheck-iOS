@@ -10,18 +10,18 @@ struct PreferenceAreReady: View {
     var body: some View {
         VStack(spacing: 32) {
             VStack(spacing: 12) {
-                Text("All set! Your IngrediFam’s Food Notes are ready.")
+                Microcopy.text(Microcopy.Key.Onboarding.FoodNotesReady.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
 
-                Text("Tap on any member to view their summary")
+                Microcopy.text(Microcopy.Key.Onboarding.FoodNotesReady.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
 
-            GreenCapsule(title: "Continue")
+            GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.continue))
                 .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

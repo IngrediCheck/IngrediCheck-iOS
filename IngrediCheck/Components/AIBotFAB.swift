@@ -46,7 +46,7 @@ struct FeedbackPromptBubble: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Text("What didn’t go well? Please explain.")
+            Microcopy.text(Microcopy.Key.Chat.feedbackPromptMessage)
                 .font(NunitoFont.semiBold.size(15))
                 .lineSpacing(5)
                 .foregroundStyle(.white)

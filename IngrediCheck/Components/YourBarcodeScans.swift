@@ -21,7 +21,7 @@ struct YourBarcodeScans: View {
         HStack {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Your Barcode Scans")
+                    Microcopy.text(Microcopy.Key.Insights.BarcodeScans.title)
                         .font(ManropeFont.regular.size(14))
                         .foregroundStyle(.grayScale110)
                     
@@ -39,7 +39,7 @@ struct YourBarcodeScans: View {
                             .resizable()
                             .frame(width: 12, height: 12)
                         
-                        Text("Scan")
+                        Microcopy.text(Microcopy.Key.Scan.Mode.scan)
                             .font(NunitoFont.semiBold.size(10))
                             .foregroundStyle(.grayScale10)
                     }

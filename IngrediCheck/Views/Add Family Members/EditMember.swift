@@ -37,7 +37,7 @@ struct EditMember: View {
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Update the name & avatar?")
+                        Microcopy.text(Microcopy.Key.Family.Setup.EditMember.title)
                             .font(NunitoFont.bold.size(22))
                             .foregroundStyle(.grayScale150)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -61,7 +61,7 @@ struct EditMember: View {
                         .buttonStyle(.plain)
                     }
 
-                    Text("Update the name and give the avatar a look that truly matches their personality")
+                    Microcopy.text(Microcopy.Key.Family.Setup.EditMember.subtitle)
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(.grayScale120)
                         .multilineTextAlignment(.center)
@@ -69,7 +69,7 @@ struct EditMember: View {
                 .padding(.horizontal, 20)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField("Enter Name", text: $name)
+                    TextField(LocalizedStringKey(Microcopy.Key.Family.Setup.EditMember.namePlaceholder), text: $name)
                         .padding(16)
                         .background(.grayScale10)
                         .cornerRadius(16)
@@ -88,7 +88,7 @@ struct EditMember: View {
                 .padding(.horizontal, 20)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Choose Avatar (Optional)")
+                    Microcopy.text(Microcopy.Key.Labels.chooseAvatarOptional)
                         .font(ManropeFont.bold.size(14))
                         .foregroundStyle(.grayScale150)
                         .padding(.leading, 20)
@@ -169,7 +169,7 @@ struct EditMember: View {
                     handleSave(trimmed: trimmed)
                 }
             } label: {
-                GreenCapsule(title: "Save")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.save))
                     .frame(width: 180)
             }
             .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)

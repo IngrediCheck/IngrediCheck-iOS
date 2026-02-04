@@ -97,7 +97,7 @@ struct AverageScansCard: View {
                   .font(.system(size: 44, weight: .bold))
                   .foregroundStyle(.grayScale150)
               
-              Text("Avg. Scans")
+              Microcopy.text(Microcopy.Key.Insights.AvgScans.label)
                   .font(ManropeFont.regular.size(10))
                   .foregroundStyle(.grayScale100)
                   .padding(.bottom, 2)

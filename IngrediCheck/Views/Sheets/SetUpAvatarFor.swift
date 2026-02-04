@@ -27,12 +27,12 @@ struct SetUpAvatarFor: View {
         VStack(spacing: 24) {
             
             VStack(spacing: 10) {
-                Text("Who do you want to set up an avatar for?")
+                Microcopy.text(Microcopy.Key.Onboarding.AvatarSetup.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                 
-                Text("Choose a family member to start crafting their avatar")
+                Microcopy.text(Microcopy.Key.Onboarding.AvatarSetup.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -94,7 +94,7 @@ struct SetUpAvatarFor: View {
                 
                 nextPressed()
             } label: {
-                GreenCapsule(title: "Next")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.next))
                     .frame(width: 180)
             }
             .padding(.bottom, 8)

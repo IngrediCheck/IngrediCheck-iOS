@@ -54,7 +54,7 @@ struct SignInView: View {
                                  .aspectRatio(contentMode: .fit)
                                  .frame(width: 16, height: 16)
 
-                            Text("Continue with Google")
+                            Microcopy.text(Microcopy.Key.Auth.continueWithGoogle)
                                 .font(.system(size: 16))
                                 .fontWeight(.medium)
                                 .foregroundColor(.black.opacity(0.85))
@@ -75,7 +75,7 @@ struct SignInView: View {
                             await authController.signIn()
                         }
                     } label: {
-                        Text("Sign in later")
+                        Microcopy.text(Microcopy.Key.Auth.signInLater)
                             .fontWeight(.bold)
                     }
                     .foregroundStyle(.paletteAccent)

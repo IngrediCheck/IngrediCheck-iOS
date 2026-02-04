@@ -108,7 +108,7 @@ struct LoginToContinueSheet: View {
                             Image("google_logo")
                                 .resizable()
                                 .frame(width: 24, height: 24)
-                            Text("Google")
+                            Microcopy.text(Microcopy.Key.Auth.Provider.google)
                                 .font(NunitoFont.semiBold.size(16))
                                 .foregroundStyle(.grayScale150)
                         }
@@ -137,7 +137,7 @@ struct LoginToContinueSheet: View {
                             Image("apple_logo")
                                 .resizable()
                                 .frame(width: 24, height: 24)
-                            Text("Apple")
+                            Microcopy.text(Microcopy.Key.Auth.Provider.apple)
                                 .font(NunitoFont.semiBold.size(16))
                                 .foregroundStyle(.grayScale150)
                         }
@@ -212,7 +212,7 @@ struct LoginToContinueSheet: View {
                         Image("google_logo")
                             .resizable()
                             .frame(width: 24, height: 24)
-                        Text("Google")
+                        Microcopy.text(Microcopy.Key.Auth.Provider.google)
                             .font(NunitoFont.semiBold.size(16))
                             .foregroundStyle(.grayScale150)
                     }
@@ -241,7 +241,7 @@ struct LoginToContinueSheet: View {
                         Image("apple_logo")
                             .resizable()
                             .frame(width: 24, height: 24)
-                        Text("Apple")
+                        Microcopy.text(Microcopy.Key.Auth.Provider.apple)
                             .font(NunitoFont.semiBold.size(16))
                             .foregroundStyle(.grayScale150)
                     }

@@ -76,13 +76,13 @@ struct UpdateAvatarSheet: View {
                 .padding(.bottom, 20)
 
             // Title & subtitle
-            Text("Update your avatar?")
+            Microcopy.text(Microcopy.Key.Avatar.Update.title)
                 .font(NunitoFont.bold.size(20))
                 .foregroundStyle(Color(hex: "#303030"))
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 8)
 
-            Text("Select an avatar that reflects your personality.")
+            Microcopy.text(Microcopy.Key.Avatar.Update.subtitle)
                 .font(ManropeFont.medium.size(14))
                 .foregroundStyle(Color(hex: "#949494"))
                 .multilineTextAlignment(.center)
@@ -90,7 +90,7 @@ struct UpdateAvatarSheet: View {
 
             // Choose Avatar section
             VStack(alignment: .leading, spacing: 12) {
-                Text("Choose Avatar")
+                Microcopy.text(Microcopy.Key.Labels.chooseAvatar)
                     .font(ManropeFont.bold.size(14))
                     .foregroundStyle(Color(hex: "#303030"))
                     .padding(.leading, 20)
@@ -103,7 +103,7 @@ struct UpdateAvatarSheet: View {
             HStack(spacing: 6) {
                 Text("💡")
                     .font(.system(size: 14))
-                Text("Choose an optional avatar or tap + to generate a new one")
+                Microcopy.text(Microcopy.Key.Avatar.Update.hint)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(Color(hex: "#949494"))
             }
@@ -116,7 +116,7 @@ struct UpdateAvatarSheet: View {
                     await saveAvatar()
                 }
             } label: {
-                    GreenCapsule(title: "Save", isLoading: isLoading, isDisabled: !hasSelection)
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.save), isLoading: isLoading, isDisabled: !hasSelection)
                         .frame(width: 159)
             }
             .disabled(!hasSelection || isLoading)

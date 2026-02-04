@@ -60,13 +60,13 @@ struct MatchingRateCard: View {
                     }
                     .foregroundStyle(.grayScale150)
                     
-                    Text("Matched")
+                    Microcopy.text(Microcopy.Key.Common.MatchStatus.matched)
                         .font(ManropeFont.regular.size(13.15))
                         .foregroundStyle(.grayScale100)
                 }.offset(y : 35)
                 
                 if isEmptyState {
-                    Text("Start scanning to unlock your matching insights")
+                    Microcopy.text(Microcopy.Key.Insights.MatchingRate.emptyHint)
                         .font(ManropeFont.regular.size(10))
                         .foregroundStyle(.grayScale120)
                         .padding(.vertical, 8)
@@ -102,7 +102,7 @@ struct MatchingRateCard: View {
                 )
         })
         .overlay(
-            Text("Matching Rate")
+            Microcopy.text(Microcopy.Key.Insights.MatchingRate.title)
                 .frame(height: 17)
                 .font(ManropeFont.semiBold.size(20))
                 .padding(16) ,alignment: .topLeading)
@@ -118,7 +118,7 @@ struct MatchingRateCard1: View {
     var body: some View {
         HStack(spacing: 8) {
 
-            Text("Your matching rate increased by")
+            Microcopy.text(Microcopy.Key.Insights.MatchingRate.increasedBy)
                 .font(ManropeFont.regular.size(10))
                 .lineLimit(1)
 

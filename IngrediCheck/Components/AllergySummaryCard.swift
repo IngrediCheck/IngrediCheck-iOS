@@ -354,7 +354,7 @@ struct AISummaryCard: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 12))
                     .foregroundStyle(Color(.pink))
-                Text("Summarized with AI")
+                Microcopy.text(Microcopy.Key.Insights.AllergySummary.summarizedWithAI)
                     .font(ManropeFont.medium.size(12))
             }
             .foregroundStyle(
@@ -433,7 +433,7 @@ struct AllergySummaryCard: View {
     var onTap: (() -> Void)? = nil
 
     private var emptyStateFormattedText: String {
-        formatCardText("Add *allergies* or *dietary* needs for your *family* members to make meal *choices* easier for everyone.")
+        formatCardText(Microcopy.string(Microcopy.Key.Insights.AllergySummary.emptyDescription))
     }
 
     /// Returns true if we should show the empty state (no data yet)
@@ -505,7 +505,7 @@ struct AllergySummaryCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     if isEmptyState {
                         // Empty state: "No Data Yet" badge + placeholder text
-                        Text("No Data Yet")
+                        Microcopy.text(Microcopy.Key.Insights.AllergySummary.emptyBadge)
                             .font(ManropeFont.regular.size(8))
                             .foregroundStyle(.grayScale130)
                             .padding(.vertical, 4)

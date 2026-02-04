@@ -121,7 +121,7 @@ struct ChatBubble: View {
                 Image("copy")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.grayScale120)
-                Text("Copy Text")
+                Microcopy.text(Microcopy.Key.Chat.ctaCopyText)
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(Color(hex: "#7F7F7F"))
             }

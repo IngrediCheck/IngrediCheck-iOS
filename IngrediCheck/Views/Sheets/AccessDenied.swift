@@ -10,18 +10,18 @@ struct AccessDenied: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Access denied")
+                Microcopy.text(Microcopy.Key.Permissions.AccessDenied.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
 
-                Text("IngrediCheck needs camera access to scan products and give you personalized recommendations. Please enable it in settings to continue.")
+                Microcopy.text(Microcopy.Key.Permissions.AccessDenied.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
 
-            GreenCapsule(title: "Open Settings")
+            GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.openSettings))
                 .frame(width: 156)
         }
         .padding(.horizontal, 20)

@@ -219,7 +219,7 @@ struct PersistentBottomSheet: View {
                                         startTutorialSwipeAnimation()
                                     }
 
-                                Text("Swipe cards to review each category")
+                                Microcopy.text(Microcopy.Key.Tutorial.swipeCardsHint)
                                     .font(NunitoFont.bold.size(16))
                                     .foregroundStyle(.white)
                             }
@@ -1799,9 +1799,9 @@ private struct TutorialOverlayPreview: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .overlay(
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Oils & Fats")
+                        Microcopy.text(Microcopy.Key.Tutorial.RedactedCard.title)
                             .font(.system(size: 20, weight: .regular))
-                        Text("Mark oils you prefer to avoid…")
+                        Microcopy.text(Microcopy.Key.Tutorial.RedactedCard.subtitle)
                             .font(.system(size: 12))
                             .opacity(0.8)
                     }
@@ -1838,7 +1838,7 @@ private struct TutorialOverlayPreview: View {
                     .rotationEffect(.degrees(-10))
                     .offset(x: swipeOffset * 0.4, y: 0)
 
-                Text("Swipe cards to review each category")
+                Microcopy.text(Microcopy.Key.Tutorial.swipeCardsHint)
                     .font(NunitoFont.bold.size(16))
                     .foregroundStyle(.white)
             }

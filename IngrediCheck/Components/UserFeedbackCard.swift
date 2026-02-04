@@ -17,9 +17,9 @@ struct UserFeedbackCard: View {
         VStack {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading) {
-                    Text("We’d love")
-                    Text("Your")
-                    Text("Feedback")
+                    Microcopy.text(Microcopy.Key.Feedback.Card.titleLine1)
+                    Microcopy.text(Microcopy.Key.Feedback.Card.titleLine2)
+                    Microcopy.text(Microcopy.Key.Feedback.Card.titleLine3)
                 }
                 .font(ManropeFont.semiBold.size(16))
                     Spacer()
@@ -28,7 +28,7 @@ struct UserFeedbackCard: View {
             }
             
             VStack(alignment: .leading) {
-                Text("Your feedback matters!")
+                Microcopy.text(Microcopy.Key.Feedback.Card.subtitle)
                     .font(ManropeFont.light.size(12))
                     .foregroundColor(Color(hex: "#A6A6A6"))
                 

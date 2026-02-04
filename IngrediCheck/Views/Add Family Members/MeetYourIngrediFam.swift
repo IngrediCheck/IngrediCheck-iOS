@@ -42,11 +42,11 @@ struct MeetYourIngrediFam: View {
             }
             
             VStack(spacing: 16) {
-                Text("Let's meet your IngrediFam!")
+                Microcopy.text(Microcopy.Key.Family.Setup.MeetYourIngrediFam.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
-                Text("Add everyone’s name and a fun avatar so we can tailor tips and scans just for them.")
+                Microcopy.text(Microcopy.Key.Family.Setup.MeetYourIngrediFam.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .frame(width : 338)
@@ -55,7 +55,7 @@ struct MeetYourIngrediFam: View {
                 Button {
                     addMemberPressed()
                 } label: {
-                    GreenCapsule(title: "Continue")
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.continue))
                         .frame(width: 156)
                         .padding(.bottom ,30)
                 }

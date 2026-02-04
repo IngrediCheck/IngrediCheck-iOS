@@ -1455,11 +1455,11 @@ enum ProductMatchStatus {
 
     var title: String {
         switch self {
-        case .matched: return "Matched"
-        case .uncertain: return "Uncertain"
-        case .unmatched: return "Unmatched"
-        case .unknown: return "Unknown"
-        case .analyzing: return "Analyzing"
+        case .matched: return Microcopy.string(Microcopy.Key.Common.MatchStatus.matched)
+        case .uncertain: return Microcopy.string(Microcopy.Key.Common.MatchStatus.uncertain)
+        case .unmatched: return Microcopy.string(Microcopy.Key.Common.MatchStatus.unmatched)
+        case .unknown: return Microcopy.string(Microcopy.Key.Common.MatchStatus.unknown)
+        case .analyzing: return Microcopy.string(Microcopy.Key.Common.MatchStatus.analyzing)
         }
     }
 
@@ -1485,11 +1485,11 @@ enum ProductMatchStatus {
 
     var alertTitle: String {
         switch self {
-        case .matched: return "Great Match"
-        case .uncertain: return "Partially Compatible"
-        case .unmatched: return "Ingredients Alerts"
-        case .unknown: return "Status Unknown"
-        case .analyzing: return "Analyzing Product"
+        case .matched: return Microcopy.string(Microcopy.Key.Product.MatchStatus.AlertTitle.matched)
+        case .uncertain: return Microcopy.string(Microcopy.Key.Product.MatchStatus.AlertTitle.uncertain)
+        case .unmatched: return Microcopy.string(Microcopy.Key.Product.MatchStatus.AlertTitle.unmatched)
+        case .unknown: return Microcopy.string(Microcopy.Key.Product.MatchStatus.AlertTitle.unknown)
+        case .analyzing: return Microcopy.string(Microcopy.Key.Product.MatchStatus.AlertTitle.analyzing)
         }
     }
 

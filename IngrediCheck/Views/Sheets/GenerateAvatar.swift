@@ -336,7 +336,7 @@ struct GenerateAvatar: View {
                                     }
                                     .buttonStyle(.plain)
                                     
-                                    Text("Generate avatar for @\(memojiStore.displayName ?? "")")
+                                    Text(Microcopy.formatted(Microcopy.Key.Avatar.Generate.title, memojiStore.displayName ?? ""))
                                         .font(ManropeFont.bold.size(14))
                                         .foregroundStyle(.grayScale150)
                                     
@@ -444,7 +444,7 @@ struct GenerateAvatar: View {
                                                        selectedAccessoriesIcon != nil ||
                                                        selectedColorThemeIcon != nil
                                     
-                                    Text("Selected")
+                                    Microcopy.text(Microcopy.Key.Avatar.Generate.selected)
                                         .font(ManropeFont.medium.size(12))
                                         .foregroundStyle(hasSelections ? .grayScale130 : .grayScale70)
                                     HStack(spacing: 8) {

@@ -1032,13 +1032,13 @@ extension DTO.ProductRecommendation {
     var displayText: String {
         switch self {
         case .match:
-            return "Matched"
+            return Microcopy.string(Microcopy.Key.Common.MatchStatus.matched)
         case .needsReview:
-            return "Uncertain"
+            return Microcopy.string(Microcopy.Key.Common.MatchStatus.uncertain)
         case .notMatch:
-            return "Unmatched"
+            return Microcopy.string(Microcopy.Key.Common.MatchStatus.unmatched)
         case .unknown:
-            return "Unknown"
+            return Microcopy.string(Microcopy.Key.Common.MatchStatus.unknown)
         }
     }
     

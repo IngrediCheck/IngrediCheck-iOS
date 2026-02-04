@@ -9,7 +9,7 @@ struct ReadyToScanSheet: View {
         VStack(spacing: 0) {
             ZStack {
                 // CENTER TEXT
-                Text("Ready to scan your")
+                Microcopy.text(Microcopy.Key.Onboarding.ReadyToScan.title)
                     .font(NunitoFont.bold.size(22))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.grayScale150)
@@ -31,12 +31,8 @@ struct ReadyToScanSheet: View {
 //                }
             }
             .padding(.top, 8)
-            Text("first product?")
-                .font(NunitoFont.bold.size(22))
-                .foregroundStyle(.grayScale150)
-                
 
-            Text("Do you have any food product around you right now?")
+            Microcopy.text(Microcopy.Key.Onboarding.ReadyToScan.subtitle)
                 .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale120)
                 .padding(.top, 12)
@@ -54,12 +50,12 @@ struct ReadyToScanSheet: View {
 //                }
 //                .buttonStyle(.plain)
                 
-                SecondaryButton(title: "Not right now", takeFullWidth: false) {
+                SecondaryButton(title: Microcopy.string(Microcopy.Key.Onboarding.ReadyToScan.ctaNotRightNow), takeFullWidth: false) {
                     onNotRightNow()
                 }
 
                 Button(action: onHaveAProduct) {
-                    GreenCapsule(title: "Have a product")
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Onboarding.ReadyToScan.ctaHaveAProduct))
                         .frame( width : 159 ,height: 52 )
                 }
                 .buttonStyle(.plain)

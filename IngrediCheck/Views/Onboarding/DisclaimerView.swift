@@ -17,11 +17,11 @@ struct DisclaimerView: View {
                 VStack(spacing: 20) {
                     Image("LogoGreen")
                     
-                    Text("Welcome to IngrediCheck!")
+                    Microcopy.text(Microcopy.Key.Disclaimer.title)
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("IngrediCheck is powered by some cool AI to help you check if your food matches your dietary needs. Remember, the AI isn’t always spot-on, so trust your own judgment. AI does improve with feedback, so please use the feedback button to share your thoughts and contribute product images. It will help make the AI even better for everyone!")
+                    Microcopy.text(Microcopy.Key.Disclaimer.body)
                 }
 
                 Spacer()
@@ -29,7 +29,7 @@ struct DisclaimerView: View {
                 Button {
                     onboardingState.disclaimerShown = true
                 } label: {
-                    Text("I Understand")
+                    Microcopy.text(Microcopy.Key.Disclaimer.ctaUnderstand)
                         .font(.title3)
                         .fontWeight(.bold)
                         .padding()

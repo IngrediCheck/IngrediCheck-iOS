@@ -23,7 +23,7 @@ struct FilterSegmentedControl: View {
                     selection = .all
                 }
             } label: {
-                Text("All")
+                Microcopy.text(Microcopy.Key.Lists.RecentScansFilter.all)
                     .font(NunitoFont.semiBold.size(12))
                     .foregroundStyle(selection == .all ? .grayScale140 : .grayScale100)
                     .padding(.horizontal, 10)
@@ -46,7 +46,7 @@ struct FilterSegmentedControl: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(selection == .favorites ? .red : .grayScale100)
 
-                    Text("Fav")
+                    Microcopy.text(Microcopy.Key.Lists.RecentScansFilter.favoritesShort)
                         .font(NunitoFont.semiBold.size(12))
                         .foregroundStyle(selection == .favorites ? .grayScale140 : .grayScale100)
                 }

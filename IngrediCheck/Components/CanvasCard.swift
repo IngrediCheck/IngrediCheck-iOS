@@ -107,7 +107,7 @@ struct CanvasCard: View {
                         .resizable()
                         .frame(width: 16, height: 16)
 
-                    Text("Something else too, don't worry we'll ask later!")
+                    Microcopy.text(Microcopy.Key.Onboarding.Dynamic.otherSelectedNote)
                         .font(ManropeFont.regular.size(10))
                         .foregroundStyle(Color(hex: "#7F7F7F"))
                         .italic()

@@ -19,7 +19,7 @@ struct DoYouHaveAnInviteCode: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Do you have an invite code?")
+                    Microcopy.text(Microcopy.Key.Onboarding.InviteCodePrompt.title)
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -38,7 +38,7 @@ struct DoYouHaveAnInviteCode: View {
                     .buttonStyle(.plain)
                 }
 
-                Text("Got a family invite to IngrediFam? Enter code.")
+                Microcopy.text(Microcopy.Key.Onboarding.InviteCodePrompt.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -47,7 +47,7 @@ struct DoYouHaveAnInviteCode: View {
 
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "Enter invite code",
+                    title: Microcopy.string(Microcopy.Key.Onboarding.InviteCodePrompt.ctaEnterInviteCode),
                     width: 152,
                     takeFullWidth: true,
                     action: { yesPressed?() }
@@ -56,7 +56,7 @@ struct DoYouHaveAnInviteCode: View {
                 Button {
                     noPressed?()
                 } label: {
-                    GreenCapsule(title: "No, Continue")
+                    GreenCapsule(title: Microcopy.string(Microcopy.Key.Onboarding.InviteCodePrompt.ctaContinueWithoutCode))
                 }
                 
             }

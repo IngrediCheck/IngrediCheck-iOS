@@ -34,7 +34,7 @@ struct AskIngrediBotButton: View {
                         .resizable()
                         .frame(width: 18, height: 18)
 
-                    Text("Ask IngrediBot")
+                    Microcopy.text(Microcopy.Key.Chat.ctaAskIngrediBot)
                         .font(NunitoFont.semiBold.size(12))
                         .foregroundStyle(.grayScale10)
                         .overlay(
@@ -51,7 +51,7 @@ struct AskIngrediBotButton: View {
                                 .frame(width: geo.size.width * 0.6)
                                 .offset(x: -geo.size.width * 0.3 + geo.size.width * 1.3 * textShimmerPhase)
                                 .mask(
-                                    Text("Ask IngrediBot")
+                                    Microcopy.text(Microcopy.Key.Chat.ctaAskIngrediBot)
                                         .font(NunitoFont.semiBold.size(12))
                                 )
                             }

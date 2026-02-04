@@ -10,12 +10,12 @@ struct StayUpdated: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Stay updated")
+                Microcopy.text(Microcopy.Key.Permissions.StayUpdated.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
 
-                Text("We’ll send you helpful meal tips, reminders, and important updates—only when you want them.")
+                Microcopy.text(Microcopy.Key.Permissions.StayUpdated.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -23,12 +23,12 @@ struct StayUpdated: View {
 
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "Remind me Later",
+                    title: Microcopy.string(Microcopy.Key.Permissions.StayUpdated.ctaRemindMeLater),
                     takeFullWidth: true,
                     action: {}
                 )
 
-                GreenCapsule(title: "Allow")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.allow))
             }
             .padding(.horizontal, 20)
         }

@@ -11,11 +11,11 @@ struct AllSet: View {
     var body: some View {
         VStack {
             VStack(spacing: 12) {
-                Text("Add more members?")
+                Microcopy.text(Microcopy.Key.Family.Setup.AddMembers.title)
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
                 
-                Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
+                Microcopy.text(Microcopy.Key.Family.Setup.AddMembers.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -26,7 +26,7 @@ struct AllSet: View {
                 Button {
                     
                 } label: {
-                    Text("All Set!")
+                    Text(Microcopy.string(Microcopy.Key.Common.allSet))
                         .font(NunitoFont.semiBold.size(16))
                         .foregroundStyle(.grayScale110)
                         .frame(width: 160, height: 52)
@@ -36,7 +36,7 @@ struct AllSet: View {
                 }
 
                 
-                GreenCapsule(title: "Add Member", width: 160, height: 52)
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Family.Setup.AddMembers.ctaAddMember), width: 160, height: 52)
             }
             .padding(.horizontal, 20)
         }

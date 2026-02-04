@@ -14,12 +14,12 @@ struct WouldYouLikeToInvite: View {
     var body: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("Would you like to invite \(name) to join IngrediFam?")
+                Text(Microcopy.formatted(Microcopy.Key.Family.InvitePrompt.title, name))
                     .font(NunitoFont.bold.size(20))
                     .foregroundStyle(.grayScale150)
                     .multilineTextAlignment(.center)
                 
-                Text("No worries if you skip this step. You can share the code with \(name) later too.")
+                Text(Microcopy.formatted(Microcopy.Key.Family.InvitePrompt.subtitle, name))
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -28,7 +28,7 @@ struct WouldYouLikeToInvite: View {
             
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "Maybe later",
+                    title: Microcopy.string(Microcopy.Key.Common.maybeLater),
                     takeFullWidth: true,
                     isDisabled: isLoading,
                     action: continuePressed
@@ -38,7 +38,7 @@ struct WouldYouLikeToInvite: View {
                     invitePressed()
                 } label: {
                     ZStack {
-                        GreenCapsule(title: "Invite" , icon: "share" ,iconWidth: 12 , iconHeight: 12 ,)
+                        GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.invite), icon: "share" ,iconWidth: 12 , iconHeight: 12 ,)
                             .opacity(isLoading ? 0.6 : 1)
 
                         if isLoading {

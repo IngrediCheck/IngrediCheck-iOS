@@ -21,7 +21,7 @@ struct WhosThisFor: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Hey there! Who’s this for?")
+                    Microcopy.text(Microcopy.Key.Onboarding.WhosThisFor.title)
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -40,7 +40,7 @@ struct WhosThisFor: View {
                     .buttonStyle(.plain)
                 }
 
-                Text("Is it just you, or your whole IngrediFam — family, friends, anyone you care about?")
+                Microcopy.text(Microcopy.Key.Onboarding.WhosThisFor.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -49,7 +49,7 @@ struct WhosThisFor: View {
 
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "Just Me",
+                    title: Microcopy.string(Microcopy.Key.Onboarding.WhosThisFor.ctaJustMe),
                     icon: "justMe",
                     takeFullWidth: true,
                     isLoading: isJustMeLoading,
@@ -70,7 +70,7 @@ struct WhosThisFor: View {
                 )
 
                 SecondaryButton(
-                    title: "Add Family",
+                    title: Microcopy.string(Microcopy.Key.Onboarding.WhosThisFor.ctaAddFamily),
                     icon: "addfamily",
                     takeFullWidth: true,
                     isLoading: isAddFamilyLoading,
@@ -93,7 +93,7 @@ struct WhosThisFor: View {
             }
             .padding(.bottom, 20)
 
-            Text("You can always add or edit members later.")
+            Microcopy.text(Microcopy.Key.Onboarding.WhosThisFor.footer)
                 .font(ManropeFont.regular.size(12))
                 .foregroundStyle(.grayScale90)
                 .multilineTextAlignment(.center)

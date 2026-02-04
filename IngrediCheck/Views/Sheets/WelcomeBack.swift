@@ -15,7 +15,7 @@ struct WelcomeBack: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Welcome back!")
+                    Microcopy.text(Microcopy.Key.Auth.WelcomeBack.title)
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .multilineTextAlignment(.center)
@@ -34,7 +34,7 @@ struct WelcomeBack: View {
                     }
                     .buttonStyle(.plain)
                 }
-                Text("Sign in to your existing IngrediCheck account.")
+                Microcopy.text(Microcopy.Key.Auth.WelcomeBack.subtitle)
                     .font(ManropeFont.medium.size(12))                    .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
@@ -77,7 +77,7 @@ struct WelcomeBack: View {
                         Image("google_logo")
                             .resizable()
                             .frame(width: 24, height: 24)
-                        Text("Google")
+                        Microcopy.text(Microcopy.Key.Auth.Provider.google)
                             .font(NunitoFont.semiBold.size(16))
                             .foregroundStyle(.grayScale150)
                     }
@@ -127,7 +127,7 @@ struct WelcomeBack: View {
                         Image("apple_logo")
                             .resizable()
                             .frame(width: 24, height: 24)
-                        Text("Apple")
+                        Microcopy.text(Microcopy.Key.Auth.Provider.apple)
                             .font(NunitoFont.semiBold.size(16))
                             .foregroundStyle(.grayScale150)
                     }

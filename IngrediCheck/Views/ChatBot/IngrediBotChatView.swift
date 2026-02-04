@@ -171,7 +171,7 @@ struct IngrediBotChatView: View {
             }
             
             HStack(alignment: .bottom, spacing: 12) {
-                TextField("Type your answer…", text: $message, axis: .vertical)
+                TextField(LocalizedStringKey(Microcopy.Key.Chat.inputPlaceholder), text: $message, axis: .vertical)
                     .focused($isInputFocused)
                     .textFieldStyle(.plain)
                     .padding(.vertical, 12)

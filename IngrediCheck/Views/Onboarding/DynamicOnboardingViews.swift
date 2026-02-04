@@ -652,7 +652,7 @@ struct DynamicOnboardingStepView: View {
                 Text(step.header.name)
                     .font(NunitoFont.bold.size(18))
                     .foregroundStyle(.grayScale150)
-                Text("Unsupported step type in current build.")
+                Microcopy.text(Microcopy.Key.Onboarding.Dynamic.unsupportedStepType)
                     .font(ManropeFont.regular.size(14))
                     .foregroundStyle(.grayScale100)
             }
@@ -679,7 +679,7 @@ struct MeetYourProfileIntroView: View {
             Button(action: {
                 coordinator.navigateInBottomSheet(.meetYourProfile(memberId: nil))
             }) {
-                GreenCapsule(title: "Continue", width: 159)
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.continue), width: 159)
                     .frame(width: 159)
             }
             .padding(.bottom, 40)
@@ -690,7 +690,7 @@ struct MeetYourProfileIntroView: View {
 // MARK: - Preferences Added Success Sheet
 
 struct PreferencesAddedSuccessSheet: View {
-    var title: String = "Preferences added successfully!"
+    var title: String = Microcopy.string(Microcopy.Key.Onboarding.FoodNotesSaved.title)
     var onContinue: () -> Void
 
     var body: some View {
@@ -703,7 +703,7 @@ struct PreferencesAddedSuccessSheet: View {
                     .multilineTextAlignment(.center)
                     .padding(.top, 32)
                 
-                Text("Your food preferences are saved. You can review them anytime, or edit a specific preference section by tapping Edit.")
+                Microcopy.text(Microcopy.Key.Onboarding.FoodNotesSaved.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale130)
                     .multilineTextAlignment(.center)
@@ -715,7 +715,7 @@ struct PreferencesAddedSuccessSheet: View {
            
             
             Button(action: onContinue) {
-                GreenCapsule(title: "Continue")
+                GreenCapsule(title: Microcopy.string(Microcopy.Key.Common.continue))
                     .frame(width : 152 , height : 52)
             }
             

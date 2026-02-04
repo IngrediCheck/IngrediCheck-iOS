@@ -44,7 +44,7 @@ struct AddMoreMembers: View {
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Add more members?")
+                        Microcopy.text(Microcopy.Key.Family.Setup.AddMembers.title)
                             .font(NunitoFont.bold.size(22))
                             .foregroundStyle(.grayScale150)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -68,7 +68,7 @@ struct AddMoreMembers: View {
                         }
                     }
 
-                    Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
+                    Microcopy.text(Microcopy.Key.Family.Setup.AddMembers.subtitle)
                         .font(ManropeFont.medium.size(12))
                         .foregroundStyle(.grayScale120)
                         .multilineTextAlignment(.center)
@@ -77,7 +77,7 @@ struct AddMoreMembers: View {
                 
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField("Enter member's name", text: $name)
+                    TextField(LocalizedStringKey(Microcopy.Key.Family.Setup.AddMembers.namePlaceholder), text: $name)
                         .padding(16)
                         .background(.grayScale10)
                         .cornerRadius(16)
@@ -112,7 +112,7 @@ struct AddMoreMembers: View {
                         }
                     
                     if showError {
-                        Text("Enter a name.")
+                        Microcopy.text(Microcopy.Key.Validation.enterName)
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.red)
                             .padding(.leading, 4)
@@ -121,7 +121,7 @@ struct AddMoreMembers: View {
                 .padding(.horizontal, 20)
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Choose Avatar (Optional)")
+                    Microcopy.text(Microcopy.Key.Labels.chooseAvatarOptional)
                         .font(ManropeFont.bold.size(14))
                         .foregroundStyle(.grayScale150)
                         .padding(.leading, 20)
@@ -209,7 +209,7 @@ struct AddMoreMembers: View {
                 }
             } label: {
                 GreenCapsule(
-                    title: "Add Member",
+                    title: Microcopy.string(Microcopy.Key.Family.Setup.AddMembers.ctaAddMember),
                     width: 159,
                     isLoading: isLoading,
                     isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

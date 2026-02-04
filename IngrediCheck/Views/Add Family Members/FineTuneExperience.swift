@@ -25,11 +25,11 @@ struct FineTuneExperience: View {
     var body: some View {
         VStack {
             VStack(spacing: 12) {
-                Text("Want to fine-tune your experience?")
+                Microcopy.text(Microcopy.Key.Onboarding.FineTune.title)
                     .font(NunitoFont.bold.size(20))
                     .foregroundStyle(.grayScale150)
                 
-                Text("Add extra preferences to tailor your experience. Jump in or skip!")
+                Microcopy.text(Microcopy.Key.Onboarding.FineTune.subtitle)
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -38,7 +38,7 @@ struct FineTuneExperience: View {
             
             HStack(spacing: 16) {
                 SecondaryButton(
-                    title: "All Set!",
+                    title: Microcopy.string(Microcopy.Key.Common.allSet),
                     width: 160,
                     takeFullWidth: false,
                     isLoading: isWaitingForUploads || familyStore.pendingUploadCount > 0,
@@ -69,7 +69,7 @@ struct FineTuneExperience: View {
                                 in: RoundedRectangle(cornerRadius: 28)
                             )
                     } else {
-                        GreenCapsule(title: "Add Preferences", width: 160, height: 52)
+                        GreenCapsule(title: Microcopy.string(Microcopy.Key.Onboarding.AddFoodNotesForMember.ctaAdd), width: 160, height: 52)
                     }
                 }
                 .disabled(isWaitingForUploads || familyStore.pendingUploadCount > 0)

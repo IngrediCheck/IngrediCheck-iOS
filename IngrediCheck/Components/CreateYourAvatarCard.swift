@@ -13,19 +13,19 @@ struct CreateYourAvatarCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Create Your Avatar")
+                        Microcopy.text(Microcopy.Key.Avatar.CreateCard.title)
                             .font(ManropeFont.semiBold.size(20))
                             .foregroundStyle(.grayScale150)
                             .lineLimit(1)
                         
-                        Text("Create a fun digital version of yourself.")
+                        Microcopy.text(Microcopy.Key.Avatar.CreateCard.subtitle)
                             .font(ManropeFont.medium.size(14))
                             .foregroundStyle(.grayScale100)
                             .lineLimit(2)
                     }
                     
                     HStack(alignment: .center, spacing: 4) {
-                        Text("Explore")
+                        Microcopy.text(Microcopy.Key.Avatar.CreateCard.ctaExplore)
                             .font(ManropeFont.medium.size(12))
                             .foregroundStyle(.grayScale150)
                         
