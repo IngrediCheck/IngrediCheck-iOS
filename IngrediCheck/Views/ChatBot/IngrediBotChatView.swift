@@ -40,9 +40,14 @@ struct IngrediBotChatView: View {
         coordinator.currentCanvasRoute != .summaryAddFamily
     }
 
+    /// Get the effective context key override - prefer coordinator's value over init parameter
+    private var effectiveContextKeyOverride: String? {
+        coordinator.aibotContextKeyOverride ?? contextKeyOverride
+    }
+
     private var contextKey: String {
         // Check explicit context override first (e.g., "food_notes" from editing screen, "general_feedback" from quick action)
-        if let contextKeyOverride { return contextKeyOverride }
+        if let override = effectiveContextKeyOverride { return override }
         if let feedbackId { return "feedback:\(feedbackId)" }
         if let scanId { return "product_scan:\(scanId)" }
         let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
@@ -254,18 +259,18 @@ struct IngrediBotChatView: View {
 
     private func generateInitialGreeting() -> [ChatMessage] {
         // Check for general feedback context (from home screen quick action)
-        if contextKeyOverride == "general_feedback" {
+        if effectiveContextKeyOverride == "general_feedback" {
             return [
                 ChatMessage(
                     id: "greeting_1",
                     isUser: false,
-                    text: "Hi! Thanks for reaching out.",
+                    text: "Hey there!",
                     timestamp: Date()
                 ),
                 ChatMessage(
                     id: "greeting_2",
                     isUser: false,
-                    text: "I'd love to hear your feedback. What's on your mind?",
+                    text: "Would you like to give me some feedback to help improve your experience?",
                     timestamp: Date()
                 )
             ]

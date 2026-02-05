@@ -18,19 +18,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     /// Stores shortcut item from cold launch until the UI is ready to handle it
     static var pendingShortcutItem: UIApplicationShortcutItem?
 
-    func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        AnalyticsService.shared.configure()
+    /// Published flag to trigger feedback shortcut handling
+    @Published var shouldShowFeedbackShortcut = false
 
-        // Set up home screen quick actions
-        UIApplication.shared.shortcutItems = [
-            UIApplicationShortcutItem(
-                type: "SendFeedback",
-                localizedTitle: "Send me Feedback",
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "bubble.left.and.bubble.right"),
-                userInfo: nil
-            )
-        ]
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        AnalyticsService.shared.configure()
 
         // Configure navigation bar appearance globally
         let appearance = UINavigationBarAppearance()
@@ -63,32 +55,39 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         WebService().ping()
     }
 
+    // Configure scene delegate for handling shortcuts
     func application(
         _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
         options: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
-        // Store shortcut item from cold launch so we can handle it once UI is ready
+        // Check for shortcut from cold launch via scene connection
         if let shortcutItem = options.shortcutItem {
             AppDelegate.pendingShortcutItem = shortcutItem
         }
+
         let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
-        config.delegateClass = SceneDelegate.self
+        config.delegateClass = ShortcutSceneDelegate.self
         return config
     }
 }
 
-class SceneDelegate: NSObject, UIWindowSceneDelegate {
+/// Scene delegate to handle quick action shortcuts
+class ShortcutSceneDelegate: NSObject, UIWindowSceneDelegate {
     func windowScene(
         _ windowScene: UIWindowScene,
         performActionFor shortcutItem: UIApplicationShortcutItem,
         completionHandler: @escaping (Bool) -> Void
     ) {
-        // Warm launch: app is running, post notification for immediate handling
-        NotificationCenter.default.post(
-            name: Notification.Name("ShowFeedbackFromShortcut"),
-            object: nil
-        )
+        // Warm launch: app is in background, post notification
+        if shortcutItem.type == "SendFeedback" {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: Notification.Name("ShowFeedbackFromShortcut"),
+                    object: nil
+                )
+            }
+        }
         completionHandler(true)
     }
 }
