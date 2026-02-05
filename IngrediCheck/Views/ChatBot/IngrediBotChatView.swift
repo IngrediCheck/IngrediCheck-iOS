@@ -353,7 +353,12 @@ struct IngrediBotChatView: View {
 
     private func buildContext() -> any Codable {
         // Build context based on provided parameters or current screen
-        // Priority: feedbackId > scanId > food_notes > home
+        // Priority: general_feedback > feedbackId > scanId > food_notes > home
+
+        // Check for general feedback context (from quick action)
+        if effectiveContextKeyOverride == "general_feedback" {
+            return ChatContextBuilder.buildFeedbackContext()
+        }
 
         // If feedbackId is provided, use feedback context
         if let feedbackId = feedbackId {
