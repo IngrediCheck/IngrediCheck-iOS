@@ -70,7 +70,7 @@ struct LetsMeetYourIngrediFamView: View {
         Group {
             if shouldShowWelcomeFamily {
             VStack {
-               Text("Welcome to IngrediFam !")
+               Text("Welcome to IngrediFam!")
                     .font(ManropeFont.bold.size(16))
                     .padding(.top, 24)
                     .padding(.bottom ,4)

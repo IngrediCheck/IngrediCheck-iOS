@@ -132,7 +132,7 @@ struct HomeView: View {
                                         .foregroundStyle(.grayScale150)
                                         .frame(height: 15)
 
-                                    Text("Here's what your family avoids or needs to watch out for.")
+                                    Text("Here's what your family needs to avoid.")
                                         .font(ManropeFont.medium.size(14))
                                         .foregroundStyle(.grayScale110)
                                         .lineLimit(3)

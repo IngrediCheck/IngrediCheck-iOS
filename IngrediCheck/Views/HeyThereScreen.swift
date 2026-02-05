@@ -27,7 +27,7 @@ struct HeyThereScreen: View {
                     switch coordinator.currentBottomSheetRoute {
                     case .whosThisFor:
                         VStack {
-                            Text("Welcome to IngrediFam !")
+                            Text("Welcome to IngrediFam!")
                                 .font(ManropeFont.bold.size(16))
                                 .padding(.top ,32)
                                 .padding(.bottom ,4)
@@ -47,7 +47,7 @@ struct HeyThereScreen: View {
                         }
                     case .doYouHaveAnInviteCode, .enterInviteCode:
                         VStack {
-                            Text("Welcome to IngrediFam !")
+                            Text("Welcome to IngrediFam!")
                                 .font(ManropeFont.bold.size(16))
                                 .padding(.top ,32)
                                 .padding(.bottom ,4)

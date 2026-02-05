@@ -15,7 +15,7 @@ struct WelcomeBack: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Welcome back !")
+                    Text("Welcome back!")
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .multilineTextAlignment(.center)
