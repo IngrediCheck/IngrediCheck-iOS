@@ -4,8 +4,10 @@ import UIKit
 
 struct ScanningHelpCanvas: View {
 
+    @Environment(NetworkState.self) private var networkState
     @State private var showFullScreen = false
     @State private var isVideoReady = false
+    @State private var downloadFailed = false
 
     private var videoURL: URL {
         TutorialVideoManager.shared.videoFileURL
@@ -36,9 +38,42 @@ struct ScanningHelpCanvas: View {
                             .padding(.top, 8)
                             .padding(.bottom, 8)
                             .padding(.horizontal, 8)
+                    } else if !networkState.connected || downloadFailed {
+                        // Offline state with retry
+                        VStack(spacing: 16) {
+                            Image(systemName: "wifi.slash")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.grayScale90)
+
+                            Text("No internet connection")
+                                .font(ManropeFont.medium.size(14))
+                                .foregroundStyle(.grayScale120)
+
+                            Button {
+                                downloadFailed = false
+                                Task {
+                                    await TutorialVideoManager.shared.downloadIfNeeded()
+                                    isVideoReady = TutorialVideoManager.shared.isVideoAvailable
+                                    if !isVideoReady {
+                                        downloadFailed = true
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Retry")
+                                }
+                                .font(ManropeFont.semiBold.size(14))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.paletteAccent, in: Capsule())
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ProgressView()
-                            .tint(.white)
+                            .tint(.grayScale90)
                     }
                 }
                 .clipped()
@@ -66,6 +101,9 @@ struct ScanningHelpCanvas: View {
             } else {
                 await TutorialVideoManager.shared.downloadIfNeeded()
                 isVideoReady = TutorialVideoManager.shared.isVideoAvailable
+                if !isVideoReady {
+                    downloadFailed = true
+                }
             }
         }
         .onDisappear {

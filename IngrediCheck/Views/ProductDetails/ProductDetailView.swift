@@ -420,7 +420,8 @@ struct ProductDetailView: View {
         .animation(.easeInOut(duration: 0.25), value: activeIngredientHighlight)
         .navigationTitle(resolvedBrand.isEmpty ? "Product Detail" : resolvedBrand)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarBackground(Color(hex: "#FAFAFA"), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             // Back button (only show when presented from camera view)
             if presentationSource == .cameraView {

@@ -63,27 +63,12 @@ struct IngrediBotChatView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-//            HStack {
-//                
-//                Spacer()
-//                
-//                VStack(alignment: .center, spacing: 5) {
-//                    Image("ai-magic")
-//                        .resizable()
-//                        .frame(width: 28, height: 28)
-//                    
-//                    Text("Asking with AI suggestions")
-//                        .font(ManropeFont.medium.size(14))
-//                        .foregroundStyle(.grayScale110)
-//                }
-//                
-//                Spacer()
-//                
-//            }
-//            .padding(.top, 16)
-            
+            // Drag indicator background area
+            Spacer()
+                .frame(height: 8)
+
             ScrollViewReader { proxy in
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         if isLoadingHistory {
                             HStack {
