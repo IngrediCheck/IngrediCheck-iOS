@@ -16,8 +16,6 @@ struct IngrediCheckApp: App {
 
 struct MainView: View {
 
-    @State private var networkState = NetworkState()
-
     @Environment(AuthController.self) var authController
     @Environment(OnboardingState.self) var onboardingState
 
@@ -39,11 +37,6 @@ struct MainView: View {
                 }
             } else {
                 UseCasesView()
-            }
-        }
-        .overlay {
-            if !networkState.connected {
-                ContentUnavailableView("Network seems Offline", systemImage: "wifi.slash")
             }
         }
     }

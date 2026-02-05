@@ -12,6 +12,7 @@ struct AppFlowRouter: View {
     @State private var familyStore = FamilyStore()
     @State private var coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
     @State private var memojiStore = MemojiStore()
+    @State private var networkState = NetworkState()
     @State private var appResetID = UUID()
 
     init() {
@@ -34,6 +35,7 @@ struct AppFlowRouter: View {
                     .environment(familyStore)
                     .environment(coordinator)
                     .environment(memojiStore)
+                    .environment(networkState)
             } else {
                 ProductionFlowView()
                     .environment(authController)
@@ -46,6 +48,12 @@ struct AppFlowRouter: View {
                     .environment(familyStore)
                     .environment(coordinator)
                     .environment(memojiStore)
+                    .environment(networkState)
+            }
+        }
+        .overlay {
+            if !networkState.connected {
+                NoInternetView()
             }
         }
         .id(appResetID)
@@ -62,6 +70,7 @@ struct AppFlowRouter: View {
             familyStore = FamilyStore()
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             memojiStore = MemojiStore()
+            networkState = NetworkState()
         }
     }
 }
