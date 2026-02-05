@@ -42,7 +42,7 @@ struct DietaryPreferencesAndRestrictions: View {
                     Text("   your Food")
                         .font(ManropeFont.extraBold.size(36))
                         .foregroundStyle(Color(hex: "D3D3D3"))
-                    Text("Choices!!")
+                    Text("Choices!")
                         .font(ManropeFont.extraBold.size(36))
                         .foregroundStyle(Color(hex: "D3D3D3"))
                 }

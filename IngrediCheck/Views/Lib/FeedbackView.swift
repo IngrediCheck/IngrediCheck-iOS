@@ -187,7 +187,7 @@ struct FeedbackView: View {
                 }
                 .scrollIndicators(.hidden)
                 .padding()
-                .navigationTitle("Help me Improve 🥹")
+                .navigationTitle("Help me improve 🥹")
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationBarItems(leading: cancelButton, trailing: nextOrSubmitButton)
                 .gesture(TapGesture().onEnded { isFocused = false })

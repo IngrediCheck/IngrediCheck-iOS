@@ -341,7 +341,7 @@ struct BarcodeAnalysisView: View {
                                 }
                                 
                                 if product.ingredients.isEmpty {
-                                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
                                         .font(.subheadline)
                                         .padding()
                                         .multilineTextAlignment(.center)

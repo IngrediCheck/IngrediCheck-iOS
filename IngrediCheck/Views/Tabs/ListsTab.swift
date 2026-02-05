@@ -697,7 +697,7 @@ struct HistoryItemDetailView: View {
                     )
                 }
                 if item.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
                         .font(.subheadline)
                         .padding()
                         .multilineTextAlignment(.center)
@@ -827,7 +827,7 @@ struct ScanDetailView: View {
                     )
                 }
                 if scan.product_info.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
                         .font(.subheadline)
                         .padding()
                         .multilineTextAlignment(.center)

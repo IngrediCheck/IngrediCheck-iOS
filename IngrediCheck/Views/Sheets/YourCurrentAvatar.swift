@@ -46,7 +46,7 @@ struct YourCurrentAvatar: View {
                     .padding(.bottom, 26)
             }
             
-            Text("Here's your current avatar. would you like to make a new one?")
+            Text("Here's your current avatar. Would you like to make a new one?")
                 .font(NunitoFont.bold.size(20))
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 23)

@@ -70,7 +70,7 @@ struct EnterYourInviteCode : View {
                 .padding(.bottom, 12)
             
             if isError {
-                Text("We couldn't verify your code. Please try again..")
+                Text("Hmm, that code didn't work. Check it and try again.")
                     .font(ManropeFont.regular.size(12))
                     .foregroundStyle(.red)
                     .padding(.bottom, 44)
