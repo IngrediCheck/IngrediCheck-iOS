@@ -15,8 +15,22 @@ struct IngrediCheckApp: App {
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
+    /// Stores shortcut item from cold launch until the UI is ready to handle it
+    static var pendingShortcutItem: UIApplicationShortcutItem?
+
     func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         AnalyticsService.shared.configure()
+
+        // Set up home screen quick actions
+        UIApplication.shared.shortcutItems = [
+            UIApplicationShortcutItem(
+                type: "SendFeedback",
+                localizedTitle: "Send me Feedback",
+                localizedSubtitle: nil,
+                icon: UIApplicationShortcutIcon(systemImageName: "bubble.left.and.bubble.right"),
+                userInfo: nil
+            )
+        ]
 
         // Configure navigation bar appearance globally
         let appearance = UINavigationBarAppearance()
@@ -47,5 +61,34 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Wake up backends on app start and foreground
         WebService().pingFlyIO()
         WebService().ping()
+    }
+
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        // Store shortcut item from cold launch so we can handle it once UI is ready
+        if let shortcutItem = options.shortcutItem {
+            AppDelegate.pendingShortcutItem = shortcutItem
+        }
+        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
+}
+
+class SceneDelegate: NSObject, UIWindowSceneDelegate {
+    func windowScene(
+        _ windowScene: UIWindowScene,
+        performActionFor shortcutItem: UIApplicationShortcutItem,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        // Warm launch: app is running, post notification for immediate handling
+        NotificationCenter.default.post(
+            name: Notification.Name("ShowFeedbackFromShortcut"),
+            object: nil
+        )
+        completionHandler(true)
     }
 }

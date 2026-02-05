@@ -41,10 +41,10 @@ struct IngrediBotChatView: View {
     }
 
     private var contextKey: String {
+        // Check explicit context override first (e.g., "food_notes" from editing screen, "general_feedback" from quick action)
+        if let contextKeyOverride { return contextKeyOverride }
         if let feedbackId { return "feedback:\(feedbackId)" }
         if let scanId { return "product_scan:\(scanId)" }
-        // Check explicit context override first (e.g., "food_notes" from editing screen)
-        if let contextKeyOverride { return contextKeyOverride }
         let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
                           coordinator.currentCanvasRoute == .summaryAddFamily ||
                           coordinator.currentCanvasRoute == .welcomeToYourFamily ||
@@ -253,6 +253,24 @@ struct IngrediBotChatView: View {
     // MARK: - Initial Greeting
 
     private func generateInitialGreeting() -> [ChatMessage] {
+        // Check for general feedback context (from home screen quick action)
+        if contextKeyOverride == "general_feedback" {
+            return [
+                ChatMessage(
+                    id: "greeting_1",
+                    isUser: false,
+                    text: "Hi! Thanks for reaching out.",
+                    timestamp: Date()
+                ),
+                ChatMessage(
+                    id: "greeting_2",
+                    isUser: false,
+                    text: "I'd love to hear your feedback. What's on your mind?",
+                    timestamp: Date()
+                )
+            ]
+        }
+
         let context = buildContext()
 
         switch context {
