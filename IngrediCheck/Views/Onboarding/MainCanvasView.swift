@@ -66,13 +66,6 @@ struct MainCanvasView: View {
         .task {
             Log.debug("MainCanvasView", "Food notes load task triggered")
 
-            // Individual flow safeguard: ensure selectedMemberId is set to self member
-            if flow == .individual && familyStore.selectedMemberId == nil {
-                if let selfMemberId = familyStore.family?.selfMember.id {
-                    familyStore.selectedMemberId = selfMemberId
-                }
-            }
-
             // Fetch and load food notes data when view appears
             // This loads the union view (Everyone + all members) for display
             await foodNotesStore.loadFoodNotesAll()
