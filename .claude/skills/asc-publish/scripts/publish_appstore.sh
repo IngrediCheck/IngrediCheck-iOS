@@ -68,16 +68,21 @@ if [[ -z "${ASC_APP_ID:-}" ]]; then
 fi
 
 # Get latest build number from App Store Connect
-echo "📡 Fetching latest build from App Store Connect..."
-LATEST_BUILD=$(asc builds latest --app "$ASC_APP_ID" 2>/dev/null | jq -r '.data.attributes.version // "0"')
+if [[ -n "${BUILD_NUMBER:-}" ]]; then
+  NEW_BUILD="$BUILD_NUMBER"
+  echo "📦 Using override build number: $NEW_BUILD"
+else
+  echo "📡 Fetching latest build from App Store Connect..."
+  LATEST_BUILD=$(asc builds latest --app "$ASC_APP_ID" 2>/dev/null | jq -r '.data.attributes.version // "0"')
 
-if [[ ! "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
-  echo "⚠️  Could not parse latest build number ('$LATEST_BUILD'), starting from 1"
-  LATEST_BUILD=0
+  if [[ ! "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
+    echo "⚠️  Could not parse latest build number ('$LATEST_BUILD'), starting from 1"
+    LATEST_BUILD=0
+  fi
+
+  NEW_BUILD=$((LATEST_BUILD + 1))
+  echo "📦 Latest build in ASC: $LATEST_BUILD → New build: $NEW_BUILD"
 fi
-
-NEW_BUILD=$((LATEST_BUILD + 1))
-echo "📦 Latest build in ASC: $LATEST_BUILD → New build: $NEW_BUILD"
 
 # Locate iTMSTransporter for upload
 if [[ "${SKIP_UPLOAD:-0}" != "1" ]]; then
@@ -159,13 +164,77 @@ xcodebuild archive \
   CURRENT_PROJECT_VERSION="$NEW_BUILD" \
   SKIP_INSTALL=NO
 
-# Create IPA manually (workaround for Xcode 26 exportArchive issues)
-echo "📦 Creating IPA from archive..."
+# Re-sign with distribution certificate and create IPA
+# (workaround for Xcode 26 exportArchive bug)
+echo "📦 Re-signing and creating IPA..."
 APP_PATH="$ARCHIVE_PATH/Products/Applications/IngrediCheck.app"
 if [[ ! -d "$APP_PATH" ]]; then
   echo "❌ App bundle not found at $APP_PATH" >&2
   exit 1
 fi
+
+# Download and install App Store provisioning profile
+echo "🔑 Downloading App Store provisioning profile..."
+PROFILE_ID=$(asc profiles list --profile-type IOS_APP_STORE --output json 2>/dev/null | python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+for p in data.get('data', []):
+    name = p.get('attributes', {}).get('name', '')
+    if 'IngrediCheck' in name and 'App Store' in name:
+        print(p['id'])
+        break
+")
+if [[ -z "$PROFILE_ID" ]]; then
+  echo "❌ No IngrediCheck App Store provisioning profile found in ASC" >&2
+  exit 1
+fi
+
+PROFILE_TMP="/tmp/ingredicheck_appstore_$$.mobileprovision"
+asc profiles download --id "$PROFILE_ID" --output "$PROFILE_TMP" >/dev/null 2>&1
+
+PROFILE_PLIST="/tmp/profile_$$.plist"
+security cms -D -i "$PROFILE_TMP" > "$PROFILE_PLIST" 2>/dev/null
+PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PROFILE_PLIST" 2>/dev/null)
+rm -f "$PROFILE_PLIST"
+
+if [[ -z "$PROFILE_UUID" ]]; then
+  echo "❌ Failed to parse provisioning profile" >&2
+  rm -f "$PROFILE_TMP"
+  exit 1
+fi
+
+mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+cp "$PROFILE_TMP" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision
+rm -f "$PROFILE_TMP"
+echo "✅ Installed profile: $PROFILE_UUID"
+
+# Replace embedded provisioning profile with App Store one
+cp ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision "$APP_PATH/embedded.mobileprovision"
+
+# Find distribution cert SHA-1
+DIST_CERT_SHA=$(security find-identity -v -p codesigning | grep "Apple Distribution" | head -1 | awk '{print $2}')
+if [[ -z "$DIST_CERT_SHA" ]]; then
+  echo "❌ No Apple Distribution certificate found in keychain" >&2
+  exit 1
+fi
+echo "🔏 Re-signing with: $DIST_CERT_SHA"
+
+# Re-sign all frameworks and dylibs first, then the app bundle
+find "$APP_PATH/Frameworks" -name "*.framework" -type d 2>/dev/null | while read -r fw; do
+  /usr/bin/codesign --force --sign "$DIST_CERT_SHA" "$fw"
+done
+find "$APP_PATH/Frameworks" -name "*.dylib" 2>/dev/null | while read -r dylib; do
+  /usr/bin/codesign --force --sign "$DIST_CERT_SHA" "$dylib"
+done
+
+# Extract entitlements and strip get-task-allow (dev-only entitlement)
+ENTITLEMENTS_PLIST="/tmp/entitlements_$$.plist"
+/usr/bin/codesign -d --entitlements :- "$APP_PATH" > "$ENTITLEMENTS_PLIST" 2>/dev/null
+/usr/libexec/PlistBuddy -c "Delete :get-task-allow" "$ENTITLEMENTS_PLIST" 2>/dev/null || true
+
+# Re-sign the main app with cleaned entitlements
+/usr/bin/codesign --force --sign "$DIST_CERT_SHA" --entitlements "$ENTITLEMENTS_PLIST" "$APP_PATH"
+rm -f "$ENTITLEMENTS_PLIST"
 
 PAYLOAD_DIR="$EXPORT_PATH/Payload"
 mkdir -p "$PAYLOAD_DIR"
@@ -202,7 +271,8 @@ echo "🚀 Uploading IPA via iTMSTransporter..."
 echo ""
 echo "========================================="
 echo "✅ Upload complete!"
-echo "   Version: 2.0"
+MARKETING_VERSION=$(xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | awk '/MARKETING_VERSION/ {print $3; exit}')
+echo "   Version: ${MARKETING_VERSION:-unknown}"
 echo "   Build:   $NEW_BUILD"
 echo ""
 echo "Next steps:"
