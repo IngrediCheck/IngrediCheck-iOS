@@ -792,6 +792,9 @@ final class FamilyStore {
             selfMember: selfMember,
             otherMembers: nil
         )
+        if let createdFamily = family {
+            selectedMemberId = createdFamily.selfMember.id
+        }
         Log.debug("FamilyStore", "createBiteBuddyFamily success, family name=\(family?.name ?? "nil"), selectedMemberId=\(selectedMemberId?.uuidString ?? "nil")")
     }
     
