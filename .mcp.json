@@ -1,12 +1,12 @@
 {
   "mcpServers": {
     "XcodeBuildMCP": {
-      "type": "stdio",
       "command": "npx",
-      "args": [
-        "xcodebuildmcp@latest"
-      ],
-      "env": {}
+      "args": ["-y", "xcodebuildmcp@latest"]
+    },
+    "posthog": {
+      "type": "http",
+      "url": "https://mcp.posthog.com/mcp"
     }
   }
 }

@@ -1,0 +1,11 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "XcodeBuildMCP"
+  ],
+  "permissions": {
+    "allow": [
+      "mcp__XcodeBuildMCP__build_sim"
+    ]
+  }
+}

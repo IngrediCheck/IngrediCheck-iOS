@@ -94,3 +94,13 @@ DerivedData/
 .env
 *.p8
 private_keys/
+# JetBrains IDE project files
+.idea/*
+!.idea/.gitignore
+
+# Build logs
+*.log
+.claude/debug.txt
+
+# App Store Connect CLI config
+.asc/

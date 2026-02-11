@@ -3,6 +3,7 @@ import Foundation
 import SwiftUI
 import VisionKit
 import PostHog
+import os
 
 enum DataScannerAccessStatusType {
     case notDetermined
@@ -300,12 +301,12 @@ struct DataScannerView: UIViewControllerRepresentable {
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, didRemove removedItems: [RecognizedItem], allItems: [RecognizedItem]) {
-//            print("dataScanner: didRemove")
+//            Log.debug("BarcodeScannerView", "dataScanner: didRemove")
 //            print(removedItems)
         }
         
         func dataScanner(_ dataScanner: DataScannerViewController, becameUnavailableWithError error: DataScannerViewController.ScanningUnavailable) {
-            print("became unavailable with error \(error.localizedDescription)")
+            Log.error("BarcodeScannerView", "became unavailable with error \(error.localizedDescription)")
         }
         
     }

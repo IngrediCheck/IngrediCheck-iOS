@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 import GoogleSignIn
 import GoogleSignInSwift
+import os
 
 struct UseCasesView: View {
 
@@ -57,7 +58,7 @@ struct UseCasesView: View {
                             onboardingState.useCasesShown = true
                         case .failure(let error):
                             // TODO: Show an alert to the user
-                            print("Google Sign-In failed: \(error.localizedDescription)")
+                            Log.error("UseCasesView", "Google Sign-In failed: \(error.localizedDescription)")
                         }
                     }
                 }) {
@@ -99,10 +100,7 @@ struct UseCasesView: View {
             }
             .padding(.horizontal)
 
-            Text("By continuing, you are agreeing to my **[Terms of Use](https://www.ingredicheck.app/terms-conditions)** and **[Privacy Policy](https://www.ingredicheck.app/privacy-policy)**.")
-                .multilineTextAlignment(.center)
-                .font(.footnote)
-                .tint(.paletteAccent)
+            LegalDisclaimerView(showShieldIcon: false)
                 .padding(.horizontal)
                 .padding(.horizontal)
                 .padding(.horizontal)
@@ -113,4 +111,6 @@ struct UseCasesView: View {
 
 #Preview {
     UseCasesView()
+        .environment(OnboardingState())
+        .environment(AuthController())
 }

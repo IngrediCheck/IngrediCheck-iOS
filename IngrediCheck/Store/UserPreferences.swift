@@ -30,6 +30,7 @@ enum HistoryType: String {
         
         // Reset rating prompt tracking properties
         successfulScanCount = 0
+        totalScanCount = 0
         lastRatingPromptDate = nil
         ratingPromptCount = 0
         ratingPromptYearStart = nil
@@ -81,6 +82,20 @@ enum HistoryType: String {
                 )
             }
         }
+
+    // Cards Swipe Tutorial
+    
+    public static let cardsSwipeTutorialShownKey = "config.cardsSwipeTutorialShown"
+    
+    private static func readCardsSwipeTutorialShown() -> Bool {
+        return UserDefaults.standard.bool(forKey: UserPreferences.cardsSwipeTutorialShownKey)
+    }
+    
+    @ObservationIgnored var cardsSwipeTutorialShown: Bool = UserPreferences.readCardsSwipeTutorialShown() {
+        didSet {
+            UserDefaults.standard.set(cardsSwipeTutorialShown, forKey: UserPreferences.cardsSwipeTutorialShownKey)
+        }
+    }
     
     // MARK: - Rating Prompt Tracking
     
@@ -93,6 +108,12 @@ enum HistoryType: String {
     
     private static func readSuccessfulScanCount() -> Int {
         return UserDefaults.standard.integer(forKey: successfulScanCountKey)
+    }
+    
+    /// Refresh the total scan count from UserDefaults
+    /// Useful when the view appears to ensure the count is up-to-date
+    func refreshScanCount() {
+        totalScanCount = UserPreferences.readSuccessfulScanCount()
     }
     
     private static func readLastRatingPromptDate() -> Date? {
@@ -122,9 +143,19 @@ enum HistoryType: String {
     @ObservationIgnored private var fibonacciIndex: Int = UserPreferences.readFibonacciIndex()
     @ObservationIgnored private var lastPromptDismissTime: Date? = UserPreferences.readLastPromptDismissTime()
     
+    /// Public observable property for total scan count - triggers view updates when changed
+    /// This property is synced with UserDefaults and updates in real-time
+    var totalScanCount: Int = UserPreferences.readSuccessfulScanCount() {
+        didSet {
+            // Keep UserDefaults in sync when set externally (though it shouldn't be)
+            UserDefaults.standard.set(totalScanCount, forKey: UserPreferences.successfulScanCountKey)
+        }
+    }
+    
     /// Increment the successful scan counter
     func incrementScanCount() {
         successfulScanCount += 1
+        totalScanCount = successfulScanCount
         UserDefaults.standard.set(successfulScanCount, forKey: UserPreferences.successfulScanCountKey)
     }
     
@@ -221,6 +252,7 @@ enum HistoryType: String {
         
         // Reset scan counter after showing prompt
         successfulScanCount = 0
+        totalScanCount = 0
         UserDefaults.standard.set(successfulScanCount, forKey: UserPreferences.successfulScanCountKey)
         
         // Set up dismissal tracking (we'll detect cancellation based on timing)

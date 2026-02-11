@@ -24,29 +24,32 @@ enum ValidationResult {
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
     @Environment(DietaryPreferences.self) var dp
+    @Environment(UserPreferences.self) var userPreferences
+    @Environment(MemojiStore.self) var memojiStore
+    @Environment(AppNavigationCoordinator.self) var coordinator
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                textInputField
-                if dp.preferences.isEmpty && !isFocused {
-                    EmptyPreferencesView()
-                } else {
-                    preferenceListView
-                }
+        // Note: NavigationStack is provided by LoggedInRootView (Single Root NavigationStack)
+        VStack {
+            textInputField
+            if dp.preferences.isEmpty && !isFocused {
+                EmptyPreferencesView()
+            } else {
+                preferenceListView
             }
-            .onAppear {
-                dp.refreshPreferences()
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    settingsButton
-                }
-            }
-            .animation(.linear, value: isFocused)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("Your Dietary Preferences")
         }
+        .onAppear {
+            dp.refreshPreferences()
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                settingsButton
+            }
+        }
+        .animation(.linear, value: isFocused)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Your Dietary Preferences")
+        .dismissKeyboardOnTap()
     }
     
     private var validationStatus: some View {
@@ -70,11 +73,11 @@ enum ValidationResult {
     }
     
     private var settingsButton: some View {
-        Button(action: {
-            appState.activeSheet = .settings
-        }, label: {
+        Button {
+            appState.navigate(to: .settings)
+        } label: {
             Image(systemName: "gearshape")
-        })
+        }
     }
     
     private var textInputField: some View {

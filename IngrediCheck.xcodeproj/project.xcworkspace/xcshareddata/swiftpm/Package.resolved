@@ -1,5 +1,5 @@
 {
-  "originHash" : "87ec2d9982ab25467a4bb4f60f99387d5ea420c6536d5f80d1bdec00ca08bdd8",
+  "originHash" : "76d535a1fe31876b3ccf3933ff49f18a1a68611f0106b2cb5aaa9590904833e5",
   "pins" : [
     {
       "identity" : "app-check",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "145104f5ea9d58ae21b60add007c33c1cc0c948e",
         "version" : "2.0.0"
+      }
+    },
+    {
+      "identity" : "dotlottie-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/LottieFiles/dotlottie-ios.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "f88d32df0e24b5dcefca052d0ea3ba0062e910bc"
       }
     },
     {
@@ -69,7 +78,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios.git",
       "state" : {
-        "revision" : "e1af8ba396618c19649949f1dfb445b0465c0f88",
+        "revision" : "62ee83c9f5202c1f1163c92a44e7deb0fea5bbfe",
         "version" : "3.33.0"
       }
     },
@@ -80,6 +89,15 @@
       "state" : {
         "revision" : "540318ecedd63d883069ae7f1ed811a2df00b6ac",
         "version" : "2.4.0"
+      }
+    },
+    {
+      "identity" : "rive-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/rive-app/rive-ios",
+      "state" : {
+        "revision" : "388cebf85b8fc2258b93f86dd3e26a30fb070fd0",
+        "version" : "6.15.1"
       }
     },
     {

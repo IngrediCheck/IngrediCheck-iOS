@@ -1,10 +1,8 @@
 import SwiftUI
+import os
 
 struct ProductImage: Hashable {
     let image: UIImage
-    let ocrTask: Task<String, Error>
-    let uploadTask: Task<String, Error>
-    let barcodeDetectionTask: Task<String?, Error>
 }
 
 struct CapturedBarcode: Hashable {
@@ -29,7 +27,7 @@ struct CapturedBarcode: Hashable {
 
 enum CapturedItem: Hashable {
     case barcode(CapturedBarcode)
-    case productImages([ProductImage])
+    case productImages(String)  // scanId for photo scans
 }
 
 struct CheckTab: View {
@@ -42,7 +40,7 @@ struct CheckTab: View {
                 Spacer()
             }
             .sheet(item: $checkTabState.feedbackConfig) { feedbackConfig in
-                let _ = print("Activating feedback sheet")
+                let _ = Log.debug("CheckTab", "Activating feedback sheet")
                 FeedbackView(
                     feedbackData: feedbackConfig.feedbackData,
                     feedbackCaptureOptions: feedbackConfig.feedbackCaptureOptions,
@@ -52,8 +50,8 @@ struct CheckTab: View {
             .environment(checkTabState)
             .navigationDestination(for: CapturedItem.self) { item in
                 switch item {
-                    case .productImages(let productImages):
-                        LabelAnalysisView(productImages: productImages)
+                    case .productImages(let scanId):
+                        LabelAnalysisView(scanId: scanId)
                             .environment(checkTabState)
                     case .barcode(let capturedBarcode):
                         BarcodeAnalysisView(barcode: capturedBarcode.barcode, viewModel: capturedBarcode.viewModel)
@@ -61,6 +59,7 @@ struct CheckTab: View {
                 }
             }
         }
+        .tint(Color(hex: "#303030"))
     }
 }
 

@@ -1,35 +1,24 @@
 import SwiftUI
 import Combine
 import SimpleToast
+import os
 
 @MainActor struct ListsTab: View {
-    
+
     @State private var isSearching: Bool = false
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
 
     var body: some View {
-        @Bindable var appState = appState
-        NavigationStack(path: $appState.listsTabState.routes) {
-            Group {
-                if isSearching {
-                    ScanHistorySearchingView(webService: webService, isSearching: $isSearching)
-                } else {
-                    defaultView
-                }
-            }
-            .navigationDestination(for: HistoryRouteItem.self) { item in
-                switch item {
-                case .historyItem(let item):
-                    HistoryItemDetailView(item: item)
-                case .listItem(let item):
-                    FavoriteItemDetailView(item: item)
-                case .favoritesAll:
-                    FavoritesPageView()
-                case .recentScansAll:
-                    RecentScansPageView()
-                }
+        // Note: NavigationStack is provided by LoggedInRootView (Single Root NavigationStack)
+        // HistoryRouteItem navigation is registered at LoggedInRootView level
+        Group {
+            if isSearching {
+                ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
+            } else {
+                defaultView
             }
         }
         .animation(.default, value: isSearching)
@@ -48,8 +37,8 @@ import SimpleToast
         .navigationBarTitle("Lists")
         .toolbar {
             Group {
-                if let historyItems = appState.listsTabState.historyItems,
-                   historyItems.count > 4 {
+                if let scans = appState.listsTabState.scans,
+                   scans.count > 4 {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(action: {
                             isSearching = true
@@ -97,6 +86,7 @@ import SimpleToast
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitle("Favorites")
+        .background(Color.pageBackground)
     }
 }
 
@@ -176,44 +166,185 @@ import SimpleToast
 @MainActor struct RecentScansPageView: View {
 
     @State private var isSearching: Bool = false
+    @State private var selectedFilter: RecentScansFilter = .all
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         Group {
             if isSearching {
-                ScanHistorySearchingView(webService: webService, isSearching: $isSearching)
+                ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
                     .navigationBarBackButtonHidden()
             } else {
                 defaultView
             }
         }
+        .background(Color.pageBackground)
     }
-    
+
+    private var filteredScans: [DTO.Scan] {
+        guard let scans = appState.listsTabState.scans else { return [] }
+        switch selectedFilter {
+        case .all:
+            return scans
+        case .favorites:
+            return scans.filter { $0.is_favorited == true }
+        }
+    }
+
     var defaultView: some View {
         Group {
-            if let historyItems = appState.listsTabState.historyItems {
-                RecentScansListView(historyItems: historyItems)
-                    .refreshable {
-                        if let history = try? await webService.fetchHistory() {
-                            appState.listsTabState.historyItems = history
+            if let scans = appState.listsTabState.scans, !scans.isEmpty {
+                if filteredScans.isEmpty {
+                    // Scans exist but filter returns empty (e.g., no favorites)
+                    EmptyStateView(
+                        imageName: "history-emptystate",
+                        title: "No Favorites Yet!",
+                        description: [
+                            "Products you favorite will appear here.",
+                            "Tap the heart icon on any scan to save it."
+                        ],
+                        buttonTitle: nil,
+                        buttonAction: nil
+                    )
+                    .frame(maxWidth: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(Array(filteredScans.enumerated()), id: \.element.id) { index, scan in
+                                NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                                    RecentScanCard(
+                                        scan: scan,
+                                        onFavoriteToggle: { scanId, isFavorited in
+                                            handleFavoriteToggle(scanId: scanId, isFavorited: isFavorited)
+                                        },
+                                        onScanUpdated: { updatedScan in
+                                            handleScanUpdated(updatedScan: updatedScan)
+                                        }
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .onAppear {
+                                    // Load more when reaching the end (3 rows remaining)
+                                    if index >= filteredScans.count - 3 {
+                                        Task {
+                                            await scanHistoryStore.loadMore()
+                                            appState.listsTabState.scans = scanHistoryStore.scans
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Loading indicator at the bottom
+                            if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
+                            }
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.top)
+                    .scrollIndicators(.hidden)
+                    .refreshable {
+                        Log.debug("RecentScansPageView", "Pull-to-refresh triggered")
+                        await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+                        appState.listsTabState.scans = scanHistoryStore.scans
+                    }
+                }
+            } else if scanHistoryStore.isLoading {
+                VStack {
+                    Spacer()
+                    ProgressView("Loading scans...")
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                EmptyStateView(
+                    imageName: "history-emptystate",
+                    title: "No Scans !",
+                    description: [
+                        "Your recent scans will appear here once",
+                        "you start scanning products."
+                    ],
+                    buttonTitle: "Start Scanning",
+                    buttonAction: {
+                        appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
+                    }
+                )
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal)
-        .navigationBarTitleDisplayMode(.inline)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle("Recent Scans")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    isSearching = true
-                }, label: {
-                    Image(systemName: "magnifyingglass")
-                })
+                FilterSegmentedControl(selection: $selectedFilter)
             }
+        }
+        .task {
+            if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {
+                if scanHistoryStore.isLoading {
+                    while scanHistoryStore.isLoading {
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                    }
+                } else if scanHistoryStore.scans.isEmpty {
+                    await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+                }
+                await MainActor.run {
+                    appState.listsTabState.scans = scanHistoryStore.scans
+                }
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func handleFavoriteToggle(scanId: String, isFavorited: Bool) {
+        // Update in store
+        let scan = appState.listsTabState.scans?.first { $0.id == scanId }
+        if let scan = scan {
+            let updatedScan = DTO.Scan(
+                id: scan.id,
+                scan_type: scan.scan_type,
+                barcode: scan.barcode,
+                state: scan.state,
+                product_info: scan.product_info,
+                product_info_source: scan.product_info_source,
+                product_info_vote: scan.product_info_vote,
+                analysis_result: scan.analysis_result,
+                images: scan.images,
+                latest_guidance: scan.latest_guidance,
+                created_at: scan.created_at,
+                last_activity_at: scan.last_activity_at,
+                is_favorited: isFavorited,
+                analysis_id: scan.analysis_id
+            )
+            scanHistoryStore.upsertScan(updatedScan)
+
+            // Sync to AppState
+            if var scans = appState.listsTabState.scans,
+               let idx = scans.firstIndex(where: { $0.id == scanId }) {
+                scans[idx] = updatedScan
+                appState.listsTabState.scans = scans
+            }
+        }
+    }
+
+    private func handleScanUpdated(updatedScan: DTO.Scan) {
+        // Update scan in store
+        scanHistoryStore.upsertScan(updatedScan)
+
+        // Sync to AppState
+        if var scans = appState.listsTabState.scans,
+           let idx = scans.firstIndex(where: { $0.id == updatedScan.id }) {
+            scans[idx] = updatedScan
+            appState.listsTabState.scans = scans
         }
     }
 }
@@ -222,10 +353,11 @@ import SimpleToast
 
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
     
     var showViewAll: Bool {
-        if let historyItems = appState.listsTabState.historyItems {
-            return historyItems.count > 4
+        if let scans = appState.listsTabState.scans {
+            return scans.count > 4
         }
         return false
     }
@@ -243,17 +375,20 @@ import SimpleToast
                 }
             }
             .padding(.bottom)
-            
-            if let historyItems = appState.listsTabState.historyItems {
-                RecentScansListView(historyItems: historyItems)
+
+            if let scans = appState.listsTabState.scans {
+                RecentScansListView(scans: scans)
                 .frame(maxWidth: .infinity)
                 .refreshable {
-                    if let history = try? await webService.fetchHistory() {
-                        appState.listsTabState.historyItems = history
-                    }
+                    NSLog("[RecentScansView] 🔄 Pull-to-refresh triggered")
+                    // Load via store (single source of truth)
+                    await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+                    NSLog("[RecentScansView] ✅ loadHistory completed")
+                    // Sync to AppState for backwards compatibility
+                    appState.listsTabState.scans = scanHistoryStore.scans
                 }
                 .overlay {
-                    if historyItems.isEmpty {
+                    if scans.isEmpty {
                         VStack {
                             Spacer()
                             Image("EmptyRecentScans")
@@ -282,31 +417,74 @@ import SimpleToast
 }
 
 @MainActor struct RecentScansListView: View {
-    
-    var historyItems: [DTO.HistoryItem]
+
+    var scans: [DTO.Scan]
+    @Environment(ScanHistoryStore.self) var scanHistoryStore
+    @Environment(AppState.self) var appState
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                ForEach(Array(historyItems.enumerated()), id: \.element.client_activity_id) { index, item in
-                    NavigationLink(value: HistoryRouteItem.historyItem(item)) {
-                        HistoryItemCardView(item: item)
+        Group {
+            if scans.isEmpty {
+                EmptyStateView(
+                    imageName: "history-emptystate",
+                    title: "No Scans !",
+                    description: [
+                        "Your recent scans will appear here once",
+                        "you start scanning products."
+                    ],
+                    buttonTitle: "Start Scanning",
+                    buttonAction: {
+                        appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
                     }
-                    .foregroundStyle(.primary)
+                )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(scans.enumerated()), id: \.element.id) { index, scan in
+                            NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                                ScanRow(scan: scan)
+                            }
+                            .foregroundStyle(.primary)
+                            .onAppear {
+                                // Load more when reaching the end (3 rows remaining)
+                                if index >= scans.count - 3 {
+                                    Task {
+                                        await scanHistoryStore.loadMore()
+                                        // Sync to AppState for backwards compatibility
+                                        appState.listsTabState.scans = scanHistoryStore.scans
+                                    }
+                                }
+                            }
 
-                    if index != historyItems.count - 1 {
-                        Divider()
+                            if index != scans.count - 1 {
+                                Divider()
+                                    .padding(.vertical, 14)
+                            }
+                        }
+                        
+                        // Loading indicator at the bottom
+                        if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 20)
+                        }
                     }
                 }
+                .scrollIndicators(.hidden)
             }
         }
-        .scrollIndicators(.hidden)
     }
 }
+
+//#Preview {
+//    RecentScansListView()
+//        .environment(AppState())
+//}
 
 @Observable @MainActor class ScanHistorySearchingViewModel {
 
     let webService: WebService
+    let scanHistoryStore: ScanHistoryStore
 
     var searchText: String = "" {
         didSet {
@@ -314,13 +492,14 @@ import SimpleToast
         }
     }
 
-    var searchResults: [DTO.HistoryItem] = []
+    var searchResults: [DTO.Scan] = []
 
     private var searchTextSubject = PassthroughSubject<String, Never>()
     private var cancellables = Set<AnyCancellable>()
 
-    init(webService: WebService) {
+    init(webService: WebService, scanHistoryStore: ScanHistoryStore) {
         self.webService = webService
+        self.scanHistoryStore = scanHistoryStore
         searchTextSubject
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] text in
@@ -338,10 +517,18 @@ import SimpleToast
         }
 
         Task {
-            print("Searching for \(searchText)")
-            let newSearchResults = try await webService.fetchHistory(searchText: searchText)
+            Log.debug("ListsTab", "Searching for \(searchText)")
+            // Load from store and filter client-side
+            await scanHistoryStore.loadHistory(limit: 100, offset: 0, forceRefresh: true)
+
+            let filtered = scanHistoryStore.scans.filter { scan in
+                let name = scan.product_info.name?.lowercased() ?? ""
+                let brand = scan.product_info.brand?.lowercased() ?? ""
+                let query = searchText.lowercased()
+                return name.contains(query) || brand.contains(query)
+            }
             await MainActor.run {
-                self.searchResults = newSearchResults
+                self.searchResults = filtered
             }
         }
     }
@@ -358,9 +545,9 @@ import SimpleToast
     @State private var vm: ScanHistorySearchingViewModel
 
     @Environment(AppState.self) var appState
-    
-    init(webService: WebService, isSearching: Binding<Bool>) {
-        _vm = State(initialValue: ScanHistorySearchingViewModel(webService: webService))
+
+    init(webService: WebService, scanHistoryStore: ScanHistoryStore, isSearching: Binding<Bool>) {
+        _vm = State(initialValue: ScanHistorySearchingViewModel(webService: webService, scanHistoryStore: scanHistoryStore))
         _isSearching = isSearching
     }
 
@@ -370,9 +557,9 @@ import SimpleToast
                 .padding(.bottom)
             ScrollView {
                 VStack(spacing: 10) {
-                    ForEach(Array(vm.searchResults.enumerated()), id: \.element.client_activity_id) { index, item in
-                        NavigationLink(value: HistoryRouteItem.historyItem(item)) {
-                            HistoryItemCardView(item: item)
+                    ForEach(Array(vm.searchResults.enumerated()), id: \.element.id) { index, scan in
+                        NavigationLink(value: HistoryRouteItem.scan(scan)) {
+                            ScanRow(scan: scan)
                         }
                         .foregroundStyle(.primary)
 
@@ -510,7 +697,7 @@ struct HistoryItemDetailView: View {
                     )
                 }
                 if item.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
                         .font(.subheadline)
                         .padding()
                         .multilineTextAlignment(.center)
@@ -529,7 +716,8 @@ struct HistoryItemDetailView: View {
                         brand: item.brand,
                         name: item.name,
                         ingredients: item.ingredients,
-                        images: item.images
+                        images: item.images,
+                        claims: nil
                     )
                     AnalysisResultView(product: product, ingredientRecommendations: item.ingredient_recommendations)
                     
@@ -566,6 +754,129 @@ struct HistoryItemDetailView: View {
                     })
                 }
                 StarButton(clientActivityId: item.client_activity_id, favorited: item.favorited)
+                Button(action: {
+                    appState.feedbackConfig = FeedbackConfig(
+                        feedbackData: $feedbackData,
+                        feedbackCaptureOptions: .feedbackAndImages,
+                        onSubmit: {
+                            showToast.toggle()
+                            submitFeedback()
+                        }
+                    )
+                }, label: {
+                    Image(systemName: "flag")
+                        .font(.subheadline)
+                })
+            }
+        }
+    }
+}
+
+struct ScanDetailView: View {
+    let scan: DTO.Scan
+    
+    @State private var feedbackData = FeedbackData()
+    @State private var showToast: Bool = false
+
+    @Environment(WebService.self) var webService
+    @Environment(AppState.self) var appState
+    @Environment(UserPreferences.self) var userPreferences
+    
+    private func submitFeedback() {
+        Task {
+            // Note: clientActivityId is not available in Scan, so feedback submission would need scan.id
+            // For now, leaving as placeholder
+            Log.debug("ListsTab", "Feedback submission not yet implemented for Scan")
+        }
+    }
+    
+    var body: some View {
+        @Bindable var userPreferencesBindable = userPreferences
+        let product = scan.toProduct()
+        let imageLocations: [DTO.ImageLocationInfo] = scan.product_info.images?.compactMap { scanImageInfo in
+            guard let urlString = scanImageInfo.url,
+                  let url = URL(string: urlString) else {
+                return nil
+            }
+            return .url(url)
+        } ?? []
+        
+        ScrollView {
+            VStack(spacing: 15) {
+                if let name = scan.product_info.name {
+                    Text(name)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                if let brand = scan.product_info.brand {
+                    Text(brand)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                }
+                ProductImagesView(images: imageLocations) {
+                    appState.feedbackConfig = FeedbackConfig(
+                        feedbackData: $feedbackData,
+                        feedbackCaptureOptions: .imagesOnly,
+                        onSubmit: {
+                            showToast.toggle()
+                            submitFeedback()
+                        }
+                    )
+                }
+                if scan.product_info.ingredients.isEmpty {
+                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
+                        .font(.subheadline)
+                        .padding()
+                        .multilineTextAlignment(.center)
+                    Button(action: {
+                        userPreferencesBindable.captureType = .ingredients
+                        appState.activeSheet = .scan
+                    }, label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.largeTitle)
+                    })
+                    Text("Product will be analyzed instantly!")
+                        .font(.subheadline)
+                } else {
+                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
+                    AnalysisResultView(product: product, ingredientRecommendations: recommendations)
+                    
+                    HStack {
+                        Text("Ingredients").font(.headline)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+
+                    IngredientsText(ingredients: scan.product_info.ingredients, ingredientRecommendations: recommendations)
+                        .padding(.horizontal)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+        .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
+            FeedbackSuccessToastView()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !imageLocations.isEmpty && !scan.product_info.ingredients.isEmpty {
+                    Button(action: {
+                        appState.feedbackConfig = FeedbackConfig(
+                            feedbackData: $feedbackData,
+                            feedbackCaptureOptions: .imagesOnly,
+                            onSubmit: {
+                                showToast.toggle()
+                                submitFeedback()
+                            }
+                        )
+                    }, label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.subheadline)
+                    })
+                }
+                // Note: StarButton needs clientActivityId which is not in Scan - would need to be handled differently
                 Button(action: {
                     appState.feedbackConfig = FeedbackConfig(
                         feedbackData: $feedbackData,
@@ -710,7 +1021,8 @@ struct FavoriteItemDetailView: View {
                     brand: item.brand,
                     name: item.name,
                     ingredients: item.ingredients,
-                    images: item.images
+                    images: item.images,
+                    claims: nil
                 )
                 
                 HStack {

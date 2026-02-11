@@ -7,6 +7,7 @@
 
 import Foundation
 import StoreKit
+import os
 
 @MainActor
 class TipJarViewModel: ObservableObject {
@@ -21,11 +22,11 @@ class TipJarViewModel: ObservableObject {
                     do {
                         let transaction = try result.payloadValue
                         if transaction.revocationDate == nil {
-                            print("🔁 Transaction update received: \(transaction.productID)")
+                            Log.debug("TipJarViewModel", "🔁 Transaction update received: \(transaction.productID)")
                             await transaction.finish()
                         }
                     } catch {
-                        print("⚠️ Failed to handle transaction update: \(error)")
+                        Log.error("TipJarViewModel", "⚠️ Failed to handle transaction update: \(error)")
                     }
                 }
             }
@@ -37,7 +38,7 @@ class TipJarViewModel: ObservableObject {
             let products = try await Product.products(for: Constants.tipJarIdentifiers).sorted(by: { $0.price < $1.price })
             productsArr = products
         } catch {
-            print("Error while fetching products from connect file: \(error)")
+            Log.error("TipJarViewModel", "Error while fetching products from connect file: \(error)")
         }
     }
     
@@ -51,25 +52,25 @@ class TipJarViewModel: ObservableObject {
                 switch verification {
                     
                 case .verified(let transaction):
-                    print("Purchase Successful: \(transaction.productID)")
+                    Log.debug("TipJarViewModel", "Purchase Successful: \(transaction.productID)")
                     await transaction.finish()
                     
                 case .unverified(_, let error):
-                    print("Unverified Purchase: \(error.localizedDescription)")
+                    Log.error("TipJarViewModel", "Unverified Purchase: \(error.localizedDescription)")
                 }
                 
             case .userCancelled:
-                print("Purchase cancelled by the user.")
+                Log.debug("TipJarViewModel", "Purchase cancelled by the user.")
                 
             case .pending:
-                print("Purchase is pending.")
+                Log.debug("TipJarViewModel", "Purchase is pending.")
                 
             @unknown default:
-                print("Unknown purchase result.")
+                Log.debug("TipJarViewModel", "Unknown purchase result.")
             }
             
         } catch {
-            print("Failed to purchase the product: \(error.localizedDescription)")
+            Log.error("TipJarViewModel", "Failed to purchase the product: \(error.localizedDescription)")
         }
     }
 }

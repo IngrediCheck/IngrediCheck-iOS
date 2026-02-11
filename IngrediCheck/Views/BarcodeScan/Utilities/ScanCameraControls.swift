@@ -1,0 +1,333 @@
+
+import SwiftUI
+
+
+struct CameraSwipeButton: View {
+    @Binding var mode: CameraMode
+    @Binding var showRetryCallout: Bool
+    @State private var isTapped = false
+    @State private var isTapped1 = false
+    @GestureState private var dragOffset: CGFloat = 0
+    
+    var body: some View {
+        VStack{
+            ZStack {
+                // Background Card
+                RoundedRectangle(cornerRadius: 41)
+                    .fill(.thinMaterial)
+                    .opacity(0.4)
+                    .frame(width: 229, height: 66)
+                
+                // Inner content
+                HStack {
+                   
+                    // MARK: Left circle (Barcode)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            isTapped = true
+                            mode = .scanner
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isTapped = false
+                            }
+                        }
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    mode == .scanner ?
+                                    AnyShapeStyle(LinearGradient(
+                                        colors: [Color(hex: "#9DCF10"), Color(hex: "#6B8E06")],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )) :
+                                        AnyShapeStyle(Color.white.opacity(0.15))
+                                )
+                                .frame(width: 58.60, height: 58.60,)
+                                .scaleEffect(isTapped ? 0.9 : 1.0)
+                            Image("iconoir_scan-barcode")
+                                .foregroundColor(.white)
+                                .font(.system(size: 28))
+                            
+                            Text("Scanner")
+                                .font(ManropeFont.regular.size(11))
+                                .foregroundStyle(.white)
+                                .offset(y: UIScreen.main.bounds.height * 0.05)
+                        }
+//                        .background(.red)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Spacer(
+//                        minLength: 12
+                    )
+                    
+                    // MARK: Middle icons (shimmer + independent rotation)
+                    ArrowSwipeShimmer(mode: mode)
+                    
+                    Spacer(
+//                        minLength: 12
+                    )
+                    
+                    // MARK: Right circle (Camera)
+                    ZStack {
+                        Button(action: {
+                            withAnimation(.smooth(duration: 0.18)) {
+                                isTapped1 = true
+                                mode = .photo
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                                withAnimation(.smooth(duration: 0.18)) {
+                                    isTapped1 = false
+                                }
+                            }
+                        }) {
+                            ZStack() {
+                                Circle()
+                                    .fill(
+                                        mode == .photo ?
+                                        AnyShapeStyle(LinearGradient(
+                                            colors: [Color(hex: "#9DCF10"), Color(hex: "#6B8E06")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )) :
+                                            AnyShapeStyle(.thinMaterial.opacity(0.5))
+                                    )
+                                    .frame(width: 58.60, height: 58.60)
+                                    .scaleEffect(isTapped1 ? 0.9 : 1.0)
+                                Image("cameracapture")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 20))
+                                
+                                Text("Photo")
+                                    .font(ManropeFont.regular.size(11))
+                                    .foregroundStyle(.white)
+                                    .offset(y: UIScreen.main.bounds.height * 0.05)
+                            }
+//                        .background(.red)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // Callout bubble above the photo circle when retry is shown
+                        if showRetryCallout {
+                            VStack(spacing: 0) {
+                                CalloutBubble(text: "Try again or switch\n to photo mode .")
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut) {
+                                            showRetryCallout = false
+                                        }
+                                    }
+                                Spacer()
+                                    .frame(height: 0)
+                            }
+                            .offset(y: -80) // Position above the circle
+                            .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showRetryCallout)
+                        }
+                    }
+                    
+                }
+                .padding(.horizontal, 3.5)
+                .frame(width: 229)
+                // Keep circles visually centered; drag is used only to switch modes.
+                .animation(.spring(response: 0.25, dampingFraction: 0.8), value: dragOffset)
+                
+            }
+            .gesture(
+                DragGesture()
+                    .updating($dragOffset) { value, state, _ in
+                        // live drag translation, tightly clamped so content stays visually centered
+                        let translation = value.translation.width
+                        let clamped = max(-15, min(15, translation))
+                        state = clamped
+                    }
+                    .onEnded { value in
+                        let threshold: CGFloat = 30
+                        let translation = value.translation.width
+                        
+                        if translation > threshold {
+                            // swipe right -> go to photo mode (move selection to the right circle)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                mode = .photo
+                            }
+                        } else if translation < -threshold {
+                            // swipe left -> go to scanner mode (move selection to the left circle)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                mode = .scanner
+                            }
+                        }
+                    }
+            )
+            // keep circles visually inside the rounded pill while sliding
+//            .clipShape(RoundedRectangle(cornerRadius: 46))
+            //           .swipeShimmer()
+            
+            
+//            HStack(){
+//                Text("Scanner")
+//                Spacer()
+//                Text("Photo")
+//            }
+//            
+//            .frame(maxWidth:229)
+//            .foregroundColor(Color.white)
+//            .font(.system(size: 11))
+//            .fontWeight(.regular)
+//            .padding(.leading , 40)
+//            .padding(.trailing, 40)
+          
+            
+            
+            
+        }
+    }
+}
+
+struct ArrowSwipeShimmer: View {
+    @State private var phase: CGFloat = -1
+    private let animationDuration: Double = 1.4
+    var mode: CameraMode
+    var baseOpacity: Double = 0.35
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<3, id: \.self) { index in
+                Image("right-arrow")
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 11, height: 21)
+                    .foregroundColor(.white.opacity(baseOpacity))
+
+//                    .opacity(0.4) // base arrow look
+                    .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+                    .animation(
+                        .easeInOut(duration: 0.24)
+                        .delay(0.04 * Double(index)),
+                        value: mode
+                    )
+            }
+        }
+        .overlay(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.white.opacity(0.0),
+                    Color.white.opacity(0.6),
+                    Color.white.opacity(0.0)
+                ]),
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: 42)
+            .offset(x: phase * 42 * (mode == .photo ? -1 : 1))
+            .mask(
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Image("right-arrow1")
+                            .renderingMode(.template)
+                            .resizable()
+                            .frame(width: 11, height: 21)
+                            .rotationEffect(.degrees(mode == .photo ? 180 : 0))
+                    
+                            .animation(
+                                .easeInOut(duration: 0.24)
+                                .delay(0.04 * Double(index)),
+                                value: mode
+                            )
+                    }
+                }
+            )
+        )
+        .onAppear { startShimmer(withDelay: 0.4) }
+        .onChange(of: mode) { _ in
+            // Restart shimmer immediately when direction flips
+            startShimmer(withDelay: 0.0)
+        }
+    }
+    
+    private func startShimmer(withDelay delay: Double) {
+        phase = -1
+        withAnimation(
+            Animation
+                .linear(duration: animationDuration)
+                .delay(delay)
+                .repeatForever(autoreverses: false)
+        ) {
+            phase = 1
+        }
+    }
+}
+
+struct SwipeShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.grayScale70.opacity(0.0),
+                        Color.grayScale70.opacity(0.3),
+                        Color.grayScale70.opacity(0.3),
+                        Color.grayScale70.opacity(0.8),
+                        
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .scaleEffect(x: 1.5) // wider highlight
+                    .offset(x: phase * 180) // shimmer movement
+            )
+            .mask(content)
+            .onAppear {
+                withAnimation(
+                    Animation
+                        .linear(duration: 1.8)
+                        .repeatForever(autoreverses: false) // <— IMPORTANT (left-right-left)
+                ) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+extension View {
+    func swipeShimmer() -> some View {
+        self.modifier(SwipeShimmer())
+    }
+}
+struct CalloutBubble: View {
+    var text: String
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(text)
+                .font(ManropeFont.medium.size(12))
+
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+
+                .background(Color(hex: "#75990E"))
+                .cornerRadius(12)
+            
+            Triangle()
+                .fill(Color(hex: "#75990E"))
+                .frame(width: 20, height: 14.5)
+        }
+//        .frame(width: 131, height: 60)  // full bubble size
+    }
+}
+
+// Triangle shape
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.closeSubpath()
+        }
+    }
+}
+

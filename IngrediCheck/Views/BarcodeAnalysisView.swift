@@ -10,19 +10,28 @@ struct HeaderImage: View {
     @Environment(WebService.self) var webService
 
     var body: some View {
-        if let image {
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-        } else {
-            ProgressView()
-                .task {
-                    if let image = try? await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium) {
-                        DispatchQueue.main.async {
-                            self.image = image
-                        }
-                    }
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                ProgressView()
+            }
+        }
+        .task(id: imageLocation) {
+            // Reset before loading a new image when imageLocation changes
+            image = nil
+            do {
+                print("[HeaderImage] Fetching image for location: \(imageLocation)")
+                let loaded = try await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium)
+                await MainActor.run {
+                    self.image = loaded
+                    print("[HeaderImage] ✅ Image loaded successfully")
                 }
+            } catch {
+                print("[HeaderImage] ❌ Failed to fetch image: \(error)")
+            }
         }
     }
 }
@@ -79,6 +88,7 @@ struct StarButton: View {
     @MainActor var errorMessage: String?
     @MainActor var ingredientRecommendations: [DTO.IngredientRecommendation]?
     @MainActor var feedbackData = FeedbackData()
+    @MainActor var scanId: String?
     let clientActivityId = UUID().uuidString
 
     func impactOccurred() {
@@ -92,6 +102,8 @@ struct StarButton: View {
         let userPreferenceText = dietaryPreferences.asString
         var streamErrorHandled = false
 
+        print("[BARCODE_SCAN] 🔵 BarcodeAnalysisViewModel.analyze() started - barcode: \(barcode), client_activity_id: \(clientActivityId)")
+
         PostHogSDK.shared.capture("Barcode Analysis Started", properties: [
             "request_id": requestId,
             "client_activity_id": clientActivityId,
@@ -100,11 +112,29 @@ struct StarButton: View {
         ])
 
         do {
-            try await webService.streamUnifiedAnalysis(
-                input: .barcode(barcode),
-                clientActivityId: clientActivityId,
-                userPreferenceText: userPreferenceText,
-                onProduct: { product in
+            try await webService.streamBarcodeScan(
+                barcode: barcode,
+                onProductInfo: { productInfo, scanId, productInfoSource, images in
+                    self.scanId = scanId
+                    
+                    // Convert ScanProductInfo to Product
+                    let imageLocations: [DTO.ImageLocationInfo] = productInfo.images?.compactMap { scanImageInfo in
+                        guard let urlString = scanImageInfo.url,
+                              let url = URL(string: urlString) else {
+                            return nil
+                        }
+                        return .url(url)
+                    } ?? []
+                    
+                    let product = DTO.Product(
+                        barcode: self.barcode,
+                        brand: productInfo.brand,
+                        name: productInfo.name,
+                        ingredients: productInfo.ingredients,
+                        images: imageLocations,
+                        claims: productInfo.claims
+                    )
+                    
                     withAnimation {
                         self.product = product
                     }
@@ -114,11 +144,14 @@ struct StarButton: View {
                         "request_id": requestId,
                         "client_activity_id": self.clientActivityId,
                         "barcode": self.barcode,
+                        "scan_id": scanId,
                         "product_name": product.name ?? "Unknown",
                         "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
                     ])
                 },
-                onAnalysis: { recommendations in
+                onAnalysis: { analysisResult in
+                    let recommendations = analysisResult.toIngredientRecommendations()
+                    
                     withAnimation {
                         self.ingredientRecommendations = recommendations
                     }
@@ -130,6 +163,7 @@ struct StarButton: View {
                         "request_id": requestId,
                         "client_activity_id": self.clientActivityId,
                         "barcode": self.barcode,
+                        "scan_id": self.scanId ?? "unknown",
                         "product_name": self.product?.name ?? "Unknown",
                         "recommendations_count": recommendations.count,
                         "total_latency_ms": totalLatency
@@ -138,10 +172,11 @@ struct StarButton: View {
                     // Track successful scan for rating prompt - only when analysis is fully complete
                     self.userPreferences.incrementScanCount()
                 },
-                onError: { streamError in
+                onError: { streamError, scanId in
                     streamErrorHandled = true
+                    self.scanId = scanId
 
-                    if streamError.statusCode == 404 {
+                    if streamError.message.lowercased().contains("not found") {
                         self.notFound = true
                     } else {
                         self.errorMessage = streamError.message
@@ -150,11 +185,12 @@ struct StarButton: View {
                     let endTime = Date().timeIntervalSince1970
                     let totalLatency = (endTime - startTime) * 1000
 
-                    if streamError.statusCode == 404 {
+                    if streamError.message.lowercased().contains("not found") {
                         PostHogSDK.shared.capture("Barcode Analysis Failed - Product Not Found", properties: [
                             "request_id": requestId,
                             "client_activity_id": self.clientActivityId,
                             "barcode": self.barcode,
+                            "scan_id": scanId ?? "unknown",
                             "total_latency_ms": totalLatency
                         ])
                     } else {
@@ -162,6 +198,7 @@ struct StarButton: View {
                             "request_id": requestId,
                             "client_activity_id": self.clientActivityId,
                             "barcode": self.barcode,
+                            "scan_id": scanId ?? "unknown",
                             "error": streamError.message,
                             "total_latency_ms": totalLatency
                         ])
@@ -304,7 +341,7 @@ struct BarcodeAnalysisView: View {
                                 }
                                 
                                 if product.ingredients.isEmpty {
-                                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoiints\u{00A9}!")
+                                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
                                         .font(.subheadline)
                                         .padding()
                                         .multilineTextAlignment(.center)
@@ -393,8 +430,13 @@ struct IngredientsText: View {
                 ingredients: ingredients,
                 ingredientRecommendations: ingredientRecommendations
             )
-        FlowLayout(mode: .scrollable, items: decoratedFragments, itemSpacing: 0) { fragment in
-            TappableTextFragment(fragment: fragment)
+        ScrollView {
+            FlowLayout(horizontalSpacing: 0, verticalSpacing: 0) {
+                ForEach(Array(decoratedFragments.enumerated()), id: \.offset) { _, fragment in
+                    TappableTextFragment(fragment: fragment)
+                }
+            }
+            .padding()
         }
     }
 }

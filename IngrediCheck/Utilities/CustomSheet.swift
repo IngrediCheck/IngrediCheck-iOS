@@ -1,0 +1,270 @@
+import SwiftUI
+import UIKit
+
+struct CustomSheet<Item: Identifiable, Content: View>: UIViewControllerRepresentable {
+    @Binding var item: Item?
+    let cornerRadius: CGFloat
+    let content: (Item) -> Content
+
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(MemojiStore.self) private var memojiStore
+    @Environment(WebService.self) private var webService
+    @Environment(AuthController.self) private var authController
+    @Environment(AppState.self) private var appState
+    @Environment(UserPreferences.self) private var userPreferences
+
+    init(
+        item: Binding<Item?>,
+        cornerRadius: CGFloat = 16,
+        @ViewBuilder content: @escaping (Item) -> Content
+    ) {
+        self._item = item
+        self.cornerRadius = cornerRadius
+        self.content = content
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let vc = UIViewController()
+        vc.view.backgroundColor = .clear
+        return vc
+    }
+
+    func updateUIViewController(_ parent: UIViewController, context: Context) {
+        guard let newItem = item else {
+            // dismiss if item is nil
+            if let presented = parent.presentedViewController {
+                presented.dismiss(animated: true) {
+                    context.coordinator.presentedID = nil
+                }
+            }
+            return
+        }
+
+        // Skip if same sheet already visible
+        if context.coordinator.presentedID == newItem.id { return }
+
+        let presentSheet = {
+            let hosting = UIHostingController(rootView:
+                AnyView(
+                    ZStack {
+                        Color.white.ignoresSafeArea()
+                        content(newItem)
+                            .environment(coordinator)
+                            .environment(familyStore)
+                            .environment(memojiStore)
+                            .environment(webService)
+                            .environment(authController)
+                            .environment(appState)
+                            .environment(userPreferences)
+                    }
+                )
+            )
+            hosting.view.backgroundColor = .white
+            hosting.modalPresentationStyle = .pageSheet
+
+            parent.present(hosting, animated: true)
+            context.coordinator.presentedID = newItem.id
+
+            configureSheet(for: hosting, parent: parent, cornerRadius: cornerRadius, context: context)
+        }
+
+        // If a different sheet is open, dismiss first
+        if parent.presentedViewController != nil {
+            parent.presentedViewController?.dismiss(animated: true) {
+                context.coordinator.presentedID = nil
+                presentSheet()
+            }
+        } else {
+            presentSheet()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(itemBinding: _item)
+    }
+
+    class Coordinator: NSObject, UIAdaptivePresentationControllerDelegate {
+        var presentedID: Item.ID?
+        private var itemBinding: Binding<Item?>
+
+        init(itemBinding: Binding<Item?>) {
+            self.itemBinding = itemBinding
+        }
+
+        func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+            // reset when user dismisses by swipe
+            itemBinding.wrappedValue = nil
+            presentedID = nil
+        }
+    }
+
+    private func configureSheet(
+        for hosting: UIHostingController<AnyView>,
+        parent: UIViewController,
+        cornerRadius: CGFloat,
+        context: Context
+    ) {
+        DispatchQueue.main.async {
+            hosting.view.layoutIfNeeded()
+
+            guard let sheet = hosting.sheetPresentationController else { return }
+
+            let targetWidth = parent.view.bounds.width
+            let fittingSize = CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
+            var measuredHeight = hosting.sizeThatFits(in: fittingSize).height
+
+            let maxHeight = parent.view.bounds.height * 0.92
+            let minHeight = parent.view.bounds.height * 0.4
+            measuredHeight = min(max(measuredHeight, minHeight), maxHeight)
+
+            let detentID = UISheetPresentationController.Detent.Identifier("dynamic.\(Int(measuredHeight))")
+            let detent = UISheetPresentationController.Detent.custom(identifier: detentID) { _ in measuredHeight }
+
+            sheet.detents = [detent]
+            sheet.selectedDetentIdentifier = detentID
+            sheet.prefersGrabberVisible = false
+            sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            sheet.preferredCornerRadius = cornerRadius
+
+            hosting.presentationController?.delegate = context.coordinator
+        }
+    }
+}
+
+
+// MARK: - Boolean-based variant with same behavior
+
+struct CustomBoolSheet<Content: View>: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let cornerRadius: CGFloat
+    let heightsProvider: () -> (min: CGFloat, max: CGFloat)
+    let content: () -> Content
+
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @Environment(FamilyStore.self) private var familyStore
+    @Environment(MemojiStore.self) private var memojiStore
+    @Environment(WebService.self) private var webService
+    @Environment(AuthController.self) private var authController
+    @Environment(AppState.self) private var appState
+    @Environment(UserPreferences.self) private var userPreferences
+
+    init(
+        isPresented: Binding<Bool>,
+        cornerRadius: CGFloat = 16,
+        heights: @escaping () -> (min: CGFloat, max: CGFloat),
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self._isPresented = isPresented
+        self.cornerRadius = cornerRadius
+        self.heightsProvider = heights
+        self.content = content
+    }
+
+    init(
+        isPresented: Binding<Bool>,
+        cornerRadius: CGFloat = 16,
+        heights: (min: CGFloat, max: CGFloat),
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self._isPresented = isPresented
+        self.cornerRadius = cornerRadius
+        self.heightsProvider = { heights }
+        self.content = content
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let vc = UIViewController()
+        vc.view.backgroundColor = .clear
+        return vc
+    }
+
+    func updateUIViewController(_ parent: UIViewController, context: Context) {
+        // Dismiss when toggled off
+        if !isPresented {
+            if let presented = parent.presentedViewController {
+                presented.dismiss(animated: true) {
+                    context.coordinator.isPresenting = false
+                }
+            }
+            return
+        }
+
+        // Skip if already visible
+        if context.coordinator.isPresenting { return }
+
+        let presentSheet = {
+            let hosting = UIHostingController(rootView:
+                AnyView(
+                    ZStack {
+                        Color.white.ignoresSafeArea()
+                        content()
+                            .environment(coordinator)
+                            .environment(familyStore)
+                            .environment(memojiStore)
+                            .environment(webService)
+                            .environment(authController)
+                            .environment(appState)
+                            .environment(userPreferences)
+                    }
+                )
+            )
+            hosting.view.backgroundColor = .white
+            hosting.modalPresentationStyle = .pageSheet
+
+            parent.present(hosting, animated: true)
+            context.coordinator.isPresenting = true
+
+            DispatchQueue.main.async {
+                if let sheet = hosting.sheetPresentationController {
+                    let (minH, maxH) = heightsProvider()
+
+                    let minID = UISheetPresentationController.Detent.Identifier("custom.min.\(Int(minH))")
+                    let maxID = UISheetPresentationController.Detent.Identifier("custom.max.\(Int(maxH))")
+
+                    let minDetent = UISheetPresentationController.Detent.custom(identifier: minID) { _ in minH }
+                    let maxDetent = UISheetPresentationController.Detent.custom(identifier: maxID) { _ in maxH }
+
+                    sheet.detents = [minDetent, maxDetent]
+                    sheet.selectedDetentIdentifier = minID
+                    sheet.largestUndimmedDetentIdentifier = maxID
+                    sheet.prefersGrabberVisible = false
+                    sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+                    sheet.preferredCornerRadius = cornerRadius
+
+                    hosting.presentationController?.delegate = context.coordinator
+                }
+            }
+        }
+
+        // If a different sheet is open, dismiss first
+        if parent.presentedViewController != nil {
+            parent.presentedViewController?.dismiss(animated: true) {
+                context.coordinator.isPresenting = false
+                presentSheet()
+            }
+        } else {
+            presentSheet()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isPresented: _isPresented)
+    }
+
+    class Coordinator: NSObject, UIAdaptivePresentationControllerDelegate {
+        var isPresenting: Bool = false
+        private var isPresented: Binding<Bool>
+
+        init(isPresented: Binding<Bool>) {
+            self.isPresented = isPresented
+        }
+
+        func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+            // reset when user dismisses by swipe
+            isPresented.wrappedValue = false
+            isPresenting = false
+        }
+    }
+}
+

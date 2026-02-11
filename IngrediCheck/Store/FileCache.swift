@@ -2,6 +2,7 @@ import SwiftUI
 import Foundation
 import Supabase
 import CryptoKit
+import os
 
 struct FileCacheEntry: Codable {
     let localFileUrl: URL
@@ -44,7 +45,7 @@ struct ImageFileStore: FileStore {
         let httpResponse = response as! HTTPURLResponse
 
         guard httpResponse.statusCode == 200 else {
-            print("Bad response from server: \(httpResponse.statusCode)")
+            Log.debug("FileCache", "Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
@@ -52,23 +53,58 @@ struct ImageFileStore: FileStore {
     }
     
     private func downloadImageFrom(supabaseFile: SupabaseFile) async throws -> Data {
-        let data = try await supabaseClient.storage
-            .from(supabaseFile.bucket)
-            .download(path: supabaseFile.name) //, options: TransformOptions(width: 0, height: 0))
-        return await resizeIfNeeded(data)
+        Log.debug("FileCache", "📥 [FileCache] Downloading from Supabase - bucket: \(supabaseFile.bucket), path: \(supabaseFile.name)")
+        do {
+            let data = try await supabaseClient.storage
+                .from(supabaseFile.bucket)
+                .download(path: supabaseFile.name)
+            Log.debug("FileCache", "✅ [FileCache] Download success - bucket: \(supabaseFile.bucket), path: \(supabaseFile.name), bytes: \(data.count)")
+            return await resizeIfNeeded(data)
+        } catch {
+            Log.error("FileCache", "❌ [FileCache] Download FAILED - bucket: \(supabaseFile.bucket), path: \(supabaseFile.name)")
+            Log.error("FileCache", "❌ [FileCache] Error: \(error)")
+            throw error
+        }
     }
     
     private func resizeIfNeeded(_ data: Data) async -> Data {
         guard let resize else {
             return data
         }
-        let uiImage = UIImage(data: data)!
+        
+        guard let uiImage = UIImage(data: data) else {
+            return data
+        }
+        
         let resizedImage = await withCheckedContinuation { continuation in
             uiImage.prepareThumbnail(of: resize) { thumbnail in
                 continuation.resume(returning: thumbnail)
             }
         }
-        return (resizedImage!.jpegData(compressionQuality: 1.0))!
+        
+        guard let resizedImage = resizedImage else {
+            return data
+        }
+        
+        // Check if the original image has transparency (alpha channel)
+        // If it does, preserve PNG format; otherwise use JPEG for smaller size
+        if let cgImage = uiImage.cgImage,
+           cgImage.alphaInfo != .none && 
+           cgImage.alphaInfo != .noneSkipFirst && 
+           cgImage.alphaInfo != .noneSkipLast {
+            // Has transparency - preserve as PNG
+            if let pngData = resizedImage.pngData() {
+                return pngData
+            }
+        }
+        
+        // No transparency or PNG conversion failed - use JPEG for smaller file size
+        if let jpegData = resizedImage.jpegData(compressionQuality: 1.0) {
+            return jpegData
+        }
+        
+        // Fallback: return original data if both conversions fail
+        return data
     }
 }
 
@@ -156,7 +192,7 @@ actor FileCache: FileStore {
                 return destinationUrl
             }
         } catch {
-            print("Copy file error: \(error)")
+            Log.error("FileCache", "Copy file error: \(error)")
         }
         return nil
     }
@@ -168,13 +204,13 @@ actor FileCache: FileStore {
         for key in sortedKeys where currentDiskUsage > maxDiskUsageInBytes {
             if let cacheEntry = inMemoryStore[key] {
                 do {
-                    print("FileCache: Deleting file")
+                    Log.debug("FileCache", "FileCache: Deleting file")
                     try FileManager.default.removeItem(at: cacheEntry.localFileUrl)
                     currentDiskUsage -= cacheEntry.fileSizeOnDisk
                     inMemoryStore.removeValue(forKey: key)
                     persistInMemoryStore()
                 } catch {
-                    print("Error deleting file: \(error)")
+                    Log.error("FileCache", "Error deleting file: \(error)")
                 }
             }
         }
@@ -188,7 +224,7 @@ actor FileCache: FileStore {
             let hash = SHA256.hash(data: data)
             return hash.compactMap { String(format: "%02x", $0) }.joined()
         case .supabase(let supabaseFile):
-            return supabaseFile.name
+            return supabaseFile.name.replacingOccurrences(of: "/", with: "_")
         }
     }
     
@@ -215,7 +251,7 @@ actor FileCache: FileStore {
                     self.cacheHit += 1
                     return data
                 } catch {
-                    print("Error reading file: \(error)")
+                    Log.error("FileCache", "Error reading file: \(error)")
                     throw error
                 }
             }
@@ -239,7 +275,7 @@ actor FileCache: FileStore {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             inMemoryStore = (try? decoder.decode([FileLocation: FileCacheEntry].self, from: data)) ?? [:]
-            print("FileCache: Loaded \(inMemoryStore.count) entries")
+            Log.debug("FileCache", "FileCache: Loaded \(inMemoryStore.count) entries")
             
             // This bizarre behavior happens when deploying a debug build to my phone.
             // The dictionary file exists, but all other cache files have been deleted.

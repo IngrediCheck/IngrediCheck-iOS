@@ -43,5 +43,6 @@ struct SearchBar: View {
         .onAppear {
             isFocused = true
         }
+        .dismissKeyboardOnTap()
     }
 }

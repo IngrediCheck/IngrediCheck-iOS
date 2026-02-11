@@ -7,6 +7,7 @@ import GoogleSignIn
 import GoogleSignInSwift
 import CryptoKit
 import PostHog
+import os
 
 enum AuthControllerError: Error, LocalizedError {
     case rootViewControllerNotFound
@@ -53,10 +54,6 @@ private final class AppleSignInCoordinator: NSObject,
             continuation = nil
             completionHandler?()
             return
-        }
-
-        if let currentUserName = appleIDCredential.fullName?.formatted(), !currentUserName.isEmpty {
-            keychain.set(currentUserName, forKey: "currentUserName")
         }
 
         guard let identityTokenData = appleIDCredential.identityToken else {
@@ -136,7 +133,6 @@ private enum AuthFlowMode {
     private static let anonPasswordKey = "anonPassword"
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
-    private static var hasPinged = false
     
     @MainActor init() {
         authChangeWatcher()
@@ -154,35 +150,67 @@ private enum AuthFlowMode {
     }
     
     @MainActor var signedInWithApple: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] {
-            return provider == "apple"
+        guard let session = session else { return false }
+        // Check identities first
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider.lowercased() == "apple" }) {
+                return true
+            }
+        }
+        // Fallback to appMetadata
+        if let provider = session.user.appMetadata["provider"] as? String,
+           provider.lowercased() == "apple" {
+            return true
+        }
+        return false
+    }
+    
+    @MainActor var signedInWithGoogle: Bool {
+        guard let session = session else { return false }
+        // Check identities first
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider.lowercased() == "google" }) {
+                return true
+            }
+        }
+        // Fallback to appMetadata
+        if let provider = session.user.appMetadata["provider"] as? String,
+           provider.lowercased() == "google" {
+            return true
         }
         return false
     }
     
     @MainActor var signedInAsGuest: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] as? String {
-            return provider == "email" || provider == "anonymous"
+        guard let session = session else { return false }
+        
+        // If we have an explicit anonymous identity
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider == "anonymous" }) {
+                return true
+            }
         }
         
-        if self.session?.user.isAnonymous == true {
+        // If appMetadata says anonymous (or email for legacy guest)
+        if let provider = session.user.appMetadata["provider"] as? String {
+            if provider == "email" || provider == "anonymous" {
+                return true
+            }
+        }
+        
+        // Specific flag on user object
+        if session.user.isAnonymous == true {
             return true
         }
         
-        if let email = self.session?.user.email {
+        // Fallback: check email pattern
+        if let email = session.user.email {
             return email.hasPrefix("anon-") && email.hasSuffix("@example.com")
         }
         
         return false
     }
     
-    @MainActor var signedInWithGoogle: Bool {
-        if let provider = self.session?.user.appMetadata["provider"] {
-            return provider == "google"
-        }
-        return false
-    }
-
     @MainActor var currentUserEmail: String? {
         return session?.user.email
     }
@@ -205,14 +233,19 @@ private enum AuthFlowMode {
     }
 
     @MainActor var currentSignInProviderDisplay: (icon: String, text: String)? {
-        if signedInWithApple {
-            return ("applelogo", "Signed in with Apple")
-        }
-
         if signedInWithGoogle {
             return ("g.circle", "Signed in with Google")
         }
-
+        
+        if signedInWithApple {
+            return ("applelogo", "Signed in with Apple")
+        }
+        
+        // Fallback for valid non-guest sessions where provider is missing
+        if session != nil && !signedInAsGuest {
+             return ("person.circle", "Signed in")
+        }
+        
         return nil
     }
     
@@ -220,7 +253,7 @@ private enum AuthFlowMode {
         Task {
             for await authStateChange in supabaseClient.auth.authStateChanges {
                 await MainActor.run {
-                    print("Auth change Event: \(authStateChange.event)")
+                    Log.debug("AuthController", "Auth change Event: \(authStateChange.event)")
                     self.handleSessionChange(
                         event: authStateChange.event,
                         session: authStateChange.session
@@ -232,25 +265,41 @@ private enum AuthFlowMode {
     
     public func signOut() async {
         do {
-            print("Signing Out")
+            Log.debug("AuthController", "Signing Out")
+            // Clear onboarding state before sign-out
+            await MainActor.run {
+                OnboardingPersistence.shared.setStage(.none)
+            }
             _ = try await supabaseClient.auth.signOut()
         } catch AuthError.sessionMissing {
-            print("Already signed out, nothing to revoke.")
+            Log.debug("AuthController", "Already signed out, nothing to revoke.")
         } catch let error as NSError {
             if error.domain == NSURLErrorDomain && error.code == -1009 {
-                print("Internet connection appears to be offline.")
+                Log.debug("AuthController", "Internet connection appears to be offline.")
                 return
             }
-            print("Signout failed: \(error)")
+            Log.error("AuthController", "Signout failed: \(error)")
+        }
+    }
+
+    public func resetForAppReset() async {
+        // Ensure we sign out of Supabase and clear all onboarding state.
+        await signOut()
+        // Also clear local onboarding caches even if there was no active session.
+
+        await MainActor.run {
+            OnboardingPersistence.shared.reset()
+            clearAnonymousCredentials()
+            Self.hasRegisteredDevice = false
         }
     }
 
     func signIn() async {
         
-        print("signIn()")
+        Log.debug("AuthController", "signIn()")
 
         guard await signInState != .signedIn else {
-            print("Already Signed In, so not Signing in again")
+            Log.debug("AuthController", "Already Signed In, so not Signing in again")
             return
         }
 
@@ -266,12 +315,12 @@ private enum AuthFlowMode {
     @MainActor
     public func upgradeCurrentAccount(to provider: AccountUpgradeProvider) async {
         guard signedInAsGuest else {
-            print("Upgrade skipped: user is not signed in as guest.")
+            Log.debug("AuthController", "Upgrade skipped: user is not signed in as guest.")
             return
         }
 
         guard isUpgradingAccount == false else {
-            print("Upgrade already in progress.")
+            Log.debug("AuthController", "Upgrade already in progress.")
             return
         }
 
@@ -294,7 +343,7 @@ private enum AuthFlowMode {
         } catch {
             isUpgradingAccount = false
             accountUpgradeError = error
-            print("Account upgrade failed: \(error)")
+            Log.error("AuthController", "Account upgrade failed: \(error)")
         }
     }
 
@@ -311,7 +360,7 @@ private enum AuthFlowMode {
             _ = try await supabaseClient.auth.signIn(email: email, password: password)
             return true
         } catch {
-            print("Anonymous signin failed for stored credentials: \(error)")
+            Log.error("AuthController", "Anonymous signin failed for stored credentials: \(error)")
             keychain.delete(AuthController.anonUserNameKey)
             keychain.delete(AuthController.anonPasswordKey)
             return false
@@ -322,7 +371,7 @@ private enum AuthFlowMode {
         do {
             _ = try await supabaseClient.auth.signInAnonymously()
         } catch {
-            print("signInAnonymously failed: \(error)")
+            Log.error("AuthController", "signInAnonymously failed: \(error)")
         }
     }
     
@@ -335,7 +384,7 @@ private enum AuthFlowMode {
                     self.session = session
                 }
             } catch {
-                print("Apple sign-in failed: \(error)")
+                Log.error("AuthController", "Apple sign-in failed: \(error)")
             }
         }
     }
@@ -381,10 +430,6 @@ private enum AuthFlowMode {
         case .success(let authorization):
             guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
                 throw AuthControllerError.unsupportedCredentialType
-            }
-
-            if let currentUserName = appleIDCredential.fullName?.formatted(), !currentUserName.isEmpty {
-                keychain.set(currentUserName, forKey: "currentUserName")
             }
 
             guard let identityTokenData = appleIDCredential.identityToken else {
@@ -498,7 +543,25 @@ private enum AuthFlowMode {
                     completion?(.success(()))
                 }
             } catch {
-                print("Google sign-in failed: \(error)")
+                Log.error("AuthController", "Google sign-in failed: \(error)")
+                await MainActor.run {
+                    completion?(.failure(error))
+                }
+            }
+        }
+    }
+
+    public func signInWithApple(completion: ((Result<Void, Error>) -> Void)? = nil) {
+        Task {
+            do {
+                let credentials = try await requestAppleIDToken()
+                let session = try await finalizeAuth(with: credentials, mode: .signIn)
+                await MainActor.run {
+                    self.session = session
+                    completion?(.success(()))
+                }
+            } catch {
+                Log.error("AuthController", "Apple sign-in failed: \(error)")
                 await MainActor.run {
                     completion?(.failure(error))
                 }
@@ -506,6 +569,31 @@ private enum AuthFlowMode {
         }
     }
     
+    private func authProvider(for session: Session) -> String {
+        if let identities = session.user.identities {
+            if identities.contains(where: { $0.provider.lowercased() == "apple" }) {
+                return "Social Login (Apple)"
+            } else if identities.contains(where: { $0.provider.lowercased() == "google" }) {
+                return "Social Login (Google)"
+            } else if identities.contains(where: { $0.provider == "anonymous" }) {
+                return "Guest Login"
+            }
+        }
+        if let provider = session.user.appMetadata["provider"] as? String {
+            if provider.lowercased() == "apple" {
+                return "Social Login (Apple)"
+            } else if provider.lowercased() == "google" {
+                return "Social Login (Google)"
+            } else if provider == "email" || provider == "anonymous" {
+                return "Guest Login"
+            }
+        }
+        if session.user.isAnonymous == true {
+            return "Guest Login"
+        }
+        return "Unknown"
+    }
+
     @MainActor
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
         self.session = session
@@ -513,57 +601,65 @@ private enum AuthFlowMode {
         
         if let session {
             signInState = .signedIn
-            registerDeviceAfterLogin(session: session)
-            pingAfterLogin()
-            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser)
+            
+            // Log user ID and login type
+            let userId = session.user.id
+            
+            let loginType = authProvider(for: session)
+
+            Log.debug("AUTH", "✅ User logged in - User ID: \(userId), Login Type: \(loginType)")
+
+            registerDeviceAfterLogin(session: session, authProvider: loginType)
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternalUser, authProvider: loginType)
         } else {
             signInState = .signedOut
             let shouldReset = event == .signedOut || event == .userDeleted
             if shouldReset {
+                Log.debug("AUTH", "🔴 User signed out")
                 AnalyticsService.shared.resetAnalytics()
-                // Reset ping flag on sign out so it can run again on next login
-                Self.hasPinged = false
             }
         }
     }
     
     
     @MainActor
-    private func registerDeviceAfterLogin(session: Session) {
+    private func registerDeviceAfterLogin(session: Session, authProvider: String) {
         guard !Self.hasRegisteredDevice else {
             return
         }
         Self.hasRegisteredDevice = true
-        
+
         WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
             guard let self = self, let isInternal = isInternal else { return }
-            
+
             Task { @MainActor in
                 if isInternal != self.isInternalUser {
                     self.isInternalUser = isInternal
-                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal)
+                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal, authProvider: authProvider)
                 }
             }
         }
     }
-    
-    @MainActor
-    private func pingAfterLogin() {
-        guard !Self.hasPinged else {
-            return
-        }
-        Self.hasPinged = true
-        
-        // Fire-and-forget ping call
-        WebService().ping()
-    }
-    
+
     @MainActor
     func setInternalUser(_ value: Bool) {
         guard value != isInternalUser else { return }
         isInternalUser = value
         if let session = session {
-            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value)
+            AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: value, authProvider: authProvider(for: session))
+        }
+    }
+    
+
+    
+    /// Restores navigation state from Supabase metadata
+    /// Call this on app launch after session is available
+    @MainActor
+    func restoreOnboardingPosition(into coordinator: AppNavigationCoordinator) {
+        // Delegate restoration to our single source of truth.
+        // It handles checking remote vs local and resolving conflicts.
+        Task {
+            await OnboardingPersistence.shared.restore(into: coordinator)
         }
     }
 }

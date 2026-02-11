@@ -36,3 +36,4 @@ struct Splash<Splash: View, Content: View>: View {
             }
     }
 }
+

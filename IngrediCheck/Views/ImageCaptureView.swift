@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import Vision
+import os
 
 extension View {
     @ViewBuilder
@@ -25,6 +26,7 @@ struct ImageCaptureView: View {
     @State private var showFocusToast = false
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
+    @Environment(CheckTabState.self) var checkTabState
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -117,8 +119,12 @@ struct ImageCaptureView: View {
             }
         }
         .onDisappear {
-            capturedImages = []
+            // Don't clear scanId on disappear - we want to preserve it for navigation
+            // Only clear if explicitly clearing all images via deleteCapturedImages()
+            // capturedImages = []  // Commented out - preserve images for navigation
+            // checkTabState.scanId = nil  // Commented out - preserve scanId for navigation
             cameraManager.stopSession()
+            Log.debug("PHOTO_SCAN", "📸 ImageCaptureView disappeared - scanId preserved: \(checkTabState.scanId ?? "nil")")
         }
     }
     
@@ -152,102 +158,71 @@ struct ImageCaptureView: View {
     }
     
     func capturePhoto() {
+        Log.debug("PHOTO_SCAN", "🔵 capturePhoto() called")
         cameraManager.capturePhoto { image in
-            if let image = image {
-                let ocrTask = startOCRTask(image: image)
-                let uploadTask = startUploadTask(image: image)
-                let barcodeDetectionTask = startBarcodeDetectionTask(image: image)
-
-                withAnimation {
-                    capturedImages.append(ProductImage(
-                        image: image,
-                        ocrTask: ocrTask,
-                        uploadTask: uploadTask,
-                        barcodeDetectionTask: barcodeDetectionTask))
-                }
-            }
-        }
-    }
-    
-    func startUploadTask(image: UIImage) -> Task<String, Error> {
-        Task {
-            try await webService.uploadImage(image: image)
-        }
-    }
-    
-    func startOCRTask(image: UIImage) -> Task<String, Error> {
-        Task {
-            guard let cgImage = image.cgImage else {
-                return ""
-            }
+            Log.debug("PHOTO_SCAN", "📸 Camera callback received - hasImage: \(image != nil)")
             
-            var imageText = ""
-            let request = VNRecognizeTextRequest { request, error in
-                guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                    fatalError("Received invalid observations")
-                }
+            if let image = image {
+                // Capture current state before async work
+                let checkTabState = self.checkTabState
+                let currentImageCount = self.capturedImages.count
                 
-                for observation in observations {
-                    guard let bestCandidate = observation.topCandidates(1).first else {
-                        print("No candidate")
-                        continue
+                Log.debug("PHOTO_SCAN", "📸 Photo captured - current_image_count: \(currentImageCount), new_count: \(currentImageCount + 1)")
+                
+                Task { @MainActor in
+                    // Generate scan_id when first image is captured
+                    if checkTabState.scanId == nil {
+                        checkTabState.scanId = UUID().uuidString
+                        Log.debug("PHOTO_SCAN", "🆔 Generated scan_id: \(checkTabState.scanId!)")
+                    } else {
+                        Log.debug("PHOTO_SCAN", "🆔 Using existing scan_id: \(checkTabState.scanId!)")
                     }
                     
-                    imageText += bestCandidate.string
-                    imageText += "\n"
+                    guard let scanId = checkTabState.scanId else {
+                        Log.debug("PHOTO_SCAN", "❌ ERROR: scanId is nil after generation!")
+                        return
+                    }
+                    
+                    withAnimation {
+                        self.capturedImages.append(ProductImage(image: image))
+                    }
+                    
+                    // Submit image to scan API - use currentImageCount (0-indexed) before appending
+                    Log.debug("PHOTO_SCAN", "🚀 Starting Task to submit image - scanId: \(scanId), imageIndex: \(currentImageCount)")
+                    Task {
+                        await self.submitImage(image: image, scanId: scanId, imageIndex: currentImageCount)
+                    }
                 }
+            } else {
+                Log.debug("PHOTO_SCAN", "❌ Camera callback returned nil image")
             }
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.automaticallyDetectsLanguage = true
-            
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            try? handler.perform([request])
-            return imageText
         }
     }
     
-    func startBarcodeDetectionTask(image: UIImage) -> Task<String?, Error> {
-        Task {
-            guard let cgImage = image.cgImage else {
-                return nil
-            }
-
-            let request = VNDetectBarcodesRequest()
-            request.symbologies = [.ean8, .ean13]
-            request.coalesceCompositeSymbologies = true
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-
-            do {
-                try handler.perform([request])
-                guard let results = request.results as [VNBarcodeObservation]?, !results.isEmpty else {
-                    return nil
-                }
-                
-                return results.first?.payloadStringValue
-            } catch {
-                print("Failed to perform barcode detection: \(error)")
-                return nil
-            }
+    private func submitImage(image: UIImage, scanId: String, imageIndex: Int) async {
+        Log.debug("PHOTO_SCAN", "🔵 submitImage() called - scanId: \(scanId), imageIndex: \(imageIndex)")
+        
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            Log.debug("PHOTO_SCAN", "❌ Failed to convert image to JPEG data - image_index: \(imageIndex)")
+            return
+        }
+        
+        let imageSizeKB = imageData.count / 1024
+        Log.debug("PHOTO_SCAN", "📤 Submitting image - scan_id: \(scanId), image_index: \(imageIndex), image_size: \(imageSizeKB)KB")
+        do {
+            let response = try await webService.submitScanImage(scanId: scanId, imageData: imageData)
+            Log.debug("PHOTO_SCAN", "✅ Image submitted successfully - scan_id: \(scanId), image_index: \(imageIndex), queued: \(response.queued), queue_position: \(response.queue_position)")
+        } catch {
+            Log.debug("PHOTO_SCAN", "❌ Failed to submit image - scan_id: \(scanId), image_index: \(imageIndex), error: \(error.localizedDescription)")
         }
     }
     
     func deleteCapturedImages() {
-        let imagesToDelete = capturedImages
-        
         withAnimation {
             capturedImages = []
+            checkTabState.scanId = nil  // Reset scanId when clearing images
         }
-
-        Task {
-            var filesToDelete: [String] = []
-            for productImage in imagesToDelete {
-                filesToDelete.append(try await productImage.uploadTask.value)
-                _ = try await productImage.ocrTask.value
-            }
-            try await webService.deleteImages(imageFileNames: filesToDelete)
-        }
+        // No need to delete from Supabase storage for scan images
     }
 }
 
@@ -380,7 +355,7 @@ class CameraPreviewUIView: UIView {
             // Show temporary visual feedback (confirmation animation)
             showFocusIndicator(at: tapPoint)
         } catch {
-            print("Could not lock device for configuration: \(error)")
+            Log.error("ImageCaptureView", "Could not lock device for configuration: \(error)")
         }
     }
     
@@ -430,14 +405,14 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
 
             device.unlockForConfiguration()
         } catch {
-            print("Could not lock device for configuration: \(error)")
+            Log.error("ImageCaptureView", "Could not lock device for configuration: \(error)")
         }
     }
 
     func setupSession() {
         session.sessionPreset = .photo
         guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
-            print("No back camera available.")
+            Log.debug("ImageCaptureView", "No back camera available.")
             return
         }
         
@@ -457,7 +432,7 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
                 session.startRunning()
             }
         } catch {
-            print("Error: \(error.localizedDescription)")
+            Log.error("ImageCaptureView", "Error: \(error.localizedDescription)")
         }
     }
     
@@ -473,7 +448,7 @@ class CameraManager: NSObject, AVCapturePhotoCaptureDelegate {
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let error {
-            print("photoOutput callback received error: \(error)")
+            Log.error("ImageCaptureView", "photoOutput callback received error: \(error)")
         } else {
             if let completion = self.completion {
                 if let imageData = photo.fileDataRepresentation(),
