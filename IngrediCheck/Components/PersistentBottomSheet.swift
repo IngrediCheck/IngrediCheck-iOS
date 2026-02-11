@@ -497,7 +497,8 @@ struct PersistentBottomSheet: View {
             await MainActor.run {
                 // Reset member filter to "Everyone" for each new onboarding question
                 // but preserve the locked member in singleMember flow
-                if !coordinator.isAddingPreferencesForMember {
+                // and preserve selectedMemberId in individual flow (no member picker UI)
+                if !coordinator.isAddingPreferencesForMember && getOnboardingFlowType() != .individual {
                     familyStore.selectedMemberId = nil
                 }
 
