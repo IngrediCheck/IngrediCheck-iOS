@@ -124,7 +124,11 @@ private enum AuthFlowMode {
     @MainActor var signInState: SignInState = .signingIn
     @MainActor var isUpgradingAccount = false
     @MainActor var accountUpgradeError: Error?
+    #if targetEnvironment(simulator) || DEBUG
+    @MainActor var isInternalUser: Bool = true
+    #else
     @MainActor var isInternalUser: Bool = false
+    #endif
     
     private let keychain = KeychainSwift()
     @MainActor private var appleSignInCoordinator: AppleSignInCoordinator?
