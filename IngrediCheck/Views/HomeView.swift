@@ -29,6 +29,7 @@ struct HomeView: View {
     @State private var isLoadingStats: Bool = false
     @State private var hasCheckedAutoScan: Bool = false
     @State private var didFinishInitialLoad: Bool = false
+    @State private var didRetryScanHistory: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -494,8 +495,9 @@ struct HomeView: View {
                     }
                 }
                 .onChange(of: scanHistoryStore.isLoading) { _, loading in
-                    // Retry when prefetch finishes without success (e.g. network failure)
-                    if !loading && !scanHistoryStore.hasLoaded {
+                    // Retry once when prefetch finishes without success (e.g. network failure)
+                    if !loading && !scanHistoryStore.hasLoaded && !didRetryScanHistory {
+                        didRetryScanHistory = true
                         Task {
                             await scanHistoryStore.loadHistory(limit: 20, offset: 0)
                         }

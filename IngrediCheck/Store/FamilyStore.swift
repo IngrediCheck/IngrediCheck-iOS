@@ -567,15 +567,17 @@ final class FamilyStore {
 
                 Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
             } catch {
-                // Clear stale cache on non-recoverable errors (auth failure, not found, etc.)
+                // Clear stale cache on non-recoverable server errors.
+                // Note: .authError is a local "no token" condition (e.g., during startup
+                // before session restoration) — do NOT clear cache for it.
                 if let networkError = error as? NetworkError {
                     switch networkError {
-                    case .authError, .notFound:
+                    case .notFound:
                         updateFamilyAndCache(nil)
                     case .invalidResponse(let statusCode) where [401, 403, 404].contains(statusCode):
                         updateFamilyAndCache(nil)
                     default:
-                        break  // Transient errors (timeout, 500, etc.) — keep cache
+                        break  // Transient/local errors — keep cache
                     }
                 }
                 if family == nil { errorMessage = (error as NSError).localizedDescription }
