@@ -90,6 +90,7 @@ final class FoodNotesStore {
     }
 
     private func loadFoodNotesSummaryInternal() async {
+        guard !isLoadingSummary else { return }
         isLoadingSummary = true
         defer { isLoadingSummary = false }
 

@@ -51,6 +51,7 @@ struct RootContainerView: View {
     // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AuthController.self) private var authController
+    @Environment(HomescreenPrefetcher.self) private var prefetcher
     @Environment(\.dismiss) private var dismiss
 
 
@@ -198,24 +199,30 @@ struct RootContainerView: View {
             }
         }
         .task {
-            // Load family state when the container becomes active.
-            await familyStore.loadCurrentFamily()
-            // Always attempt to restore onboarding position on launch from Supabase metadata.
-            // Guest login should happen at whosThisFor, so session should exist by then.
-            print("[OnboardingMeta] RootContainerView.task: attempting restoreOnboardingPosition on launch")
-            authController.restoreOnboardingPosition(into: coordinator)
-            
-            // Sync Onboarding view model to match the restored coordinator state
-            if let stepId = coordinator.currentOnboardingStepId {
-                onboarding.restoreState(forStepId: stepId)
-            } else if case .fineTuneYourExperience = coordinator.currentBottomSheetRoute {
-                onboarding.restoreState(forStepId: "lifeStyle")
-            } else if case .workingOnSummary = coordinator.currentBottomSheetRoute {
-                onboarding.restoreToLastStep()
+            await withTaskGroup(of: Void.self) { group in
+                // Family load runs concurrently — skip if prefetcher already handled it
+                group.addTask { @MainActor in
+                    if !prefetcher.didPrefetch {
+                        await familyStore.loadCurrentFamily()
+                    }
+                }
+                // Onboarding restoration runs concurrently
+                group.addTask { @MainActor in
+                    print("[OnboardingMeta] RootContainerView.task: attempting restore on launch")
+                    await OnboardingPersistence.shared.restore(into: coordinator)
+
+                    // These must run AFTER restore completes (coordinator state is now ready)
+                    if let stepId = coordinator.currentOnboardingStepId {
+                        onboarding.restoreState(forStepId: stepId)
+                    } else if case .fineTuneYourExperience = coordinator.currentBottomSheetRoute {
+                        onboarding.restoreState(forStepId: "lifeStyle")
+                    } else if case .workingOnSummary = coordinator.currentBottomSheetRoute {
+                        onboarding.restoreToLastStep()
+                    }
+                    onboarding.updateSectionCompletionStatus()
+                }
+                await group.waitForAll()
             }
-            
-            // Ensure section completion status is accurate based on loaded preferences
-            onboarding.updateSectionCompletionStatus()
         }
         // Whenever authentication completes (including first-time login or
         // upgrading a guest account), refresh the family from the backend so

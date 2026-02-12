@@ -23,6 +23,9 @@ import SwiftUI
 
     /// Whether there are more scans to load
     @MainActor private(set) var hasMore: Bool = true
+
+    /// Whether the initial load (offset=0) has completed successfully
+    @MainActor private(set) var hasLoaded: Bool = false
     
     // MARK: - Dependencies
 
@@ -51,8 +54,8 @@ import SwiftUI
     @MainActor
     func loadHistory(limit: Int = 20, offset: Int = 0, forceRefresh: Bool = false) async {
         Log.debug("ScanHistoryStore", "🔵 loadHistory called - limit: \(limit), offset: \(offset), forceRefresh: \(forceRefresh)")
-        guard !isLoading || forceRefresh else {
-            Log.debug("ScanHistoryStore", "⏸️ Already loading, skipping")
+        guard forceRefresh || (!isLoading && !(offset == 0 && hasLoaded)) else {
+            Log.debug("ScanHistoryStore", "⏸️ Already loading or loaded, skipping")
             return
         }
 
@@ -93,6 +96,8 @@ import SwiftUI
             }
 
             Log.debug("ScanHistoryStore", "💾 Cache updated - total scans: \(scans.count), cache size: \(scanCache.count), barcode mappings: \(barcodeToScanIdMap.count)")
+
+            if offset == 0 { hasLoaded = true }
 
         } catch {
             Log.debug("ScanHistoryStore", "❌ Failed to load scan history - error: \(error.localizedDescription)")
@@ -199,6 +204,17 @@ import SwiftUI
         scans.removeAll()
         scanCache.removeAll()
         barcodeToScanIdMap.removeAll()
+        hasLoaded = false
+        lastError = nil
+    }
+
+    /// Reset store to initial state (used when prefetcher needs a clean slate)
+    @MainActor
+    func reset() {
+        scans.removeAll()
+        scanCache.removeAll()
+        barcodeToScanIdMap.removeAll()
+        hasLoaded = false
         lastError = nil
     }
 
