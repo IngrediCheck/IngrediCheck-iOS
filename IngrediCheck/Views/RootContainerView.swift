@@ -51,7 +51,7 @@ struct RootContainerView: View {
     // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AuthController.self) private var authController
-    @Environment(HomescreenPrefetcher.self) private var prefetcher
+
     @Environment(\.dismiss) private var dismiss
 
 
@@ -200,11 +200,10 @@ struct RootContainerView: View {
         }
         .task {
             await withTaskGroup(of: Void.self) { group in
-                // Family load runs concurrently — skip if prefetcher already handled it
+                // Family load runs concurrently — FamilyStore's isFetchInFlight
+                // guard prevents duplicate calls if prefetch is already in-flight
                 group.addTask { @MainActor in
-                    if !prefetcher.didPrefetch {
-                        await familyStore.loadCurrentFamily()
-                    }
+                    await familyStore.loadCurrentFamily()
                 }
                 // Onboarding restoration runs concurrently
                 group.addTask { @MainActor in
