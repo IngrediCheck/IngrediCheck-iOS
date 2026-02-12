@@ -47,6 +47,7 @@ struct RootContainerView: View {
     // --- HEAD BRANCH (keep these)
     @State private var appState = AppState()
     @State private var userPreferences = UserPreferences()
+    @State private var hasPendingFeedbackShortcut = false
 
     // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
@@ -190,6 +191,9 @@ struct RootContainerView: View {
             familyStore.resetLocalState()
             dismiss()
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowFeedbackFromShortcut"))) { _ in
+            handleFeedbackShortcut()
+        }
         .onAppear {
             // Set up callback to sync onboarding state to Supabase whenever navigation changes
             coordinator.onNavigationChange = {
@@ -204,6 +208,13 @@ struct RootContainerView: View {
             // Guest login should happen at whosThisFor, so session should exist by then.
             print("[OnboardingMeta] RootContainerView.task: attempting restoreOnboardingPosition on launch")
             authController.restoreOnboardingPosition(into: coordinator)
+
+            // Check for pending quick action from cold launch
+            if let shortcutItem = AppDelegate.pendingShortcutItem,
+               shortcutItem.type == "SendFeedback" {
+                AppDelegate.pendingShortcutItem = nil
+                handleFeedbackShortcut()
+            }
             
             // Sync Onboarding view model to match the restored coordinator state
             if let stepId = coordinator.currentOnboardingStepId {
@@ -234,9 +245,24 @@ struct RootContainerView: View {
                             coordinator.showCanvas(.home)
                         }
                     }
+                    // Handle pending feedback shortcut after sign-in and family load
+                    if hasPendingFeedbackShortcut {
+                        await MainActor.run {
+                            hasPendingFeedbackShortcut = false
+                            coordinator.showAIBotSheetWithContext(contextKeyOverride: "general_feedback")
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private func handleFeedbackShortcut() {
+        guard authController.signInState == .signedIn else {
+            hasPendingFeedbackShortcut = true
+            return
+        }
+        coordinator.showAIBotSheetWithContext(contextKeyOverride: "general_feedback")
     }
 
     @ViewBuilder
