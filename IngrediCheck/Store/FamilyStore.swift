@@ -13,7 +13,7 @@ final class FamilyStore {
     
     private(set) var family: Family?
     private(set) var isLoading = false
-    private var isFetchInFlight = false
+    private var activeFetchTask: Task<Void, Never>?
     private(set) var isJoining = false
     private(set) var isInviting = false
     private(set) var errorMessage: String?
@@ -500,6 +500,7 @@ final class FamilyStore {
     // MARK: - Cache
 
     private static let familyCacheKeyPrefix = "cached_family_json_"
+    private static let activeCacheKeyName = "active_family_cache_key"
 
     private var familyCacheKey: String? {
         guard let session = try? supabaseClient.auth.currentSession else { return nil }
@@ -516,12 +517,17 @@ final class FamilyStore {
         guard let key = familyCacheKey else { return }
         if let data = try? JSONEncoder().encode(family) {
             UserDefaults.standard.set(data, forKey: key)
+            UserDefaults.standard.set(key, forKey: Self.activeCacheKeyName)
         }
     }
 
     private func clearCache() {
-        guard let key = familyCacheKey else { return }
-        UserDefaults.standard.removeObject(forKey: key)
+        // Use session-scoped key if available, fall back to stored key (works after sign-out)
+        let key = familyCacheKey ?? UserDefaults.standard.string(forKey: Self.activeCacheKeyName)
+        if let key {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        UserDefaults.standard.removeObject(forKey: Self.activeCacheKeyName)
     }
 
     private func updateFamilyAndCache(_ newFamily: Family?) {
@@ -532,8 +538,12 @@ final class FamilyStore {
     // MARK: - Loading
 
     func loadCurrentFamily() async {
-        guard !isFetchInFlight else { return }
-        isFetchInFlight = true
+        // If a fetch is already in-flight, await it instead of dropping the call
+        if let existingTask = activeFetchTask {
+            await existingTask.value
+            return
+        }
+
         Log.debug("FamilyStore", "loadCurrentFamily() called")
 
         // Show cached data instantly if we have nothing yet
@@ -544,31 +554,36 @@ final class FamilyStore {
 
         isLoading = family == nil  // Only show spinner if no cached data
         errorMessage = nil
-        defer { isLoading = false; isFetchInFlight = false }
 
-        do {
-            let fresh = try await service.fetchFamily()
-            updateFamilyAndCache(fresh)
+        let task = Task { @MainActor in
+            defer { isLoading = false; activeFetchTask = nil }
 
-            // Sync pending invite status from local persistence
-            syncPendingInviteStatus()
+            do {
+                let fresh = try await service.fetchFamily()
+                updateFamilyAndCache(fresh)
 
-            Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
-        } catch {
-            // Clear stale cache on non-recoverable errors (auth failure, not found, etc.)
-            if let networkError = error as? NetworkError {
-                switch networkError {
-                case .authError, .notFound:
-                    updateFamilyAndCache(nil)
-                case .invalidResponse(let statusCode) where [401, 403, 404].contains(statusCode):
-                    updateFamilyAndCache(nil)
-                default:
-                    break  // Transient errors (timeout, 500, etc.) — keep cache
+                // Sync pending invite status from local persistence
+                syncPendingInviteStatus()
+
+                Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
+            } catch {
+                // Clear stale cache on non-recoverable errors (auth failure, not found, etc.)
+                if let networkError = error as? NetworkError {
+                    switch networkError {
+                    case .authError, .notFound:
+                        updateFamilyAndCache(nil)
+                    case .invalidResponse(let statusCode) where [401, 403, 404].contains(statusCode):
+                        updateFamilyAndCache(nil)
+                    default:
+                        break  // Transient errors (timeout, 500, etc.) — keep cache
+                    }
                 }
+                if family == nil { errorMessage = (error as NSError).localizedDescription }
+                Log.error("FamilyStore", "loadCurrentFamily error: \(error)")
             }
-            if family == nil { errorMessage = (error as NSError).localizedDescription }
-            Log.error("FamilyStore", "loadCurrentFamily error: \(error)")
         }
+        activeFetchTask = task
+        await task.value
     }
     
     // MARK: - Create / Update
@@ -995,7 +1010,8 @@ final class FamilyStore {
     func resetLocalState() {
         family = nil
         isLoading = false
-        isFetchInFlight = false
+        activeFetchTask?.cancel()
+        activeFetchTask = nil
         isJoining = false
         isInviting = false
         errorMessage = nil

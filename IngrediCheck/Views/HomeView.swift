@@ -487,14 +487,18 @@ struct HomeView: View {
                         await group.waitForAll()
                     }
 
-                    // Retry scan history if prefetch was in-flight and failed
-                    if !scanHistoryStore.hasLoaded && !scanHistoryStore.isLoading {
-                        await scanHistoryStore.loadHistory(limit: 20, offset: 0)
-                    }
                 }
                 .onChange(of: scanHistoryStore.hasLoaded) { _, loaded in
                     if loaded, appState.listsTabState.scans == nil {
                         appState.listsTabState.scans = scanHistoryStore.scans
+                    }
+                }
+                .onChange(of: scanHistoryStore.isLoading) { _, loading in
+                    // Retry when prefetch finishes without success (e.g. network failure)
+                    if !loading && !scanHistoryStore.hasLoaded {
+                        Task {
+                            await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+                        }
                     }
                 }
                 .onChange(of: prefetcher.prefetchedFoodNotesSummary) { _, summary in
