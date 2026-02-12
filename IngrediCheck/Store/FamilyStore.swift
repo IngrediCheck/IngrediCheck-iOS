@@ -499,21 +499,29 @@ final class FamilyStore {
     
     // MARK: - Cache
 
-    private let familyCacheKey = "cached_family_json"
+    private static let familyCacheKeyPrefix = "cached_family_json_"
+
+    private var familyCacheKey: String? {
+        guard let session = try? supabaseClient.auth.currentSession else { return nil }
+        return Self.familyCacheKeyPrefix + session.user.id.uuidString
+    }
 
     private func loadCachedFamily() -> Family? {
-        guard let data = UserDefaults.standard.data(forKey: familyCacheKey) else { return nil }
+        guard let key = familyCacheKey,
+              let data = UserDefaults.standard.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(Family.self, from: data)
     }
 
     private func saveFamilyToCache(_ family: Family) {
+        guard let key = familyCacheKey else { return }
         if let data = try? JSONEncoder().encode(family) {
-            UserDefaults.standard.set(data, forKey: familyCacheKey)
+            UserDefaults.standard.set(data, forKey: key)
         }
     }
 
     private func clearCache() {
-        UserDefaults.standard.removeObject(forKey: familyCacheKey)
+        guard let key = familyCacheKey else { return }
+        UserDefaults.standard.removeObject(forKey: key)
     }
 
     private func updateFamilyAndCache(_ newFamily: Family?) {
@@ -547,7 +555,17 @@ final class FamilyStore {
 
             Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
         } catch {
-            // Not being in a family is a valid state; treat errors as UI feedback only.
+            // Clear stale cache on non-recoverable errors (auth failure, not found, etc.)
+            if let networkError = error as? NetworkError {
+                switch networkError {
+                case .authError, .notFound:
+                    updateFamilyAndCache(nil)
+                case .invalidResponse(let statusCode) where [401, 403, 404].contains(statusCode):
+                    updateFamilyAndCache(nil)
+                default:
+                    break  // Transient errors (timeout, 500, etc.) — keep cache
+                }
+            }
             if family == nil { errorMessage = (error as NSError).localizedDescription }
             Log.error("FamilyStore", "loadCurrentFamily error: \(error)")
         }
