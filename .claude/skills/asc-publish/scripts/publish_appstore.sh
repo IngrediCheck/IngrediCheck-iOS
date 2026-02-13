@@ -29,20 +29,34 @@ IPA_NAME="${IPA_NAME:-IngrediCheck}"
 IPA_PATH="$EXPORT_PATH/$IPA_NAME.ipa"
 PROJECT_PATH="$PROJECT_ROOT/$PROJECT"
 
-# Load environment from .asc/publish.env (preferred) or publish/.env (legacy)
-if [[ -f "$PROJECT_ROOT/.asc/publish.env" ]]; then
-  set -a
-  source "$PROJECT_ROOT/.asc/publish.env"
-  set +a
-  ENV_FILE="$PROJECT_ROOT/.asc/publish.env"
-elif [[ -f "$PROJECT_ROOT/publish/.env" ]]; then
-  set -a
-  source "$PROJECT_ROOT/publish/.env"
-  set +a
-  ENV_FILE="$PROJECT_ROOT/publish/.env"
-else
-  ENV_FILE=""
+# Resolve the main git worktree root (for fallback config lookup)
+MAIN_WORKTREE=""
+if git rev-parse --git-common-dir >/dev/null 2>&1; then
+  GIT_COMMON="$(git rev-parse --git-common-dir 2>/dev/null)"
+  if [[ -n "$GIT_COMMON" && "$GIT_COMMON" != ".git" ]]; then
+    # In a linked worktree — common dir is <main>/.git
+    MAIN_WORKTREE="$(cd "$GIT_COMMON/.." && pwd)"
+  else
+    MAIN_WORKTREE="$PROJECT_ROOT"
+  fi
 fi
+
+# Load environment from .asc/publish.env (preferred) or publish/.env (legacy)
+# Falls back to main worktree if not found locally (worktree support)
+ENV_FILE=""
+for candidate in \
+  "$PROJECT_ROOT/.asc/publish.env" \
+  "$PROJECT_ROOT/publish/.env" \
+  "${MAIN_WORKTREE:+$MAIN_WORKTREE/.asc/publish.env}" \
+  "${MAIN_WORKTREE:+$MAIN_WORKTREE/publish/.env}"; do
+  if [[ -n "$candidate" && -f "$candidate" ]]; then
+    set -a
+    source "$candidate"
+    set +a
+    ENV_FILE="$candidate"
+    break
+  fi
+done
 
 cd "$PROJECT_ROOT"
 
@@ -57,14 +71,43 @@ if ! command -v asc >/dev/null 2>&1; then
   exit 1
 fi
 
-# Load ASC app ID from config
-if [[ -f "$PROJECT_ROOT/.asc/config.json" ]]; then
-  ASC_APP_ID=$(jq -r '.app_id // empty' "$PROJECT_ROOT/.asc/config.json" 2>/dev/null)
-fi
+# Load ASC app ID from config (try local, then main worktree)
+for config_path in "$PROJECT_ROOT/.asc/config.json" "${MAIN_WORKTREE:+$MAIN_WORKTREE/.asc/config.json}"; do
+  if [[ -n "$config_path" && -f "$config_path" ]]; then
+    ASC_APP_ID=$(jq -r '.app_id // empty' "$config_path" 2>/dev/null)
+    [[ -n "${ASC_APP_ID:-}" ]] && break
+  fi
+done
 
 if [[ -z "${ASC_APP_ID:-}" ]]; then
   echo "❌ ASC_APP_ID not configured. Run /asc-setup first." >&2
   exit 1
+fi
+
+# Auto-resolve upload credentials from asc CLI keychain if publish.env didn't provide them.
+# The asc CLI stores credentials in macOS Keychain under service "asc" with
+# account "asc:credential:<name>". The password is a JSON blob with key_id,
+# issuer_id, and private_key_path.
+if [[ "${SKIP_UPLOAD:-0}" != "1" && -z "${APP_STORE_CONNECT_API_KEY:-}" ]]; then
+  # Determine default key name from config
+  ASC_KEY_NAME=""
+  for config_path in "$PROJECT_ROOT/.asc/config.json" "${MAIN_WORKTREE:+$MAIN_WORKTREE/.asc/config.json}"; do
+    if [[ -n "$config_path" && -f "$config_path" ]]; then
+      ASC_KEY_NAME=$(jq -r '.default_key_name // empty' "$config_path" 2>/dev/null)
+      [[ -n "$ASC_KEY_NAME" ]] && break
+    fi
+  done
+
+  if [[ -n "$ASC_KEY_NAME" ]]; then
+    KEYCHAIN_JSON=$(security find-generic-password -s "asc" -a "asc:credential:$ASC_KEY_NAME" -w 2>/dev/null || true)
+    if [[ -n "$KEYCHAIN_JSON" ]]; then
+      echo "🔑 Resolved credentials from asc CLI keychain (key: $ASC_KEY_NAME)"
+      APP_STORE_CONNECT_API_KEY=$(echo "$KEYCHAIN_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['key_id'])")
+      APP_STORE_CONNECT_API_ISSUER=$(echo "$KEYCHAIN_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['issuer_id'])")
+      APP_STORE_CONNECT_API_PRIVATE_KEY_PATH=$(echo "$KEYCHAIN_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['private_key_path'])")
+      APP_STORE_CONNECT_API_KEY_TYPE="${APP_STORE_CONNECT_API_KEY_TYPE:-individual}"
+    fi
+  fi
 fi
 
 # Get latest build number from App Store Connect

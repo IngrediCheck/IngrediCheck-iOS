@@ -51,7 +51,9 @@ Install from Mac App Store: [Transporter](https://apps.apple.com/us/app/transpor
 
 ### 4. Configure Credentials
 
-Create `.asc/publish.env`:
+**Automatic (recommended):** If you've already run `asc auth login`, credentials are stored in the macOS Keychain. The script auto-resolves them using the `default_key_name` from `.asc/config.json`. No extra setup needed.
+
+**Manual (fallback):** Create `.asc/publish.env`:
 
 ```bash
 mkdir -p .asc
@@ -67,6 +69,12 @@ Copy your `.p8` key file to `.asc/`:
 ```bash
 cp ~/Downloads/AuthKey_XXXXX.p8 .asc/
 ```
+
+## Worktree Support
+
+The script works from git worktrees automatically:
+- Falls back to the main worktree for `.asc/config.json` and `.asc/publish.env`
+- Auto-resolves credentials from `asc` CLI keychain if no `publish.env` exists
 
 ## Usage
 
