@@ -1472,126 +1472,6 @@ struct ChatStreamError: Error, LocalizedError {
         }
     }
 
-    func submitFeedback(
-        clientActivityId: String,
-        feedbackData: FeedbackData
-    ) async throws {
-
-        guard let token = try? await supabaseClient.auth.session.accessToken else {
-            throw NetworkError.authError
-        }
-
-        var feedbackDataDto = DTO.FeedbackData()
-        feedbackDataDto.rating = feedbackData.rating
-        feedbackDataDto.reasons =
-            feedbackData.reasons.isEmpty
-            ? nil
-            : Array(feedbackData.reasons).map { reason in reason.rawValue }
-        feedbackDataDto.note =
-            feedbackData.note.isEmpty
-            ? nil
-            : feedbackData.note
-        feedbackDataDto.images =
-            feedbackData.images.isEmpty
-            ? nil
-            : try await feedbackData.images.asyncMap { productImage in
-                // Upload image and get hash
-                let imageFileHash = try await uploadImage(image: productImage.image)
-                // For feedback, we don't need OCR text or barcode
-                return DTO.ImageInfo(
-                    imageFileHash: imageFileHash,
-                    imageOCRText: "",  // Not needed for feedback
-                    barcode: nil  // Not needed for feedback
-                )
-            }
-
-        let feedbackDataJson = try JSONEncoder().encode(feedbackDataDto)
-        let feedbackDataJsonString = String(data: feedbackDataJson, encoding: .utf8)!
-
-        let request = SupabaseRequestBuilder(endpoint: .feedback)
-            .setAuthorization(with: token)
-            .setMethod(to: "POST")
-            .setFormData(name: "clientActivityId", value: clientActivityId)
-            .setFormData(name: "feedback", value: feedbackDataJsonString)
-            .build()
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-
-        let httpResponse = response as! HTTPURLResponse
-
-        guard httpResponse.statusCode == 201 else {
-            throw NetworkError.invalidResponse(httpResponse.statusCode)
-        }
-    }
-
-    func fetchHistory(searchText: String? = nil) async throws -> [DTO.HistoryItem] {
-
-        let requestId = UUID().uuidString
-        let startTime = Date().timeIntervalSince1970
-
-        guard let token = try? await supabaseClient.auth.session.accessToken else {
-            throw NetworkError.authError
-        }
-
-        var requestBuilder = SupabaseRequestBuilder(endpoint: .history)
-            .setAuthorization(with: token)
-            .setMethod(to: "GET")
-
-        if let searchText {
-            requestBuilder =
-                requestBuilder
-                    .setQueryItems(queryItems: [
-                        URLQueryItem(name: "searchText", value: searchText)
-                    ])
-        }
-
-        let request = requestBuilder.build()
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        let httpResponse = response as! HTTPURLResponse
-
-        guard httpResponse.statusCode == 200 else {
-            PostHogSDK.shared.capture("History Fetch Failed", properties: [
-                "request_id": requestId,
-                "has_search_text": searchText != nil,
-                "search_length": searchText?.count ?? 0,
-                "status_code": httpResponse.statusCode,
-                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-            ])
-
-            throw NetworkError.invalidResponse(httpResponse.statusCode)
-        }
-
-        do {
-            let history = try JSONDecoder().decode([DTO.HistoryItem].self, from: data)
-
-            PostHogSDK.shared.capture("History Fetch Successful", properties: [
-                "request_id": requestId,
-                "has_search_text": searchText != nil,
-                "search_length": searchText?.count ?? 0,
-                "history_count": history.count,
-                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-            ])
-
-            return history
-        } catch {
-            let responseText = String(data: data, encoding: .utf8) ?? ""
-            print("Failed to decode History object: \(error)")
-            print(responseText)
-
-            PostHogSDK.shared.capture("History Fetch Decode Error", properties: [
-                "request_id": requestId,
-                "has_search_text": searchText != nil,
-                "search_length": searchText?.count ?? 0,
-                "error": error.localizedDescription,
-                "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
-            ])
-
-            throw NetworkError.decodingError
-        }
-    }
-
     func toggleScanFavorite(scanId: String) async throws -> Bool {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
@@ -1615,12 +1495,6 @@ struct ChatStreamError: Error, LocalizedError {
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
-        // Some backends return the updated scan record; others return a small payload.
-        if let decoded = try? JSONDecoder().decode(DTO.HistoryItem.self, from: data) {
-            Log.debug("WebService", "toggleScanFavorite: decoded HistoryItem favorited=\(decoded.favorited)")
-            return decoded.favorited
-        }
-
         struct ToggleFavoriteResponse: Decodable {
             let favorited: Bool?
             let favorite: Bool?
@@ -1641,23 +1515,6 @@ struct ChatStreamError: Error, LocalizedError {
         let responseText = String(data: data, encoding: .utf8) ?? ""
         Log.error("WebService", "toggleScanFavorite: failed to decode response body=\(responseText)")
         throw NetworkError.decodingError
-    }
-
-    func setHistoryFavorite(clientActivityId: String, favorited: Bool) async throws -> Bool {
-        Log.debug("WebService", "setHistoryFavorite: start clientActivityId=\(clientActivityId), favorited=\(favorited)")
-        do {
-            if favorited {
-                try await addToFavorites(clientActivityId: clientActivityId)
-                Log.debug("WebService", "setHistoryFavorite: addToFavorites ✅ clientActivityId=\(clientActivityId)")
-            } else {
-                try await removeFromFavorites(clientActivityId: clientActivityId)
-                Log.debug("WebService", "setHistoryFavorite: removeFromFavorites ✅ clientActivityId=\(clientActivityId)")
-            }
-            return favorited
-        } catch {
-            Log.error("WebService", "setHistoryFavorite: ❌ clientActivityId=\(clientActivityId), error=\(error.localizedDescription)")
-            throw error
-        }
     }
 
     func uploadImage(image: UIImage) async throws -> String {

@@ -21,7 +21,7 @@ final class FamilyStore {
     /// Tracks the number of pending avatar uploads
     private(set) var pendingUploadCount: Int = 0
 
-    // Temporary in-memory builder used by the preview onboarding flow
+    // Temporary in-memory builder used during the onboarding flow
     // before the family is actually created on the backend.
     private(set) var pendingSelfMember: FamilyMember?
     private(set) var pendingOtherMembers: [FamilyMember] = []
@@ -49,7 +49,7 @@ final class FamilyStore {
         self.service = service
     }
     
-    // MARK: - Pending members (preview flow helpers)
+    // MARK: - Pending members (onboarding helpers)
     
     /// Generates a random pastel hex color for a new family member.
     private func randomColor() -> String {

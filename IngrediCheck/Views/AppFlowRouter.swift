@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Routes between production and preview flows based on configuration
 struct AppFlowRouter: View {
     @State private var webService: WebService
     @State private var scanHistoryStore: ScanHistoryStore
@@ -27,86 +26,48 @@ struct AppFlowRouter: View {
             familyStore: fs, scanHistoryStore: shs, webService: ws
         ))
     }
-    
-    var body: some View {
-        Group {
-            if Config.usePreviewFlow {
-                PreviewFlowView()
-                    .environment(authController)
-                    .environment(webService)
-                    .environment(scanHistoryStore)
-                    .environment(userPreferences)
-                    .environment(appState)
-                    .environment(dietaryPreferences)
-                    .environment(onboardingState)
-                    .environment(familyStore)
-                    .environment(coordinator)
-                    .environment(memojiStore)
-                    .environment(networkState)
-                    .environment(prefetcher)
-            } else {
-                ProductionFlowView()
-                    .environment(authController)
-                    .environment(webService)
-                    .environment(scanHistoryStore)
-                    .environment(userPreferences)
-                    .environment(appState)
-                    .environment(dietaryPreferences)
-                    .environment(onboardingState)
-                    .environment(familyStore)
-                    .environment(coordinator)
-                    .environment(memojiStore)
-                    .environment(networkState)
-                    .environment(prefetcher)
-            }
-        }
-        .overlay {
-            if !networkState.connected {
-                NoInternetView()
-            }
-        }
-        .id(appResetID)
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
-            appResetID = UUID()
-            let ws = WebService()
-            let shs = ScanHistoryStore(webService: ws)
-            let fs = FamilyStore()
-            webService = ws
-            scanHistoryStore = shs
-            dietaryPreferences = DietaryPreferences()
-            userPreferences = UserPreferences()
-            appState = AppState()
-            onboardingState = OnboardingState()
-            authController = AuthController()
-            familyStore = fs
-            coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
-            memojiStore = MemojiStore()
-            networkState = NetworkState()
-            prefetcher = HomescreenPrefetcher(
-                familyStore: fs, scanHistoryStore: shs, webService: ws
-            )
-        }
-    }
-}
 
-// MARK: - Production Flow
-private struct ProductionFlowView: View {
-    var body: some View {
-        Splash {
-            Image("SplashScreen")
-                .resizable() 
-                .scaledToFill()
-        } content: {
-            MainView()
-        }
-    }
-}
-
-// MARK: - Preview/Testing Flow
-private struct PreviewFlowView: View {
     var body: some View {
         SplashScreen()
             .preferredColorScheme(.light)
+            .environment(authController)
+            .environment(webService)
+            .environment(scanHistoryStore)
+            .environment(userPreferences)
+            .environment(appState)
+            .environment(dietaryPreferences)
+            .environment(onboardingState)
+            .environment(familyStore)
+            .environment(coordinator)
+            .environment(memojiStore)
+            .environment(networkState)
+            .environment(prefetcher)
+            .overlay {
+                if !networkState.connected {
+                    NoInternetView()
+                }
+            }
+            .id(appResetID)
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppDidReset"))) { _ in
+                appResetID = UUID()
+                let ws = WebService()
+                let shs = ScanHistoryStore(webService: ws)
+                let fs = FamilyStore()
+                webService = ws
+                scanHistoryStore = shs
+                dietaryPreferences = DietaryPreferences()
+                userPreferences = UserPreferences()
+                appState = AppState()
+                onboardingState = OnboardingState()
+                authController = AuthController()
+                familyStore = fs
+                coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
+                memojiStore = MemojiStore()
+                networkState = NetworkState()
+                prefetcher = HomescreenPrefetcher(
+                    familyStore: fs, scanHistoryStore: shs, webService: ws
+                )
+            }
     }
 }
 

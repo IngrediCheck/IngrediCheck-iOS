@@ -2,6 +2,13 @@ import SwiftUI
 import Foundation
 import os
 
+enum ValidationResult {
+    case idle
+    case validating
+    case success
+    case failure(String)
+}
+
 fileprivate let DietaryPreferencesKey = "DietaryPreferences"
 
 extension UserDefaults {

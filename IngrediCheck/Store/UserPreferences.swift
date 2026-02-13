@@ -1,21 +1,10 @@
 import SwiftUI
 
-enum CaptureType: String {
-    case barcode = "barcode"
-    case ingredients = "ingredients"
-}
-
-enum HistoryType: String {
-    case scans = "scans"
-    case favorites = "favorites"
-}
-
 @Observable class UserPreferences {
-    
+
     @MainActor public func clearAll() {
-        UserDefaults.standard.removeObject(forKey: UserPreferences.captureTypeKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.startScanningOnAppStartKey)
-        
+
         // Clear rating prompt tracking keys
         UserDefaults.standard.removeObject(forKey: UserPreferences.successfulScanCountKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.lastRatingPromptDateKey)
@@ -23,11 +12,10 @@ enum HistoryType: String {
         UserDefaults.standard.removeObject(forKey: UserPreferences.ratingPromptYearStartKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.fibonacciIndexKey)
         UserDefaults.standard.removeObject(forKey: UserPreferences.lastPromptDismissTimeKey)
-        
+
         // Reset properties to default values
-        captureType = .barcode
         startScanningOnAppStart = false
-        
+
         // Reset rating prompt tracking properties
         successfulScanCount = 0
         totalScanCount = 0
@@ -36,28 +24,6 @@ enum HistoryType: String {
         ratingPromptYearStart = nil
         fibonacciIndex = 0
         lastPromptDismissTime = nil
-    }
-
-    // Capture Type
-    
-    private static let captureTypeKey = "config.lastUsedCaptureType"
-    
-    private static func readLastUsedCaptureType() -> CaptureType {
-        guard let rawValue = UserDefaults.standard.string(forKey: captureTypeKey),
-              let captureType = CaptureType(rawValue: rawValue) else {
-            return .barcode
-        }
-        return captureType
-    }
-    
-    private static func writeLastUsedCaptureType(captureType: CaptureType) {
-        UserDefaults.standard.set(captureType.rawValue, forKey: captureTypeKey)
-    }
-
-    var captureType: CaptureType = UserPreferences.readLastUsedCaptureType() {
-        didSet {
-            UserPreferences.writeLastUsedCaptureType(captureType: captureType)
-        }
     }
 
     // StartScanningOnAppStart
