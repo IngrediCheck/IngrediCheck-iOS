@@ -16,6 +16,7 @@ struct SplashScreen: View {
     @State private var restoredState: (canvas: CanvasRoute, sheet: BottomSheetRoute)?
     @Environment(AuthController.self) private var authController
     @Environment(FamilyStore.self) private var familyStore
+    @Environment(HomescreenPrefetcher.self) private var prefetcher
     
     var body: some View {
         Group {
@@ -93,6 +94,7 @@ struct SplashScreen: View {
             // This matches the logic in AppNavigationCoordinator.init
             if OnboardingPersistence.shared.isLocallyCompleted {
                 print("[SplashScreen] ✅ Onboarding completed locally, navigating to home immediately")
+                prefetcher.prefetchIfNeeded()
                 shouldNavigateToHome = true
                 isCheckingLaunchState = false
                 return
@@ -154,7 +156,11 @@ struct SplashScreen: View {
 }
 
 #Preview {
+    let ws = WebService()
+    let fs = FamilyStore()
+    let shs = ScanHistoryStore(webService: ws)
     SplashScreen()
         .environment(AuthController())
-        .environment(FamilyStore())
+        .environment(fs)
+        .environment(HomescreenPrefetcher(familyStore: fs, scanHistoryStore: shs, webService: ws))
 }

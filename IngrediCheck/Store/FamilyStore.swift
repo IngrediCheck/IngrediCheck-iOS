@@ -13,6 +13,7 @@ final class FamilyStore {
     
     private(set) var family: Family?
     private(set) var isLoading = false
+    private var activeFetchTask: Task<Void, Never>?
     private(set) var isJoining = false
     private(set) var isInviting = false
     private(set) var errorMessage: String?
@@ -427,7 +428,7 @@ final class FamilyStore {
         if var currentFamily = family {
             if let idx = currentFamily.otherMembers.firstIndex(where: { $0.id == id }) {
                 currentFamily.otherMembers[idx].invitePending = pending
-                self.family = currentFamily
+                updateFamilyAndCache(currentFamily)
             }
         }
     }
@@ -496,25 +497,125 @@ final class FamilyStore {
         Log.debug("FamilyStore", "waitForPendingUploads: All uploads completed")
     }
     
+    // MARK: - Cache
+
+    private static let familyCacheKeyPrefix = "cached_family_json_"
+    private static let activeCacheKeyName = "active_family_cache_key"
+
+    private var sessionFamilyCacheKey: String? {
+        guard let session = supabaseClient.auth.currentSession else { return nil }
+        return Self.familyCacheKeyPrefix + session.user.id.uuidString
+    }
+
+    private var activeFamilyCacheKey: String? {
+        get { UserDefaults.standard.string(forKey: Self.activeCacheKeyName) }
+        set {
+            if let newValue {
+                UserDefaults.standard.set(newValue, forKey: Self.activeCacheKeyName)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.activeCacheKeyName)
+            }
+        }
+    }
+
+    private var familyCacheKeyForRead: String? {
+        // During startup session restoration can lag slightly; fall back to the
+        // last active key so we can still render cached family data instantly.
+        sessionFamilyCacheKey ?? activeFamilyCacheKey
+    }
+
+    private func loadCachedFamily() -> Family? {
+        guard let key = familyCacheKeyForRead,
+              let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(Family.self, from: data)
+    }
+
+    private func saveFamilyToCache(_ family: Family) {
+        guard let key = sessionFamilyCacheKey else { return }
+        if let data = try? JSONEncoder().encode(family) {
+            UserDefaults.standard.set(data, forKey: key)
+            activeFamilyCacheKey = key
+        }
+    }
+
+    private func clearCache() {
+        let sessionKey = sessionFamilyCacheKey
+        let activeKey = activeFamilyCacheKey
+
+        if let activeKey {
+            UserDefaults.standard.removeObject(forKey: activeKey)
+        }
+        if let sessionKey, sessionKey != activeKey {
+            UserDefaults.standard.removeObject(forKey: sessionKey)
+        }
+
+        activeFamilyCacheKey = nil
+    }
+
+    private func updateFamilyAndCache(_ newFamily: Family?) {
+        family = newFamily
+        if let f = newFamily { saveFamilyToCache(f) } else { clearCache() }
+    }
+
     // MARK: - Loading
-    
+
+    private func withCoalescedFetch(_ operation: @escaping @MainActor () async -> Void) async {
+        if let existingTask = activeFetchTask {
+            await existingTask.value
+            return
+        }
+
+        let task = Task { @MainActor in
+            defer { activeFetchTask = nil }
+            await operation()
+        }
+        activeFetchTask = task
+        await task.value
+    }
+
+    private func shouldInvalidateCachedFamily(for error: Error) -> Bool {
+        guard let networkError = error as? NetworkError else { return false }
+        switch networkError {
+        case .notFound(_):
+            return true
+        case .invalidResponse(let statusCode):
+            // 403 means the user is authenticated but no longer authorized for this family.
+            // Keep 401 non-invalidating to avoid clearing cache during transient auth/bootstrap races.
+            return statusCode == 403 || statusCode == 404
+        default:
+            return false
+        }
+    }
+
     func loadCurrentFamily() async {
-        Log.debug("FamilyStore", "loadCurrentFamily() called")
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-        
-        do {
-            family = try await service.fetchFamily()
-            
-            // Sync pending invite status from local persistence
-            syncPendingInviteStatus()
-            
-            Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: family))")
-        } catch {
-            // Not being in a family is a valid state; treat errors as UI feedback only.
-            errorMessage = (error as NSError).localizedDescription
-            Log.error("FamilyStore", "loadCurrentFamily error: \(error)")
+        await withCoalescedFetch { [self] in
+            Log.debug("FamilyStore", "loadCurrentFamily() called")
+
+            // Show cached data instantly if we have nothing yet
+            if self.family == nil, let cached = self.loadCachedFamily() {
+                self.family = cached
+                self.syncPendingInviteStatus()
+            }
+
+            self.isLoading = self.family == nil  // Only show spinner if no cached data
+            self.errorMessage = nil
+            defer { self.isLoading = false }
+
+            do {
+                let fresh = try await self.service.fetchFamily()
+                self.updateFamilyAndCache(fresh)
+
+                // Sync pending invite status from local persistence
+                self.syncPendingInviteStatus()
+
+                Log.debug("FamilyStore", "loadCurrentFamily success: family=\(String(describing: self.family))")
+            } catch {
+                if self.shouldInvalidateCachedFamily(for: error) {
+                    self.updateFamilyAndCache(nil)
+                }
+                if self.family == nil { self.errorMessage = (error as NSError).localizedDescription }
+                Log.error("FamilyStore", "loadCurrentFamily error: \(error)")
+            }
         }
     }
     
@@ -536,15 +637,15 @@ final class FamilyStore {
         
         do {
             Log.debug("FamilyStore", "⏳ Calling service.createFamily...")
-            family = try await service.createFamily(
+            updateFamilyAndCache(try await service.createFamily(
                 name: name,
                 selfMember: selfMember,
                 otherMembers: otherMembers.isEmpty ? nil : otherMembers
-            )
-            
+            ))
+
             // Sync pending invite status after update
             syncPendingInviteStatus()
-            
+
             Log.debug("FamilyStore", "✅ createOrUpdateFamily success - family name: \(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -571,7 +672,7 @@ final class FamilyStore {
 
         do {
             Log.debug("FamilyStore", "⏳ Calling service.updateFamily...")
-            family = try await service.updateFamily(name: name)
+            updateFamilyAndCache(try await service.updateFamily(name: name))
 
             // Sync pending invite status after update
             syncPendingInviteStatus()
@@ -598,7 +699,7 @@ final class FamilyStore {
         defer { isLoading = false }
         
         do {
-            family = try await service.addMember(member)
+            updateFamilyAndCache(try await service.addMember(member))
             syncPendingInviteStatus()
             Log.debug("FamilyStore", "addMember success, family name=\(family?.name ?? "nil")")
         } catch {
@@ -631,34 +732,34 @@ final class FamilyStore {
                     // Check if this is the self member
                     if currentFamily.selfMember.id == member.id {
                         // Create new family with updated selfMember only
-                        family = Family(
+                        updateFamilyAndCache(Family(
                             name: currentFamily.name,
                             selfMember: updatedMember,
                             otherMembers: currentFamily.otherMembers,
                             version: updatedFamily.version
-                        )
+                        ))
                     } else if let idx = currentFamily.otherMembers.firstIndex(where: { $0.id == member.id }) {
                         // Update only the specific other member
                         currentFamily.otherMembers[idx] = updatedMember
-                        family = Family(
+                        updateFamilyAndCache(Family(
                             name: currentFamily.name,
                             selfMember: currentFamily.selfMember,
                             otherMembers: currentFamily.otherMembers,
                             version: updatedFamily.version
-                        )
+                        ))
                     } else {
                         // Member not found in current family, fall back to full replacement
-                        family = updatedFamily
+                        updateFamilyAndCache(updatedFamily)
                     }
                     Log.debug("FamilyStore", "editMember success (granular update) for \(member.id), imageFileHash=\(updatedMember.imageFileHash ?? "nil")")
                 } else {
                     // Updated member not found in response, fall back to full replacement
-                    family = updatedFamily
+                    updateFamilyAndCache(updatedFamily)
                     Log.debug("FamilyStore", "editMember success (full replacement) for \(member.id)")
                 }
             } else {
                 // No current family, use the response directly
-                family = updatedFamily
+                updateFamilyAndCache(updatedFamily)
                 Log.debug("FamilyStore", "editMember success (no current family) for \(member.id)")
             }
         } catch {
@@ -708,7 +809,7 @@ final class FamilyStore {
         defer { isLoading = false }
         
         do {
-            family = try await service.deleteMember(id: id)
+            updateFamilyAndCache(try await service.deleteMember(id: id))
             Log.debug("FamilyStore", "deleteMember success, family name=\(family?.name ?? "nil")")
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -743,7 +844,7 @@ final class FamilyStore {
         defer { isJoining = false }
         
         do {
-            family = try await service.joinFamily(inviteCode: inviteCode)
+            updateFamilyAndCache(try await service.joinFamily(inviteCode: inviteCode))
             errorMessage = nil  // Clear any error set by concurrent operations
             Log.debug("FamilyStore", "join success, family name=\(family?.name ?? "nil")")
         } catch {
@@ -760,7 +861,7 @@ final class FamilyStore {
         
         do {
             try await service.leaveFamily()
-            family = nil
+            updateFamilyAndCache(nil)
             Log.debug("FamilyStore", "leave success, family cleared")
         } catch {
             errorMessage = (error as NSError).localizedDescription
@@ -787,11 +888,11 @@ final class FamilyStore {
             imageFileHash: "memoji_3"
         )
 
-        family = try await service.createFamily(
+        updateFamilyAndCache(try await service.createFamily(
             name: "Bite Buddy",
             selfMember: selfMember,
             otherMembers: nil
-        )
+        ))
         if let createdFamily = family {
             selectedMemberId = createdFamily.selfMember.id
         }
@@ -851,12 +952,12 @@ final class FamilyStore {
         
         do {
             Log.debug("FamilyStore", "⏳ Calling service.createFamily...")
-            family = try await service.createFamily(
+            updateFamilyAndCache(try await service.createFamily(
                 name: familyName,
                 selfMember: selfMember,
                 otherMembers: nil
-            )
-            
+            ))
+
             if let family = family {
                 Log.debug("FamilyStore", "✅ Family created successfully - name: \(family.name)")
                 // Clear pending self member as it is now persisted
@@ -928,8 +1029,8 @@ final class FamilyStore {
             imageFileHash: avatarHash
         )
         
-        family = try await service.addMember(member)
-        
+        updateFamilyAndCache(try await service.addMember(member))
+
         // Update pending invite status
         syncPendingInviteStatus()
         
@@ -942,11 +1043,14 @@ final class FamilyStore {
     func resetLocalState() {
         family = nil
         isLoading = false
+        activeFetchTask?.cancel()
+        activeFetchTask = nil
         isJoining = false
         isInviting = false
         errorMessage = nil
         pendingSelfMember = nil
         pendingOtherMembers = []
+        clearCache()
     }
 
     private func syncPendingInviteStatus() {
@@ -975,8 +1079,8 @@ final class FamilyStore {
         if changed {
             pendingInviteIds = currentPendingIds
         }
-        
-        self.family = f
+
+        updateFamilyAndCache(f)
     }
     
     // MARK: - Preview Helpers
@@ -987,5 +1091,3 @@ final class FamilyStore {
         self.family = family
     }
 }
-
-

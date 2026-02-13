@@ -69,6 +69,7 @@
 		D382E0602EDEE4B600F139B2 /* FamilyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */; };
 		D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05E2EDEE4B600F139B2 /* FamilyService.swift */; };
 		D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */; };
+		D3A1B2C3F001000000000002 /* HomescreenPrefetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A1B2C3F001000000000001 /* HomescreenPrefetcher.swift */; };
 		D382E0642EDEE4B600F139B2 /* FoodNotesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D382E0632EDEE4B600F139B2 /* FoodNotesStore.swift */; };
 		D3BECC7D2ED98D320088E044 /* WelcomeToYourFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC7C2ED98D320088E044 /* WelcomeToYourFamilyView.swift */; };
 		D3BECC7E2ED98D320088E044 /* HeyThereScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BECC782ED98D320088E044 /* HeyThereScreen.swift */; };
@@ -167,6 +168,7 @@
 		D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyModels.swift; sourceTree = "<group>"; };
 		D382E05E2EDEE4B600F139B2 /* FamilyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyService.swift; sourceTree = "<group>"; };
 		D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyStore.swift; sourceTree = "<group>"; };
+		D3A1B2C3F001000000000001 /* HomescreenPrefetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomescreenPrefetcher.swift; sourceTree = "<group>"; };
 		D382E0632EDEE4B600F139B2 /* FoodNotesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodNotesStore.swift; sourceTree = "<group>"; };
 		D3BECC752ED98D320088E044 /* AppFlowRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlowRouter.swift; sourceTree = "<group>"; };
 		D3BECC762ED98D320088E044 /* BlankScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlankScreen.swift; sourceTree = "<group>"; };
@@ -302,6 +304,7 @@
 				D382E05D2EDEE4B600F139B2 /* FamilyModels.swift */,
 				D382E05E2EDEE4B600F139B2 /* FamilyService.swift */,
 				D382E05F2EDEE4B600F139B2 /* FamilyStore.swift */,
+				D3A1B2C3F001000000000001 /* HomescreenPrefetcher.swift */,
 				D382E0632EDEE4B600F139B2 /* FoodNotesStore.swift */,
 				D3CHAT001000000000000000 /* ChatStore.swift */,
 				D3BECC872ED98E860088E044 /* AppNavigationCoordinator.swift */,
@@ -625,6 +628,7 @@
 				D382E0612EDEE4B600F139B2 /* FamilyService.swift in Sources */,
 				D3CE197A2F20EF400097B28D /* ViewExtensions.swift in Sources */,
 				D382E0622EDEE4B600F139B2 /* FamilyStore.swift in Sources */,
+				D3A1B2C3F001000000000002 /* HomescreenPrefetcher.swift in Sources */,
 				D382E0642EDEE4B600F139B2 /* FoodNotesStore.swift in Sources */,
 				D3CHAT002000000000000000 /* ChatStore.swift in Sources */,
 				0CF25DF52EDD9ECA00C582FA /* DynamicSteps.swift in Sources */,

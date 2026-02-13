@@ -57,6 +57,7 @@ struct HomeView: View {
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @Environment(MemojiStore.self) private var memojiStore
+    @Environment(HomescreenPrefetcher.self) private var prefetcher
     private var familyMembers: [FamilyMember] {
         guard let family = familyStore.family else { return [] }
         return [family.selfMember] + family.otherMembers
@@ -453,25 +454,48 @@ struct HomeView: View {
             // ------------ COORDINATED INITIAL LOAD ------------
                 .task {
                     guard !didFinishInitialLoad else { return }
-                    let needsScans = appState.listsTabState.scans == nil
+
+                    // Consume prefetched data if available
+                    if let ps = prefetcher.prefetchedStats, stats == nil { stats = ps }
+                    if let fs = prefetcher.prefetchedFoodNotesSummary, foodNotesStore.foodNotesSummary == nil {
+                        foodNotesStore.foodNotesSummary = fs
+                    }
+
+                    // Each store guards against duplicate in-flight requests internally,
+                    // so callers can always call without coordination.
+
                     defer {
+                        if !scanHistoryStore.scans.isEmpty {
+                            appState.listsTabState.scans = scanHistoryStore.scans
+                        }
                         withAnimation(.easeInOut(duration: 0.3)) {
                             didFinishInitialLoad = true
                         }
                     }
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask { @MainActor in
-                            if needsScans {
-                                await refreshRecentScans()
-                            }
+                            await scanHistoryStore.loadInitialHistoryIfNeeded(limit: 20, retryCount: 1)
                         }
-                        group.addTask { @MainActor in
-                            await loadStats()
+                        if stats == nil {
+                            group.addTask { @MainActor in
+                                await loadStats()
+                            }
                         }
                         group.addTask { @MainActor in
                             await foodNotesStore.loadSummaryIfNeeded()
                         }
                         await group.waitForAll()
+                    }
+
+                }
+                .onChange(of: scanHistoryStore.hasLoaded) { _, loaded in
+                    if loaded, appState.listsTabState.scans == nil {
+                        appState.listsTabState.scans = scanHistoryStore.scans
+                    }
+                }
+                .onChange(of: prefetcher.prefetchedFoodNotesSummary) { _, summary in
+                    if let s = summary, foodNotesStore.foodNotesSummary == nil {
+                        foodNotesStore.foodNotesSummary = s
                     }
                 }
             // Trigger a push navigation to Settings when requested by app state
@@ -910,15 +934,18 @@ struct HomeView: View {
 
 #Preview {
     let webService = WebService()
+    let familyStore = FamilyStore()
+    let scanHistoryStore = ScanHistoryStore(webService: webService)
     HomeView()
         .environmentObject(Onboarding(onboardingFlowtype: .individual))
         .environment(AppState())
         .environment(webService)
-        .environment(ScanHistoryStore(webService: webService))
+        .environment(scanHistoryStore)
         .environment(UserPreferences())
         .environment(AuthController())
-        .environment(FamilyStore())
+        .environment(familyStore)
         .environment(AppNavigationCoordinator(initialRoute: .home))
         .environment(MemojiStore())
         .environment(ChatStore())
+        .environment(HomescreenPrefetcher(familyStore: familyStore, scanHistoryStore: scanHistoryStore, webService: webService))
 }

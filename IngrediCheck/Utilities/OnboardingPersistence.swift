@@ -162,18 +162,22 @@ final class OnboardingPersistence {
     /// Reads remote metadata and updates local state if remote is "ahead" (e.g. completed).
     /// Returns the fetched metadata for specific navigation restoration.
     func restore(into coordinator: AppNavigationCoordinator) async {
-        // 1. Fetch Remote Metadata
-        guard let metadata = await fetchRemoteMetadata() else {
-            Log.debug("OnboardingPersistence", "No remote metadata found.")
-            // Falling back to whatever local state we have or default
+        // Fast path: local completion is authoritative, skip network call
+        if isLocallyCompleted {
+            Log.debug("OnboardingPersistence", "Local is completed. Skipping remote check, navigating to home.")
+            coordinator.showCanvas(.home)
             return
         }
-        
+
+        // Slow path: partial onboarding, need remote state
+        guard let metadata = await fetchRemoteMetadata() else {
+            Log.debug("OnboardingPersistence", "No remote metadata found.")
+            return
+        }
+
         guard let remoteStage = metadata.stage else { return }
         Log.debug("OnboardingPersistence", "Remote stage is: \(remoteStage.rawValue)")
-        
-        // 2. Conflict Resolution
-        // If remote says completed, update local immediately.
+
         if remoteStage == .completed {
             if localStage != .completed {
                 Log.debug("OnboardingPersistence", "Remote is completed but local wasn't. Updating local -> completed.")
@@ -182,16 +186,8 @@ final class OnboardingPersistence {
             coordinator.showCanvas(.home)
             return
         }
-        
-        // If local says completed, TRUST LOCAL (prevent regression).
-        if isLocallyCompleted {
-             Log.debug("OnboardingPersistence", "Local is completed. Ignoring non-completed remote state.")
-             coordinator.showCanvas(.home)
-             return
-        }
-        
-        // 3. Apply Detailed Restoration
-        // If neither is completed, we restore the specific state from metadata
+
+        // Apply Detailed Restoration
         await applyRestoration(metadata: metadata, into: coordinator)
     }
     

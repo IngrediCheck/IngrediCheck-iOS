@@ -23,6 +23,12 @@ import SwiftUI
 
     /// Whether there are more scans to load
     @MainActor private(set) var hasMore: Bool = true
+
+    /// Whether the initial load (offset=0) has completed successfully
+    @MainActor private(set) var hasLoaded: Bool = false
+
+    /// In-flight history request so concurrent callers can await shared work.
+    @MainActor private var activeLoadTask: Task<Void, Never>?
     
     // MARK: - Dependencies
 
@@ -51,52 +57,84 @@ import SwiftUI
     @MainActor
     func loadHistory(limit: Int = 20, offset: Int = 0, forceRefresh: Bool = false) async {
         Log.debug("ScanHistoryStore", "🔵 loadHistory called - limit: \(limit), offset: \(offset), forceRefresh: \(forceRefresh)")
-        guard !isLoading || forceRefresh else {
-            Log.debug("ScanHistoryStore", "⏸️ Already loading, skipping")
+
+        if let existingTask = activeLoadTask {
+            if !forceRefresh {
+                Log.debug("ScanHistoryStore", "⏸️ Awaiting in-flight history request")
+                await existingTask.value
+                return
+            }
+            await existingTask.value
+        }
+
+        guard forceRefresh || (!isLoading && !(offset == 0 && hasLoaded)) else {
+            Log.debug("ScanHistoryStore", "⏸️ Already loading or loaded, skipping")
             return
         }
 
-        isLoading = true
-        lastError = nil
-        defer { isLoading = false }
-
-        Log.debug("ScanHistoryStore", "🔵 Loading scan history - limit: \(limit), offset: \(offset)")
-
-        do {
-            let response = try await webService.fetchScanHistory(limit: limit, offset: offset)
-            
-            // Check if we reached the end
-            hasMore = response.scans.count >= limit
-
-            // Update scans array
-            if offset == 0 {
-                // Fresh load - replace all scans
-                scans = response.scans
-                Log.debug("ScanHistoryStore", "✅ Loaded \(response.scans.count) scans (fresh)")
-            } else {
-                // Pagination - append new scans (filtering duplicates just in case)
-                let newScans = response.scans.filter { newScan in
-                    !scans.contains(where: { $0.id == newScan.id })
-                }
-                scans.append(contentsOf: newScans)
-                Log.debug("ScanHistoryStore", "✅ Loaded \(newScans.count) new scans (pagination)")
+        let task = Task { @MainActor in
+            isLoading = true
+            lastError = nil
+            defer {
+                isLoading = false
+                activeLoadTask = nil
             }
 
-            // Update caches
-            for scan in response.scans {
-                scanCache[scan.id] = scan
+            Log.debug("ScanHistoryStore", "🔵 Loading scan history - limit: \(limit), offset: \(offset)")
 
-                // Map barcode to scanId for quick lookups
-                if let barcode = scan.barcode, !barcode.isEmpty {
-                    barcodeToScanIdMap[barcode] = scan.id
+            do {
+                let response = try await webService.fetchScanHistory(limit: limit, offset: offset)
+
+                // Check if we reached the end
+                hasMore = response.scans.count >= limit
+
+                // Update scans array
+                if offset == 0 {
+                    // Fresh load - replace all scans
+                    scans = response.scans
+                    Log.debug("ScanHistoryStore", "✅ Loaded \(response.scans.count) scans (fresh)")
+                } else {
+                    // Pagination - append new scans (filtering duplicates just in case)
+                    let newScans = response.scans.filter { newScan in
+                        !scans.contains(where: { $0.id == newScan.id })
+                    }
+                    scans.append(contentsOf: newScans)
+                    Log.debug("ScanHistoryStore", "✅ Loaded \(newScans.count) new scans (pagination)")
                 }
+
+                // Update caches
+                for scan in response.scans {
+                    scanCache[scan.id] = scan
+
+                    // Map barcode to scanId for quick lookups
+                    if let barcode = scan.barcode, !barcode.isEmpty {
+                        barcodeToScanIdMap[barcode] = scan.id
+                    }
+                }
+
+                Log.debug("ScanHistoryStore", "💾 Cache updated - total scans: \(scans.count), cache size: \(scanCache.count), barcode mappings: \(barcodeToScanIdMap.count)")
+
+                if offset == 0 { hasLoaded = true }
+
+            } catch {
+                Log.debug("ScanHistoryStore", "❌ Failed to load scan history - error: \(error.localizedDescription)")
+                lastError = error
             }
+        }
+        activeLoadTask = task
+        await task.value
+    }
 
-            Log.debug("ScanHistoryStore", "💾 Cache updated - total scans: \(scans.count), cache size: \(scanCache.count), barcode mappings: \(barcodeToScanIdMap.count)")
-
-        } catch {
-            Log.debug("ScanHistoryStore", "❌ Failed to load scan history - error: \(error.localizedDescription)")
-            lastError = error
+    /// Ensures the first page has loaded, retrying a bounded number of times.
+    @MainActor
+    func loadInitialHistoryIfNeeded(limit: Int = 20, retryCount: Int = 1) async {
+        let boundedRetryCount = max(0, retryCount)
+        for attempt in 0...boundedRetryCount {
+            await loadHistory(limit: limit, offset: 0)
+            if hasLoaded { return }
+            if attempt < boundedRetryCount {
+                Log.debug("ScanHistoryStore", "🔁 Initial history load failed, retrying once")
+            }
         }
     }
 
@@ -196,9 +234,28 @@ import SwiftUI
     @MainActor
     func clearAll() {
         Log.debug("ScanHistoryStore", "🧹 Clearing all data")
+        activeLoadTask?.cancel()
+        activeLoadTask = nil
+        isLoading = false
         scans.removeAll()
         scanCache.removeAll()
         barcodeToScanIdMap.removeAll()
+        hasMore = true
+        hasLoaded = false
+        lastError = nil
+    }
+
+    /// Reset store to initial state (used when prefetcher needs a clean slate)
+    @MainActor
+    func reset() {
+        activeLoadTask?.cancel()
+        activeLoadTask = nil
+        isLoading = false
+        scans.removeAll()
+        scanCache.removeAll()
+        barcodeToScanIdMap.removeAll()
+        hasMore = true
+        hasLoaded = false
         lastError = nil
     }
 
