@@ -83,19 +83,19 @@ struct HeyThereScreen: View {
             }
         }
         .task(id: coordinator.currentBottomSheetRoute) {
-            // Trigger anonymous sign-in only when explicitly asking "Who's this for?"
-            // This prevents "Get Started" or other pre-onboarding states from creating sessions.
             if coordinator.currentBottomSheetRoute == .whosThisFor {
                 if authController.session == nil {
                     print("[OnboardingMeta] Auto-triggering guest login on .whosThisFor screen")
                     await authController.signIn()
 
-                    // Sync initial state to Supabase immediately after session is created
-                    print("[OnboardingMeta] Syncing initial state after guest login")
-                    await OnboardingPersistence.shared.sync(from: coordinator)
-
-                    // Pre-download tutorial video in background
-                    Task { await TutorialVideoManager.shared.downloadIfNeeded() }
+                    // signIn() creates an internal unstructured Task that survives
+                    // cancellation, so the sign-in completes regardless. But post-work
+                    // (sync, video download) should only run if we're still on this route.
+                    if !Task.isCancelled {
+                        print("[OnboardingMeta] Syncing initial state after guest login")
+                        await OnboardingPersistence.shared.sync(from: coordinator)
+                        Task { await TutorialVideoManager.shared.downloadIfNeeded() }
+                    }
                 }
             }
         }
