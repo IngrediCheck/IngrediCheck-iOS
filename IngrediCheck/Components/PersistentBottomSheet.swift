@@ -642,12 +642,20 @@ struct PersistentBottomSheet: View {
                 AnalyticsService.shared.trackOnboarding("Onboarding Family Member Added", properties: ["member_count": memberCount])
 
                 // If coming from home screen, navigate to WouldYouLikeToInvite
-                // Otherwise, navigate to addMoreMembersMinimal (onboarding flow)
+                // Otherwise, stay on AddMoreMembers (fields cleared automatically, user can add more or tap "All Set!")
                 if case .home = coordinator.currentCanvasRoute {
                     coordinator.navigateInBottomSheet(.wouldYouLikeToInvite(memberId: newMember.id, name: name))
-                } else {
-                    coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
                 }
+                // In onboarding flow: stay on same screen - user can add more or tap "All Set!"
+            } allSetPressed: {
+                // Track onboarding analytics
+                let memberCount = (familyStore.family?.otherMembers.count ?? 0) + 1
+                AnalyticsService.shared.trackOnboarding("Onboarding Family Members Choice", properties: [
+                    "choice": "all_set",
+                    "member_count": memberCount
+                ])
+                // Proceed to dietary preferences
+                coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: true))
             }
             
         case .addMoreMembersMinimal:

@@ -33,9 +33,14 @@ struct AddMoreMembers: View {
     ]
     @State var selectedFamilyMember: UserModel? = nil
     private let continuePressed: (String, UIImage?, String?, String?) async throws -> Void
+    private let allSetPressed: (() -> Void)?
 
-    init(continuePressed: @escaping (String, UIImage?, String?, String?) async throws -> Void = { _, _, _, _ in }) {
+    init(
+        continuePressed: @escaping (String, UIImage?, String?, String?) async throws -> Void = { _, _, _, _ in },
+        allSetPressed: (() -> Void)? = nil
+    ) {
         self.continuePressed = continuePressed
+        self.allSetPressed = allSetPressed
     }
 
     var body: some View {
@@ -50,23 +55,6 @@ struct AddMoreMembers: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .frame(maxWidth: .infinity)
-                    .overlay(alignment: .leading) {
-                        // No back button when opened from home screen - allow drag down to dismiss
-                        if case .home = coordinator.currentCanvasRoute {
-                            // Back button removed - sheet can be dragged down to dismiss
-                        } else if !familyStore.pendingOtherMembers.isEmpty {
-                            Button {
-                                coordinator.navigateInBottomSheet(.addMoreMembersMinimal)
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(.black)
-                                    .frame(width: 24, height: 24)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
 
                     Text("Start by adding their name and a fun avatar—it’ll help us personalize food tips just for them.")
                         .font(ManropeFont.medium.size(12))
@@ -197,26 +185,57 @@ struct AddMoreMembers: View {
                 }
             }
             .padding(.bottom, 40)
-            
-            Button {
-                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty {
-                    showError = true
-                } else {
-                    Task {
-                        await handleAddMember(trimmed: trimmed)
+
+            // Button section - show "All Set!" + "Add Member" during onboarding
+            if case .home = coordinator.currentCanvasRoute {
+                // Home screen: only "Add Member" button
+                Button {
+                    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty {
+                        showError = true
+                    } else {
+                        Task {
+                            await handleAddMember(trimmed: trimmed)
+                        }
                     }
+                } label: {
+                    GreenCapsule(
+                        title: "Add Member",
+                        width: 159,
+                        isLoading: isLoading,
+                        isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
                 }
-            } label: {
-                GreenCapsule(
-                    title: "Add Member",
-                    width: 159,
-                    isLoading: isLoading,
-                    isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                )
+                .disabled(isLoading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .padding(.horizontal, 20)
+            } else {
+                // Onboarding: show both buttons side by side
+                HStack(spacing: 16) {
+                    SecondaryButton(title: "All Set!", takeFullWidth: false) {
+                        allSetPressed?()
+                    }
+
+                    Button {
+                        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmed.isEmpty {
+                            showError = true
+                        } else {
+                            Task {
+                                await handleAddMember(trimmed: trimmed)
+                            }
+                        }
+                    } label: {
+                        GreenCapsule(
+                            title: "Add Member",
+                            width: 159,
+                            isLoading: isLoading,
+                            isDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        )
+                    }
+                    .disabled(isLoading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding(.horizontal, 20)
             }
-            .disabled(isLoading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .dismissKeyboardOnTap()
