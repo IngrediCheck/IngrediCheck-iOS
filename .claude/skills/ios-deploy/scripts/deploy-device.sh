@@ -57,7 +57,7 @@ if [ "$SKIP_BUILD" = false ]; then
     BUILD_START=$(date +%s)
 
     # Use generic platform - doesn't require device during build
-    xcodebuild -project "$PROJECT" \
+    BUILD_OUTPUT=$(xcodebuild -project "$PROJECT" \
         -scheme "$SCHEME" \
         -destination "generic/platform=iOS" \
         -allowProvisioningUpdates \
@@ -65,17 +65,30 @@ if [ "$SKIP_BUILD" = false ]; then
         CODE_SIGN_IDENTITY="Apple Development" \
         DEVELOPMENT_TEAM="$TEAM_ID" \
         PROVISIONING_PROFILE_SPECIFIER="" \
-        build 2>&1 | grep -E "(Build Succeeded|error:|warning:.*error)" || true
+        build 2>&1) || true
 
     BUILD_END=$(date +%s)
+
+    # Show relevant lines
+    echo "$BUILD_OUTPUT" | grep -E "(BUILD SUCCEEDED|error:|warning:.*error)" || true
+
+    # Fail if build didn't succeed (prevents deploying stale cached binaries)
+    if ! echo "$BUILD_OUTPUT" | grep -q "BUILD SUCCEEDED"; then
+        error "Build failed! Fix errors before deploying."
+    fi
+
     log "Build completed in $((BUILD_END - BUILD_START))s"
 else
     warn "Skipping build (--skip-build)"
 fi
 
-# Find app (exclude Index.noindex)
-APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "IngrediCheck.app" -path "*/Build/Products/Debug-iphoneos/*" -not -path "*/Index.noindex/*" -type d 2>/dev/null | head -1)
-[ -z "$APP_PATH" ] && error "App not found in DerivedData! Run a full build first."
+# Find app in the correct DerivedData for THIS project (not a stale build from another worktree)
+BUILD_DIR=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | grep "CONFIGURATION_BUILD_DIR" | head -1 | sed 's/.*= //')
+if [ -n "$BUILD_DIR" ] && [ -d "$BUILD_DIR/IngrediCheck.app" ]; then
+    APP_PATH="$BUILD_DIR/IngrediCheck.app"
+else
+    error "App not found at $BUILD_DIR/IngrediCheck.app! Build may have failed."
+fi
 log "Found app: $APP_PATH"
 
 # Check device is connected
