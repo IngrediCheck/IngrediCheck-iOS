@@ -29,7 +29,6 @@ struct HomeView: View {
     @State private var isLoadingStats: Bool = false
     @State private var hasCheckedAutoScan: Bool = false
     @State private var didFinishInitialLoad: Bool = false
-    @State private var didRetryScanHistory: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -475,7 +474,7 @@ struct HomeView: View {
                     }
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask { @MainActor in
-                            await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+                            await scanHistoryStore.loadInitialHistoryIfNeeded(limit: 20, retryCount: 1)
                         }
                         if stats == nil {
                             group.addTask { @MainActor in
@@ -492,15 +491,6 @@ struct HomeView: View {
                 .onChange(of: scanHistoryStore.hasLoaded) { _, loaded in
                     if loaded, appState.listsTabState.scans == nil {
                         appState.listsTabState.scans = scanHistoryStore.scans
-                    }
-                }
-                .onChange(of: scanHistoryStore.isLoading) { _, loading in
-                    // Retry once when prefetch finishes without success (e.g. network failure)
-                    if !loading && !scanHistoryStore.hasLoaded && !didRetryScanHistory {
-                        didRetryScanHistory = true
-                        Task {
-                            await scanHistoryStore.loadHistory(limit: 20, offset: 0)
-                        }
                     }
                 }
                 .onChange(of: prefetcher.prefetchedFoodNotesSummary) { _, summary in
