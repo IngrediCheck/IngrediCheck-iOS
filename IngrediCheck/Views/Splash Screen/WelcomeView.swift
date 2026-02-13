@@ -104,7 +104,7 @@ struct FillingPipeLine: View {
             }
             // Trigger completion after animation duration
             Task {
-                try? await Task.sleep(nanoseconds: UInt64(15 * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(8 * 1_000_000_000))
                 await MainActor.run {
                     onComplete()
                 }
