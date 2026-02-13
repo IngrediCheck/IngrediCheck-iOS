@@ -585,18 +585,25 @@ struct PersistentBottomSheet: View {
         case .whosThisFor:
             WhosThisFor {
                 AnalyticsService.shared.trackOnboarding("Onboarding Flow Selected", properties: ["flow_type": "individual"])
-                // Guest login already happened on .heyThere screen, just proceed
+                await authController.signIn()
+                guard authController.session != nil else {
+                    Log.error("PersistentBottomSheet", "Sign-in failed, cannot create Bite Buddy family")
+                    return
+                }
                 do {
                     try await familyStore.createBiteBuddyFamily()
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
                     coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
                 } catch {
                     Log.error("PersistentBottomSheet", "Failed to create Bite Buddy family: \(error)")
-                    // Don't navigate forward on error - user stays on current screen
                 }
             } addFamilyPressed: {
                 AnalyticsService.shared.trackOnboarding("Onboarding Flow Selected", properties: ["flow_type": "family"])
-                // Guest login already happened on .heyThere screen, just proceed
+                await authController.signIn()
+                guard authController.session != nil else {
+                    Log.error("PersistentBottomSheet", "Sign-in failed, cannot proceed to family flow")
+                    return
+                }
                 coordinator.showCanvas(.letsMeetYourIngrediFam)
             }
             

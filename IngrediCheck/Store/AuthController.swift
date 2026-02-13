@@ -132,9 +132,8 @@ private enum AuthFlowMode {
     
     private let keychain = KeychainSwift()
     @MainActor private var appleSignInCoordinator: AppleSignInCoordinator?
-    
-    private static let anonUserNameKey = "anonEmail"
-    private static let anonPasswordKey = "anonPassword"
+    @MainActor private var signInTask: Task<Void, Never>?
+
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
     
@@ -293,27 +292,36 @@ private enum AuthFlowMode {
 
         await MainActor.run {
             OnboardingPersistence.shared.reset()
-            clearAnonymousCredentials()
             Self.hasRegisteredDevice = false
         }
     }
 
+    @MainActor
     func signIn() async {
-        
-        Log.debug("AuthController", "signIn()")
-
-        guard await signInState != .signedIn else {
-            Log.debug("AuthController", "Already Signed In, so not Signing in again")
+        guard signInState != .signedIn else {
+            Log.debug("AuthController", "signIn(): Already signed in")
             return
         }
 
-        if let anonymousEmail = keychain.get(AuthController.anonUserNameKey),
-           let anonymousPassword = keychain.get(AuthController.anonPasswordKey),
-           await signInWithLegacyGuest(email: anonymousEmail, password: anonymousPassword) {
+        // Deduplicate: if sign-in is already in flight, join it
+        if let existing = signInTask {
+            Log.debug("AuthController", "signIn(): Joining existing sign-in task")
+            await existing.value
             return
         }
 
-        await signInWithNewAnonymousAccount()
+        Log.debug("AuthController", "signIn(): Starting new sign-in")
+
+        // Unstructured Task — does NOT inherit parent's cancellation,
+        // so SwiftUI .task(id:) cancellation won't kill the network request.
+        // Inherits @MainActor (no Sendable issues with self).
+        let task = Task {
+            await signInWithNewAnonymousAccount()
+        }
+
+        signInTask = task
+        await task.value
+        signInTask = nil
     }
 
     @MainActor
@@ -342,7 +350,6 @@ private enum AuthFlowMode {
 
             let session = try await finalizeAuth(with: credentials, mode: .link)
             self.session = session
-            clearAnonymousCredentials()
             isUpgradingAccount = false
         } catch {
             isUpgradingAccount = false
@@ -356,24 +363,14 @@ private enum AuthFlowMode {
         let webService = WebService()
         try? await webService.deleteUserAccount()
         await self.signOut()
-        clearAnonymousCredentials()
     }
     
-    private func signInWithLegacyGuest(email: String, password: String) async -> Bool {
-        do {
-            _ = try await supabaseClient.auth.signIn(email: email, password: password)
-            return true
-        } catch {
-            Log.error("AuthController", "Anonymous signin failed for stored credentials: \(error)")
-            keychain.delete(AuthController.anonUserNameKey)
-            keychain.delete(AuthController.anonPasswordKey)
-            return false
-        }
-    }
-
     private func signInWithNewAnonymousAccount() async {
         do {
-            _ = try await supabaseClient.auth.signInAnonymously()
+            let session = try await supabaseClient.auth.signInAnonymously()
+            await MainActor.run {
+                self.handleSessionChange(event: .signedIn, session: session)
+            }
         } catch {
             Log.error("AuthController", "signInAnonymously failed: \(error)")
         }
@@ -530,11 +527,6 @@ private enum AuthFlowMode {
                 throw AuthControllerError.rootViewControllerNotFound
             }
         return rootViewController
-    }
-
-    private func clearAnonymousCredentials() {
-        keychain.delete(AuthController.anonUserNameKey)
-        keychain.delete(AuthController.anonPasswordKey)
     }
 
     public func signInWithGoogle(completion: ((Result<Void, Error>) -> Void)? = nil) {
