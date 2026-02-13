@@ -5,5 +5,4 @@ struct Config {
     static let supabaseKey = "YOUR_SUPABASE_ANON_KEY"
     static let supabaseFunctionsURLBase = "https://YOUR_PROJECT.supabase.co/functions/v1/ingredicheck/"
     static let flyIOBaseURL = "https://YOUR_FLY_APP.fly.dev"
-    static let usePreviewFlow = false
 }

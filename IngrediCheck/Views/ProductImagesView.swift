@@ -1,5 +1,35 @@
 import SwiftUI
 
+struct HeaderImage: View {
+    let imageLocation: DTO.ImageLocationInfo
+
+    @State private var image: UIImage? = nil
+    @Environment(WebService.self) var webService
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                ProgressView()
+            }
+        }
+        .task(id: imageLocation) {
+            image = nil
+            do {
+                let loaded = try await webService.fetchImage(imageLocation: imageLocation, imageSize: .medium)
+                await MainActor.run {
+                    self.image = loaded
+                }
+            } catch {
+                print("[HeaderImage] Failed to fetch image: \(error)")
+            }
+        }
+    }
+}
+
 struct ProductImagesView: View {
 
     let images: [DTO.ImageLocationInfo]

@@ -26,7 +26,7 @@ struct SplashScreen: View {
                     .scaledToFill()
                     .ignoresSafeArea()
             } else if shouldNavigateToHome {
-                // In preview flow, if there's already a Supabase session
+                // If there's already a Supabase session
                 // (including anonymous/guest), skip the marketing carousel
                 // and go straight into the main container.
                 Splash {

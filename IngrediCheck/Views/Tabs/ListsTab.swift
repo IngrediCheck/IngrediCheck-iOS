@@ -3,60 +3,11 @@ import Combine
 import SimpleToast
 import os
 
-@MainActor struct ListsTab: View {
-
-    @State private var isSearching: Bool = false
-
-    @Environment(AppState.self) var appState
-    @Environment(WebService.self) var webService
-    @Environment(ScanHistoryStore.self) var scanHistoryStore
-
-    var body: some View {
-        // Note: NavigationStack is provided by LoggedInRootView (Single Root NavigationStack)
-        // HistoryRouteItem navigation is registered at LoggedInRootView level
-        Group {
-            if isSearching {
-                ScanHistorySearchingView(webService: webService, scanHistoryStore: scanHistoryStore, isSearching: $isSearching)
-            } else {
-                defaultView
-            }
-        }
-        .animation(.default, value: isSearching)
-    }
-
-    var defaultView: some View {
-        VStack {
-            FavoritesView()
-                .padding(.bottom)
-                .padding(.bottom)
-            RecentScansView()
-            Spacer()
-        }
-        .padding(.horizontal)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarTitle("Lists")
-        .toolbar {
-            Group {
-                if let scans = appState.listsTabState.scans,
-                   scans.count > 4 {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: {
-                            isSearching = true
-                        }, label: {
-                            Image(systemName: "magnifyingglass")
-                        })
-                    }
-                }
-            }
-        }
-    }
-}
-
 @MainActor struct FavoritesPageView: View {
-    
+
     @Environment(AppState.self) var appState
     @Environment(WebService.self) var webService
-    
+
     var body: some View {
         Group {
             if let favoriteItems = appState.listsTabState.listItems {
@@ -87,79 +38,6 @@ import os
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitle("Favorites")
         .background(Color.pageBackground)
-    }
-}
-
-@MainActor struct FavoritesView: View {
-
-    @Environment(AppState.self) var appState
-    @Environment(WebService.self) var webService
-
-    var body: some View {
-        
-        VStack {
-            HStack {
-                Text("Favorites")
-                    .font(.headline)
-                Spacer()
-                if let favoriteItems = appState.listsTabState.listItems,
-                   !favoriteItems.isEmpty {
-                    NavigationLink(value: HistoryRouteItem.favoritesAll) {
-                        Text("View all")
-                    }
-                }
-            }
-            .padding(.bottom)
-            
-            if let favoriteItems = appState.listsTabState.listItems {
-                ScrollView(.horizontal) {
-                    HStack {
-                        ForEach(favoriteItems, id: \.list_item_id) { item in
-                            NavigationLink(value: HistoryRouteItem.listItem(item)) {
-                                FavoriteItemBirdsEyeView(item: item)
-                            }
-                        }
-                    }
-                }
-                .frame(minHeight: 130)
-                .scrollIndicators(.hidden)
-                .refreshable {
-                    if let listItems = try? await webService.getFavorites() {
-                        appState.listsTabState.listItems = listItems
-                    }
-                }
-                .overlay  {
-                    if favoriteItems.isEmpty {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                HStack {
-                                    ForEach (0..<1) { index in
-                                        Image("EmptyList")
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 120, height: 120)
-                                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    }
-                                }
-                                Text("No Favorite products yet")
-                                    .font(.subheadline)
-                                    .fontWeight(.light)
-                                    .multilineTextAlignment(.center)
-                                    .foregroundStyle(.gray)
-                            }
-                            Spacer()
-                        }
-                    }
-                }
-            } else {
-                VStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
-                .frame(height: 130)
-            }
-        }
     }
 }
 
@@ -349,138 +227,6 @@ import os
     }
 }
 
-@MainActor struct RecentScansView: View {
-
-    @Environment(AppState.self) var appState
-    @Environment(WebService.self) var webService
-    @Environment(ScanHistoryStore.self) var scanHistoryStore
-    
-    var showViewAll: Bool {
-        if let scans = appState.listsTabState.scans {
-            return scans.count > 4
-        }
-        return false
-    }
-
-    var body: some View {
-        VStack {
-            HStack {
-                Text("Recent Scans")
-                    .font(.headline)
-                Spacer()
-                if showViewAll {
-                    NavigationLink(value: HistoryRouteItem.recentScansAll) {
-                        Text("View all")
-                    }
-                }
-            }
-            .padding(.bottom)
-
-            if let scans = appState.listsTabState.scans {
-                RecentScansListView(scans: scans)
-                .frame(maxWidth: .infinity)
-                .refreshable {
-                    NSLog("[RecentScansView] 🔄 Pull-to-refresh triggered")
-                    // Load via store (single source of truth)
-                    await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
-                    NSLog("[RecentScansView] ✅ loadHistory completed")
-                    // Sync to AppState for backwards compatibility
-                    appState.listsTabState.scans = scanHistoryStore.scans
-                }
-                .overlay {
-                    if scans.isEmpty {
-                        VStack {
-                            Spacer()
-                            Image("EmptyRecentScans")
-                                .resizable()
-                                .scaledToFit()
-                            Text("No products scanned yet")
-                                .font(.subheadline)
-                                .fontWeight(.light)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.gray)
-                                .padding(.top)
-                            Spacer()
-                        }
-                        .frame(width: UIScreen.main.bounds.width / 2)
-                    }
-                }
-            } else {
-                VStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
-            }
-        }
-    }
-}
-
-@MainActor struct RecentScansListView: View {
-
-    var scans: [DTO.Scan]
-    @Environment(ScanHistoryStore.self) var scanHistoryStore
-    @Environment(AppState.self) var appState
-    
-    var body: some View {
-        Group {
-            if scans.isEmpty {
-                EmptyStateView(
-                    imageName: "history-emptystate",
-                    title: "No Scans !",
-                    description: [
-                        "Your recent scans will appear here once",
-                        "you start scanning products."
-                    ],
-                    buttonTitle: "Start Scanning",
-                    buttonAction: {
-                        appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
-                    }
-                )
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(scans.enumerated()), id: \.element.id) { index, scan in
-                            NavigationLink(value: HistoryRouteItem.scan(scan)) {
-                                ScanRow(scan: scan)
-                            }
-                            .foregroundStyle(.primary)
-                            .onAppear {
-                                // Load more when reaching the end (3 rows remaining)
-                                if index >= scans.count - 3 {
-                                    Task {
-                                        await scanHistoryStore.loadMore()
-                                        // Sync to AppState for backwards compatibility
-                                        appState.listsTabState.scans = scanHistoryStore.scans
-                                    }
-                                }
-                            }
-
-                            if index != scans.count - 1 {
-                                Divider()
-                                    .padding(.vertical, 14)
-                            }
-                        }
-                        
-                        // Loading indicator at the bottom
-                        if scanHistoryStore.isLoading && scanHistoryStore.hasMore {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 20)
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-            }
-        }
-    }
-}
-
-//#Preview {
-//    RecentScansListView()
-//        .environment(AppState())
-//}
-
 @Observable @MainActor class ScanHistorySearchingViewModel {
 
     let webService: WebService
@@ -507,7 +253,7 @@ import os
             }
             .store(in: &cancellables)
     }
-    
+
     private func searchForEntries(searchText: String) {
         guard !searchText.isEmpty  else {
             DispatchQueue.main.async {
@@ -517,7 +263,7 @@ import os
         }
 
         Task {
-            Log.debug("ListsTab", "Searching for \(searchText)")
+            Log.debug("ScanHistorySearch", "Searching for \(searchText)")
             // Load from store and filter client-side
             await scanHistoryStore.loadHistory(limit: 100, offset: 0, forceRefresh: true)
 
@@ -532,7 +278,7 @@ import os
             }
         }
     }
-    
+
     func refreshSearchResults() {
         searchForEntries(searchText: searchText)
     }
@@ -583,324 +329,13 @@ import os
         .padding(.horizontal)
     }
 }
-struct HistoryItemCardView: View {
-    let item: DTO.HistoryItem
-    
-    @State private var image: UIImage? = nil
-    @Environment(WebService.self) var webService
-    
-    var placeholderImage: some View {
-        Image("EmptyList")
-            .resizable()
-            .scaledToFill()
-            .frame(width: 80, height: 80)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    var body: some View {
-        HStack {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 80, height: 80)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-            } else {
-                placeholderImage
-            }
-
-            VStack(alignment: .leading) {
-                Text(item.brand ?? "Unknown Brand")
-                    .lineLimit(1)
-                    .font(.callout)
-
-                Text(item.name ?? "Unknown Name")
-                    .lineLimit(1)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-                
-                if let dateString = item.convertISODateToLocalDateString() {
-                    Text(dateString)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-
-            Circle()
-                .fill(item.toColor())
-                .frame(width: 10, height: 10)
-                .padding(.leading)
-        }
-        .task {
-            if let firstImage = item.images.first,
-               let image = try? await webService.fetchImage(imageLocation: firstImage, imageSize: .small) {
-                DispatchQueue.main.async {
-                    self.image = image
-                }
-            }
-        }
-    }
-}
-
-struct HistoryItemDetailView: View {
-    let item: DTO.HistoryItem
-    
-    @State private var feedbackData: FeedbackData
-    @State private var showToast: Bool = false
-
-    @Environment(WebService.self) var webService
-    @Environment(AppState.self) var appState
-    @Environment(UserPreferences.self) var userPreferences
-    
-    init(item: DTO.HistoryItem) {
-        self.item = item
-        self.feedbackData = FeedbackData(rating: item.rating)
-    }
-
-    private func submitFeedback() {
-        Task {
-            try? await webService.submitFeedback(
-                clientActivityId: item.client_activity_id,
-                feedbackData: feedbackData
-            )
-        }
-    }
-    
-    var body: some View {
-        @Bindable var userPreferencesBindable = userPreferences
-        ScrollView {
-            VStack(spacing: 15) {
-                if let name = item.name {
-                    Text(name)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.horizontal)
-                }
-                if let brand = item.brand {
-                    Text(brand)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.horizontal)
-                }
-                ProductImagesView(images: item.images) {
-                    appState.feedbackConfig = FeedbackConfig(
-                        feedbackData: $feedbackData,
-                        feedbackCaptureOptions: .imagesOnly,
-                        onSubmit: {
-                            showToast.toggle()
-                            submitFeedback()
-                        }
-                    )
-                }
-                if item.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
-                        .font(.subheadline)
-                        .padding()
-                        .multilineTextAlignment(.center)
-                    Button(action: {
-                        userPreferencesBindable.captureType = .ingredients
-                        appState.activeSheet = .scan
-                    }, label: {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.largeTitle)
-                    })
-                    Text("Product will be analyzed instantly!")
-                        .font(.subheadline)
-                } else {
-                    let product = DTO.Product(
-                        barcode: item.barcode,
-                        brand: item.brand,
-                        name: item.name,
-                        ingredients: item.ingredients,
-                        images: item.images,
-                        claims: nil
-                    )
-                    AnalysisResultView(product: product, ingredientRecommendations: item.ingredient_recommendations)
-                    
-                    HStack {
-                        Text("Ingredients").font(.headline)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-
-                    IngredientsText(ingredients: product.ingredients, ingredientRecommendations: item.ingredient_recommendations)
-                        .padding(.horizontal)
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-        .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
-            FeedbackSuccessToastView()
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if !item.images.isEmpty && !item.ingredients.isEmpty {
-                    Button(action: {
-                        appState.feedbackConfig = FeedbackConfig(
-                            feedbackData: $feedbackData,
-                            feedbackCaptureOptions: .imagesOnly,
-                            onSubmit: {
-                                showToast.toggle()
-                                submitFeedback()
-                            }
-                        )
-                    }, label: {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.subheadline)
-                    })
-                }
-                StarButton(clientActivityId: item.client_activity_id, favorited: item.favorited)
-                Button(action: {
-                    appState.feedbackConfig = FeedbackConfig(
-                        feedbackData: $feedbackData,
-                        feedbackCaptureOptions: .feedbackAndImages,
-                        onSubmit: {
-                            showToast.toggle()
-                            submitFeedback()
-                        }
-                    )
-                }, label: {
-                    Image(systemName: "flag")
-                        .font(.subheadline)
-                })
-            }
-        }
-    }
-}
-
-struct ScanDetailView: View {
-    let scan: DTO.Scan
-    
-    @State private var feedbackData = FeedbackData()
-    @State private var showToast: Bool = false
-
-    @Environment(WebService.self) var webService
-    @Environment(AppState.self) var appState
-    @Environment(UserPreferences.self) var userPreferences
-    
-    private func submitFeedback() {
-        Task {
-            // Note: clientActivityId is not available in Scan, so feedback submission would need scan.id
-            // For now, leaving as placeholder
-            Log.debug("ListsTab", "Feedback submission not yet implemented for Scan")
-        }
-    }
-    
-    var body: some View {
-        @Bindable var userPreferencesBindable = userPreferences
-        let product = scan.toProduct()
-        let imageLocations: [DTO.ImageLocationInfo] = scan.product_info.images?.compactMap { scanImageInfo in
-            guard let urlString = scanImageInfo.url,
-                  let url = URL(string: urlString) else {
-                return nil
-            }
-            return .url(url)
-        } ?? []
-        
-        ScrollView {
-            VStack(spacing: 15) {
-                if let name = scan.product_info.name {
-                    Text(name)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.horizontal)
-                }
-                if let brand = scan.product_info.brand {
-                    Text(brand)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .padding(.horizontal)
-                }
-                ProductImagesView(images: imageLocations) {
-                    appState.feedbackConfig = FeedbackConfig(
-                        feedbackData: $feedbackData,
-                        feedbackCaptureOptions: .imagesOnly,
-                        onSubmit: {
-                            showToast.toggle()
-                            submitFeedback()
-                        }
-                    )
-                }
-                if scan.product_info.ingredients.isEmpty {
-                    Text("Help! Our Product Database is missing an Ingredient List for this Product. Submit Product Images and Earn IngrediPoints\u{00A9}!")
-                        .font(.subheadline)
-                        .padding()
-                        .multilineTextAlignment(.center)
-                    Button(action: {
-                        userPreferencesBindable.captureType = .ingredients
-                        appState.activeSheet = .scan
-                    }, label: {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.largeTitle)
-                    })
-                    Text("Product will be analyzed instantly!")
-                        .font(.subheadline)
-                } else {
-                    let recommendations = scan.analysis_result?.toIngredientRecommendations()
-                    AnalysisResultView(product: product, ingredientRecommendations: recommendations)
-                    
-                    HStack {
-                        Text("Ingredients").font(.headline)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-
-                    IngredientsText(ingredients: scan.product_info.ingredients, ingredientRecommendations: recommendations)
-                        .padding(.horizontal)
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-        .simpleToast(isPresented: $showToast, options: SimpleToastOptions(hideAfter: 3)) {
-            FeedbackSuccessToastView()
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if !imageLocations.isEmpty && !scan.product_info.ingredients.isEmpty {
-                    Button(action: {
-                        appState.feedbackConfig = FeedbackConfig(
-                            feedbackData: $feedbackData,
-                            feedbackCaptureOptions: .imagesOnly,
-                            onSubmit: {
-                                showToast.toggle()
-                                submitFeedback()
-                            }
-                        )
-                    }, label: {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.subheadline)
-                    })
-                }
-                // Note: StarButton needs clientActivityId which is not in Scan - would need to be handled differently
-                Button(action: {
-                    appState.feedbackConfig = FeedbackConfig(
-                        feedbackData: $feedbackData,
-                        feedbackCaptureOptions: .feedbackAndImages,
-                        onSubmit: {
-                            showToast.toggle()
-                            submitFeedback()
-                        }
-                    )
-                }, label: {
-                    Image(systemName: "flag")
-                        .font(.subheadline)
-                })
-            }
-        }
-    }
-}
 
 struct FavoriteItemCardView: View {
     let item: DTO.ListItem
-    
+
     @State private var image: UIImage? = nil
     @Environment(WebService.self) var webService
-    
+
     var placeholderImage: some View {
         Image("EmptyList")
             .resizable()
@@ -930,7 +365,7 @@ struct FavoriteItemCardView: View {
                     .lineLimit(1)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
 
                 if let dateString = item.convertISODateToLocalDateString() {
@@ -939,44 +374,8 @@ struct FavoriteItemCardView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            
+
             Spacer()
-        }
-        .task {
-            if let firstImage = item.images.first,
-               let image = try? await webService.fetchImage(imageLocation: firstImage, imageSize: .small) {
-                DispatchQueue.main.async {
-                    self.image = image
-                }
-            }
-        }
-    }
-}
-
-struct FavoriteItemBirdsEyeView: View {
-    let item: DTO.ListItem
-    
-    @State private var image: UIImage? = nil
-    @Environment(WebService.self) var webService
-    
-    var placeholderImage: some View {
-        Image("EmptyList")
-            .resizable()
-            .scaledToFill()
-            .frame(width: 120, height: 120)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    var body: some View {
-        ZStack {
-            placeholderImage
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
         }
         .task {
             if let firstImage = item.images.first,
@@ -991,13 +390,12 @@ struct FavoriteItemBirdsEyeView: View {
 
 struct FavoriteItemDetailView: View {
     let item: DTO.ListItem
-    
+
     @Environment(WebService.self) var webService
     @Environment(AppState.self) var appState
     @Environment(UserPreferences.self) var userPreferences
 
     var body: some View {
-        @Bindable var userPreferencesBindable = userPreferences
         ScrollView {
             VStack(spacing: 15) {
                 if let name = item.name {
@@ -1024,7 +422,7 @@ struct FavoriteItemDetailView: View {
                     images: item.images,
                     claims: nil
                 )
-                
+
                 HStack {
                     Text("Ingredients").font(.headline)
                     Spacer()

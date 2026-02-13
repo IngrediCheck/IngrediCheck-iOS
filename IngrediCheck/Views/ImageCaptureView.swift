@@ -24,9 +24,9 @@ struct ImageCaptureView: View {
 
     @State private var cameraManager = CameraManager()
     @State private var showFocusToast = false
+    @State private var scanId: String?
     @Environment(WebService.self) var webService
     @Environment(UserPreferences.self) var userPreferences
-    @Environment(CheckTabState.self) var checkTabState
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -122,9 +122,9 @@ struct ImageCaptureView: View {
             // Don't clear scanId on disappear - we want to preserve it for navigation
             // Only clear if explicitly clearing all images via deleteCapturedImages()
             // capturedImages = []  // Commented out - preserve images for navigation
-            // checkTabState.scanId = nil  // Commented out - preserve scanId for navigation
+            // scanId = nil  // Commented out - preserve scanId for navigation
             cameraManager.stopSession()
-            Log.debug("PHOTO_SCAN", "📸 ImageCaptureView disappeared - scanId preserved: \(checkTabState.scanId ?? "nil")")
+            Log.debug("PHOTO_SCAN", "📸 ImageCaptureView disappeared - scanId preserved: \(scanId ?? "nil")")
         }
     }
     
@@ -163,22 +163,20 @@ struct ImageCaptureView: View {
             Log.debug("PHOTO_SCAN", "📸 Camera callback received - hasImage: \(image != nil)")
             
             if let image = image {
-                // Capture current state before async work
-                let checkTabState = self.checkTabState
                 let currentImageCount = self.capturedImages.count
                 
                 Log.debug("PHOTO_SCAN", "📸 Photo captured - current_image_count: \(currentImageCount), new_count: \(currentImageCount + 1)")
                 
                 Task { @MainActor in
                     // Generate scan_id when first image is captured
-                    if checkTabState.scanId == nil {
-                        checkTabState.scanId = UUID().uuidString
-                        Log.debug("PHOTO_SCAN", "🆔 Generated scan_id: \(checkTabState.scanId!)")
+                    if scanId == nil {
+                        scanId = UUID().uuidString
+                        Log.debug("PHOTO_SCAN", "🆔 Generated scan_id: \(scanId!)")
                     } else {
-                        Log.debug("PHOTO_SCAN", "🆔 Using existing scan_id: \(checkTabState.scanId!)")
+                        Log.debug("PHOTO_SCAN", "🆔 Using existing scan_id: \(scanId!)")
                     }
                     
-                    guard let scanId = checkTabState.scanId else {
+                    guard let scanId = scanId else {
                         Log.debug("PHOTO_SCAN", "❌ ERROR: scanId is nil after generation!")
                         return
                     }
@@ -220,7 +218,7 @@ struct ImageCaptureView: View {
     func deleteCapturedImages() {
         withAnimation {
             capturedImages = []
-            checkTabState.scanId = nil  // Reset scanId when clearing images
+            scanId = nil  // Reset scanId when clearing images
         }
         // No need to delete from Supabase storage for scan images
     }
