@@ -1,0 +1,315 @@
+---
+name: mk-reply-guy
+description: Find Reddit posts and craft genuine comments to pitch IngrediCheck. Walk through posts one by one, propose comments, get approval, then move to next.
+disable-model-invocation: true
+argument-hint: [search-terms|subreddit]
+allowed-tools:
+  - mcp_cursor-ide-browser_browser_navigate
+  - mcp_cursor-ide-browser_browser_snapshot
+  - mcp_cursor-ide-browser_browser_take_screenshot
+  - mcp_web_fetch
+  - web_search
+---
+
+# Reddit Post Discovery & Commenting for IngrediCheck
+
+Find Reddit posts where we can comment to pitch IngrediCheck 2.0. Walk through posts one by one: show the post, propose a comment, get approval, then move to the next.
+
+## Trigger: /mk-reply-guy
+
+When the user runs **/mk-reply-guy** (or asks for "mk-reply-guy" / "reply guy" / "Reddit outreach"):
+
+1. **Start the browser immediately** — Open a browser tab and navigate to Reddit (`https://www.reddit.com`).
+2. **Run the Procedure** below from Step 0 (login check), then Step 1 (search), and keep proposing posts and comments until the user stops.
+3. Do not ask for confirmation before opening the browser; open it and begin.
+
+**Cursor:** This skill is available as a slash command. Type **/** in Agent chat and choose **mk-reply-guy** to run it. It runs only when explicitly invoked (not applied automatically).
+
+## App Details
+
+- **Name:** IngrediCheck (version 2.0)
+- **Main Features:**
+  - Family food notes
+  - Personalized analysis of packaged food ingredients when grocery shopping
+  - Free for early adopters
+- **Links (include in every comment):**
+  - https://www.ingredicheck.app/
+  - https://apps.apple.com/us/app/ingredicheck/id6477521615
+
+## Search Strategy
+
+### Target Subreddits
+Cast a wide net across these; prioritize subs where people discuss checking ingredients on packaged foods, labels, or shopping with restrictions. Prefer subs with recent activity (browse `/new/` or check that posts are from the last month).
+
+**Ingredient- and label-focused (high relevance)**
+- r/ultraprocessedfood (weekly "Is this UPF?" product threads; very active)
+- r/ingredients
+- r/DoesThisTasteOff
+- r/mildlyinfuriating (product/recipe changes)
+
+**Allergies & food allergies**
+- r/FoodAllergies
+- r/Allergies
+- r/peanutallergy
+- r/sulfiteallergy
+
+**Celiac, gluten-free, intolerance**
+- r/Celiac
+- r/GlutenFree
+- r/GlutenFreeCooking
+- r/glutenfreerecipes
+- r/LactoseIntolerant
+- r/DairyFree
+- r/EosinophilicE
+
+**Diet & condition-specific**
+- r/MCAS
+- r/HistamineIntolerance
+- r/FODMAPS
+- r/SIBO
+- r/ibs
+- r/GERD
+- r/AutoImmuneProtocol
+- r/Whole30
+- r/Keto
+- r/IBD
+- r/CrohnsDisease
+- r/UlcerativeColitis
+
+**Plant-based & ethical eating**
+- r/vegan
+- r/vegetarian
+- r/PlantBasedDiet
+- r/WholeFoodsPlantBased
+- r/veganrecipes
+- r/glutenfreevegan
+- r/ketorecipes
+
+**Skin, asthma, and trigger-aware**
+- r/eczema
+- r/Psoriasis
+- r/Asthma
+- r/nontoxicpom
+
+**General food, labels, and shopping**
+- r/nutrition
+- r/HealthyFood
+- r/EatCheapAndHealthy
+- r/fitmeals
+- r/AskRedditFood
+
+**Process:** Search within these subs (e.g. subreddit search with `restrict_sr=1`), and/or browse `/new/` when search is sparse. Add other subs where people discuss ingredients, labels, allergies, or grocery shopping.
+
+### Search Terms
+- "ingredients changed" / "label changed" / "recipe change"
+- "reading food labels" / "checking ingredients"
+- "packaged food ingredients" / "grocery shopping ingredients"
+- "food allergies" / "allergen checking"
+- "how do you shop" / "shopping with allergies"
+- "scan product" / "scanning labels" / "barcode scanner"
+- "ingredient list" / "reading labels" / "checking labels"
+
+### Search Focus
+**Prioritize posts specifically about:**
+- Checking ingredient labels on packaged products
+- Confusion over ingredient lists
+- Using apps/tools to scan or check products
+- Reading labels for allergens or dietary restrictions
+
+**Avoid posts about:**
+- Nutrition facts, serving sizes, calories, macros
+- Restaurant items without labels
+- General food safety questions without ingredient focus
+- Cooking recipes (unless specifically about checking packaged ingredient labels)
+
+### Search Filters
+- Time: `t=month` (recent, non-archived posts)
+- Sort: `sort=new` (most recent first)
+- Avoid archived posts (Reddit archives after 6 months)
+
+### Search Process
+1. Search across all of Reddit or within specific subreddits
+2. Filter for posts from the past month
+3. Check that comments are enabled (no "Archived post" message)
+4. Prioritize posts with engagement (comments, upvotes)
+
+## Comment Writing Guidelines
+
+### Critical Rules
+1. **ALWAYS read the full post AND top 5-10 comments before proposing a comment**
+2. **ALWAYS check post relevance first** - Use the "Post Relevance Checklist" in "Lessons Learned" section. Skip posts about nutrition info, restaurant items without labels, or general food questions without ingredient checking focus.
+3. **ALWAYS thoroughly check if user already commented** - Use multiple methods (fetch, grep, browser snapshot). If user says "we already commented," trust them and skip immediately.
+4. Make it relevant to the specific post and thread
+5. Reference other comments, OP's phrasing, or shared pain points
+6. Use "I built" or "I created" (not "I use")
+7. Match the tone and style of other comments in the thread
+8. **Do NOT use em dashes (—)** in proposed comments. Use regular hyphens (-) or parentheses instead.
+9. **Be sensitive to context** - Avoid promoting on posts about severe medical crises or very distressing symptoms unless you can offer genuine help without trivializing their situation.
+
+### Comment Structure
+- **Opening:** Question, observation, or reference that ties to the discussion
+- **Middle:** Brief explanation of how IngrediCheck helps with the specific problem
+- **Features:** Mention family food notes + personalized ingredient analysis
+- **Optional:** Future feature (e.g., "notify when ingredients change") only if relevant
+- **Close:** Links + "free for early adopters"
+
+### When to propose what kind of comment
+Choose the angle that best matches the post so the comment feels relevant, not generic.
+
+- **Ingredients changed / label changed / recipe change / "they changed the formula" / frustration that a product changed**  
+  Lead with the **"notify when ingredients change"** angle: ask if they'd be interested in an app that notifies them when the ingredient list of their favorite products changes, say you're considering adding this feature to IngrediCheck, then plug current features (family food notes, personalized ingredient analysis when you scan) and both links + "free for early adopters." Do not lead with "notify when ingredients change" on posts that are *not* about products changing.
+
+- **General label reading / checking ingredients / shopping with allergies or restrictions**  
+  Lead with **current features**: family food notes and personalized ingredient analysis when you scan a label. Optionally mention the future "notify when ingredients change" feature only if it fits the thread.
+
+- **Specific dietary triggers (FODMAPs, salicylates, benzoates, rare allergens)**  
+  Use the **beta-testing invitation** approach: invite them to try IngrediCheck for their specific triggers and offer to improve the app based on their feedback; then mention current features and links.
+
+- **Other apps or tools mentioned (Fig, Checkit, Spoonful, Monash, etc.)**  
+  Lead with: IngrediCheck can do the same thing (e.g. flag gluten). Then emphasize it's **more general and flexible**: if someone has other restrictions on top of the main one (e.g. gluten + dairy), or different people in the family have different restrictions, IngrediCheck gives **personalized analysis for each person's unique needs**. Avoid over-indexing on technical differentiators (e.g. "scan the label vs barcode") unless the user asks; prefer the "flexible, multi-restriction, family/personalized" angle. Include family food notes, both links, and "free for early adopters."
+
+### What Works
+- Referencing another commenter's tool/method (e.g., "Someone mentioned using Fig app...")
+- Using OP's own terminology (e.g., "sent to the backrooms")
+- Addressing specific pain points mentioned in the thread
+- Positioning as a tool that solves the exact problem being discussed
+- Conversational, helpful tone
+- **Beta-testing invitation approach:** For posts where users have specific dietary needs (e.g., salicylates, benzoates, FODMAPs), invite them to test IngrediCheck for their specific triggers and offer to improve it based on their feedback. This creates a collaborative, helpful tone rather than pure promotion.
+
+### What Doesn't Work
+- Generic templates that ignore the thread context
+- Leading with "notifies when ingredients change" when the post is about something else
+- Comments that feel like ads rather than genuine participation
+- Not reading the full post/comments first
+- Ignoring the actual question/topic
+- **On "other apps mentioned" threads:** Leading with technical differentiators (e.g. "scan the label not just barcode," "middle ground") instead of the preferred angle: IngrediCheck can do the same (e.g. flag gluten), but is more general and flexible for multiple restrictions per person or different family members' needs.
+
+### Comment pitfalls (avoid these)
+- **Never claim to share OP's condition or allergies.** Do not say "I'm the same with egg and nuts," "I have X too," or similar when the commenter (IngrediCheck founder) does not have that allergy or condition. It is dishonest. Tie to the thread by referencing the *problem* (e.g. reading labels, decoding ingredients) without falsely claiming personal experience.
+- **Do not tie the app to "not trusting labels."** IngrediCheck helps users *read and interpret* labels (decode ingredients, match to their list, get personalized analysis). It does NOT address whether the label is accurate or whether to trust the manufacturer. If you don't trust the label, scanning and analyzing it is pointless. Position the app as helping with *reading/decoding/analyzing* labels and matching them to the user's restrictions. Avoid framing like "when you don't trust the label," "not quite trusting them," or "the problem of not trusting labels."
+
+## Workflow
+
+1. **Search** for recent posts using the strategy above
+2. **Open the post** and read:
+   - The full post body
+   - Top 5-10 comments
+   - The general discussion tone
+3. **Propose a comment** that:
+   - Answers the question or adds to the discussion
+   - References specific elements from the thread
+   - Naturally introduces IngrediCheck as relevant
+   - Includes both links
+4. **Get user approval** (they may request edits)
+5. **User posts the comment manually** (provide copy-paste text)
+6. **Move to the next post**
+
+## Example Comment Template (Tailor Each Time)
+
+```
+[Opening that ties to the thread - question/reference/observation]
+
+[Brief explanation of IngrediCheck relevant to this specific problem]
+
+Right now it lets you capture family food notes and get personalized ingredient analysis when you scan a label. [Optional: mention future feature if relevant] Free for early adopters:
+
+https://www.ingredicheck.app/
+https://apps.apple.com/us/app/ingredicheck/id6477521615
+```
+
+## Important Notes
+
+- **Quality over quantity:** Better to find 3-5 highly relevant posts than 20 generic ones
+- **Authenticity matters:** Comments should feel like genuine participation, not promotion
+- **Context is everything:** Each comment must be tailored to its specific post and thread
+- **User posts manually:** Provide copy-paste ready text, don't attempt to post via browser automation
+- **Always check if post is archived:** Reddit archives posts after 6 months - these cannot be commented on
+- **Skip posts where user already commented:** Never propose a post if the current Reddit user has already left a comment on it; skip to the next candidate.
+
+## Lessons Learned & Critical Relevance Criteria
+
+### What IngrediCheck IS For:
+- **Ingredient analysis on packaged products with scannable labels** - This is the core use case. The app helps users *read and interpret* the label (decode ingredients, match to their list, get personalized analysis). It does not verify whether the label is accurate or address "trust" in manufacturers.
+- Posts about reading/checking ingredient labels on grocery store products
+- Posts about identifying allergens or dietary triggers in packaged foods
+- Posts about confusion over ingredient lists on product labels
+- Posts where people mention using other apps (Fig, Spoonful, Monash) for ingredient checking
+
+### What IngrediCheck is NOT For:
+- **Nutrition information** - IngrediCheck does NOT help with serving sizes, calories, macros, or nutrition facts. Skip posts about nutrition data.
+- **Restaurant items without labels** - IngrediCheck is for scanning product labels, not restaurant menus or items without scannable labels (e.g., Chipotle, fast food, etc.)
+- **General food questions** - Skip posts that are just asking "is X safe?" without focusing on ingredient checking
+- **Cooking recipes** - Skip posts about cooking or recipe modifications unless they specifically mention checking ingredient labels on packaged products
+
+### Post Relevance Checklist (MUST pass all):
+1. ✅ Post is about checking ingredients on **packaged products** (not restaurants)
+2. ✅ Post involves **reading labels** or **scanning products** (not just general food questions)
+3. ✅ Post is NOT about nutrition information (serving sizes, calories, macros)
+4. ✅ Post is NOT about restaurant items without scannable labels
+5. ✅ Post shows genuine need for ingredient analysis tool
+
+### Tone & Sensitivity Guidelines:
+- **Avoid insensitive comments** - If a post involves severe health struggles, medical crises, or very distressing symptoms, be extra careful. The comment should offer genuine help without trivializing their situation.
+- **Match the thread's emotional tone** - If people are frustrated, acknowledge that. If they're celebrating a win, match that energy.
+- **Don't promote on posts about severe medical issues** - If someone is describing losing the ability to eat, severe reactions, or medical emergencies, skip the post or be extremely empathetic and helpful without heavy promotion.
+
+### Duplicate Comment Prevention:
+- **ALWAYS check thoroughly** - Use multiple methods:
+  1. Fetch full post page with `mcp_web_fetch` on old.reddit.com
+  2. Use `grep` to search for exact username match
+  3. Search for "IngrediCheck" or "ingredicheck" (case-insensitive)
+  4. Scroll through ALL visible comments in browser snapshot
+  5. If ANY match found, IMMEDIATELY skip - do NOT propose
+- **User feedback overrides** - If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately
+
+## Procedure (run from this skill only — no external scripts)
+
+Execute these steps using browser and fetch tools only. Do not create or call separate script files.
+
+### Step 0 — Ensure user is logged in to Reddit
+
+- Navigate to `https://www.reddit.com` (or ensure the browser is on Reddit).
+- Check the page: if you see **"Log In"** or **"Sign Up"** in the header (and no user avatar/profile in the top right), the user is **not** logged in.
+- **If not logged in:** Tell the user: "You're not logged in to Reddit. Please log in in the browser, then tell me when you're done." Do not search for posts or propose comments until they confirm they are logged in.
+- **If logged in:** Note the current user's Reddit username from the UI (e.g. profile menu, top-right). You will need it to skip posts where they already commented. Then continue to Step 1.
+
+### Step 1 — Search for posts
+- Navigate to: `https://www.reddit.com/search/?q=QUERY&t=month&sort=new`  
+  (replace QUERY with one of: `ingredients+changed+label`, `reading+food+labels`, `how+do+you+shop+celiac`, `food+allergies+ingredients`, or search within a sub: `https://www.reddit.com/r/SUBREDDIT/search/?q=QUERY&t=month&sort=new`)
+- Or fetch for link extraction: `https://old.reddit.com/search?q=QUERY&sort=new&t=month`  
+  (parse the HTML/markdown for post links and ages; prefer posts < 1 month old)
+
+### Step 2 — Open and read each candidate post
+- Navigate to the post URL (e.g. `https://www.reddit.com/r/Subreddit/comments/POST_ID/slug/`).
+- **CRITICAL: Thoroughly check if current user already commented BEFORE proposing:**
+  1. Fetch the full post page using `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` (old.reddit.com is easier to parse)
+  2. Use `grep` to search the fetched content for the current Reddit username (from Step 0) - search for exact username match
+  3. Also search for "IngrediCheck" or "ingredicheck" (case-insensitive) in the comments to catch any previous mentions
+  4. Scroll through ALL visible comments in the browser snapshot if needed
+  5. **If ANY match is found, IMMEDIATELY skip this post and move to the next candidate. Do NOT propose a comment.**
+  6. **If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately**
+- **CRITICAL: Check post relevance using the "Post Relevance Checklist" above:**
+  1. Is this about checking ingredients on **packaged products**? (Skip if restaurant items without labels)
+  2. Does this involve **reading labels** or **scanning products**? (Skip if just general food questions)
+  3. Is this about **nutrition information**? (If yes, skip - IngrediCheck doesn't help with serving sizes, calories, macros)
+  4. Is this about **restaurant items without scannable labels**? (If yes, skip)
+  5. Does this show genuine need for ingredient analysis tool? (If no, skip)
+- Read the full post body and top 5–10 comments (use screenshot or `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` for readable comment text).
+- Confirm the post is not archived (no "Archived post. New comments cannot be posted" message).
+- **Check tone/sensitivity:** If post involves severe health struggles or medical crises, be extra careful with comment tone or skip if inappropriate.
+
+### Step 3 — Propose a comment
+- Draft a comment using the Comment Writing Guidelines and Example Template above.
+- Tie the opening to the post and other comments; include both app links and "free for early adopters."
+- Present the comment to the user and ask for approval or edits.
+
+### Step 4 — Hand off for posting
+- Once approved, provide the final text in a copy-paste block (no markdown formatting that would break paste).
+- User posts manually. Do not attempt to submit the comment via automation.
+
+### Step 5 — Next post
+- Repeat from Step 2 for the next candidate until the user stops or asks for a new search.
+
+## Usage
+
+When the user asks to find Reddit posts or work on Reddit outreach, follow the **Procedure** above. Do not create or reference any scripts outside this SKILL.md.
