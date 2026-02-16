@@ -79,7 +79,7 @@ struct ScanDataCard: View {
     
     // Computed property to determine which images to display
     // Returns separate arrays for inventory images, user images, and pending local images
-    // Stack order (front to back): pending local → user → inventory (reversed)
+    // Stack order (front to back): pending local → user → inventory (API order, front first)
     private var imagesToDisplay: (
         inventoryImages: [DTO.ImageLocationInfo],
         userImages: [DTO.ImageLocationInfo],
@@ -300,9 +300,8 @@ struct ScanDataCard: View {
     // MARK: - API Images Stack View
     @ViewBuilder
     private func apiImagesStackView(images: [DTO.ImageLocationInfo]) -> some View {
-        // Reverse the images array so the last API image appears at the front of the stack
-        let reversedImages = Array(images.reversed())
-        let displayedImages = Array(reversedImages.prefix(3))
+        // Prefix first to keep front image, then reverse so front ends up on top in ZStack
+        let displayedImages = Array(images.prefix(3).reversed())
         let totalCount = images.count
         let stackOffset: CGFloat = 6
         let sizeReduction: CGFloat = 4
@@ -376,29 +375,26 @@ struct ScanDataCard: View {
     }
 
     // MARK: - Combined Images Stack View
-    /// Displays images in priority order: local (with loader) → user → inventory (reversed)
+    /// Displays images in priority order: local (with loader) → user → inventory (front first)
     @ViewBuilder
     private func combinedImagesStackView(
         inventoryImages: [DTO.ImageLocationInfo],
         userImages: [DTO.ImageLocationInfo],
         localImages: [UIImage]
     ) -> some View {
-        // Reverse inventory images so last appears at front of its section
-        let reversedInventory = Array(inventoryImages.reversed())
-
-        // Build combined display array
-        // Order (front to back): localImages → userImages → reversedInventory
+        // Build combined display array, then prefix before reversing
+        // so the front image (first in API order) is always included
         let totalCount = localImages.count + userImages.count + inventoryImages.count
         let displayLimit = 3
         let stackOffset: CGFloat = 6
         let sizeReduction: CGFloat = 4
 
-        // Build display items using helper function
+        // Prefix first (keeps front image), then reverse (puts front image on top in ZStack)
         let displayedItems = Array(buildDisplayItems(
             localImages: localImages,
             userImages: userImages,
-            reversedInventory: reversedInventory
-        ).prefix(displayLimit))
+            inventoryImages: inventoryImages
+        ).prefix(displayLimit).reversed())
 
         ZStack(alignment: .topTrailing) {
             ZStack(alignment: .leading) {
@@ -462,7 +458,7 @@ struct ScanDataCard: View {
     private func buildDisplayItems(
         localImages: [UIImage],
         userImages: [DTO.ImageLocationInfo],
-        reversedInventory: [DTO.ImageLocationInfo]
+        inventoryImages: [DTO.ImageLocationInfo]
     ) -> [CombinedImageDisplayItem] {
         var displayItems: [CombinedImageDisplayItem] = []
 
@@ -476,8 +472,8 @@ struct ScanDataCard: View {
             displayItems.append(CombinedImageDisplayItem(content: .api(location), showLoader: false))
         }
 
-        // Third: inventory images (reversed, no loader)
-        for location in reversedInventory {
+        // Third: inventory images (API order - front first)
+        for location in inventoryImages {
             displayItems.append(CombinedImageDisplayItem(content: .api(location), showLoader: false))
         }
 
