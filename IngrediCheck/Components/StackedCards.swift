@@ -27,11 +27,12 @@ struct StackedCards: View {
     private let totalCardCount: Int
     @State var dragOffset: CGSize = .zero
     @State var dragValue: CGFloat = 0
+    @State private var isHorizontalDragging: Bool = false
     @State var tempCard: Card = Card(title: "", subTitle: "", color: .black, chips: [])
     private var progressText: String {
         totalCardCount > 0 ? "\(currentIndex)/\(totalCardCount)" : ""
     }
-    
+
     init(
         cards: [Card],
         isChipSelected: @escaping (Card, ChipsModel) -> Bool = { _, _ in false },
@@ -56,6 +57,36 @@ struct StackedCards: View {
         self.onSwipe = onSwipe
     }
     
+    @ViewBuilder
+    private func chipsSection(for card: Card, idx: Int) -> some View {
+        let chipsLayout = FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
+            ForEach(card.chips, id: \.id) { chip in
+                IngredientsChipsForStackedCards(
+                    title: chip.name,
+                    bgColor: nil,
+                    fontColor: "303030",
+                    image: chip.icon ?? "",
+                    onClick: {
+                        guard !isHorizontalDragging else { return }
+                        onChipTap(card, chip)
+                    },
+                    isSelected: isChipSelected(card, chip),
+                    outlined: false
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .opacity((idx == 0) ? 1 : 0)
+
+        ViewThatFits(in: .vertical) {
+            chipsLayout
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.vertical, showsIndicators: true) {
+                chipsLayout
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
             ForEach(Array(cards.enumerated()).prefix(2).reversed(), id: \.element.id) {
@@ -99,44 +130,32 @@ struct StackedCards: View {
                             }
                             .opacity((idx == 0) ? 1 : 0)
                         } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(){
-                                    Text(card.title)
-                                        .font(.system(size: 20, weight: .regular))
+                            Group {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(){
+                                        Text(card.title)
+                                            .font(.system(size: 20, weight: .regular))
+                                            .multilineTextAlignment(.leading)
+                                            .lineLimit(nil)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Spacer()
+                                        Text(progressText)
+                                            .font(ManropeFont.regular.size(14))
+                                            .foregroundColor(.grayScale140)
+                                    }
+                                    
+                                    Text(card.subTitle)
+                                        .font(.system(size: 12, weight: .regular))
+                                        .opacity(0.8)
                                         .multilineTextAlignment(.leading)
                                         .lineLimit(nil)
                                         .fixedSize(horizontal: false, vertical: true)
-                                    Spacer()
-                                    Text(progressText)
-                                        .font(ManropeFont.regular.size(14))
-                                        .foregroundColor(.grayScale140)
                                 }
-                                
-                                Text(card.subTitle)
-                                    .font(.system(size: 12, weight: .regular))
-                                    .opacity(0.8)
-                                    .multilineTextAlignment(.leading)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                .opacity((idx == 0) ? 1 : 0)
+
+                                chipsSection(for: card, idx: idx)
                             }
-                            .opacity((idx == 0) ? 1 : 0)
-                            
-                            FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
-                                ForEach(card.chips, id: \.id) { chip in
-                                    IngredientsChipsForStackedCards(
-                                        title: chip.name,
-                                        bgColor: nil,
-                                        fontColor: "303030",
-                                        image: chip.icon ?? "",
-                                        onClick: {
-                                            onChipTap(card, chip)
-                                        },
-                                        isSelected: isChipSelected(card, chip),
-                                        outlined: false
-                                    )
-                                }
-                            }
-                            .opacity((idx == 0) ? 1 : 0)
+                            .allowsHitTesting(!(idx == 0 && isHorizontalDragging))
                         }
                     }
                     .padding(.horizontal, 12)
@@ -201,19 +220,31 @@ struct StackedCards: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .rotationEffect(.degrees((idx == 0) ? 0 : 4))
                 .offset(x: (idx == 0) ? dragOffset.width : 0, y: (idx == 0) ? dragOffset.height : 0)
-                .highPriorityGesture(
+                .simultaneousGesture(
                     DragGesture()
                         .onChanged { value in
                             guard idx == 0 else { return }
-                            
-                            dragOffset.width = value.translation.width
+
+                            let horizontalTranslation = value.translation.width
+                            let verticalTranslation = value.translation.height
+                            let isHorizontal = abs(horizontalTranslation) > abs(verticalTranslation)
+                            if isHorizontal, abs(horizontalTranslation) > 8 {
+                                isHorizontalDragging = true
+                            }
+                            guard isHorizontal else { return }
+
+                            dragOffset.width = horizontalTranslation
                             dragOffset.height = 0
-                            
-                            dragValue = value.translation.width
+
+                            dragValue = horizontalTranslation
                         }
                         .onEnded { _ in
                             guard idx == 0 else { return }
                             
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                isHorizontalDragging = false
+                            }
+
                             withAnimation(.smooth) {
                                 dragOffset = .zero
                                 
