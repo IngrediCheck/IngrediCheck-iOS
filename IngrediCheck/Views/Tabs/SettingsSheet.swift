@@ -237,22 +237,22 @@ struct SettingsContentView: View {
                                 Divider()
                                     .padding(.horizontal, 16)
                             }
-                            Button {
-                                Task {
-                                    do {
-                                        _ = try await webService.markDeviceInternal(deviceId: authController.deviceId)
-                                        await MainActor.run {
-                                            authController.setInternalUser(true)
-                                            internalModeToastMessage = "Internal Mode Unlocked"
-                                            showInternalModeToast = false
-                                            showInternalModeToast = true
+                            rowContent(image: Image("LogoGreenv2"), title: "IngrediCheck for iOS \(appVersion).(\(buildNumber))", showChevron: false)
+                                .onTapGesture(count: 7) {
+                                    Task {
+                                        do {
+                                            _ = try await webService.markDeviceInternal(deviceId: authController.deviceId)
+                                            await MainActor.run {
+                                                authController.setInternalUser(true)
+                                                internalModeToastMessage = "Internal Mode Unlocked"
+                                                showInternalModeToast = false
+                                                showInternalModeToast = true
+                                            }
+                                        } catch {
+                                            print("Failed to mark device internal: \(error)")
                                         }
-                                    } catch {
-                                        print("Failed to mark device internal: \(error)")
                                     }
                                 }
-                            } label: { rowContent(image: Image("LogoGreenv2"), title: "IngrediCheck for iOS \(appVersion).(\(buildNumber))", showChevron: false) }
-                                .buttonStyle(.plain)
                         }
                     }
                     
