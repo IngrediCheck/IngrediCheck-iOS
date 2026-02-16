@@ -120,23 +120,26 @@ struct StackedCards: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             .opacity((idx == 0) ? 1 : 0)
-                            
-                            FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
-                                ForEach(card.chips, id: \.id) { chip in
-                                    IngredientsChipsForStackedCards(
-                                        title: chip.name,
-                                        bgColor: nil,
-                                        fontColor: "303030",
-                                        image: chip.icon ?? "",
-                                        onClick: {
-                                            onChipTap(card, chip)
-                                        },
-                                        isSelected: isChipSelected(card, chip),
-                                        outlined: false
-                                    )
+
+                            ScrollView(.vertical, showsIndicators: true) {
+                                FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
+                                    ForEach(card.chips, id: \.id) { chip in
+                                        IngredientsChipsForStackedCards(
+                                            title: chip.name,
+                                            bgColor: nil,
+                                            fontColor: "303030",
+                                            image: chip.icon ?? "",
+                                            onClick: {
+                                                onChipTap(card, chip)
+                                            },
+                                            isSelected: isChipSelected(card, chip),
+                                            outlined: false
+                                        )
+                                    }
                                 }
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                                .opacity((idx == 0) ? 1 : 0)
                             }
-                            .opacity((idx == 0) ? 1 : 0)
                         }
                     }
                     .padding(.horizontal, 12)
@@ -201,15 +204,19 @@ struct StackedCards: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .rotationEffect(.degrees((idx == 0) ? 0 : 4))
                 .offset(x: (idx == 0) ? dragOffset.width : 0, y: (idx == 0) ? dragOffset.height : 0)
-                .highPriorityGesture(
+                .simultaneousGesture(
                     DragGesture()
                         .onChanged { value in
                             guard idx == 0 else { return }
-                            
-                            dragOffset.width = value.translation.width
+
+                            let horizontalTranslation = value.translation.width
+                            let verticalTranslation = value.translation.height
+                            guard abs(horizontalTranslation) > abs(verticalTranslation) else { return }
+
+                            dragOffset.width = horizontalTranslation
                             dragOffset.height = 0
-                            
-                            dragValue = value.translation.width
+
+                            dragValue = horizontalTranslation
                         }
                         .onEnded { _ in
                             guard idx == 0 else { return }
