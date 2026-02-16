@@ -43,9 +43,10 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 
 **Ingredient- and label-focused (high relevance)**
 - r/ultraprocessedfood (weekly "Is this UPF?" product threads; very active)
-- r/ingredients
+- r/FoodLabels ("What's in your food?"; reading labels at the store; open posting)
 - r/DoesThisTasteOff
 - r/mildlyinfuriating (product/recipe changes)
+- *Restricted (approved users only; do not try to post):* r/ingredients, r/onofffood
 
 **Allergies & food allergies**
 - r/FoodAllergies
@@ -56,10 +57,17 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 **Celiac, gluten-free, intolerance**
 - r/Celiac
 - r/GlutenFree
+- r/glutenfree
 - r/GlutenFreeCooking
+- r/glutenfreecooking
+- r/glutenscience
+- r/glutenfreememes
+- r/glutenfreefoodporn
 - r/glutenfreerecipes
 - r/LactoseIntolerant
+- r/lactoseintolerance
 - r/DairyFree
+- r/dairyfree
 - r/EosinophilicE
 
 **Diet & condition-specific**
@@ -68,13 +76,17 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - r/FODMAPS
 - r/SIBO
 - r/ibs
+- r/IBS
 - r/GERD
 - r/AutoImmuneProtocol
 - r/Whole30
 - r/Keto
+- r/keto
 - r/IBD
 - r/CrohnsDisease
 - r/UlcerativeColitis
+- r/Hashimotos
+- r/migraine (food triggers, tyramine, MSG; pick threads about label reading / avoiding triggers)
 
 **Plant-based & ethical eating**
 - r/vegan
@@ -82,6 +94,7 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - r/PlantBasedDiet
 - r/WholeFoodsPlantBased
 - r/veganrecipes
+- r/EatCheapAndVegan (vegan grocery, budget, product picks)
 - r/glutenfreevegan
 - r/ketorecipes
 
@@ -195,7 +208,7 @@ Choose the angle that best matches the post so the comment feels relevant, not g
    - The full post body
    - Top 5-10 comments
    - The general discussion tone
-3. **Propose a comment** that:
+3. **Open the post in the browser**, then **propose a comment** that:
    - Answers the question or adds to the discussion
    - References specific elements from the thread
    - Naturally introduces IngrediCheck as relevant
@@ -299,6 +312,7 @@ Execute these steps using browser and fetch tools only. Do not create or call se
 - **Check tone/sensitivity:** If post involves severe health struggles or medical crises, be extra careful with comment tone or skip if inappropriate.
 
 ### Step 3 — Propose a comment
+- **Open the post in the browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread when you propose.
 - Draft a comment using the Comment Writing Guidelines and Example Template above.
 - Tie the opening to the post and other comments; include both app links and "free for early adopters."
 - Present the comment to the user and ask for approval or edits.
