@@ -27,6 +27,7 @@ struct StackedCards: View {
     private let totalCardCount: Int
     @State var dragOffset: CGSize = .zero
     @State var dragValue: CGFloat = 0
+    @State private var isHorizontalDragging: Bool = false
     @State var tempCard: Card = Card(title: "", subTitle: "", color: .black, chips: [])
     private var progressText: String {
         totalCardCount > 0 ? "\(currentIndex)/\(totalCardCount)" : ""
@@ -66,6 +67,7 @@ struct StackedCards: View {
                     fontColor: "303030",
                     image: chip.icon ?? "",
                     onClick: {
+                        guard !isHorizontalDragging else { return }
                         onChipTap(card, chip)
                     },
                     isSelected: isChipSelected(card, chip),
@@ -128,29 +130,32 @@ struct StackedCards: View {
                             }
                             .opacity((idx == 0) ? 1 : 0)
                         } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(){
-                                    Text(card.title)
-                                        .font(.system(size: 20, weight: .regular))
+                            Group {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(){
+                                        Text(card.title)
+                                            .font(.system(size: 20, weight: .regular))
+                                            .multilineTextAlignment(.leading)
+                                            .lineLimit(nil)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Spacer()
+                                        Text(progressText)
+                                            .font(ManropeFont.regular.size(14))
+                                            .foregroundColor(.grayScale140)
+                                    }
+                                    
+                                    Text(card.subTitle)
+                                        .font(.system(size: 12, weight: .regular))
+                                        .opacity(0.8)
                                         .multilineTextAlignment(.leading)
                                         .lineLimit(nil)
                                         .fixedSize(horizontal: false, vertical: true)
-                                    Spacer()
-                                    Text(progressText)
-                                        .font(ManropeFont.regular.size(14))
-                                        .foregroundColor(.grayScale140)
                                 }
-                                
-                                Text(card.subTitle)
-                                    .font(.system(size: 12, weight: .regular))
-                                    .opacity(0.8)
-                                    .multilineTextAlignment(.leading)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .opacity((idx == 0) ? 1 : 0)
+                                .opacity((idx == 0) ? 1 : 0)
 
-                            chipsSection(for: card, idx: idx)
+                                chipsSection(for: card, idx: idx)
+                            }
+                            .allowsHitTesting(!(idx == 0 && isHorizontalDragging))
                         }
                     }
                     .padding(.horizontal, 12)
@@ -222,7 +227,11 @@ struct StackedCards: View {
 
                             let horizontalTranslation = value.translation.width
                             let verticalTranslation = value.translation.height
-                            guard abs(horizontalTranslation) > abs(verticalTranslation) else { return }
+                            let isHorizontal = abs(horizontalTranslation) > abs(verticalTranslation)
+                            if isHorizontal, abs(horizontalTranslation) > 8 {
+                                isHorizontalDragging = true
+                            }
+                            guard isHorizontal else { return }
 
                             dragOffset.width = horizontalTranslation
                             dragOffset.height = 0
@@ -232,6 +241,10 @@ struct StackedCards: View {
                         .onEnded { _ in
                             guard idx == 0 else { return }
                             
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                isHorizontalDragging = false
+                            }
+
                             withAnimation(.smooth) {
                                 dragOffset = .zero
                                 
