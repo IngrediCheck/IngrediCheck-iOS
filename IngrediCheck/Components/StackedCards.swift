@@ -31,7 +31,7 @@ struct StackedCards: View {
     private var progressText: String {
         totalCardCount > 0 ? "\(currentIndex)/\(totalCardCount)" : ""
     }
-    
+
     init(
         cards: [Card],
         isChipSelected: @escaping (Card, ChipsModel) -> Bool = { _, _ in false },
@@ -56,6 +56,35 @@ struct StackedCards: View {
         self.onSwipe = onSwipe
     }
     
+    @ViewBuilder
+    private func chipsSection(for card: Card, idx: Int) -> some View {
+        let chipsLayout = FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
+            ForEach(card.chips, id: \.id) { chip in
+                IngredientsChipsForStackedCards(
+                    title: chip.name,
+                    bgColor: nil,
+                    fontColor: "303030",
+                    image: chip.icon ?? "",
+                    onClick: {
+                        onChipTap(card, chip)
+                    },
+                    isSelected: isChipSelected(card, chip),
+                    outlined: false
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .opacity((idx == 0) ? 1 : 0)
+
+        ViewThatFits(in: .vertical) {
+            chipsLayout
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.vertical, showsIndicators: true) {
+                chipsLayout
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
             ForEach(Array(cards.enumerated()).prefix(2).reversed(), id: \.element.id) {
@@ -121,25 +150,7 @@ struct StackedCards: View {
                             }
                             .opacity((idx == 0) ? 1 : 0)
 
-                            ScrollView(.vertical, showsIndicators: true) {
-                                FlowLayout(horizontalSpacing: 4, verticalSpacing: 8) {
-                                    ForEach(card.chips, id: \.id) { chip in
-                                        IngredientsChipsForStackedCards(
-                                            title: chip.name,
-                                            bgColor: nil,
-                                            fontColor: "303030",
-                                            image: chip.icon ?? "",
-                                            onClick: {
-                                                onChipTap(card, chip)
-                                            },
-                                            isSelected: isChipSelected(card, chip),
-                                            outlined: false
-                                        )
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .opacity((idx == 0) ? 1 : 0)
-                            }
+                            chipsSection(for: card, idx: idx)
                         }
                     }
                     .padding(.horizontal, 12)
