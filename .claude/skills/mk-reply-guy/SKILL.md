@@ -38,8 +38,11 @@ When the user runs **/mk-reply-guy** (or asks for "mk-reply-guy" / "reply guy" /
 
 ## Search Strategy
 
+### Banned subreddits (do not search or propose)
+- **r/FoodAllergies** — we are banned; skip any candidate from this sub.
+
 ### Target Subreddits
-Cast a wide net across these; prioritize subs where people discuss checking ingredients on packaged foods, labels, or shopping with restrictions. Prefer subs with recent activity (browse `/new/` or check that posts are from the last month).
+Cast a wide net across these; prioritize subs where people discuss checking ingredients on packaged foods, labels, or shopping with restrictions. Prefer subs with recent activity (browse `/new/` or check that posts are from the last month). Do not use banned subreddits (see above).
 
 **Ingredient- and label-focused (high relevance)**
 - r/ultraprocessedfood (weekly "Is this UPF?" product threads; very active)
@@ -49,7 +52,6 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - *Restricted (approved users only; do not try to post):* r/ingredients, r/onofffood
 
 **Allergies & food allergies**
-- r/FoodAllergies
 - r/Allergies
 - r/peanutallergy
 - r/sulfiteallergy
@@ -298,6 +300,7 @@ Execute these steps using browser and fetch tools only. Do not create or call se
   (parse the HTML/markdown for post links and ages; prefer posts < 1 month old)
 
 ### Step 2 — Open and read each candidate post
+- **Skip banned subreddits:** Do not open or propose posts from r/FoodAllergies (we are banned there). If a search result or candidate is from a banned sub, skip it and pick the next candidate.
 - **Open the post in the Cursor IDE browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread. Prefer the in-IDE browser for opening and showing posts; use `mcp_web_fetch` for duplicate-checking and parsing comment text.
 - **CRITICAL: Thoroughly check if current user already commented BEFORE proposing:**
   1. Fetch the full post page using `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` (old.reddit.com is easier to parse)
