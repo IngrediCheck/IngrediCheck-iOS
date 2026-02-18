@@ -160,9 +160,9 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 9. **Be sensitive to context** - Avoid promoting on posts about severe medical crises or very distressing symptoms unless you can offer genuine help without trivializing their situation.
 
 ### Comment Structure
-- **Opening:** Question, observation, or reference that ties to the discussion
-- **Middle:** Brief explanation of how IngrediCheck helps with the specific problem
-- **Features:** Mention family food notes + personalized ingredient analysis
+- **Opening:** Direct observation that ties to the post (e.g. "I noticed you're trying to identify and avoid [X]."). Avoid performative empathy; keep it simple and genuine.
+- **Middle:** Brief explanation of how IngrediCheck helps. When describing the app, use **user-first order**: "You add your own triggers (e.g. X, Y, or whatever you're avoiding), then scan product labels while you shop" — not "you scan and then add triggers."
+- **Features:** Mention family food notes + personalized ingredient analysis (and saving products that work)
 - **Optional:** Future feature (e.g., "notify when ingredients change") only if relevant
 - **Close:** Links + "free for early adopters"
 
@@ -199,6 +199,7 @@ Choose the angle that best matches the post so the comment feels relevant, not g
 
 ### Comment pitfalls (avoid these)
 - **Never claim to share OP's condition or allergies.** Do not say "I'm the same with egg and nuts," "I have X too," or similar when the commenter (IngrediCheck founder) does not have that allergy or condition. It is dishonest. Tie to the thread by referencing the *problem* (e.g. reading labels, decoding ingredients) without falsely claiming personal experience.
+- **Do not use performative empathy.** Avoid lines like "That feeling is so real," "I got tired of doing that myself," or "I know how overwhelming it is" unless they are genuine. They often sound inauthentic and can imply shared experience you don't have. Prefer a **direct, observational opening** instead: e.g. "I noticed you're trying to identify and avoid [specific thing from their post]." Then plug the app. Simple and honest beats trying to sound relatable.
 - **Do not tie the app to "not trusting labels."** IngrediCheck helps users *read and interpret* labels (decode ingredients, match to their list, get personalized analysis). It does NOT address whether the label is accurate or whether to trust the manufacturer. If you don't trust the label, scanning and analyzing it is pointless. Position the app as helping with *reading/decoding/analyzing* labels and matching them to the user's restrictions. Avoid framing like "when you don't trust the label," "not quite trusting them," or "the problem of not trusting labels."
 
 ## Workflow
@@ -220,15 +221,15 @@ Choose the angle that best matches the post so the comment feels relevant, not g
 ## Example Comment Template (Tailor Each Time)
 
 ```
-[Opening that ties to the thread - question/reference/observation]
+[Opening: direct observation, e.g. "I noticed you're trying to identify and avoid [X]." Keep it simple; no performative empathy.]
 
-[Brief explanation of IngrediCheck relevant to this specific problem]
-
-Right now it lets you capture family food notes and get personalized ingredient analysis when you scan a label. [Optional: mention future feature if relevant] Free for early adopters:
+I built an app for that: you add your own triggers (e.g. [relevant examples], or whatever you're avoiding), then scan product labels while you shop. It flags matches so you get a quick read in the aisle, and you can save products that work so you're not re-checking next time. [Optional: "Still early and I'm improving it based on feedback, so if you try it and something's wrong or missing, I'd love to hear it."] Free for early adopters:
 
 https://www.ingredicheck.app/
 https://apps.apple.com/us/app/ingredicheck/id6477521615
 ```
+
+**App flow to use in comments:** Describe as "you add your own triggers (...), then scan product labels while you shop" — user sets their list first, then scans when shopping. Do not lead with "you scan the ingredient list and add your triggers."
 
 ## Important Notes
 
@@ -260,6 +261,10 @@ https://apps.apple.com/us/app/ingredicheck/id6477521615
 3. ✅ Post is NOT about nutrition information (serving sizes, calories, macros)
 4. ✅ Post is NOT about restaurant items without scannable labels
 5. ✅ Post shows genuine need for ingredient analysis tool
+
+### Comment authenticity (from user feedback):
+- **Opening:** Use a direct observation (e.g. "I noticed you're trying to identify and avoid [X]."). Do not use performative empathy like "That feeling is so real" or "I got tired of doing that myself" — it does not sound genuine.
+- **App description:** Use user-first order: "You add your own triggers (...), then scan product labels while you shop." Do not say "you scan the ingredient list and add your triggers."
 
 ### Tone & Sensitivity Guidelines:
 - **Avoid insensitive comments** - If a post involves severe health struggles, medical crises, or very distressing symptoms, be extra careful. The comment should offer genuine help without trivializing their situation.
@@ -293,7 +298,7 @@ Execute these steps using browser and fetch tools only. Do not create or call se
   (parse the HTML/markdown for post links and ages; prefer posts < 1 month old)
 
 ### Step 2 — Open and read each candidate post
-- Navigate to the post URL (e.g. `https://www.reddit.com/r/Subreddit/comments/POST_ID/slug/`).
+- **Open the post in the Cursor IDE browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread. Prefer the in-IDE browser for opening and showing posts; use `mcp_web_fetch` for duplicate-checking and parsing comment text.
 - **CRITICAL: Thoroughly check if current user already commented BEFORE proposing:**
   1. Fetch the full post page using `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` (old.reddit.com is easier to parse)
   2. Use `grep` to search the fetched content for the current Reddit username (from Step 0) - search for exact username match
@@ -312,8 +317,8 @@ Execute these steps using browser and fetch tools only. Do not create or call se
 - **Check tone/sensitivity:** If post involves severe health struggles or medical crises, be extra careful with comment tone or skip if inappropriate.
 
 ### Step 3 — Propose a comment
-- **Open the post in the browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread when you propose.
-- Draft a comment using the Comment Writing Guidelines and Example Template above.
+- Ensure the post is open in the Cursor IDE browser so the user can see the thread when you propose.
+- Draft a comment using the Comment Writing Guidelines and Example Template above. Use a direct observational opening (e.g. "I noticed you're trying to...") and describe the app as: add your triggers first, then scan product labels while shopping.
 - Tie the opening to the post and other comments; include both app links and "free for early adopters."
 - Present the comment to the user and ask for approval or edits.
 
