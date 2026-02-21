@@ -117,8 +117,7 @@ class BarcodeCameraManager: NSObject, ObservableObject, AVCaptureMetadataOutputO
                                                               .code128,
                                                               .code39,
                                                               .code93,
-                                                              .upce,
-                                                              .qr
+                                                              .upce
             ]
             let available = metadataOutput.availableMetadataObjectTypes
             let supported = requested.filter { available.contains($0) }
