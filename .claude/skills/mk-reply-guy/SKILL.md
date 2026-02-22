@@ -74,9 +74,14 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 
 **Diet & condition-specific**
 - r/MCAS
+- r/MastCellDiseases (related: r/MCAS)
 - r/HistamineIntolerance
 - r/FODMAPS
+- r/LowFODMAP
+- r/lowfodmap
 - r/SIBO
+- r/Dysautonomia (related: r/SIBO)
+- r/Paleo (related: r/SIBO)
 - r/ibs
 - r/IBS
 - r/GERD
@@ -87,18 +92,54 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - r/IBD
 - r/CrohnsDisease
 - r/UlcerativeColitis
+- r/PSC (primary sclerosing cholangitis; related: r/IBD)
 - r/Hashimotos
+- r/Candida (related: r/IBD, r/LowFODMAP)
 - r/migraine (food triggers, tyramine, MSG; pick threads about label reading / avoiding triggers)
+- r/POTS (related: r/Dysautonomia)
+- r/ehlersdanlos
+- r/Fibromyalgia
+- r/Sjogrens
+- r/autoimmunity
+- r/Lyme
+- r/MEAction
+- r/autoimmunehepatitis (related: r/PSC)
+- r/paleorecipes (related: r/Paleo)
+- r/frugalpaleo (related: r/Paleo)
+- r/grainfree (related: r/Paleo)
+- r/primalmealplan (related: r/Paleo)
+
+**Other diet-focused** (named diets, calorie/weight, timing, volume, meal prep)
+- *Carnivore / zerocarb / very low carb:* r/carnivore, r/zerocarb, r/zerocarbrecipes, r/ZeroCarbMeals, r/meatogains
+- *Mediterranean / DASH / MIND:* r/mediterraneandiet, r/DASHdiet (sodium/ingredient awareness), r/MINDdiet (brain health; Mediterranean–DASH hybrid)
+- *Low carb / keto-adjacent:* r/lowcarb, r/ketoscience (research; label/ingredient discussions)
+- *Elimination / triggers:* r/EliminationDiet
+- *Intermittent fasting / timing:* r/IntermittentFasting
+- *Calorie-aware / CICO / weight:* r/loseit, r/CICO, r/1200isplenty, r/1500isplenty, r/1200realfood, r/Vegan1200isPlenty, r/1200isPlentyKeto, r/caloriecount
+- *Volume / low-cal cooking:* r/Volumeeating, r/LowCalorieCooking, r/LowCalFoodFinds
+- *Meal prep / planning:* r/MealPrepSunday
+- *Other diet types:* r/whole30 (30-day reset; we also list under condition-specific), r/Atkins (low-carb), r/psmf (protein-sparing modified fast), r/flexitarian, r/gainit (weight-gain diet), r/diabetes (diabetic eating; labels/carbs), r/PCOSloseit (PCOS + diet)
+- *Diet/health general:* r/Health, r/FixMyDiet, r/PublicHealth, r/Dietetics, r/Supplements, r/WomensHealth, r/MensHealth
 
 **Plant-based & ethical eating**
 - r/vegan
+- r/VeganActivism (related: r/vegan)
+- r/VeganRecipes
+- r/veganrecipes
+- r/VeganFitness (related: r/vegan)
+- r/VeganFoodPorn (related: r/vegan)
 - r/vegetarian
 - r/PlantBasedDiet
 - r/WholeFoodsPlantBased
-- r/veganrecipes
 - r/EatCheapAndVegan (vegan grocery, budget, product picks)
 - r/glutenfreevegan
 - r/ketorecipes
+- r/veganize (related: r/VeganFoodPorn)
+- r/Veganism
+- r/vegangifrecipes
+- r/ShittyVeganFoodPorn
+- r/planetbaseddiet
+- r/ZeroWasteVegans (related: r/VeganActivism)
 
 **Skin, asthma, and trigger-aware**
 - r/eczema
@@ -112,6 +153,14 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - r/EatCheapAndHealthy
 - r/fitmeals
 - r/AskRedditFood
+
+**Recipe subreddits** (use only when post is about ingredient labels on packaged products, not pure recipe discussion)
+- r/Recipes
+- r/VegRecipes
+- r/SlackerRecipes
+- r/Cooking
+- r/MiniMeals
+- r/TrailMeals
 
 **Process:** Search within these subs (e.g. subreddit search with `restrict_sr=1`), and/or browse `/new/` when search is sparse. Add other subs where people discuss ingredients, labels, allergies, or grocery shopping.
 
