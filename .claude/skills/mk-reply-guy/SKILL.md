@@ -85,6 +85,10 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - r/ibs
 - r/IBS
 - r/GERD
+- r/ConstipationAdvice
+- r/shittingadvice
+- r/HumanMicrobiome
+- r/Microbiome
 - r/AutoImmuneProtocol
 - r/Whole30
 - r/Keto
