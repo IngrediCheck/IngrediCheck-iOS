@@ -118,9 +118,23 @@ struct DietaryPreferencesSheetContent: View {
 }
 
 // MARK: - SpriteKit Scene
-class PhysicsScene: SKScene {
+class PhysicsScene: SKScene, SKPhysicsContactDelegate {
 
     static let stopHapticsNotification = Notification.Name("StopDietaryPreferencesHaptics")
+
+    // Physics categories
+    private struct Category {
+        static let chip: UInt32     = 0x1 << 0
+        static let boundary: UInt32 = 0x1 << 1
+    }
+
+    // Haptics
+    private let lightImpact = UIImpactFeedbackGenerator(style: .light)
+    private let mediumImpact = UIImpactFeedbackGenerator(style: .medium)
+    private var hapticsEnabled = true
+    private var lastHapticTime: TimeInterval = 0
+    private let hapticCooldown: TimeInterval = 0.06
+    private var stopHapticsObserver: NSObjectProtocol?
 
     struct ChipData {
         let title: String
@@ -150,16 +164,34 @@ class PhysicsScene: SKScene {
 
     override func didMove(to view: SKView) {
         physicsWorld.gravity = CGVector(dx: 0, dy: -6.0)
+        physicsWorld.contactDelegate = self
+
+        lightImpact.prepare()
+        mediumImpact.prepare()
+
+        stopHapticsObserver = NotificationCenter.default.addObserver(
+            forName: Self.stopHapticsNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.hapticsEnabled = false
+        }
 
         setupBoundaries()
         setupTouchAnchor()
         spawnChips()
     }
 
+    deinit {
+        if let observer = stopHapticsObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
     private func setupBoundaries() {
         let extendedBoundary = CGRect(x: 0, y: 0, width: size.width, height: size.height + 2000)
         let frameBody = SKPhysicsBody(edgeLoopFrom: extendedBoundary)
         frameBody.friction = 0.5
+        frameBody.categoryBitMask = Category.boundary
+        frameBody.contactTestBitMask = Category.chip
         self.physicsBody = frameBody
     }
 
@@ -208,6 +240,8 @@ class PhysicsScene: SKScene {
         body.restitution = 0.35
         body.friction = 0.1
         body.mass = chipSize.width / 100
+        body.categoryBitMask = Category.chip
+        body.contactTestBitMask = Category.boundary | Category.chip
         sprite.physicsBody = body
 
         return sprite
@@ -301,6 +335,25 @@ class PhysicsScene: SKScene {
             physicsWorld.remove(joint)
             activeJoint = nil
             draggedNode = nil
+        }
+    }
+
+    // MARK: - Contact Delegate (Haptics)
+
+    func didBegin(_ contact: SKPhysicsContact) {
+        guard hapticsEnabled else { return }
+
+        let now = CACurrentMediaTime()
+        guard now - lastHapticTime >= hapticCooldown else { return }
+        lastHapticTime = now
+
+        // Collision speed from the contact impulse
+        let speed = abs(contact.collisionImpulse)
+
+        if speed > 1.5 {
+            mediumImpact.impactOccurred(intensity: min(speed / 8.0, 1.0))
+        } else if speed > 0.4 {
+            lightImpact.impactOccurred(intensity: min(speed / 4.0, 1.0))
         }
     }
 
