@@ -999,7 +999,7 @@ extension DTO {
 
     struct FeedbackContext: Codable {
         let screen: String // "feedback"
-        let feedback_id: String // UUID
+        let feedback_id: String? // UUID, optional for general feedback
     }
     
     // SSE Events (event name: "turn" for thinking/done, "error" for errors)

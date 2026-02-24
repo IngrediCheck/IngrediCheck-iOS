@@ -49,5 +49,16 @@
 	</array>
 	<key>UIDesignRequiresCompatibility</key>
 	<true/>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>SendFeedback</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Send me Feedback</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>bubble.left.and.bubble.right</string>
+		</dict>
+	</array>
 </dict>
 </plist>

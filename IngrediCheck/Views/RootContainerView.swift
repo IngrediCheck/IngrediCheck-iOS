@@ -47,6 +47,7 @@ struct RootContainerView: View {
     // --- HEAD BRANCH (keep these)
     @State private var appState = AppState()
     @State private var userPreferences = UserPreferences()
+    @State private var hasPendingFeedbackShortcut = false
 
     // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
@@ -189,7 +190,11 @@ struct RootContainerView: View {
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)
             familyStore.resetLocalState()
+            hasPendingFeedbackShortcut = false
             dismiss()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowFeedbackFromShortcut"))) { _ in
+            handleFeedbackShortcut()
         }
         .onAppear {
             // Set up callback to sync onboarding state to Supabase whenever navigation changes
@@ -222,6 +227,13 @@ struct RootContainerView: View {
                 }
                 await group.waitForAll()
             }
+
+            // Check for pending quick action from cold launch
+            if let shortcutItem = AppDelegate.pendingShortcutItem,
+               shortcutItem.type == "SendFeedback" {
+                AppDelegate.pendingShortcutItem = nil
+                handleFeedbackShortcut()
+            }
         }
         // Whenever authentication completes (including first-time login or
         // upgrading a guest account), refresh the family from the backend so
@@ -229,6 +241,13 @@ struct RootContainerView: View {
         // without requiring an app restart.
         // Only navigate to home if we're not already on home canvas to avoid
         // disrupting navigation when Settings or other views are presented
+        .onChange(of: coordinator.currentCanvasRoute) { _, newRoute in
+            // Retry pending feedback shortcut when user reaches home (onboarding complete)
+            if newRoute == .home, hasPendingFeedbackShortcut {
+                hasPendingFeedbackShortcut = false
+                coordinator.showAIBotSheetWithContext(contextKeyOverride: "general_feedback")
+            }
+        }
         .onChange(of: authController.signInState) { _, newValue in
             if newValue == .signedIn {
                 Task {
@@ -240,9 +259,26 @@ struct RootContainerView: View {
                             coordinator.showCanvas(.home)
                         }
                     }
+                    // Handle pending feedback shortcut after sign-in and family load
+                    if hasPendingFeedbackShortcut,
+                       OnboardingPersistence.shared.isLocallyCompleted {
+                        await MainActor.run {
+                            hasPendingFeedbackShortcut = false
+                            coordinator.showAIBotSheetWithContext(contextKeyOverride: "general_feedback")
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private func handleFeedbackShortcut() {
+        guard authController.signInState == .signedIn,
+              OnboardingPersistence.shared.isLocallyCompleted else {
+            hasPendingFeedbackShortcut = true
+            return
+        }
+        coordinator.showAIBotSheetWithContext(contextKeyOverride: "general_feedback")
     }
 
     @ViewBuilder

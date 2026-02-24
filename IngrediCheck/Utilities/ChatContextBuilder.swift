@@ -22,7 +22,7 @@ class ChatContextBuilder {
         return DTO.FoodNotesContext(screen: "food_notes")
     }
 
-    static func buildFeedbackContext(feedbackId: String) -> DTO.FeedbackContext {
+    static func buildFeedbackContext(feedbackId: String? = nil) -> DTO.FeedbackContext {
         return DTO.FeedbackContext(screen: "feedback", feedback_id: feedbackId)
     }
     

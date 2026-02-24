@@ -40,11 +40,16 @@ struct IngrediBotChatView: View {
         coordinator.currentCanvasRoute != .summaryAddFamily
     }
 
+    /// Get the effective context key override - prefer coordinator's value over init parameter
+    private var effectiveContextKeyOverride: String? {
+        coordinator.aibotContextKeyOverride ?? contextKeyOverride
+    }
+
     private var contextKey: String {
+        // Check explicit context override first (e.g., "food_notes" from editing screen, "general_feedback" from quick action)
+        if let override = effectiveContextKeyOverride { return override }
         if let feedbackId { return "feedback:\(feedbackId)" }
         if let scanId { return "product_scan:\(scanId)" }
-        // Check explicit context override first (e.g., "food_notes" from editing screen)
-        if let contextKeyOverride { return contextKeyOverride }
         let isFoodNotes = coordinator.currentCanvasRoute == .summaryJustMe ||
                           coordinator.currentCanvasRoute == .summaryAddFamily ||
                           coordinator.currentCanvasRoute == .welcomeToYourFamily ||
@@ -253,6 +258,24 @@ struct IngrediBotChatView: View {
     // MARK: - Initial Greeting
 
     private func generateInitialGreeting() -> [ChatMessage] {
+        // Check for general feedback context (from home screen quick action)
+        if effectiveContextKeyOverride == "general_feedback" {
+            return [
+                ChatMessage(
+                    id: "greeting_1",
+                    isUser: false,
+                    text: "Hey there!",
+                    timestamp: Date()
+                ),
+                ChatMessage(
+                    id: "greeting_2",
+                    isUser: false,
+                    text: "Would you like to give me some feedback to help improve your experience?",
+                    timestamp: Date()
+                )
+            ]
+        }
+
         let context = buildContext()
 
         switch context {
@@ -330,7 +353,12 @@ struct IngrediBotChatView: View {
 
     private func buildContext() -> any Codable {
         // Build context based on provided parameters or current screen
-        // Priority: feedbackId > scanId > food_notes > home
+        // Priority: general_feedback > feedbackId > scanId > food_notes > home
+
+        // Check for general feedback context (from quick action)
+        if effectiveContextKeyOverride == "general_feedback" {
+            return ChatContextBuilder.buildFeedbackContext()
+        }
 
         // If feedbackId is provided, use feedback context
         if let feedbackId = feedbackId {
