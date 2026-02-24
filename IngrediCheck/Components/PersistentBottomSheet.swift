@@ -882,7 +882,7 @@ struct PersistentBottomSheet: View {
         case .dietaryPreferencesSheet(let isFamilyFlow):
             DietaryPreferencesSheetContent(isFamilyFlow: isFamilyFlow) {
                 // Stop haptic feedback when "Let's Go" is pressed
-                NotificationCenter.default.post(name: PhysicsController.stopHapticsNotification, object: nil)
+                NotificationCenter.default.post(name: PhysicsScene.stopHapticsNotification, object: nil)
                 
                 // Get first step ID from JSON dynamically
                 let steps = DynamicStepsProvider.loadSteps()
@@ -897,7 +897,7 @@ struct PersistentBottomSheet: View {
                 // into the first dynamic onboarding step.
                 if coordinator.isCreatingFamilyFromSettings {
                     // Stop haptics immediately to avoid lingering feedback
-                    NotificationCenter.default.post(name: PhysicsController.stopHapticsNotification, object: nil)
+                    NotificationCenter.default.post(name: PhysicsScene.stopHapticsNotification, object: nil)
 
                     // Navigate to the first dynamic step and switch canvas
                     let steps = DynamicStepsProvider.loadSteps()
