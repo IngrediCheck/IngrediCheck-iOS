@@ -19,6 +19,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     static var pendingShortcutItem: UIApplicationShortcutItem?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Clear any stale dynamic shortcuts from previous builds; we only use static Info.plist shortcuts
+        application.shortcutItems = []
+
         AnalyticsService.shared.configure()
 
         // Configure navigation bar appearance globally

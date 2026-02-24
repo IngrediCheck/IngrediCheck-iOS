@@ -261,7 +261,6 @@ struct RootContainerView: View {
                     }
                     // Handle pending feedback shortcut after sign-in and family load
                     if hasPendingFeedbackShortcut,
-                       !authController.signedInAsGuest,
                        OnboardingPersistence.shared.isLocallyCompleted {
                         await MainActor.run {
                             hasPendingFeedbackShortcut = false
@@ -275,7 +274,6 @@ struct RootContainerView: View {
 
     private func handleFeedbackShortcut() {
         guard authController.signInState == .signedIn,
-              !authController.signedInAsGuest,
               OnboardingPersistence.shared.isLocallyCompleted else {
             hasPendingFeedbackShortcut = true
             return
