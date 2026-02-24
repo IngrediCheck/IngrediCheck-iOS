@@ -224,10 +224,7 @@ class AppNavigationCoordinator {
         aibotContextIngredientName = ingredientName
         aibotContextFeedbackId = feedbackId
         aibotContextKeyOverride = contextKeyOverride
-        // Delay sheet presentation to ensure context properties are observed first
-        DispatchQueue.main.async { [weak self] in
-            self?.isAIBotSheetPresented = true
-        }
+        isAIBotSheetPresented = true
     }
 
     func dismissAIBotSheet() {

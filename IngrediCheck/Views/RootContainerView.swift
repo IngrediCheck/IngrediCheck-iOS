@@ -190,6 +190,7 @@ struct RootContainerView: View {
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)
             familyStore.resetLocalState()
+            hasPendingFeedbackShortcut = false
             dismiss()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowFeedbackFromShortcut"))) { _ in
@@ -240,6 +241,13 @@ struct RootContainerView: View {
         // without requiring an app restart.
         // Only navigate to home if we're not already on home canvas to avoid
         // disrupting navigation when Settings or other views are presented
+        .onChange(of: coordinator.currentCanvasRoute) { _, newRoute in
+            // Retry pending feedback shortcut when user reaches home (onboarding complete)
+            if newRoute == .home, hasPendingFeedbackShortcut {
+                hasPendingFeedbackShortcut = false
+                coordinator.showAIBotSheetWithContext(contextKeyOverride: "general_feedback")
+            }
+        }
         .onChange(of: authController.signInState) { _, newValue in
             if newValue == .signedIn {
                 Task {
