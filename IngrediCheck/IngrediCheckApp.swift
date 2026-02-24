@@ -18,9 +18,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     /// Stores shortcut item from cold launch until the UI is ready to handle it
     static var pendingShortcutItem: UIApplicationShortcutItem?
 
-    /// Published flag to trigger feedback shortcut handling
-    @Published var shouldShowFeedbackShortcut = false
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         AnalyticsService.shared.configure()
 
