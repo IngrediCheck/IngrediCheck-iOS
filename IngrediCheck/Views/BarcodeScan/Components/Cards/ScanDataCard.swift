@@ -21,6 +21,7 @@ struct ScanDataCard: View {
     @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
     @Environment(UserPreferences.self) private var userPreferences
+    @Environment(FoodNotesStore.self) private var foodNotesStore
 
     @State private var scan: DTO.Scan?
     @State private var cachedInitialScan: DTO.Scan?  // Store initialScan as state to watch for changes
@@ -34,7 +35,18 @@ struct ScanDataCard: View {
     }
     
     private var matchStatus: DTO.ProductRecommendation? {
-        scan?.toProductRecommendation()
+        guard let scan = scan else { return nil }
+        
+        // If this is a photo scan (or hybrid) with no analysis_result and the user has no food notes,
+        // treat it as a "no preferences" state rather than unknown.
+        if scan.analysis_result == nil,
+           (scan.scan_type == "photo" || scan.scan_type == "barcode_plus_photo"),
+           hasNoFoodNotes {
+            print("[ScanDataCard] 🟦 noPreferences inferred for photo scan_id=\(scan.id) (analysis_result=nil, no food notes)")
+            return .noPreferences
+        }
+        
+        return scan.toProductRecommendation()
     }
     
     private var ingredientRecommendations: [DTO.IngredientRecommendation]? {
@@ -43,6 +55,14 @@ struct ScanDataCard: View {
     
     private var overallAnalysis: String? {
         scan?.analysis_result?.overall_analysis
+    }
+
+    private var hasNoFoodNotes: Bool {
+        guard let summary = foodNotesStore.foodNotesSummary else {
+            return true
+        }
+        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "No Food Notes yet."
     }
     
     private var isAnalyzing: Bool {

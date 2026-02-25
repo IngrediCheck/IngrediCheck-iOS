@@ -20,6 +20,7 @@ struct ProductDetailView: View {
     @Environment(ScanHistoryStore.self) private var scanHistoryStore
     @Environment(AppState.self) private var appState: AppState?  // Optional - for push navigation
     @Environment(AppNavigationCoordinator.self) private var coordinator: AppNavigationCoordinator?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
 
     @State private var isFavorite = false
     @AppStorage("ingredientsSectionExpanded") private var isIngredientsExpanded = true  // Default: expanded, persists user choice
@@ -219,6 +220,15 @@ struct ProductDetailView: View {
             return .analyzing
         }
 
+        // If this is a photo scan (or hybrid) with no analysis_result and the user has no food notes,
+        // treat it as a "no preferences" state instead of unknown.
+        if isPhotoNoPreferencesState {
+            if let scan = scan {
+                print("[ProductDetailView] 🟦 noPreferences inferred for photo scan_id=\(scan.id) (analysis_result=nil, no food notes)")
+            }
+            return .noPreferences
+        }
+
         guard let matchStatus = resolvedMatchStatus else {
             return fallbackProductStatus
         }
@@ -231,8 +241,8 @@ struct ProductDetailView: View {
             return .unmatched
         case .unknown:
             return .unknown
-    case .noPreferences:
-        return .noPreferences
+        case .noPreferences:
+            return .noPreferences
         }
     }
     
@@ -259,6 +269,20 @@ struct ProductDetailView: View {
                     rawIngredientName: analysis?.ingredient
                 )
             }
+    }
+
+    private var hasNoFoodNotes: Bool {
+        guard let summary = foodNotesStore.foodNotesSummary else {
+            return true
+        }
+        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "No Food Notes yet."
+    }
+
+    private var isPhotoNoPreferencesState: Bool {
+        guard let scan = scan else { return false }
+        let isPhotoType = scan.scan_type == "photo" || scan.scan_type == "barcode_plus_photo"
+        return isPhotoType && scan.analysis_result == nil && hasNoFoodNotes
     }
     
     private var resolvedIngredientParagraphs: [IngredientParagraph] {
