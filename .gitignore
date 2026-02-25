@@ -101,6 +101,7 @@ private_keys/
 # Build logs
 *.log
 .claude/debug.txt
+.claude/settings.local.json
 
 # App Store Connect CLI config
 .asc/
