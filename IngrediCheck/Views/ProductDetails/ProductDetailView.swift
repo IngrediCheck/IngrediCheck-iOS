@@ -273,11 +273,19 @@ struct ProductDetailView: View {
     }
 
     private var hasNoFoodNotes: Bool {
-        guard let summary = foodNotesStore.foodNotesSummary else {
+        if foodNotesStore.canvasPreferences.sections.isEmpty {
             return true
         }
-        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed == "No Food Notes yet."
+
+        if let summary = foodNotesStore.foodNotesSummary {
+            let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == "No Food Notes yet." {
+                return true
+            }
+            return false
+        }
+
+        return false
     }
     
     private var resolvedIngredientParagraphs: [IngredientParagraph] {

@@ -125,11 +125,23 @@ struct RecentScanCard: View {
     }
 
     private var hasNoFoodNotes: Bool {
-        guard let summary = foodNotesStore.foodNotesSummary else {
+        // Prefer the canonical preferences model: if the canvasPreferences.sections
+        // dictionary is empty, the user has no configured food notes.
+        if foodNotesStore.canvasPreferences.sections.isEmpty {
             return true
         }
-        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed == "No Food Notes yet."
+
+        // Fallback to summary text for legacy flows / safety.
+        if let summary = foodNotesStore.foodNotesSummary {
+            let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == "No Food Notes yet." {
+                return true
+            }
+            return false
+        }
+
+        // If we have sections but no summary, treat as having notes.
+        return false
     }
 
     // MARK: - Body
