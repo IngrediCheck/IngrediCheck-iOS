@@ -413,6 +413,8 @@ extension DTO.ProductRecommendation {
             return Color(hex: "#FCDE00")
         case .unknown:
             return Color(hex: "#9E9E9E")
+        case .noPreferences:
+            return Color.grayScale80
         }
     }
 
@@ -426,6 +428,8 @@ extension DTO.ProductRecommendation {
             return Color(hex: "#FF594E")
         case .unknown:
             return Color(hex: "#757575")
+        case .noPreferences:
+            return Color.grayScale100
         }
     }
 
@@ -439,6 +443,8 @@ extension DTO.ProductRecommendation {
             return Color(hex: "#FFF9CE")
         case .unknown:
             return Color(hex: "#F5F5F5")
+        case .noPreferences:
+            return Color.grayScale30
         }
     }
 }

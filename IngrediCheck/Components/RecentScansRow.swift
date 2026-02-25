@@ -78,6 +78,8 @@ struct ScanRow: View {
             return false
         case .unknown:
             return nil  // Treat unknown as Uncertain (nil)
+        case .noPreferences:
+            return nil  // Treat noPreferences as neutral/uncertain for this simple row
         }
     }
     

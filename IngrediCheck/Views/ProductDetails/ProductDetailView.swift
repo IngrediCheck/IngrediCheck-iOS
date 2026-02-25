@@ -231,6 +231,8 @@ struct ProductDetailView: View {
             return .unmatched
         case .unknown:
             return .unknown
+    case .noPreferences:
+        return .noPreferences
         }
     }
     
@@ -1453,6 +1455,7 @@ enum ProductMatchStatus {
     case unmatched
     case unknown
     case analyzing  // Analysis in progress
+    case noPreferences
 
     var title: String {
         switch self {
@@ -1461,6 +1464,7 @@ enum ProductMatchStatus {
         case .unmatched: return "Unmatched"
         case .unknown: return "Unknown"
         case .analyzing: return "Analyzing"
+        case .noPreferences: return "No dietary preferences set"
         }
     }
 
@@ -1471,6 +1475,7 @@ enum ProductMatchStatus {
         case .unmatched: return Color(hex: "#FF4E50")
         case .unknown: return Color.grayScale100
         case .analyzing: return Color(hex: "#007AFF")  // Blue for analyzing
+        case .noPreferences: return Color.grayScale100
         }
     }
 
@@ -1481,6 +1486,7 @@ enum ProductMatchStatus {
         case .unmatched: return Color(hex: "#FFE3E2")
         case .unknown: return Color.grayScale40
         case .analyzing: return Color(hex: "#E3F2FF")  // Light blue for analyzing
+        case .noPreferences: return Color.grayScale40
         }
     }
 
@@ -1491,6 +1497,7 @@ enum ProductMatchStatus {
         case .unmatched: return "Ingredients Alerts"
         case .unknown: return "Status Unknown"
         case .analyzing: return "Analyzing Product"
+        case .noPreferences: return "No dietary preferences set"
         }
     }
 
@@ -1501,6 +1508,7 @@ enum ProductMatchStatus {
         case .unmatched: return Color(hex: "#FFEAEA")
         case .unknown: return Color.grayScale40
         case .analyzing: return Color(hex: "#F0F8FF")  // Light blue for analyzing
+        case .noPreferences: return Color.grayScale40
         }
     }
 

@@ -291,6 +291,7 @@ class DTO {
         case needsReview
         case notMatch
         case unknown
+        case noPreferences
     }
 
     struct ImageInfo: Codable {
@@ -857,10 +858,23 @@ extension String {
 
 extension DTO.Scan {
     func toProductRecommendation() -> DTO.ProductRecommendation {
-        guard let overallMatch = analysis_result?.overall_match else {
-            return .unknown  // Default to unknown if no analysis data
+        guard let analysis = analysis_result else {
+            return .unknown  // No analysis_result at all
         }
-        return overallMatch.toProductRecommendation() ?? .unknown
+
+        // When nullable_analysis=true and the user has no food notes, backend may skip LLM
+        // analysis entirely and return overall_match = null with an empty ingredient_analysis array.
+        if analysis.overall_match == nil && analysis.ingredient_analysis.isEmpty {
+            print("[Scan] 🟦 noPreferences inferred for scan_id=\(id) (overall_match=nil, ingredient_analysis empty)")
+            return .noPreferences
+        }
+
+        if let overallMatch = analysis.overall_match,
+           let mapped = overallMatch.toProductRecommendation() {
+            return mapped
+        }
+
+        return .unknown  // Fallback if string value is unexpected
     }
     
     func relativeTimeDescription(now: Date = Date()) -> String {
@@ -950,6 +964,8 @@ extension DTO.ProductRecommendation {
             return "Unmatched"
         case .unknown:
             return "Unknown"
+        case .noPreferences:
+            return "No dietary preferences set"
         }
     }
     
@@ -962,6 +978,8 @@ extension DTO.ProductRecommendation {
         case .notMatch:
             return "unsafe"
         case .unknown:
+            return "questionmark.circle"
+        case .noPreferences:
             return "questionmark.circle"
         }
     }
@@ -976,6 +994,8 @@ extension DTO.ProductRecommendation {
             return [Color(hex: "#FF5252"), Color(hex: "#D32F2F")]
         case .unknown:
             return [Color(hex: "#9E9E9E"), Color(hex: "#757575")]
+        case .noPreferences:
+            return [Color.grayScale40, Color.grayScale60]
         }
     }
 }

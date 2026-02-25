@@ -43,6 +43,11 @@ struct AnalysisResultView: View {
                         .onAppear {
                             checkAndPromptForRating()
                         }
+                case .noPreferences:
+                    CapsuleWithDivider(state: .fail)
+                        .onAppear {
+                            checkAndPromptForRating()
+                        }
 
                 }
             } else {
