@@ -215,18 +215,19 @@ struct ProductDetailView: View {
     }
     
     private var resolvedStatus: ProductMatchStatus {
+        // If user has no food notes at all, always show a neutral "no preferences"
+        // status regardless of scan type/state, so the header never flips to
+        // "Unknown" or "Analyzing" while preferences are empty.
+        if hasNoFoodNotes {
+            if let scan = scan {
+                print("[ProductDetailView] 🟦 noPreferences (hasNoFoodNotes=true) for scan_id=\(scan.id)")
+            }
+            return .noPreferences
+        }
+
         // Show "analyzing" status if analysis is in progress
         if isAnalyzing {
             return .analyzing
-        }
-
-        // If this is a photo scan (or hybrid) with no analysis_result and the user has no food notes,
-        // treat it as a "no preferences" state instead of unknown.
-        if isPhotoNoPreferencesState {
-            if let scan = scan {
-                print("[ProductDetailView] 🟦 noPreferences inferred for photo scan_id=\(scan.id) (analysis_result=nil, no food notes)")
-            }
-            return .noPreferences
         }
 
         guard let matchStatus = resolvedMatchStatus else {
@@ -277,12 +278,6 @@ struct ProductDetailView: View {
         }
         let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty || trimmed == "No Food Notes yet."
-    }
-
-    private var isPhotoNoPreferencesState: Bool {
-        guard let scan = scan else { return false }
-        let isPhotoType = scan.scan_type == "photo" || scan.scan_type == "barcode_plus_photo"
-        return isPhotoType && scan.analysis_result == nil && hasNoFoodNotes
     }
     
     private var resolvedIngredientParagraphs: [IngredientParagraph] {

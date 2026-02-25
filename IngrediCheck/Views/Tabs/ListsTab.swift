@@ -165,6 +165,9 @@ import os
                 FilterSegmentedControl(selection: $selectedFilter)
             }
         }
+        .onAppear {
+            logScansJSON(source: "onAppear")
+        }
         .task {
             if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {
                 if scanHistoryStore.isLoading {
@@ -178,6 +181,7 @@ import os
                     appState.listsTabState.scans = scanHistoryStore.scans
                 }
             }
+            logScansJSON(source: "afterInitialLoad")
         }
     }
 
@@ -223,6 +227,25 @@ import os
            let idx = scans.firstIndex(where: { $0.id == updatedScan.id }) {
             scans[idx] = updatedScan
             appState.listsTabState.scans = scans
+        }
+    }
+
+    private func logScansJSON(source: String) {
+        let scans = scanHistoryStore.scans
+        guard !scans.isEmpty else {
+            print("[RecentScansPageView] JSON (\(source)): scans array is empty")
+            return
+        }
+
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(scans)
+            if let json = String(data: data, encoding: .utf8) {
+                print("[RecentScansPageView] JSON (\(source)):\n\(json)")
+            }
+        } catch {
+            print("[RecentScansPageView] ❌ Failed to encode scans JSON (\(source)): \(error)")
         }
     }
 }

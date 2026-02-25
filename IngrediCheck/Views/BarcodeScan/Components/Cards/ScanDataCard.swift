@@ -36,16 +36,15 @@ struct ScanDataCard: View {
     
     private var matchStatus: DTO.ProductRecommendation? {
         guard let scan = scan else { return nil }
-        
-        // If this is a photo scan (or hybrid) with no analysis_result and the user has no food notes,
-        // treat it as a "no preferences" state rather than unknown.
-        if scan.analysis_result == nil,
-           (scan.scan_type == "photo" || scan.scan_type == "barcode_plus_photo"),
-           hasNoFoodNotes {
-            print("[ScanDataCard] 🟦 noPreferences inferred for photo scan_id=\(scan.id) (analysis_result=nil, no food notes)")
+
+        // If user has no food notes at all, always show a neutral "no preferences"
+        // state regardless of scan type/state, so the card never flips to "Unknown"
+        // or a match verdict while preferences are empty.
+        if hasNoFoodNotes {
+            print("[ScanDataCard] 🟦 noPreferences (hasNoFoodNotes=true) for scan_id=\(scan.id)")
             return .noPreferences
         }
-        
+
         return scan.toProductRecommendation()
     }
     

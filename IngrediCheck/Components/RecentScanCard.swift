@@ -21,6 +21,7 @@ struct RecentScanCard: View {
     var onScanUpdated: ((DTO.Scan) -> Void)?
 
     @Environment(WebService.self) private var webService
+    @Environment(FoodNotesStore.self) private var foodNotesStore
     @State private var isFavorited: Bool
     @State private var isTogglingFavorite: Bool = false
     @State private var isReanalyzing: Bool = false
@@ -89,7 +90,17 @@ struct RecentScanCard: View {
     }
 
     private var matchStatus: DTO.ProductRecommendation {
-        currentScan.toProductRecommendation()
+        let base = currentScan.toProductRecommendation()
+
+        // If user has no food notes at all, always show a neutral "no preferences"
+        // state in history, so recent scans never show "Unknown" while preferences
+        // are empty. Once the user adds any preference, we show the real base value.
+        if hasNoFoodNotes {
+            print("[RecentScanCard] 🟦 noPreferences (hasNoFoodNotes=true) for scan_id=\(currentScan.id)")
+            return .noPreferences
+        }
+
+        return base
     }
 
     private var isStale: Bool {
@@ -111,6 +122,14 @@ struct RecentScanCard: View {
 
     private var imageLocations: [DTO.ImageLocationInfo] {
         product.images
+    }
+
+    private var hasNoFoodNotes: Bool {
+        guard let summary = foodNotesStore.foodNotesSummary else {
+            return true
+        }
+        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "No Food Notes yet."
     }
 
     // MARK: - Body
