@@ -18,6 +18,7 @@ struct GreenCapsule: View {
     var isLoading: Bool = false
     var labelFont: Font = NunitoFont.semiBold.size(16)
     var isDisabled: Bool = false
+    var spacing: CGFloat = 8
     
     init(
         title: String,
@@ -29,7 +30,8 @@ struct GreenCapsule: View {
         takeFullWidth: Bool = true,
         isLoading: Bool = false,
         isDisabled: Bool = false,
-        labelFont: Font = NunitoFont.semiBold.size(16)
+        labelFont: Font = NunitoFont.semiBold.size(16),
+        spacing: CGFloat = 8
     ) {
         self.title = title
         self.icon = icon
@@ -41,10 +43,11 @@ struct GreenCapsule: View {
         self.isLoading = isLoading
         self.isDisabled = isDisabled
         self.labelFont = labelFont
+        self.spacing = spacing
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: spacing) {
             if isLoading {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: .grayScale10))
