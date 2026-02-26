@@ -1491,7 +1491,7 @@ enum ProductMatchStatus {
         case .unmatched: return "Unmatched"
         case .unknown: return "Unknown"
         case .analyzing: return "Analyzing"
-        case .noPreferences: return "No dietary preferences set"
+        case .noPreferences: return "Not Personalized"
         }
     }
 
@@ -1524,7 +1524,7 @@ enum ProductMatchStatus {
         case .unmatched: return "Ingredients Alerts"
         case .unknown: return "Status Unknown"
         case .analyzing: return "Analyzing Product"
-        case .noPreferences: return "No dietary preferences set"
+        case .noPreferences: return "Not Personalized"
         }
     }
 
