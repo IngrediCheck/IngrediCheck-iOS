@@ -1371,18 +1371,26 @@ struct ProductDetailView: View {
                     }
                 }
                 
-                Spacer()
+//                if !(resolvedStatus == .noPreferences) {
+                    Spacer()
+//                }
                 
-                HStack(spacing: 4) {
-                    StatusDotView(status: resolvedStatus)
-
-                    Text(resolvedStatus.title)
-                        .font(NunitoFont.bold.size(14))
-                        .foregroundStyle(resolvedStatus.color)
+                
+                if resolvedStatus == .noPreferences {
+                    NotPersonalized()
+                        .layoutPriority(1)
+                } else {
+                    HStack(spacing: 4) {
+                        StatusDotView(status: resolvedStatus)
+                        
+                        Text(resolvedStatus.title)
+                            .font(NunitoFont.bold.size(14))
+                            .foregroundStyle(resolvedStatus.color)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(resolvedStatus.badgeBackground, in: Capsule())
                 }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(resolvedStatus.badgeBackground, in: Capsule())
             }
         }
         .padding(.horizontal, 20)
