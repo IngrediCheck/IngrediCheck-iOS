@@ -52,9 +52,9 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - *Restricted (approved users only; do not try to post):* r/ingredients, r/onofffood
 
 **Allergies & food allergies**
+- *Restricted (approved users only; do not try to post):* r/Allergy, r/sulfiteallergy
 - r/Allergies
 - r/peanutallergy
-- r/sulfiteallergy
 
 **Celiac, gluten-free, intolerance**
 - r/Celiac
@@ -157,6 +157,8 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - r/EatCheapAndHealthy
 - r/fitmeals
 - r/AskRedditFood
+- r/CostcoWholesale
+- r/BuyFromEU
 
 **Recipe subreddits** (use only when post is about ingredient labels on packaged products, not pure recipe discussion)
 - r/Recipes
