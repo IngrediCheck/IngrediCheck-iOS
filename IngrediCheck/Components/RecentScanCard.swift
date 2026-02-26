@@ -445,7 +445,7 @@ extension DTO.ProductRecommendation {
         case .unknown:
             return Color(hex: "#9E9E9E")
         case .noPreferences:
-            return Color.grayScale80
+            return Color.grayScale110
         }
     }
 
@@ -460,7 +460,7 @@ extension DTO.ProductRecommendation {
         case .unknown:
             return Color(hex: "#757575")
         case .noPreferences:
-            return Color.grayScale100
+            return Color.grayScale110
         }
     }
 
@@ -475,7 +475,7 @@ extension DTO.ProductRecommendation {
         case .unknown:
             return Color(hex: "#F5F5F5")
         case .noPreferences:
-            return Color.grayScale30
+            return Color.grayScale40
         }
     }
 }

@@ -965,7 +965,7 @@ extension DTO.ProductRecommendation {
         case .unknown:
             return "Unknown"
         case .noPreferences:
-            return "No dietary preferences set"
+            return "Not Personalized"
         }
     }
     

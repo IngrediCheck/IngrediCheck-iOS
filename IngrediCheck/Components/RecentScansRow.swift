@@ -68,18 +68,20 @@ struct ScanRow: View {
         _isFavorited = State(initialValue: scan.is_favorited ?? false)
     }
     
+    private var recommendation: DTO.ProductRecommendation {
+        scan.toProductRecommendation()
+    }
+    
     private var feedback: Bool? {
-        switch scan.toProductRecommendation() {
+        switch recommendation {
         case .match:
             return true
         case .needsReview:
             return nil
         case .notMatch:
             return false
-        case .unknown:
-            return nil  // Treat unknown as Uncertain (nil)
-        case .noPreferences:
-            return nil  // Treat noPreferences as neutral/uncertain for this simple row
+        case .unknown, .noPreferences:
+            return nil  // Treat unknown/noPreferences as neutral for legacy colors
         }
     }
     
@@ -119,18 +121,22 @@ struct ScanRow: View {
                     .foregroundStyle(.teritairy1000)
                     .lineLimit(1)
                 
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
-                        .frame(width: 10, height: 10)
-                    
-                    Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
-                        .font(ManropeFont.medium.size(12))
-                        .foregroundStyle(feedback == nil ? Color(hex: "#FF594E") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                if recommendation == .noPreferences {
+                    NotPersonalized()
+                } else {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(feedback == nil ? Color(hex: "#FCDE00") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                            .frame(width: 10, height: 10)
+                        
+                        Text(feedback == nil ? "Uncertain" : feedback == true ? "Matched" : "Unmatched")
+                            .font(ManropeFont.medium.size(12))
+                            .foregroundStyle(feedback == nil ? Color(hex: "#FF594E") : feedback == true ? .primary600 : Color(hex: "#FF1100"))
+                    }
+                    .padding(.vertical, 5)
+                    .padding(.horizontal, 8)
+                    .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 25))
                 }
-                .padding(.vertical, 5)
-                .padding(.horizontal, 8)
-                .background(feedback == nil ? Color(hex: "#FFF9CE") : feedback == true ? .primary200 : Color(hex: "#FFE3E2"), in: RoundedRectangle(cornerRadius: 25))
             }
             
             Spacer()
