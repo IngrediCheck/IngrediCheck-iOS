@@ -114,7 +114,7 @@ struct ScanDataCard: View {
     ) {
         var inventoryImages: [DTO.ImageLocationInfo] = []
         var userImages: [DTO.ImageLocationInfo] = []
-        var processedHashes: Set<String> = []  // Track which hashes are already processed
+        var processedHashes: Set<String> = []  // Track which hashes are already processed (normalized lowercase)
 
         // Extract images from scan.images (has type information)
         if let scan = scan {
@@ -127,7 +127,8 @@ struct ScanDataCard: View {
                 case .user(let img):
                     if img.status == "processed", let storagePath = img.storage_path {
                         userImages.append(.scanImagePath(storagePath))
-                        processedHashes.insert(img.content_hash)  // Mark as processed
+                        // Normalize to lowercase so we match local hashes regardless of case
+                        processedHashes.insert(img.content_hash.lowercased())  // Mark as processed
                     }
                 }
             }
@@ -138,10 +139,20 @@ struct ScanDataCard: View {
         var pendingLocalImages: [UIImage] = []
         if let locals = localImages {
             for (image, hash) in locals {
-                if !processedHashes.contains(hash) {
+                // Compare using lowercase to avoid duplicates when API returns
+                // the same hash with a different case than our local hash.
+                let key = hash.lowercased()
+                if !processedHashes.contains(key) {
                     pendingLocalImages.append(image)
                 }
             }
+        }
+
+        // If we already have any processed user images from the API, rely on those
+        // as the source of truth and stop showing local pending images to avoid
+        // duplicate thumbnails after analysis completes.
+        if !userImages.isEmpty {
+            pendingLocalImages = []
         }
 
         return (inventoryImages: inventoryImages, userImages: userImages, pendingLocalImages: pendingLocalImages)
