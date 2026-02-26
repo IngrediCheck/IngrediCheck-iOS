@@ -470,6 +470,10 @@ struct ScanCameraView: View {
                 .filter { !activeScanIdsSet.contains($0) }  // Don't duplicate active scans
 
             historyScanIds = historyIds
+
+            // Normalize active/history lists to avoid any duplicate scanIds across both
+            normalizeScanLists()
+
             Log.debug("SCAN_HISTORY", "✅ CameraScreen: Synced \(historyIds.count) history scan IDs from store")
         }
     }
@@ -546,11 +550,115 @@ struct ScanCameraView: View {
         items.append(contentsOf: nonSkeletonNonPendingScans)
 
         // Append history cards (excluding any that are in active scans)
-        let activeScanIdsSet = Set(activeScans)
-        let filteredHistory = historyScanIds.filter { !activeScanIdsSet.contains($0) }
+        let activeScanIdsSet = Set(activeScans.map { $0.lowercased() })
+        let filteredHistory = historyScanIds.filter { !activeScanIdsSet.contains($0.lowercased()) }
         items.append(contentsOf: filteredHistory)
 
-        return items
+        // Ensure we never show the same scanId twice in the carousel, even if
+        // state updates introduce duplicates into scanIds/historyScanIds.
+        var seenLowercased = Set<String>()
+        var uniqueItems: [String] = []
+        for id in items {
+            let key = id.lowercased()
+            if !seenLowercased.contains(key) {
+                seenLowercased.insert(key)
+                uniqueItems.append(id)
+            }
+        }
+
+        return uniqueItems
+    }
+
+    /// Pretty-prints the current camera state (active scanIds, historyScanIds, and
+    /// the derived allCarouselItems) along with basic scan summaries, so we can
+    /// inspect what is happening when navigating to/from ProductDetail.
+    private func logCameraState(source: String) {
+        struct DebugScanSummary: Codable {
+            let id: String
+            let state: String
+            let type: String
+            let name: String
+        }
+
+        struct CameraStateSnapshot: Codable {
+            let source: String
+            let scanIds: [String]
+            let historyScanIds: [String]
+            let allCarouselItems: [String]
+            let activeScans: [DebugScanSummary]
+            let historyScans: [DebugScanSummary]
+        }
+
+        let activeSummaries: [DebugScanSummary] = scanIds.compactMap { id in
+            guard let scan = scanDataCache[id] else { return nil }
+            return DebugScanSummary(
+                id: scan.id,
+                state: scan.state,
+                type: scan.scan_type,
+                name: scan.product_info.name ?? ""
+            )
+        }
+
+        let historySummaries: [DebugScanSummary] = historyScanIds.compactMap { id in
+            guard let scan = scanHistoryStore.scanCache[id] else { return nil }
+            return DebugScanSummary(
+                id: scan.id,
+                state: scan.state,
+                type: scan.scan_type,
+                name: scan.product_info.name ?? ""
+            )
+        }
+
+        let snapshot = CameraStateSnapshot(
+            source: source,
+            scanIds: scanIds,
+            historyScanIds: historyScanIds,
+            allCarouselItems: allCarouselItems,
+            activeScans: activeSummaries,
+            historyScans: historySummaries
+        )
+
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(snapshot)
+            if let json = String(data: data, encoding: .utf8) {
+                print("[ScanCameraView] JSON CameraState (\(source)):\n\(json)")
+            }
+        } catch {
+            print("[ScanCameraView] ❌ Failed to encode CameraState JSON (\(source)): \(error)")
+        }
+    }
+
+    /// Ensures scanIds and historyScanIds never contain duplicate scanIds (case-insensitive),
+    /// and that any scanId present in the active list is not also present in history.
+    private func normalizeScanLists() {
+        // 1. De-duplicate active scanIds while preserving order (case-insensitive)
+        var seenLowercased = Set<String>()
+        var normalizedActive: [String] = []
+        for id in scanIds {
+            let key = id.lowercased()
+            if !seenLowercased.contains(key) {
+                seenLowercased.insert(key)
+                // Normalize to lowercase so IDs match the backend / history IDs
+                normalizedActive.append(key)
+            }
+        }
+        scanIds = normalizedActive
+        
+        // 2. Remove any history ids that are also active and de-duplicate history (case-insensitive)
+        let activeSetLowercased = Set(scanIds.map { $0.lowercased() })
+        var normalizedHistory: [String] = []
+        seenLowercased.removeAll(keepingCapacity: true)
+        for id in historyScanIds {
+            let key = id.lowercased()
+            guard !activeSetLowercased.contains(key) else { continue }
+            if !seenLowercased.contains(key) {
+                seenLowercased.insert(key)
+                normalizedHistory.append(key)
+            }
+        }
+        historyScanIds = normalizedHistory
     }
     
     // MARK: - New Product Session (Photo Mode)
@@ -779,6 +887,11 @@ struct ScanCameraView: View {
                     // Fetch scan history on appear
                     Task {
                         await loadScanHistory()
+
+                        // Log full camera state (active + history) after history sync
+                        await MainActor.run {
+                            logCameraState(source: "onAppear_afterHistory")
+                        }
                         
                         // If opened with initial scroll target (from ProductDetailView or push navigation), handle scrolling
                         // This handles the case when view is opened to add more photos to an existing scan
@@ -925,6 +1038,9 @@ struct ScanCameraView: View {
                         camera.stopSession()
                     } else if cameraStatus == .authorized && scenePhase == .active {
                         camera.startSession()
+                        // When returning from Product Detail, normalize lists so there is
+                        // never more than one card per scanId in the carousel.
+                        normalizeScanLists()
                     }
                 }
                 .onAppear {
