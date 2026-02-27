@@ -364,6 +364,7 @@ struct ProductDetailView: View {
                             if resolvedStatus == .noPreferences, hasIngredients {
                                 AddFoodNotesPromptCard()
                                     .padding(.horizontal, 20)
+                                    .padding(.bottom, 15)
                             }
 
                             // Show Missing Ingredients UI or regular content

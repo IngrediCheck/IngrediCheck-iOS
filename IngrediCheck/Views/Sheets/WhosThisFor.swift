@@ -21,7 +21,7 @@ struct WhosThisFor: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Hey there! Who’s this for?")
+                    Text("Let’s set up your account !")
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -40,7 +40,7 @@ struct WhosThisFor: View {
                     .buttonStyle(.plain)
                 }
 
-                Text("Is it just you, or your whole IngrediFam — family, friends, anyone you care about?")
+                Text("Choose who you'd like to create profiles for.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -91,12 +91,40 @@ struct WhosThisFor: View {
                 )
                 
             }
-            .padding(.bottom, 20)
+            
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(colors: [Color(hex: "#D6D4D4"), .white], startPoint: .trailing, endPoint: .leading)
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 1)
+                
+                Text("Or")
+                    .font(ManropeFont.medium.size(10))
+                    .foregroundStyle(.grayScale120)
+                    .padding(.horizontal, 7)
+                
+                Rectangle()
+                    .fill(
+                        LinearGradient(colors: [Color(hex: "#D6D4D4"), .white], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 1)
+            }
+            .padding(.vertical, 16)
 
-            Text("You can always add or edit members later.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale90)
-                .multilineTextAlignment(.center)
+            HStack(spacing: 2) {
+                Text("Got a family invite to IngrediFam?")
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.grayScale120)
+                    .multilineTextAlignment(.center)
+                
+                Text("Join a Family")
+                    .font(ManropeFont.bold.size(12))
+                    .foregroundStyle(Color(hex: "#75990E"))
+                    .underline()
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)
