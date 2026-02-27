@@ -407,7 +407,7 @@ struct PersistentBottomSheet: View {
         case .alreadyHaveAnAccount:
             return 244
         case .signInToIngrediCheck:
-            return 320
+            return nil
         case  .doYouHaveAnInviteCode:
             return 220
         case .welcomeBack:

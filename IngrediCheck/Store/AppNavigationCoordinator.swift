@@ -347,7 +347,7 @@ class AppNavigationCoordinator {
         case .welcomeBack:
             return (.welcomeBack, nil)
         case .signInToIngrediCheck:
-            return nil
+            return (.signInToIngrediCheck, nil)
         case .doYouHaveAnInviteCode:
             return (.doYouHaveAnInviteCode, nil)
         case .enterInviteCode:
@@ -435,6 +435,8 @@ class AppNavigationCoordinator {
             return .alreadyHaveAnAccount
         case .welcomeBack:
             return .welcomeBack
+        case .signInToIngrediCheck:
+            return .signInToIngrediCheck
         case .doYouHaveAnInviteCode:
             return .doYouHaveAnInviteCode
         case .enterInviteCode:
@@ -545,7 +547,7 @@ class AppNavigationCoordinator {
         // 3. Refine Canvas based on specific Sheets that map to specific Canvases
         // This overrides the broader 'stage' based guess for accuracy
         switch sheet {
-        case .alreadyHaveAnAccount, .welcomeBack, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
+        case .alreadyHaveAnAccount, .welcomeBack, .signInToIngrediCheck, .doYouHaveAnInviteCode, .enterInviteCode, .whosThisFor:
              // These sheets all appear on .heyThere canvas (consistent with navigateInBottomSheet logic)
              canvas = .heyThere
         case .letsMeetYourIngrediFam, .whatsYourName, .addMoreMembers, .addMoreMembersMinimal, .editMember, .wouldYouLikeToInvite, .addPreferencesForMember, .generateAvatar, .bringingYourAvatar, .meetYourAvatar, .yourCurrentAvatar, .setUpAvatarFor:

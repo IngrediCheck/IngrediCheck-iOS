@@ -17,6 +17,7 @@ struct SignInToIngrediCheckSheet: View {
                 .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale120)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
 
             HStack(spacing: 16) {
