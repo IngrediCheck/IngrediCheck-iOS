@@ -30,17 +30,14 @@ Before using this skill, the following must be configured once:
 4. Set redirect URI to `http://localhost:8080` (unused but required)
 5. Note the **client ID** (under the app name) and **client secret**
 
-### 2. Create credentials file
-```bash
-mkdir -p ~/.config/ingredicheck
-cat > ~/.config/ingredicheck/reddit.env << 'EOF'
+### 2. Add Reddit credentials to `.env`
+Add these variables to the `.env` file in the repo root (already gitignored):
+```
 REDDIT_CLIENT_ID=your_client_id
 REDDIT_CLIENT_SECRET=your_client_secret
 REDDIT_USERNAME=your_reddit_username
 REDDIT_PASSWORD=your_reddit_password
 REDDIT_USER_AGENT=IngrediCheck-ReplyGuy/1.0 by /u/your_reddit_username
-EOF
-chmod 600 ~/.config/ingredicheck/reddit.env
 ```
 
 ### 3. Required OAuth scopes

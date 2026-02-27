@@ -5,7 +5,8 @@
 # Each public function is self-contained: loads config, gets token, makes request.
 # This is intentional — Bash state doesn't persist between Claude tool calls.
 
-REDDIT_CONFIG_FILE="$HOME/.config/ingredicheck/reddit.env"
+# Find repo root (git rev-parse works from any subdirectory)
+REDDIT_CONFIG_FILE="$(git rev-parse --show-toplevel 2>/dev/null)/.env"
 REDDIT_TOKEN_URL="https://www.reddit.com/api/v1/access_token"
 REDDIT_API_BASE="https://oauth.reddit.com"
 
@@ -20,24 +21,12 @@ reddit_load_config() {
     if [ ! -f "$REDDIT_CONFIG_FILE" ]; then
         _reddit_error "Credentials file not found: $REDDIT_CONFIG_FILE"
         echo ""
-        echo "Create it with:"
-        echo "  mkdir -p ~/.config/ingredicheck"
-        echo "  cat > ~/.config/ingredicheck/reddit.env << 'EOF'"
+        echo "Create a .env file in the repo root with:"
         echo "  REDDIT_CLIENT_ID=..."
         echo "  REDDIT_CLIENT_SECRET=..."
         echo "  REDDIT_USERNAME=..."
         echo "  REDDIT_PASSWORD=..."
         echo "  REDDIT_USER_AGENT=IngrediCheck-ReplyGuy/1.0 by /u/YourUsername"
-        echo "  EOF"
-        echo "  chmod 600 ~/.config/ingredicheck/reddit.env"
-        return 1
-    fi
-
-    # Check file permissions (should be 600)
-    local perms
-    perms=$(stat -f "%Lp" "$REDDIT_CONFIG_FILE" 2>/dev/null || stat -c "%a" "$REDDIT_CONFIG_FILE" 2>/dev/null)
-    if [ "$perms" != "600" ]; then
-        _reddit_error "Credentials file has insecure permissions ($perms). Run: chmod 600 $REDDIT_CONFIG_FILE"
         return 1
     fi
 
