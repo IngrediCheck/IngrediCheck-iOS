@@ -48,7 +48,7 @@ struct EnterYourInviteCode : View {
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .leading) {
                     Button {
-                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
+                        coordinator.navigateInBottomSheet(.whosThisFor)
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
