@@ -677,7 +677,11 @@ struct ScanDataCard: View {
                 if isAnalyzing && ingredientRecommendations == nil {
                     analyzingBadge
                 } else if let matchStatus = matchStatus {
-                    matchStatusBadge(matchStatus: matchStatus)
+                    if matchStatus == .noPreferences {
+                        addFoodNotesButton
+                    } else {
+                        matchStatusBadge(matchStatus: matchStatus)
+                    }
                 } else if errorState != nil {
                     retryButton
                 }
@@ -764,6 +768,28 @@ struct ScanDataCard: View {
                     )
                 )
         )
+    }
+
+    // MARK: - Add Food Notes Button (noPreferences)
+    @ViewBuilder
+    private var addFoodNotesButton: some View {
+        Button(action: {
+            appState.navigate(to: .editableCanvas(targetSection: nil))
+        }) {
+            PrimaryButton(
+                title: "Add food notes",
+                icon: "plus",
+                iconWidth: 12,
+                iconHeight: 12,
+                width: 125,
+                height: 31,
+                takeFullWidth: false,
+                isLoading: false,
+                isDisabled: false,
+                labelFont: NunitoFont.medium.size(12)
+            )
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Retry Button
