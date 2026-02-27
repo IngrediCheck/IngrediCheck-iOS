@@ -199,22 +199,24 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 
 ### Search Process
 1. Search across all of Reddit or within specific subreddits
-2. Filter for posts from the past month
-3. Check that comments are enabled (no "Archived post" message)
-4. Prioritize posts with engagement (comments, upvotes)
+2. Filter for posts from the past month (`t=month`)
+3. **Skip posts with age ≥ 6 months** (e.g. "6mo ago", "1y ago", "2y ago") - these are archived and cannot be commented on
+4. When opening a post, verify it is not archived before proposing (see Procedure Step 2)
+5. Prioritize posts with engagement (comments, upvotes)
 
 ## Comment Writing Guidelines
 
 ### Critical Rules
-1. **ALWAYS read the full post AND top 5-10 comments before proposing a comment**
-2. **ALWAYS check post relevance first** - Use the "Post Relevance Checklist" in "Lessons Learned" section. Skip posts about nutrition info, restaurant items without labels, or general food questions without ingredient checking focus.
-3. **ALWAYS thoroughly check if user already commented** - Use multiple methods (fetch, grep, browser snapshot). If user says "we already commented," trust them and skip immediately.
-4. Make it relevant to the specific post and thread
-5. Reference other comments, OP's phrasing, or shared pain points
-6. Use "I built" or "I created" (not "I use")
-7. Match the tone and style of other comments in the thread
-8. **Do NOT use em dashes (—)** in proposed comments. Use regular hyphens (-) or parentheses instead.
-9. **Be sensitive to context** - Avoid promoting on posts about severe medical crises or very distressing symptoms unless you can offer genuine help without trivializing their situation.
+1. **ALWAYS verify the post is NOT archived BEFORE proposing** - Reddit archives posts after 6 months. Check post age (e.g. "6mo ago", "1y ago", "2y ago" = archived; skip immediately). Look for "Archived" or "New comments cannot be posted" in the page. If archived, skip and move to the next candidate. Do NOT propose a comment on archived posts.
+2. **ALWAYS read the full post AND top 5-10 comments before proposing a comment**
+3. **ALWAYS check post relevance first** - Use the "Post Relevance Checklist" in "Lessons Learned" section. Skip posts about nutrition info, restaurant items without labels, or general food questions without ingredient checking focus.
+4. **ALWAYS thoroughly check if user already commented** - Use multiple methods (fetch, grep, browser snapshot). If user says "we already commented," trust them and skip immediately.
+5. Make it relevant to the specific post and thread
+6. Reference other comments, OP's phrasing, or shared pain points
+7. Use "I built" or "I created" (not "I use")
+8. Match the tone and style of other comments in the thread
+9. **Do NOT use em dashes (—)** in proposed comments. Use regular hyphens (-) or parentheses instead.
+10. **Be sensitive to context** - Avoid promoting on posts about severe medical crises or very distressing symptoms unless you can offer genuine help without trivializing their situation.
 
 ### Comment Structure
 - **Opening:** Direct observation that ties to the post (e.g. "I noticed you're trying to identify and avoid [X]."). Avoid performative empathy; keep it simple and genuine.
@@ -294,7 +296,7 @@ https://apps.apple.com/us/app/ingredicheck/id6477521615
 - **Authenticity matters:** Comments should feel like genuine participation, not promotion
 - **Context is everything:** Each comment must be tailored to its specific post and thread
 - **User posts manually:** Provide copy-paste ready text, don't attempt to post via browser automation
-- **Always check if post is archived:** Reddit archives posts after 6 months - these cannot be commented on
+- **Always verify post is NOT archived before proposing:** Reddit archives posts after 6 months. Check post age (6mo ago, 1y ago, 2y ago = skip) and look for "Archived" or "New comments cannot be posted" in the page. Never propose a comment on archived posts.
 - **Skip posts where user already commented:** Never propose a post if the current Reddit user has already left a comment on it; skip to the next candidate.
 
 ## Lessons Learned & Critical Relevance Criteria
@@ -357,6 +359,10 @@ Execute these steps using browser and fetch tools only. Do not create or call se
 ### Step 2 — Open and read each candidate post
 - **Skip banned subreddits:** Do not open or propose posts from r/FoodAllergies (we are banned there). If a search result or candidate is from a banned sub, skip it and pick the next candidate.
 - **Open the post in the Cursor IDE browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread. Prefer the in-IDE browser for opening and showing posts; use `mcp_web_fetch` for duplicate-checking and parsing comment text.
+- **CRITICAL: Verify post is NOT archived BEFORE proposing:**
+  1. Check the post age in the page or snapshot. If it shows **6mo ago**, **1y ago**, **2y ago**, or any age ≥ 6 months, the post is archived. **SKIP immediately** - do NOT propose a comment.
+  2. Look for text such as **"Archived"**, **"archived"**, or **"New comments cannot be posted"** in the page or snapshot. If found, **SKIP immediately**.
+  3. Reddit archives posts after 6 months. Only propose comments on posts that are clearly still open for new comments.
 - **CRITICAL: Thoroughly check if current user already commented BEFORE proposing:**
   1. Fetch the full post page using `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` (old.reddit.com is easier to parse)
   2. Use `grep` to search the fetched content for the current Reddit username (from Step 0) - search for exact username match
@@ -371,7 +377,6 @@ Execute these steps using browser and fetch tools only. Do not create or call se
   4. Is this about **restaurant items without scannable labels**? (If yes, skip)
   5. Does this show genuine need for ingredient analysis tool? (If no, skip)
 - Read the full post body and top 5–10 comments (use screenshot or `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` for readable comment text).
-- Confirm the post is not archived (no "Archived post. New comments cannot be posted" message).
 - **Check tone/sensitivity:** If post involves severe health struggles or medical crises, be extra careful with comment tone or skip if inappropriate.
 
 ### Step 3 — Propose a comment
