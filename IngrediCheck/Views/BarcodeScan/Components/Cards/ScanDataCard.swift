@@ -786,7 +786,8 @@ struct ScanDataCard: View {
                 takeFullWidth: false,
                 isLoading: false,
                 isDisabled: false,
-                labelFont: NunitoFont.medium.size(12)
+                labelFont: NunitoFont.medium.size(12),
+                shadowDissabled: true
             )
         }
         .buttonStyle(.plain)
