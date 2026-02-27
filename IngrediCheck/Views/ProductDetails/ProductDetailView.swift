@@ -364,6 +364,7 @@ struct ProductDetailView: View {
                             if resolvedStatus == .noPreferences, hasIngredients {
                                 AddFoodNotesPromptCard()
                                     .padding(.horizontal, 20)
+                                    .padding(.bottom, 15)
                             }
 
                             // Show Missing Ingredients UI or regular content
@@ -1386,21 +1387,22 @@ struct ProductDetailView: View {
 //                }
                 
                 
-                if resolvedStatus == .noPreferences {
-                    NotPersonalized()
-                        .layoutPriority(1)
-                } else {
                     HStack(spacing: 4) {
                         StatusDotView(status: resolvedStatus)
                         
                         Text(resolvedStatus.title)
                             .font(NunitoFont.bold.size(14))
                             .foregroundStyle(resolvedStatus.color)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .allowsTightening(true)
+                            .layoutPriority(1)
                     }
+                    
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
                     .background(resolvedStatus.badgeBackground, in: Capsule())
-                }
+                
             }
         }
         .padding(.horizontal, 20)
@@ -1561,4 +1563,3 @@ enum ProductMatchStatus {
         badgeBackground
     }
 }
-
