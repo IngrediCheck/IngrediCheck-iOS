@@ -58,6 +58,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     let startTime = Date().timeIntervalSince1970
 
     guard let token = try? await supabaseClient.auth.session.accessToken else {
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "auth", error: "No access token")
         throw AIMemojiError.notAuthenticated
     }
 
@@ -121,6 +122,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
             // If not retryable or max retries reached, throw the error
             if attempt == maxRetries {
                 Log.error("AIMemojiService", "❌ Max retries reached, throwing error")
+                AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "network", error: error.localizedDescription)
                 throw error
             }
         }
@@ -132,11 +134,13 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
             throw error
         }
         Log.error("AIMemojiService", "❌ No data or response received")
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "network", error: "No data or response received")
         throw AIMemojiError.invalidResponse("No response received.")
     }
 
     guard let httpResponse = urlResponse as? HTTPURLResponse else {
         Log.error("AIMemojiService", "❌ No HTTP Response received")
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "network", error: "No HTTP response")
         throw AIMemojiError.invalidResponse("No HTTP response.")
     }
 
@@ -151,6 +155,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
             "total_latency_ms": latency,
             "status_code": httpResponse.statusCode
         ])
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "http", statusCode: httpResponse.statusCode)
 
         // Try to parse error details from backend response
         if let errorData = try? JSONDecoder().decode(MemojiErrorResponse.self, from: responseData) {
@@ -176,11 +181,13 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
         let rawDataString = String(data: responseData, encoding: .utf8) ?? "Unable to convert data to string"
         Log.error("AIMemojiService", "❌ Decoding failed: \(error.localizedDescription)")
         Log.error("AIMemojiService", "❌ Raw Data that failed to decode: \(rawDataString)")
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "decode", error: error.localizedDescription)
         throw error
     }
 
     guard let urlString = decoded.imageUrl, let url = URL(string: urlString) else {
         Log.error("AIMemojiService", "❌ decoded.imageUrl is NIL or invalid")
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "decode", error: "Missing or invalid imageUrl")
         throw AIMemojiError.missingImage
     }
 
@@ -191,7 +198,14 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     imageRequest.timeoutInterval = 30.0 // 30 seconds for image download
     Log.debug("AIMemojiService", "🔵 Downloading memoji image...")
     
-    let (pngData, _) = try await URLSession.shared.data(for: imageRequest)
+    let pngData: Data
+    do {
+        let (downloadedData, _) = try await URLSession.shared.data(for: imageRequest)
+        pngData = downloadedData
+    } catch {
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "network", error: "Image download failed: \(error.localizedDescription)")
+        throw error
+    }
     Log.debug("AIMemojiService", "✅ Downloaded PNG Data size: \(pngData.count) bytes")
     Log.debug("AIMemojiService", "generateMemojiImage: Before UIImage(data:) - Thread.isMainThread=\(Thread.isMainThread)")
     // CRITICAL: UIImage(data:) must be called on main thread - UIImage operations are not thread-safe
@@ -204,6 +218,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     }
     Log.debug("AIMemojiService", "generateMemojiImage: After MainActor.run - Thread.isMainThread=\(Thread.isMainThread)")
     guard let image = image else {
+        AnalyticsService.shared.captureAPIError(endpoint: "generateMemojiImage", errorType: "decode", error: "Failed to create UIImage from PNG data")
         throw AIMemojiError.missingImage
     }
 

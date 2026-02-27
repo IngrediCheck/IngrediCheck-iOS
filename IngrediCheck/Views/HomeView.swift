@@ -622,9 +622,10 @@ struct HomeView: View {
                 }
                 .onAppear {
                     // Check if we should auto-open scan camera on app start
-                    // Only trigger once when HomeView first appears
-                    if !hasCheckedAutoScan && userPreferences.startScanningOnAppStart {
-                        hasCheckedAutoScan = true
+                    // Only trigger once when HomeView first appears (not when returning from navigation)
+                    guard !hasCheckedAutoScan else { return }
+                    hasCheckedAutoScan = true
+                    if userPreferences.startScanningOnAppStart {
                         // Small delay to ensure view is fully loaded
                         Task { @MainActor in
                             try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds

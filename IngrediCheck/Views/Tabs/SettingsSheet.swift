@@ -349,12 +349,7 @@ struct SettingsContentView: View {
                 guard !newValue.isEmpty, !isEditingPrimaryName else { return }
                 if primaryMemberName != newValue { primaryMemberName = newValue }
             }
-            // If the user turns on "Start Scanning on App Start" from Settings, open the scan screen immediately
-            .onChange(of: userPreferences.startScanningOnAppStart) { _, newValue in
-                if newValue && !dietaryPreferences.preferences.isEmpty {
-                    appState.activeSheet = .scan
-                }
-            }
+            // "Start Scanning on App Start" takes effect on next app launch (handled in HomeView.onAppear)
             .onChange(of: primaryMemberName) { oldValue, newValue in
                 // Filter to letters and spaces only
                 let filtered = newValue.filter { $0.isLetter || $0.isWhitespace }
