@@ -362,7 +362,13 @@ struct ProductDetailView: View {
                             dietaryTagsRow
 
                             if resolvedStatus == .noPreferences, hasIngredients {
-                                AddFoodNotesPromptCard()
+                                AddFoodNotesPromptCard(
+                                    onAddFoodNotes: {
+                                        if let appState = appState {
+                                            appState.navigate(to: .editableCanvas(targetSection: nil))
+                                        }
+                                    }
+                                )
                                     .padding(.horizontal, 20)
                                     .padding(.bottom, 15)
                             }
