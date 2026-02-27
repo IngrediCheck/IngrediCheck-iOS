@@ -1,29 +1,50 @@
 ---
 name: mk-reply-guy
-description: Find Reddit posts and craft genuine comments to pitch IngrediCheck. Walk through posts one by one, propose comments, get approval, then move to next.
+description: Find Reddit posts and craft genuine comments to pitch IngrediCheck. Walk through posts one by one, propose comments, get approval, then post via API.
 disable-model-invocation: true
 argument-hint: [search-terms|subreddit]
 allowed-tools:
-  - mcp_cursor-ide-browser_browser_navigate
-  - mcp_cursor-ide-browser_browser_snapshot
-  - mcp_cursor-ide-browser_browser_take_screenshot
-  - mcp_web_fetch
-  - web_search
+  - Bash(*)
+  - WebSearch
 ---
 
 # Reddit Post Discovery & Commenting for IngrediCheck
 
-Find Reddit posts where we can comment to pitch IngrediCheck 2.0. Walk through posts one by one: show the post, propose a comment, get approval, then move to the next.
+Find Reddit posts where we can comment to pitch IngrediCheck 2.0. Walk through posts one by one: show the post, propose a comment, get approval, then post via the Reddit API.
 
 ## Trigger: /mk-reply-guy
 
 When the user runs **/mk-reply-guy** (or asks for "mk-reply-guy" / "reply guy" / "Reddit outreach"):
 
-1. **Start the browser immediately** — Open a browser tab and navigate to Reddit (`https://www.reddit.com`).
-2. **Run the Procedure** below from Step 0 (login check), then Step 1 (search), and keep proposing posts and comments until the user stops.
-3. Do not ask for confirmation before opening the browser; open it and begin.
+1. **Run the Procedure** below from Step 0 (auth check), then Step 1 (search), and keep proposing posts and comments until the user stops.
+2. Do not ask for confirmation before starting; begin immediately.
 
-**Cursor:** This skill is available as a slash command. Type **/** in Agent chat and choose **mk-reply-guy** to run it. It runs only when explicitly invoked (not applied automatically).
+## Setup (Prerequisites)
+
+Before using this skill, the following must be configured once:
+
+### 1. Register a Reddit app
+1. Go to https://www.reddit.com/prefs/apps
+2. Click "create another app..."
+3. Choose type: **script**
+4. Set redirect URI to `http://localhost:8080` (unused but required)
+5. Note the **client ID** (under the app name) and **client secret**
+
+### 2. Create credentials file
+```bash
+mkdir -p ~/.config/ingredicheck
+cat > ~/.config/ingredicheck/reddit.env << 'EOF'
+REDDIT_CLIENT_ID=your_client_id
+REDDIT_CLIENT_SECRET=your_client_secret
+REDDIT_USERNAME=your_reddit_username
+REDDIT_PASSWORD=your_reddit_password
+REDDIT_USER_AGENT=IngrediCheck-ReplyGuy/1.0 by /u/your_reddit_username
+EOF
+chmod 600 ~/.config/ingredicheck/reddit.env
+```
+
+### 3. Required OAuth scopes
+The helper script requests these scopes automatically: `identity`, `read`, `submit`
 
 ## App Details
 
@@ -198,19 +219,18 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 - Avoid archived posts (Reddit archives after 6 months)
 
 ### Search Process
-1. Search across all of Reddit or within specific subreddits
+1. Search across all of Reddit or within specific subreddits using the Reddit API
 2. Filter for posts from the past month (`t=month`)
-3. **Skip posts with age ≥ 6 months** (e.g. "6mo ago", "1y ago", "2y ago") - these are archived and cannot be commented on
-4. When opening a post, verify it is not archived before proposing (see Procedure Step 2)
-5. Prioritize posts with engagement (comments, upvotes)
+3. **Skip archived/locked posts** - check `archived` and `locked` boolean fields in the API response (see Procedure Step 2)
+4. Prioritize posts with engagement (comments, upvotes)
 
 ## Comment Writing Guidelines
 
 ### Critical Rules
-1. **ALWAYS verify the post is NOT archived BEFORE proposing** - Reddit archives posts after 6 months. Check post age (e.g. "6mo ago", "1y ago", "2y ago" = archived; skip immediately). Look for "Archived" or "New comments cannot be posted" in the page. If archived, skip and move to the next candidate. Do NOT propose a comment on archived posts.
+1. **ALWAYS verify the post is NOT archived/locked BEFORE proposing** - Check `archived` and `locked` boolean fields in the API response. If either is `true`, skip immediately and move to the next candidate. Do NOT propose a comment on archived or locked posts.
 2. **ALWAYS read the full post AND top 5-10 comments before proposing a comment**
 3. **ALWAYS check post relevance first** - Use the "Post Relevance Checklist" in "Lessons Learned" section. Skip posts about nutrition info, restaurant items without labels, or general food questions without ingredient checking focus.
-4. **ALWAYS thoroughly check if user already commented** - Use multiple methods (fetch, grep, browser snapshot). If user says "we already commented," trust them and skip immediately.
+4. **ALWAYS thoroughly check if user already commented** - Query `/user/{username}/comments` via API and check `link_id`. If user says "we already commented," trust them and skip immediately.
 5. Make it relevant to the specific post and thread
 6. Reference other comments, OP's phrasing, or shared pain points
 7. Use "I built" or "I created" (not "I use")
@@ -263,19 +283,17 @@ Choose the angle that best matches the post so the comment feels relevant, not g
 
 ## Workflow
 
-1. **Search** for recent posts using the strategy above
-2. **Open the post** and read:
-   - The full post body
-   - Top 5-10 comments
-   - The general discussion tone
-3. **Open the post in the browser**, then **propose a comment** that:
+1. **Authenticate** via Reddit API (Step 0) and confirm username
+2. **Search** for recent posts using the Reddit API search endpoint
+3. **Read the post** via API - full body, top comments, discussion tone
+4. **Propose a comment** that:
    - Answers the question or adds to the discussion
    - References specific elements from the thread
    - Naturally introduces IngrediCheck as relevant
    - Includes both links
-4. **Get user approval** (they may request edits)
-5. **User posts the comment manually** (provide copy-paste text)
-6. **Move to the next post**
+5. **Get user approval** (they may request edits)
+6. **Post the comment via API** after approval (Step 4)
+7. **Move to the next post**
 
 ## Example Comment Template (Tailor Each Time)
 
@@ -295,9 +313,9 @@ https://apps.apple.com/us/app/ingredicheck/id6477521615
 - **Quality over quantity:** Better to find 3-5 highly relevant posts than 20 generic ones
 - **Authenticity matters:** Comments should feel like genuine participation, not promotion
 - **Context is everything:** Each comment must be tailored to its specific post and thread
-- **User posts manually:** Provide copy-paste ready text, don't attempt to post via browser automation
-- **Always verify post is NOT archived before proposing:** Reddit archives posts after 6 months. Check post age (6mo ago, 1y ago, 2y ago = skip) and look for "Archived" or "New comments cannot be posted" in the page. Never propose a comment on archived posts.
-- **Skip posts where user already commented:** Never propose a post if the current Reddit user has already left a comment on it; skip to the next candidate.
+- **Human-in-the-loop:** Always get user approval before posting. The API posts comments directly - there is no undo.
+- **Always verify post is NOT archived/locked before proposing:** Check the `archived` and `locked` boolean fields in the API response. If either is true, skip immediately.
+- **Skip posts where user already commented:** Query `/user/{username}/comments` and check `link_id` against the current post. Never propose a post if the current Reddit user has already left a comment on it; skip to the next candidate.
 
 ## Lessons Learned & Critical Relevance Criteria
 
@@ -331,67 +349,110 @@ https://apps.apple.com/us/app/ingredicheck/id6477521615
 - **Don't promote on posts about severe medical issues** - If someone is describing losing the ability to eat, severe reactions, or medical emergencies, skip the post or be extremely empathetic and helpful without heavy promotion.
 
 ### Duplicate Comment Prevention:
-- **ALWAYS check thoroughly** - Use multiple methods:
-  1. Fetch full post page with `mcp_web_fetch` on old.reddit.com
-  2. Use `grep` to search for exact username match
-  3. Search for "IngrediCheck" or "ingredicheck" (case-insensitive)
-  4. Scroll through ALL visible comments in browser snapshot
-  5. If ANY match found, IMMEDIATELY skip - do NOT propose
-- **User feedback overrides** - If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately
+- **ALWAYS check via API** - Query `/user/{username}/comments?limit=100` and check if any returned comment has a `link_id` matching `t3_{post_id}` for the current post. This is deterministic and does not depend on comment tree pagination.
+- Also search the post's comment tree for "IngrediCheck" or "ingredicheck" (case-insensitive) as a secondary check.
+- If ANY match is found, IMMEDIATELY skip - do NOT propose.
+- **User feedback overrides** - If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately.
 
-## Procedure (run from this skill only — no external scripts)
+## Procedure
 
-Execute these steps using browser and fetch tools only. Do not create or call separate script files.
+Execute these steps using the Reddit API via the `reddit-api.sh` helper script. The script is at `.claude/skills/mk-reply-guy/scripts/reddit-api.sh`.
 
-### Step 0 — Ensure user is logged in to Reddit
+### Step 0 — Authenticate via Reddit API
 
-- Navigate to `https://www.reddit.com` (or ensure the browser is on Reddit).
-- Check the page: if you see **"Log In"** or **"Sign Up"** in the header (and no user avatar/profile in the top right), the user is **not** logged in.
-- **If not logged in:** Tell the user: "You're not logged in to Reddit. Please log in in the browser, then tell me when you're done." Do not search for posts or propose comments until they confirm they are logged in.
-- **If logged in:** Note the current user's Reddit username from the UI (e.g. profile menu, top-right). You will need it to skip posts where they already commented. Then continue to Step 1.
+1. Source the helper script and validate credentials:
+   ```bash
+   source .claude/skills/mk-reply-guy/scripts/reddit-api.sh
+   reddit_load_config
+   ```
+2. Get an OAuth token and verify identity:
+   ```bash
+   source .claude/skills/mk-reply-guy/scripts/reddit-api.sh
+   reddit_api GET /api/v1/me | jq '{name, comment_karma, link_karma}'
+   ```
+3. Note the `name` field - this is the Reddit username. You will need it for duplicate detection.
+4. **If auth fails with a 2FA error:** Ask the user for their current OTP code, then retry with `REDDIT_OTP=<code> reddit_api GET /api/v1/me`.
+5. Do not proceed to Step 1 until auth succeeds.
 
 ### Step 1 — Search for posts
-- Navigate to: `https://www.reddit.com/search/?q=QUERY&t=month&sort=new`  
-  (replace QUERY with one of: `ingredients+changed+label`, `reading+food+labels`, `how+do+you+shop+celiac`, `food+allergies+ingredients`, or search within a sub: `https://www.reddit.com/r/SUBREDDIT/search/?q=QUERY&t=month&sort=new`)
-- Or fetch for link extraction: `https://old.reddit.com/search?q=QUERY&sort=new&t=month`  
-  (parse the HTML/markdown for post links and ages; prefer posts < 1 month old)
 
-### Step 2 — Open and read each candidate post
-- **Skip banned subreddits:** Do not open or propose posts from r/FoodAllergies (we are banned there). If a search result or candidate is from a banned sub, skip it and pick the next candidate.
-- **Open the post in the Cursor IDE browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread. Prefer the in-IDE browser for opening and showing posts; use `mcp_web_fetch` for duplicate-checking and parsing comment text.
-- **CRITICAL: Verify post is NOT archived BEFORE proposing:**
-  1. Check the post age in the page or snapshot. If it shows **6mo ago**, **1y ago**, **2y ago**, or any age ≥ 6 months, the post is archived. **SKIP immediately** - do NOT propose a comment.
-  2. Look for text such as **"Archived"**, **"archived"**, or **"New comments cannot be posted"** in the page or snapshot. If found, **SKIP immediately**.
-  3. Reddit archives posts after 6 months. Only propose comments on posts that are clearly still open for new comments.
-- **CRITICAL: Thoroughly check if current user already commented BEFORE proposing:**
-  1. Fetch the full post page using `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` (old.reddit.com is easier to parse)
-  2. Use `grep` to search the fetched content for the current Reddit username (from Step 0) - search for exact username match
-  3. Also search for "IngrediCheck" or "ingredicheck" (case-insensitive) in the comments to catch any previous mentions
-  4. Scroll through ALL visible comments in the browser snapshot if needed
-  5. **If ANY match is found, IMMEDIATELY skip this post and move to the next candidate. Do NOT propose a comment.**
-  6. **If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately**
+Search within target subreddits or across Reddit using the API:
+```bash
+source .claude/skills/mk-reply-guy/scripts/reddit-api.sh
+reddit_api GET "/r/SUBREDDIT/search" \
+  --data-urlencode "q=QUERY" \
+  --data-urlencode "sort=new" \
+  --data-urlencode "t=month" \
+  --data-urlencode "limit=25" \
+  --data-urlencode "restrict_sr=1" \
+| jq '[.data.children[].data | {id, title, subreddit, selftext: .selftext[:200], score, num_comments, created_utc, archived, locked, permalink}]'
+```
+
+For cross-subreddit search, use `/search` instead of `/r/SUBREDDIT/search` and omit `restrict_sr`.
+
+Present the results as a numbered list with title, subreddit, age, and comment count.
+
+### Step 2 — Read and validate each candidate post
+
+- **Skip banned subreddits:** Do not read or propose posts from r/FoodAllergies (we are banned there). If a search result is from a banned sub, skip it.
+
+- **Fetch the full post and comments via API:**
+  ```bash
+  source .claude/skills/mk-reply-guy/scripts/reddit-api.sh
+  reddit_api GET "/r/SUBREDDIT/comments/POST_ID" \
+    --data-urlencode "limit=100" \
+    --data-urlencode "sort=top"
+  ```
+  The response is a two-element JSON array: `[0]` is the post, `[1]` is the comment tree.
+
+- **CRITICAL: Check archived/locked status BEFORE proposing:**
+  Extract `archived` and `locked` from the post data: `.[0].data.children[0].data | {archived, locked}`. If either is `true`, **SKIP immediately**.
+
+- **CRITICAL: Check for duplicate comments BEFORE proposing:**
+  1. Query the user's recent comments:
+     ```bash
+     source .claude/skills/mk-reply-guy/scripts/reddit-api.sh
+     reddit_api GET "/user/USERNAME/comments" \
+       --data-urlencode "limit=100" \
+     | jq '[.data.children[].data | {link_id, subreddit, body: .body[:100]}]'
+     ```
+  2. Check if any returned comment has `link_id` equal to `t3_POST_ID` (the current post's ID).
+  3. Also search the post's comment tree for "IngrediCheck" or "ingredicheck" (case-insensitive).
+  4. **If ANY match is found, IMMEDIATELY skip this post. Do NOT propose.**
+  5. **If user says "we already commented on this," trust them and skip immediately.**
+
 - **CRITICAL: Check post relevance using the "Post Relevance Checklist" above:**
   1. Is this about checking ingredients on **packaged products**? (Skip if restaurant items without labels)
   2. Does this involve **reading labels** or **scanning products**? (Skip if just general food questions)
-  3. Is this about **nutrition information**? (If yes, skip - IngrediCheck doesn't help with serving sizes, calories, macros)
+  3. Is this about **nutrition information**? (If yes, skip)
   4. Is this about **restaurant items without scannable labels**? (If yes, skip)
   5. Does this show genuine need for ingredient analysis tool? (If no, skip)
-- Read the full post body and top 5–10 comments (use screenshot or `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` for readable comment text).
+
+- Read the full post body (`.selftext`) and top comments from the API response.
 - **Check tone/sensitivity:** If post involves severe health struggles or medical crises, be extra careful with comment tone or skip if inappropriate.
 
 ### Step 3 — Propose a comment
-- Ensure the post is open in the Cursor IDE browser so the user can see the thread when you propose.
+- Present the post title, body excerpt, and top comments to the user so they have context.
 - Draft a comment using the Comment Writing Guidelines and Example Template above. Use a direct observational opening (e.g. "I noticed you're trying to...") and describe the app as: add your triggers first, then scan product labels while shopping.
 - Tie the opening to the post and other comments; include both app links and "free for early adopters."
 - Present the comment to the user and ask for approval or edits.
 
-### Step 4 — Hand off for posting
-- Once approved, provide the final text in a copy-paste block (no markdown formatting that would break paste).
-- User posts manually. Do not attempt to submit the comment via automation.
+### Step 4 — Post the comment via API
+- **Only after user explicitly approves**, post the comment:
+  ```bash
+  source .claude/skills/mk-reply-guy/scripts/reddit-api.sh
+  reddit_api POST "/api/comment" \
+    --data-urlencode "api_type=json" \
+    --data-urlencode "thing_id=t3_POST_ID" \
+    --data-urlencode "text=COMMENT_TEXT"
+  ```
+- Parse the response: check that `.json.errors` is an empty array AND that `.json.data.things[0].data` exists.
+- **On success:** Show the permalink (`json.data.things[0].data.permalink`) and confirm the comment was posted.
+- **On failure:** Show the error details. Common errors: rate limiting (wait and retry), RATELIMIT (show time to wait), captcha required (inform user), permission denied (sub may restrict new commenters).
 
 ### Step 5 — Next post
 - Repeat from Step 2 for the next candidate until the user stops or asks for a new search.
 
 ## Usage
 
-When the user asks to find Reddit posts or work on Reddit outreach, follow the **Procedure** above. Do not create or reference any scripts outside this SKILL.md.
+When the user asks to find Reddit posts or work on Reddit outreach, follow the **Procedure** above. The `reddit-api.sh` helper script handles all API communication.
