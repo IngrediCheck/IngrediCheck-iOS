@@ -40,6 +40,7 @@ struct AddFoodNotesPromptCard: View {
             .buttonStyle(.plain)
         }
         .padding(12)
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 24)
                 .foregroundStyle(.grayScale10)
@@ -54,6 +55,7 @@ struct AddFoodNotesPromptCard: View {
             Image("Group 1171276642")
             , alignment: .bottomTrailing
         )
+        
     }
 }
 
