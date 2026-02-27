@@ -94,6 +94,11 @@ struct ProductDetailView: View {
         return scan?.analysis_result?.is_stale ?? false
     }
 
+    private var hasIngredients: Bool {
+        guard let product = resolvedProduct else { return false }
+        return !product.ingredients.isEmpty
+    }
+
     // Check if analysis is in progress
 
 
@@ -356,7 +361,7 @@ struct ProductDetailView: View {
                             productInformation
                             dietaryTagsRow
 
-                            if resolvedStatus == .noPreferences {
+                            if resolvedStatus == .noPreferences, hasIngredients {
                                 AddFoodNotesPromptCard()
                                     .padding(.horizontal, 20)
                             }
@@ -1556,5 +1561,4 @@ enum ProductMatchStatus {
         badgeBackground
     }
 }
-
 
