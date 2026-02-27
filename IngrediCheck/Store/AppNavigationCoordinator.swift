@@ -259,7 +259,7 @@ class AppNavigationCoordinator {
     private static func bottomSheetRoute(for canvasRoute: CanvasRoute) -> BottomSheetRoute {
         switch canvasRoute {
         case .heyThere:
-            return .alreadyHaveAnAccount
+            return .signInToIngrediCheck
         case .blankScreen:
             return .doYouHaveAnInviteCode
         case .letsGetStarted:
@@ -346,6 +346,8 @@ class AppNavigationCoordinator {
             return (.alreadyHaveAnAccount, nil)
         case .welcomeBack:
             return (.welcomeBack, nil)
+        case .signInToIngrediCheck:
+            return nil
         case .doYouHaveAnInviteCode:
             return (.doYouHaveAnInviteCode, nil)
         case .enterInviteCode:

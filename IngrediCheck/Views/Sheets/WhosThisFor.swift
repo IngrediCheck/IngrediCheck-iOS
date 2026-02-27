@@ -29,7 +29,7 @@ struct WhosThisFor: View {
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .leading) {
                     Button {
-                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
+                        coordinator.navigateInBottomSheet(.signInToIngrediCheck)
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
@@ -119,11 +119,16 @@ struct WhosThisFor: View {
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
-                
-                Text("Join a Family")
-                    .font(ManropeFont.bold.size(12))
-                    .foregroundStyle(Color(hex: "#75990E"))
-                    .underline()
+
+                Button {
+                    coordinator.navigateInBottomSheet(.enterInviteCode)
+                } label: {
+                    Text("Join a Family")
+                        .font(ManropeFont.bold.size(12))
+                        .foregroundStyle(Color(hex: "#75990E"))
+                        .underline()
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 20)

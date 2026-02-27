@@ -1,10 +1,9 @@
 import SwiftUI
 
 struct SignInToIngrediCheckSheet: View {
-    var onGoogle: (() -> Void)?
-    var onApple: (() -> Void)?
-    var onContinueAsGuest: (() -> Void)?
-    var onTermsAndPrivacy: (() -> Void)?
+    @Environment(AuthController.self) private var authController
+    @Environment(AppNavigationCoordinator.self) private var coordinator
+    @State private var isSigningIn = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,17 +23,19 @@ struct SignInToIngrediCheckSheet: View {
                 AuthProviderCapsuleButton(
                     title: "Google",
                     iconAssetName: "google_logo",
-                    action: { onGoogle?() }
+                    isDisabled: isSigningIn,
+                    action: handleGoogleSignIn
                 )
 
                 AuthProviderCapsuleButton(
                     title: "Apple",
                     iconAssetName: "apple_logo",
-                    action: { onApple?() }
+                    isDisabled: isSigningIn,
+                    action: handleAppleSignIn
                 )
             }
             .padding(.top, 28)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 24)
 
             HStack(spacing: 0) {
                 Rectangle()
@@ -59,41 +60,117 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.top, 18)
             .padding(.horizontal, 24)
 
-            AuthProviderCapsuleButton(title: "Continue as Guest", iconAssetName: nil,action: {}, titleColor: .primary800)
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-
             Button {
-                onTermsAndPrivacy?()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "shield")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.grayScale70)
-
-                    Text("By continuing, you agree to our ")
-                        .foregroundStyle(.grayScale70)
-                    + Text("Terms & Privacy Policy.")
-                        .foregroundStyle(.grayScale70)
-                        .font(ManropeFont.semiBold.size(12))
+                Task {
+                    isSigningIn = true
+                    await authController.signIn()
+                    coordinator.navigateInBottomSheet(.whosThisFor)
+                    isSigningIn = false
                 }
-                .font(ManropeFont.medium.size(12))
-                .multilineTextAlignment(.center)
+            } label: {
+                Text("Continue as Guest")
+                    .font(NunitoFont.semiBold.size(16))
+                    .foregroundStyle(Color(hex: "6B8E06"))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.white, in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.grayScale30, lineWidth: 1)
+                    )
             }
             .buttonStyle(.plain)
-            .padding(.top, 24)
+            .disabled(isSigningIn)
+            .padding(.top, 18)
+            .padding(.horizontal, 24)
+
+            LegalDisclaimerView()
+                .padding(.top, 18)
             .padding(.bottom, 28)
             .padding(.horizontal, 24)
         }
         .background(Color.white)
+        .overlay {
+            if isSigningIn {
+                ZStack {
+                    Color.black.opacity(0.4)
+                    ProgressView()
+                        .scaleEffect(2)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    private func handleGoogleSignIn() {
+        isSigningIn = true
+        authController.signInWithGoogle { result in
+            switch result {
+            case .success:
+                Task {
+                    let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
+                    Log.debug("SignInToIngrediCheckSheet", "Google sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
+                    await MainActor.run {
+                        if let stage = metadata?.stage, stage == .completed {
+                            AnalyticsService.shared.trackOnboarding("Onboarding Existing User Completed", properties: ["sign_in_method": "google"])
+                            OnboardingPersistence.shared.markCompleted()
+                            coordinator.showCanvas(.home)
+                        } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
+                            let (canvas, sheet) = AppNavigationCoordinator.restoreState(from: metadata)
+                            Log.debug("SignInToIngrediCheckSheet", "Restoring to canvas=\(canvas), sheet=\(sheet)")
+                            coordinator.showCanvas(canvas)
+                            coordinator.navigateInBottomSheet(sheet)
+                        } else {
+                            Log.debug("SignInToIngrediCheckSheet", "No metadata or no progress — navigating to whosThisFor")
+                            coordinator.showCanvas(.letsGetStarted)
+                            coordinator.navigateInBottomSheet(.whosThisFor)
+                        }
+                        isSigningIn = false
+                    }
+                }
+            case .failure(let error):
+                Log.error("SignInToIngrediCheckSheet", "Google Sign-In failed: \(error.localizedDescription)")
+                isSigningIn = false
+            }
+        }
+    }
+
+    private func handleAppleSignIn() {
+        isSigningIn = true
+        authController.signInWithApple { result in
+            switch result {
+            case .success:
+                Task {
+                    let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
+                    Log.debug("SignInToIngrediCheckSheet", "Apple sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
+                    await MainActor.run {
+                        if let stage = metadata?.stage, stage == .completed {
+                            AnalyticsService.shared.trackOnboarding("Onboarding Existing User Completed", properties: ["sign_in_method": "apple"])
+                            OnboardingPersistence.shared.markCompleted()
+                            coordinator.showCanvas(.home)
+                        } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
+                            let (canvas, sheet) = AppNavigationCoordinator.restoreState(from: metadata)
+                            Log.debug("SignInToIngrediCheckSheet", "Restoring to canvas=\(canvas), sheet=\(sheet)")
+                            coordinator.showCanvas(canvas)
+                            coordinator.navigateInBottomSheet(sheet)
+                        } else {
+                            Log.debug("SignInToIngrediCheckSheet", "No metadata or no progress — navigating to whosThisFor")
+                            coordinator.showCanvas(.letsGetStarted)
+                            coordinator.navigateInBottomSheet(.whosThisFor)
+                        }
+                        isSigningIn = false
+                    }
+                }
+            case .failure(let error):
+                Log.error("SignInToIngrediCheckSheet", "Apple Sign-In failed: \(error.localizedDescription)")
+                isSigningIn = false
+            }
+        }
     }
 }
 
 #Preview {
-    SignInToIngrediCheckSheet(
-        onGoogle: {},
-        onApple: {},
-        onContinueAsGuest: {},
-        onTermsAndPrivacy: {}
-    )
+    SignInToIngrediCheckSheet()
+        .environment(AuthController())
+        .environment(AppNavigationCoordinator(initialRoute: .heyThere))
 }
