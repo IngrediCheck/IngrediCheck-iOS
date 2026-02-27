@@ -356,6 +356,12 @@ struct ProductDetailView: View {
                             productInformation
                             dietaryTagsRow
 
+                            if resolvedStatus == .noPreferences {
+                                AddFoodNotesPromptCard()
+//                                    .padding(.horizontal, 20)
+//                                    .padding(.bottom, 20)
+                            }
+
                             // Show Missing Ingredients UI or regular content
                             if hasMissingIngredients {
                                 missingIngredientsView

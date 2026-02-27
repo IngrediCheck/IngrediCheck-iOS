@@ -59,6 +59,6 @@ struct AddFoodNotesPromptCard: View {
 
 #Preview {
     AddFoodNotesPromptCard()
-        .padding(.horizontal, 20)
+//        .padding(.horizontal, 20)
 }
 
