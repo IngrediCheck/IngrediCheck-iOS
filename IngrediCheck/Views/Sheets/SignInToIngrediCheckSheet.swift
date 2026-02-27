@@ -21,22 +21,20 @@ struct SignInToIngrediCheckSheet: View {
                 .padding(.top, 12)
 
             HStack(spacing: 16) {
-                signInButton(
+                AuthProviderCapsuleButton(
                     title: "Google",
-                    icon: Image("google_logo"),
-                    iconSize: 24,
-                    action: onGoogle
+                    iconAssetName: "google_logo",
+                    action: { onGoogle?() }
                 )
 
-                signInButton(
+                AuthProviderCapsuleButton(
                     title: "Apple",
-                    icon: Image("apple_logo"),
-                    iconSize: 24,
-                    action: onApple
+                    iconAssetName: "apple_logo",
+                    action: { onApple?() }
                 )
             }
             .padding(.top, 28)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
 
             HStack(spacing: 0) {
                 Rectangle()
@@ -61,23 +59,9 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.top, 18)
             .padding(.horizontal, 24)
 
-            Button {
-                onContinueAsGuest?()
-            } label: {
-                Text("Continue as Guest")
-                    .font(NunitoFont.semiBold.size(16))
-                    .foregroundStyle(Color(hex: "6B8E06"))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.white, in: Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.grayScale30, lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 18)
-            .padding(.horizontal, 24)
+            AuthProviderCapsuleButton(title: "Continue as Guest", iconAssetName: nil,action: {}, titleColor: .primary800)
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
 
             Button {
                 onTermsAndPrivacy?()
@@ -97,41 +81,11 @@ struct SignInToIngrediCheckSheet: View {
                 .multilineTextAlignment(.center)
             }
             .buttonStyle(.plain)
-            .padding(.top, 18)
+            .padding(.top, 24)
             .padding(.bottom, 28)
             .padding(.horizontal, 24)
         }
-        .frame(maxWidth: 375)
         .background(Color.white)
-    }
-
-    private func signInButton(
-        title: String,
-        icon: Image,
-        iconSize: CGFloat,
-        action: (() -> Void)?
-    ) -> some View {
-        Button {
-            action?()
-        } label: {
-            HStack(spacing: 8) {
-                icon
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: iconSize, height: iconSize)
-                Text(title)
-                    .font(NunitoFont.semiBold.size(16))
-                    .foregroundStyle(.grayScale150)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Color.white, in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Color.grayScale30, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -143,4 +97,3 @@ struct SignInToIngrediCheckSheet: View {
         onTermsAndPrivacy: {}
     )
 }
-
