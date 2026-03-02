@@ -136,13 +136,6 @@ struct ScanDataCard: View {
             }
         }
 
-        // If we already have any processed user images from the API, rely on those
-        // as the source of truth and stop showing local pending images to avoid
-        // duplicate thumbnails after analysis completes.
-        if !userImages.isEmpty {
-            pendingLocalImages = []
-        }
-
         return (inventoryImages: inventoryImages, userImages: userImages, pendingLocalImages: pendingLocalImages)
     }
 
