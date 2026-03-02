@@ -3,6 +3,10 @@ import Foundation
 struct Config {
     static let supabaseURL = URL(string: "https://YOUR_PROJECT.supabase.co")!
     static let supabaseKey = "YOUR_SUPABASE_ANON_KEY"
+    // Pinned keychain key for Supabase session storage. The SDK derives this from the hostname
+    // (sb-<host-prefix>-auth-token), so changing supabaseURL would orphan existing sessions.
+    // Set this to the original derived key to preserve sessions across domain changes.
+    static let supabaseAuthStorageKey = "sb-YOUR_PROJECT-auth-token"
     static let supabaseFunctionsURLBase = "https://YOUR_PROJECT.supabase.co/functions/v1/ingredicheck/"
     static let flyIOBaseURL = "https://YOUR_FLY_APP.fly.dev"
 }

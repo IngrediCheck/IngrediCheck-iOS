@@ -99,8 +99,11 @@ private final class AppleSignInCoordinator: NSObject,
     }
 }
 
-let supabaseClient =
-    SupabaseClient(supabaseURL: Config.supabaseURL, supabaseKey: Config.supabaseKey)
+let supabaseClient = SupabaseClient(
+    supabaseURL: Config.supabaseURL,
+    supabaseKey: Config.supabaseKey,
+    options: .init(auth: .init(storageKey: Config.supabaseAuthStorageKey))
+)
 
 enum SignInState {
     case signingIn
