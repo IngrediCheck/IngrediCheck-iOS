@@ -18,7 +18,7 @@ struct PrimaryButton: View {
     var isLoading: Bool = false
     var labelFont: Font = NunitoFont.semiBold.size(16)
     var isDisabled: Bool = false
-    var shadowDissabled: Bool = false
+    var shadowDisabled: Bool = false
     
     init(
         title: String,
@@ -31,7 +31,7 @@ struct PrimaryButton: View {
         isLoading: Bool = false,
         isDisabled: Bool = false,
         labelFont: Font = NunitoFont.semiBold.size(16),
-        shadowDissabled: Bool = false
+        shadowDisabled: Bool = false
     ) {
         self.title = title
         self.icon = icon
@@ -43,7 +43,7 @@ struct PrimaryButton: View {
         self.isLoading = isLoading
         self.isDisabled = isDisabled
         self.labelFont = labelFont
-        self.shadowDissabled = shadowDissabled
+        self.shadowDisabled = shadowDisabled
     }
     
     var body: some View {
@@ -77,7 +77,7 @@ struct PrimaryButton: View {
         )
         // Outer drop shadow - only when not disabled
         .shadow(
-            color: (isDisabled || shadowDissabled) ? Color.clear : Color(hex: "C5C5C5").opacity(0.47),
+            color: (isDisabled || shadowDisabled) ? Color.clear : Color(hex: "C5C5C5").opacity(0.47),
             radius: 2.6,
             x: 0,
             y: 1

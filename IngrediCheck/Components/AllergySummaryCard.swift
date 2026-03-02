@@ -440,7 +440,8 @@ struct AllergySummaryCard: View {
     private var isEmptyState: Bool {
         guard let summary = summary else { return true }
         let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed == "No Food Notes yet."
+        // Treat any non-empty summary as having data; avoid checking specific copy
+        return trimmed.isEmpty
     }
 
     /// Summary text with emoji icons injected (server sends **bold** markdown)

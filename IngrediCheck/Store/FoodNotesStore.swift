@@ -83,7 +83,10 @@ final class FoodNotesStore {
         }
         if let summary = foodNotesSummary {
             let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty || trimmed == "No Food Notes yet."
+            // Fallback: if we only have a summary string, treat any non-empty
+            // summary as indicating that some notes exist. Avoid depending on
+            // a specific copy string from the backend.
+            return trimmed.isEmpty
         }
         return false
     }

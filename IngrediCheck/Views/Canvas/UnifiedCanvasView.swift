@@ -236,11 +236,17 @@ struct UnifiedCanvasView: View {
                     if !hasStoreData && !didFinishInitialLoad {
                         redactedLoadingContent
                     } else {
-                        // AI Summary Card at top (only show if we have a summary and no member filter applied)
-                        let hasSummary = selectedMemberId == nil &&
-                            foodNotesStore.foodNotesSummary != nil &&
-                            !foodNotesStore.foodNotesSummary!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                            foodNotesStore.foodNotesSummary != "No Food Notes yet."
+                        // AI Summary Card at top (only show if we have a non-empty summary
+                        // and no member filter applied). Treat any non-empty summary as
+                        // having content; avoid relying on specific backend copy.
+                        let hasSummary: Bool = {
+                            guard selectedMemberId == nil,
+                                  let summary = foodNotesStore.foodNotesSummary else {
+                                return false
+                            }
+                            let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+                            return !trimmed.isEmpty
+                        }()
 
                         if hasSummary {
                             AISummaryCard(
