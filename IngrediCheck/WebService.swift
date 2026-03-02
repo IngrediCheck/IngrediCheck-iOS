@@ -9,6 +9,23 @@ import CoreTelephony
 import os
 import StoreKit
 
+/// Guards a CheckedContinuation against double-resume.
+private actor ContinuationGuard<T: Sendable> {
+    private var continuation: CheckedContinuation<T, Never>?
+
+    init(continuation: CheckedContinuation<T, Never>) {
+        self.continuation = continuation
+    }
+
+    @discardableResult
+    func resume(returning value: T) -> Bool {
+        guard let c = continuation else { return false }
+        continuation = nil
+        c.resume(returning: value)
+        return true
+    }
+}
+
 enum NetworkError: Error {
     case invalidResponse(Int)
     case badUrl
@@ -2046,44 +2063,73 @@ struct ChatStreamError: Error, LocalizedError {
 
     func registerDeviceAfterLogin(deviceId: String, completion: @escaping (Bool?) -> Void) {
         Task.detached {
-            do {
-                let platform = UIDevice.current.systemName.lowercased()
-                let osVersion = UIDevice.current.systemVersion
-                let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            let maxRetries = 3
 
-                // Approximate location fields
-                let timezone = TimeZone.current.identifier
-                let localeRegion = Locale.current.region?.identifier
-                let preferredLanguage = Locale.preferredLanguages.first
-                let storeCountry = await Storefront.current?.countryCode
+            let platform = UIDevice.current.systemName.lowercased()
+            let osVersion = UIDevice.current.systemVersion
+            let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
 
-                #if targetEnvironment(simulator) || DEBUG
-                let markInternal = true
-                #else
-                let markInternal: Bool? = nil
-                #endif
+            // Approximate location fields
+            let timezone = TimeZone.current.identifier
+            let localeRegion = Locale.current.region?.identifier
+            let preferredLanguage = Locale.preferredLanguages.first
 
-                Log.debug("DEVICE", "Registering device - timezone: \(timezone), region: \(localeRegion ?? "nil"), language: \(preferredLanguage ?? "nil"), storeCountry: \(storeCountry ?? "nil")")
+            // Storefront can hang indefinitely; use unstructured task so we can abandon it
+            let storeCountry: String? = await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
+                let guard_ = ContinuationGuard(continuation: continuation)
 
-                let isInternal = try await self.registerDevice(
-                    deviceId: deviceId,
-                    platform: platform,
-                    osVersion: osVersion,
-                    appVersion: appVersion,
-                    markInternal: markInternal,
-                    timezone: timezone,
-                    localeRegion: localeRegion,
-                    preferredLanguage: preferredLanguage,
-                    storeCountry: storeCountry
-                )
+                let storefrontTask = Task {
+                    let code = await Storefront.current?.countryCode
+                    await guard_.resume(returning: code)
+                }
 
-                completion(isInternal)
-            } catch {
-                // Silently handle errors - fire-and-forget
-                print("Failed to register device after login: \(error)")
-                AnalyticsService.shared.captureAPIError(endpoint: "registerDeviceAfterLogin", errorType: "network", error: error.localizedDescription)
-                completion(nil)
+                Task {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    storefrontTask.cancel()
+                    if await guard_.resume(returning: nil) {
+                        Log.debug("DEVICE", "Storefront timed out after 3s")
+                    }
+                }
             }
+
+            #if targetEnvironment(simulator) || DEBUG
+            let markInternal = true
+            #else
+            let markInternal: Bool? = nil
+            #endif
+
+            for attempt in 1...maxRetries {
+                do {
+                    Log.debug("DEVICE", "Registering device (attempt \(attempt)/\(maxRetries)) - timezone: \(timezone), region: \(localeRegion ?? "nil"), language: \(preferredLanguage ?? "nil"), storeCountry: \(storeCountry ?? "nil")")
+
+                    let isInternal = try await self.registerDevice(
+                        deviceId: deviceId,
+                        platform: platform,
+                        osVersion: osVersion,
+                        appVersion: appVersion,
+                        markInternal: markInternal,
+                        timezone: timezone,
+                        localeRegion: localeRegion,
+                        preferredLanguage: preferredLanguage,
+                        storeCountry: storeCountry
+                    )
+
+                    Log.debug("DEVICE", "✅ Device registered successfully on attempt \(attempt)")
+                    completion(isInternal)
+                    return
+                } catch {
+                    Log.error("DEVICE", "Registration attempt \(attempt)/\(maxRetries) failed: \(error)")
+                    AnalyticsService.shared.captureAPIError(endpoint: "registerDeviceAfterLogin", errorType: "network", error: "\(error.localizedDescription) (attempt \(attempt))")
+
+                    if attempt < maxRetries {
+                        try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                    }
+                }
+            }
+
+            Log.error("DEVICE", "❌ Device registration failed after \(maxRetries) attempts")
+            AnalyticsService.shared.captureAPIError(endpoint: "registerDeviceAfterLogin", errorType: "exhausted", error: "Failed after \(maxRetries) attempts")
+            completion(nil)
         }
     }
     

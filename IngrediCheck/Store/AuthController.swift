@@ -99,8 +99,11 @@ private final class AppleSignInCoordinator: NSObject,
     }
 }
 
-let supabaseClient =
-    SupabaseClient(supabaseURL: Config.supabaseURL, supabaseKey: Config.supabaseKey)
+let supabaseClient = SupabaseClient(
+    supabaseURL: Config.supabaseURL,
+    supabaseKey: Config.supabaseKey,
+    options: .init(auth: .init(storageKey: Config.supabaseAuthStorageKey))
+)
 
 enum SignInState {
     case signingIn
@@ -632,12 +635,19 @@ private enum AuthFlowMode {
         Self.hasRegisteredDevice = true
 
         WebService().registerDeviceAfterLogin(deviceId: deviceId) { [weak self] isInternal in
-            guard let self = self, let isInternal = isInternal else { return }
+            guard let self = self else { return }
 
-            Task { @MainActor in
-                if isInternal != self.isInternalUser {
-                    self.isInternalUser = isInternal
-                    AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal, authProvider: authProvider)
+            if let isInternal = isInternal {
+                Task { @MainActor in
+                    if isInternal != self.isInternalUser {
+                        self.isInternalUser = isInternal
+                        AnalyticsService.shared.refreshAnalyticsIdentity(session: session, isInternalUser: isInternal, authProvider: authProvider)
+                    }
+                }
+            } else {
+                Task { @MainActor in
+                    Log.error("DEVICE", "❌ Device registration failed — will retry on next launch")
+                    Self.hasRegisteredDevice = false
                 }
             }
         }
