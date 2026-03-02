@@ -482,6 +482,7 @@ struct HomeView: View {
                             }
                         }
                         group.addTask { @MainActor in
+                            await foodNotesStore.loadFoodNotesAll()
                             await foodNotesStore.loadSummaryIfNeeded()
                         }
                         await group.waitForAll()
