@@ -61,25 +61,14 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.top, 18)
             .padding(.horizontal, 24)
 
-            Button {
+            AuthProviderCapsuleButton(title: "Continue as Guest", iconAssetName: nil, action: {
                 Task {
                     isSigningIn = true
                     await authController.signIn()
                     coordinator.navigateInBottomSheet(.whosThisFor)
                     isSigningIn = false
                 }
-            } label: {
-                Text("Continue as Guest")
-                    .font(NunitoFont.semiBold.size(16))
-                    .foregroundStyle(Color(hex: "6B8E06"))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.white, in: Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.grayScale30, lineWidth: 1)
-                    )
-            }
+            }, titleColor: .primary800)
             .buttonStyle(.plain)
             .disabled(isSigningIn)
             .padding(.top, 18)
