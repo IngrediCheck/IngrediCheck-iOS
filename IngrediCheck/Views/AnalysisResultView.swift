@@ -44,7 +44,7 @@ struct AnalysisResultView: View {
                             checkAndPromptForRating()
                         }
                 case .noPreferences:
-                    CapsuleWithDivider(state: .fail)
+                    CapsuleWithDivider(state: .noPreferences)
                         .onAppear {
                             checkAndPromptForRating()
                         }

@@ -5,6 +5,7 @@ enum CapsuleState {
     case fail
     case warning
     case analyzing
+    case noPreferences
 }
 
 extension CapsuleState {
@@ -14,6 +15,9 @@ extension CapsuleState {
         case .analyzing:
             Text("Analyzing")
                 .foregroundStyle(Color.primary100)
+        case .noPreferences:
+            Text("Not Personalized")
+                .foregroundStyle(Color.grayScale110)
         case .fail:
             Text("Unmatched")
                 .foregroundStyle(Color.fail200)
@@ -30,6 +34,8 @@ extension CapsuleState {
         switch self {
         case .analyzing:
             Color.primary50
+        case .noPreferences:
+            Color.grayScale30
         case .fail:
             Color.fail25
         case .success:
@@ -45,6 +51,9 @@ extension CapsuleState {
         case .analyzing:
             ProgressView()
                 .foregroundStyle(Color.primary100)
+        case .noPreferences:
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .foregroundStyle(Color.grayScale110)
         case .fail:
             Image(systemName: "x.circle.fill")
                 .foregroundStyle(Color.fail100)
@@ -77,5 +86,5 @@ struct CapsuleWithDivider: View {
 }
 
 #Preview {
-    CapsuleWithDivider(state: .analyzing)
+    CapsuleWithDivider(state: .noPreferences)
 }
