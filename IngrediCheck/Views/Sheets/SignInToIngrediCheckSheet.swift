@@ -86,7 +86,7 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.horizontal, 24)
 
             LegalDisclaimerView()
-                .padding(.top, 18)
+            .padding(.top, 36)
             .padding(.bottom, 28)
             .padding(.horizontal, 24)
         }

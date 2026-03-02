@@ -27,25 +27,13 @@ struct WhosThisFor: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .frame(maxWidth: .infinity)
-                .overlay(alignment: .leading) {
-                    Button {
-                        coordinator.navigateInBottomSheet(.signInToIngrediCheck)
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.black)
-                            .frame(width: 24, height: 24)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
 
                 Text("Choose who you'd like to create profiles for.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
-            .padding(.bottom, 40)
+            .padding(.bottom, 28)
 
             HStack(spacing: 16) {
                 SecondaryButton(
@@ -133,7 +121,8 @@ struct WhosThisFor: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)
-        .padding(.bottom, 20)
+        .padding(.bottom, 52)
+//        .background(.blue)
 //        .overlay(
 //            RoundedRectangle(cornerRadius: 4)
 //                .fill(.neutral500)
