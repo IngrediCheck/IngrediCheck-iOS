@@ -111,6 +111,7 @@ final class FamilyService {
             guard (200 ..< 300).contains(result.statusCode) else {
                 Log.debug("FamilyService", "❌ Error response - status: \(result.statusCode)")
                 Log.debug("FamilyService", "📄 Error body: \(result.body)")
+                AnalyticsService.shared.captureAPIError(endpoint: "createFamily", errorType: "http", statusCode: result.statusCode)
                 throw NetworkError.invalidResponse(result.statusCode)
             }
 
@@ -118,6 +119,7 @@ final class FamilyService {
             Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
             return family
         } catch {
+            AnalyticsService.shared.captureAPIError(endpoint: "createFamily", errorType: "network", error: error.localizedDescription)
             Log.debug("FamilyService", "❌ createFamily failed with error: \(error)")
             if let networkError = error as? NetworkError {
                 Log.debug("FamilyService", "❌ NetworkError type: \(networkError)")
@@ -153,6 +155,7 @@ final class FamilyService {
         guard (200 ..< 300).contains(result.statusCode) else {
             Log.debug("FamilyService", "❌ Error response - status: \(result.statusCode)")
             Log.debug("FamilyService", "📄 Error body: \(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "updateFamily", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
 
@@ -160,7 +163,7 @@ final class FamilyService {
         Log.debug("FamilyService", "✅ Successfully decoded family - name: \(family.name), selfMember: \(family.selfMember.name), otherMembers: \(family.otherMembers.map { $0.name })")
         return family
     }
-    
+
     func fetchFamily() async throws -> Family {
         Log.debug("FamilyService", "fetchFamily request")
         let jwt = try await currentJWT()
@@ -173,6 +176,7 @@ final class FamilyService {
         
         guard result.statusCode == 200 else {
             Log.debug("FamilyService", "fetchFamily bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFamily", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
@@ -198,6 +202,7 @@ final class FamilyService {
         
         guard result.statusCode == 201 else {
             Log.debug("FamilyService", "createInvite bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "createInvite", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
@@ -248,6 +253,7 @@ final class FamilyService {
             
             // If all retries failed, throw a user-friendly error
             print("[FamilyService] ❌ All retry attempts failed for createInvite")
+            AnalyticsService.shared.captureAPIError(endpoint: "createInvite", errorType: "decode", error: "Empty response after retries")
             throw NetworkError.decodingError
         }
         
@@ -269,6 +275,7 @@ final class FamilyService {
         
         guard result.statusCode == 201 else {
             Log.debug("FamilyService", "joinFamily bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "joinFamily", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
 
@@ -289,6 +296,7 @@ final class FamilyService {
         
         guard result.statusCode == 200 else {
             Log.debug("FamilyService", "leaveFamily bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "leaveFamily", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
     }
@@ -315,6 +323,7 @@ final class FamilyService {
         
         guard result.statusCode == 201 else {
             Log.debug("FamilyService", "addMember bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "addMember", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
 
@@ -345,6 +354,7 @@ final class FamilyService {
         
         guard result.statusCode == 200 else {
             Log.debug("FamilyService", "editMember bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "editMember", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
@@ -370,6 +380,7 @@ final class FamilyService {
         
         guard result.statusCode == 200 else {
             Log.debug("FamilyService", "deleteMember bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "deleteMember", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
         
@@ -392,6 +403,7 @@ final class FamilyService {
         
         guard (200 ..< 300).contains(result.statusCode) else {
             Log.debug("FamilyService", "createPersonalFamily bad status: \(result.statusCode), body=\(result.body)")
+            AnalyticsService.shared.captureAPIError(endpoint: "createPersonalFamily", errorType: "http", statusCode: result.statusCode)
             throw NetworkError.invalidResponse(result.statusCode)
         }
         

@@ -113,6 +113,21 @@ struct ChatStreamError: Error, LocalizedError {
             )
     }
     
+    private func performRequest(_ request: URLRequest, endpoint: String) async throws -> (Data, URLResponse) {
+        do {
+            return try await URLSession.shared.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            AnalyticsService.shared.captureAPIError(
+                endpoint: endpoint,
+                errorType: "network",
+                error: error.localizedDescription
+            )
+            throw error
+        }
+    }
+
     func fetchImage(imageLocation: DTO.ImageLocationInfo, imageSize: ImageSize) async throws -> UIImage {
         
         let fileLocation: FileLocation
@@ -166,6 +181,7 @@ struct ChatStreamError: Error, LocalizedError {
         }
         
         guard let validImage = image else {
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchImage", errorType: "decode", error: "Failed to create UIImage from data")
             throw NetworkError.decodingError
         }
         
@@ -229,6 +245,7 @@ struct ChatStreamError: Error, LocalizedError {
         guard httpResponse.statusCode == 200 else {
             analyticsProperties["status_code"] = httpResponse.statusCode
             PostHogSDK.shared.capture("Unified Analysis Stream Failed - HTTP", properties: analyticsProperties)
+            AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "http", statusCode: httpResponse.statusCode)
 
             let message = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
             let streamError = UnifiedAnalysisStreamError(message: message, statusCode: httpResponse.statusCode)
@@ -403,11 +420,12 @@ struct ChatStreamError: Error, LocalizedError {
                     case "error":
                         hasReportedError = true
                         let errorMessage = scanPayload.error ?? "Unknown scan error"
-                        
+
                         var errorProps = analyticsProperties
                         errorProps["error_message"] = errorMessage
                         PostHogSDK.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
-                        
+                        AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "http", error: errorMessage)
+
                         await MainActor.run {
                             onError(UnifiedAnalysisStreamError(message: errorMessage, statusCode: nil))
                         }
@@ -422,6 +440,7 @@ struct ChatStreamError: Error, LocalizedError {
                     errorProps["decode_stage"] = "scan"
                     errorProps["raw_payload"] = payloadString
                     PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "decode")
                     Log.error("SSE", "Failed to decode scan payload: \(error)")
                 }
 
@@ -446,6 +465,7 @@ struct ChatStreamError: Error, LocalizedError {
                     errorProps["decode_stage"] = "product"
                     errorProps["raw_payload"] = payloadString
                     PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "decode")
                 }
             case "analysis":
                 guard !payloadString.isEmpty else { return }
@@ -473,6 +493,7 @@ struct ChatStreamError: Error, LocalizedError {
                     errorProps["decode_stage"] = "analysis"
                     errorProps["raw_payload"] = payloadString
                     PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "decode")
                 }
             case "error":
                 guard !payloadString.isEmpty else { return }
@@ -504,6 +525,7 @@ struct ChatStreamError: Error, LocalizedError {
                 errorProps["elapsed_ms"] = (Date().timeIntervalSince1970 - startTime) * 1000
 
                 PostHogSDK.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
+                AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "http", error: errorMessage)
 
                 await MainActor.run {
                     onError(UnifiedAnalysisStreamError(message: errorMessage, statusCode: statusCode))
@@ -566,6 +588,7 @@ struct ChatStreamError: Error, LocalizedError {
                 errorProps["error"] = error.localizedDescription
                 errorProps["elapsed_ms"] = (Date().timeIntervalSince1970 - startTime) * 1000
                 PostHogSDK.shared.capture("Unified Analysis Stream Network Error", properties: errorProps)
+                AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "network", error: error.localizedDescription)
 
                 await MainActor.run {
                     onError(UnifiedAnalysisStreamError(message: error.localizedDescription, statusCode: nil))
@@ -642,9 +665,10 @@ struct ChatStreamError: Error, LocalizedError {
                 "request_id": requestId,
                 "status_code": statusCode
             ])
+            AnalyticsService.shared.captureAPIError(endpoint: "streamBarcodeScan", errorType: "http", statusCode: statusCode)
             throw NetworkError.invalidResponse(statusCode)
         }
-        
+
         Log.debug("BARCODE_SCAN", "✅ Connected to SSE stream - Status: 200, starting to receive events...")
         Log.debug("BARCODE_SCAN", "⏳ Polling: NO (using Server-Sent Events stream)")
         
@@ -765,7 +789,8 @@ struct ChatStreamError: Error, LocalizedError {
                             "scan_id": scan.id,
                             "error": errorMessage
                         ])
-                        
+                        AnalyticsService.shared.captureAPIError(endpoint: "streamBarcodeScan", errorType: "http", error: errorMessage)
+
                         await MainActor.run {
                             onError(ScanStreamError(message: errorMessage, statusCode: nil), scan.id)
                         }
@@ -828,13 +853,14 @@ struct ChatStreamError: Error, LocalizedError {
         } catch {
             if !hasReportedError && !(error is CancellationError) {
                 Log.error("BARCODE_SCAN", "❌ Stream error: \(error.localizedDescription)")
+                AnalyticsService.shared.captureAPIError(endpoint: "streamBarcodeScan", errorType: "network", error: error.localizedDescription)
                 await MainActor.run {
                     onError(ScanStreamError(message: error.localizedDescription, statusCode: nil), scanId)
                 }
             }
             throw error
         }
-        
+
         let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
         Log.debug("BARCODE_SCAN", "✅ Barcode scan completed - total latency: \(Int(totalLatency))ms")
     }
@@ -865,9 +891,9 @@ struct ChatStreamError: Error, LocalizedError {
         
         Log.debug("PHOTO_SCAN", "📡 API Call: POST \(endpoint)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "submitScanImage")
         let httpResponse = response as! HTTPURLResponse
-        
+
         switch httpResponse.statusCode {
         case 200:
             let submitResponse = try JSONDecoder().decode(DTO.SubmitImageResponse.self, from: data)
@@ -876,26 +902,32 @@ struct ChatStreamError: Error, LocalizedError {
             return submitResponse
         case 401:
             Log.error("PHOTO_SCAN", "❌ Status 401 - Unauthorized")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitScanImage", errorType: "http", statusCode: 401)
             throw NetworkError.authError
         case 403:
             Log.error("PHOTO_SCAN", "❌ Status 403 - Scan belongs to another user")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitScanImage", errorType: "http", statusCode: 403)
             throw NetworkError.notFound("Scan belongs to another user")
         case 413:
             Log.error("PHOTO_SCAN", "❌ Status 413 - Image too large (>10MB)")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitScanImage", errorType: "http", statusCode: 413)
             throw NetworkError.invalidResponse(413)  // Image too large (>10MB)
         case 400:
             Log.error("PHOTO_SCAN", "❌ Status 400 - Max images reached (20)")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitScanImage", errorType: "http", statusCode: 400)
             throw NetworkError.invalidResponse(400)  // Max images reached (20)
         case 502, 503, 504:
             // Server-side errors - gateway/proxy/upstream issues
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
             Log.error("PHOTO_SCAN", "❌ Status \(httpResponse.statusCode) - Server error (likely server-side issue)")
             Log.debug("PHOTO_SCAN", "📄 Response body: \(responseBody.prefix(500))")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitScanImage", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         default:
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
             Log.error("PHOTO_SCAN", "❌ Status \(httpResponse.statusCode) - Unexpected error")
             Log.debug("PHOTO_SCAN", "📄 Response body: \(responseBody.prefix(500))")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitScanImage", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
@@ -928,14 +960,15 @@ struct ChatStreamError: Error, LocalizedError {
         
         Log.debug("REANALYZE", "📡 API Call: POST \(endpoint)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "reanalyzeScan")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
             Log.error("REANALYZE", "❌ HTTP Error - Status: \(httpResponse.statusCode)")
             Log.debug("REANALYZE", "📄 Response body: \(responseBody)")
-            
+            AnalyticsService.shared.captureAPIError(endpoint: "reanalyzeScan", errorType: "http", statusCode: httpResponse.statusCode)
+
             if httpResponse.statusCode == 400 {
                 // Cannot reanalyze (e.g. no ingredients)
                 throw NetworkError.invalidResponse(400)
@@ -945,13 +978,14 @@ struct ChatStreamError: Error, LocalizedError {
                 throw NetworkError.invalidResponse(httpResponse.statusCode)
             }
         }
-        
+
         do {
             let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
             Log.debug("REANALYZE", "✅ Reanalysis complete - scan_id: \(scan.id)")
             return scan
         } catch {
             Log.error("REANALYZE", "❌ Failed to decode reanalysis response: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "reanalyzeScan", errorType: "decode", error: error.localizedDescription)
             throw NetworkError.decodingError
         }
     }
@@ -1054,6 +1088,7 @@ struct ChatStreamError: Error, LocalizedError {
                 "request_id": requestId,
                 "status_code": httpResponse.statusCode
             ])
+            AnalyticsService.shared.captureAPIError(endpoint: "streamChatMessage", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
@@ -1149,7 +1184,8 @@ struct ChatStreamError: Error, LocalizedError {
                         "turn_id": errorEvent.turn_id ?? "",
                         "error": errorEvent.error
                     ])
-                    
+                    AnalyticsService.shared.captureAPIError(endpoint: "streamChatMessage", errorType: "http", error: errorEvent.error)
+
                     await MainActor.run {
                         onError(ChatStreamError(message: errorEvent.error, statusCode: nil), errorEvent.conversation_id, errorEvent.turn_id)
                     }
@@ -1197,13 +1233,14 @@ struct ChatStreamError: Error, LocalizedError {
         } catch {
             if !hasReportedError && !(error is CancellationError) {
                 Log.error("CHAT", "❌ Stream error: \(error.localizedDescription)")
+                AnalyticsService.shared.captureAPIError(endpoint: "streamChatMessage", errorType: "network", error: error.localizedDescription)
                 await MainActor.run {
                     onError(ChatStreamError(message: error.localizedDescription, statusCode: nil), currentConversationId, currentTurnId)
                 }
             }
             throw error
         }
-        
+
         let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
         Log.debug("CHAT", "✅ Chat message completed - total latency: \(Int(totalLatency))ms")
     }
@@ -1227,9 +1264,9 @@ struct ChatStreamError: Error, LocalizedError {
         Log.debug("CHAT", "📡 Request Headers: Authorization=Bearer ***")
         Log.debug("CHAT", "📡 Request Body: (GET request - no body)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "getConversation")
         let httpResponse = response as! HTTPURLResponse
-        
+
         // Log response details
         Log.debug("CHAT", "📥 Response Status: \(httpResponse.statusCode)")
         if let responseBody = String(data: data, encoding: .utf8) {
@@ -1237,7 +1274,7 @@ struct ChatStreamError: Error, LocalizedError {
         } else {
             Log.debug("CHAT", "📥 Response Body: (unable to decode as string, size: \(data.count) bytes)")
         }
-        
+
         switch httpResponse.statusCode {
         case 200:
             let conversation = try JSONDecoder().decode(DTO.ConversationResponse.self, from: data)
@@ -1245,12 +1282,15 @@ struct ChatStreamError: Error, LocalizedError {
             return conversation
         case 401:
             Log.error("CHAT", "❌ Status 401 - Unauthorized")
+            AnalyticsService.shared.captureAPIError(endpoint: "getConversation", errorType: "http", statusCode: 401)
             throw NetworkError.authError
         case 404:
             Log.error("CHAT", "❌ Status 404 - Conversation not found")
+            AnalyticsService.shared.captureAPIError(endpoint: "getConversation", errorType: "http", statusCode: 404)
             throw NetworkError.notFound("Conversation not found")
         default:
             Log.error("CHAT", "❌ HTTP Error - Status: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "getConversation", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
@@ -1273,20 +1313,20 @@ struct ChatStreamError: Error, LocalizedError {
         
         Log.debug("PHOTO_SCAN", "🔄 Polling: GET \(endpoint)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "getScan")
         let httpResponse = response as! HTTPURLResponse
-        
+
         switch httpResponse.statusCode {
         case 200:
             // Log raw response for debugging
             if let rawResponse = String(data: data, encoding: .utf8) {
                 Log.debug("PHOTO_SCAN", "📄 Raw response: \(rawResponse)")
             }
-            
+
             do {
                 let scan = try JSONDecoder().decode(DTO.Scan.self, from: data)
             Log.debug("PHOTO_SCAN", "✅ Poll response - scan_id: \(scanId), state: \(scan.state)")
-            
+
                 // Check for newly processed images and emit latency events
                 for scanImage in scan.images {
                     if case .user(let userImage) = scanImage,
@@ -1310,7 +1350,7 @@ struct ChatStreamError: Error, LocalizedError {
                         Log.debug("PHOTO_SCAN", "📊 ingredient_analysis[\(index)]: ingredient=\(analysis.ingredient), match=\(analysis.match), members_affected=\(analysis.members_affected)")
                     }
                 }
-                
+
                 return scan
             } catch let error {
                 // Log detailed decoding error
@@ -1332,19 +1372,24 @@ struct ChatStreamError: Error, LocalizedError {
                         Log.error("PHOTO_SCAN", "❌ Unknown decoding error: \(decodingError)")
                     }
                 }
+                AnalyticsService.shared.captureAPIError(endpoint: "getScan", errorType: "decode", error: error.localizedDescription)
                 throw error
             }
         case 401:
             Log.error("PHOTO_SCAN", "❌ Poll Status 401 - Unauthorized")
+            AnalyticsService.shared.captureAPIError(endpoint: "getScan", errorType: "http", statusCode: 401)
             throw NetworkError.authError
         case 403:
             Log.error("PHOTO_SCAN", "❌ Poll Status 403 - Scan belongs to another user")
+            AnalyticsService.shared.captureAPIError(endpoint: "getScan", errorType: "http", statusCode: 403)
             throw NetworkError.notFound("Scan belongs to another user")
         case 404:
             Log.error("PHOTO_SCAN", "❌ Poll Status 404 - Scan not found")
+            AnalyticsService.shared.captureAPIError(endpoint: "getScan", errorType: "http", statusCode: 404)
             throw NetworkError.notFound("Scan not found")
         default:
             Log.error("PHOTO_SCAN", "❌ Poll Status \(httpResponse.statusCode) - Unexpected error")
+            AnalyticsService.shared.captureAPIError(endpoint: "getScan", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
@@ -1375,7 +1420,7 @@ struct ChatStreamError: Error, LocalizedError {
             .build()
 
         Log.debug("SCAN_HISTORY", "📡 Sending request to scan_history API...")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "fetchScanHistory")
         let httpResponse = response as! HTTPURLResponse
         
         // Log raw response
@@ -1392,6 +1437,7 @@ struct ChatStreamError: Error, LocalizedError {
                 "status_code": httpResponse.statusCode,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchScanHistory", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
         
@@ -1419,11 +1465,12 @@ struct ChatStreamError: Error, LocalizedError {
                 "error": error.localizedDescription,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
-            
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchScanHistory", errorType: "decode", error: error.localizedDescription)
+
             throw NetworkError.decodingError
         }
     }
-    
+
     func fetchStats() async throws -> DTO.StatsResponse {
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
@@ -1443,18 +1490,19 @@ struct ChatStreamError: Error, LocalizedError {
             ])
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "fetchStats")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             PostHogSDK.shared.capture("Stats Fetch Failed", properties: [
                 "request_id": requestId,
                 "status_code": httpResponse.statusCode,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchStats", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         do {
             let stats = try JSONDecoder().decode(DTO.StatsResponse.self, from: data)
             
@@ -1477,7 +1525,8 @@ struct ChatStreamError: Error, LocalizedError {
                 "error": error.localizedDescription,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
-            
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchStats", errorType: "decode", error: error.localizedDescription)
+
             throw NetworkError.decodingError
         }
     }
@@ -1494,7 +1543,7 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "PATCH")
             .build()
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "toggleScanFavorite")
         let httpResponse = response as! HTTPURLResponse
 
         Log.debug("WebService", "toggleScanFavorite: status=\(httpResponse.statusCode), bytes=\(data.count)")
@@ -1502,6 +1551,7 @@ struct ChatStreamError: Error, LocalizedError {
         guard httpResponse.statusCode == 200 else {
             let responseText = String(data: data, encoding: .utf8) ?? ""
             Log.debug("WebService", "toggleScanFavorite: non-200 response body=\(responseText)")
+            AnalyticsService.shared.captureAPIError(endpoint: "toggleScanFavorite", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
@@ -1524,6 +1574,7 @@ struct ChatStreamError: Error, LocalizedError {
 
         let responseText = String(data: data, encoding: .utf8) ?? ""
         Log.error("WebService", "toggleScanFavorite: failed to decode response body=\(responseText)")
+        AnalyticsService.shared.captureAPIError(endpoint: "toggleScanFavorite", errorType: "decode", error: "Failed to decode favorite response")
         throw NetworkError.decodingError
     }
 
@@ -1559,6 +1610,7 @@ struct ChatStreamError: Error, LocalizedError {
                 Log.debug("WebService", "uploadImage: ℹ️ Resource already exists for key=\(imageFileName), reusing existing file")
             } else {
                 Log.error("WebService", "uploadImage: ❌ Upload failed for key=\(imageFileName): \(error.localizedDescription)")
+                AnalyticsService.shared.captureAPIError(endpoint: "uploadImage", errorType: "storage", error: error.localizedDescription)
                 throw error
             }
         }
@@ -1567,7 +1619,12 @@ struct ChatStreamError: Error, LocalizedError {
     }
 
     func deleteImages(imageFileNames: [String]) async throws {
-        _ = try await supabaseClient.storage.from("productimages").remove(paths: imageFileNames)
+        do {
+            _ = try await supabaseClient.storage.from("productimages").remove(paths: imageFileNames)
+        } catch {
+            AnalyticsService.shared.captureAPIError(endpoint: "deleteImages", errorType: "storage", error: error.localizedDescription)
+            throw error
+        }
     }
 
     /// Toggles favorite status for a scan using the v2 API
@@ -1588,16 +1645,16 @@ struct ChatStreamError: Error, LocalizedError {
         
         Log.debug("FAVORITE", "📡 API Call: POST \(endpoint)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "toggleFavorite")
         let httpResponse = response as! HTTPURLResponse
-        
+
         switch httpResponse.statusCode {
         case 200:
             // Parse response to get is_favorited value
             struct FavoriteResponse: Codable {
                 let is_favorited: Bool
             }
-            
+
             do {
                 let favoriteResponse = try JSONDecoder().decode(FavoriteResponse.self, from: data)
                 Log.debug("FAVORITE", "✅ Toggle successful - scanId: \(scanId), is_favorited: \(favoriteResponse.is_favorited)")
@@ -1607,18 +1664,22 @@ struct ChatStreamError: Error, LocalizedError {
                 if let rawResponse = String(data: data, encoding: .utf8) {
                     Log.debug("FAVORITE", "📄 Raw response: \(rawResponse)")
                 }
+                AnalyticsService.shared.captureAPIError(endpoint: "toggleFavorite", errorType: "decode", error: error.localizedDescription)
                 throw NetworkError.decodingError
             }
         case 401:
             Log.error("FAVORITE", "❌ Status 401 - Unauthorized")
+            AnalyticsService.shared.captureAPIError(endpoint: "toggleFavorite", errorType: "http", statusCode: 401)
             throw NetworkError.authError
         case 404:
             Log.error("FAVORITE", "❌ Status 404 - Scan not found")
+            AnalyticsService.shared.captureAPIError(endpoint: "toggleFavorite", errorType: "http", statusCode: 404)
             throw NetworkError.notFound("Scan not found")
         default:
             let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
             Log.error("FAVORITE", "❌ Status \(httpResponse.statusCode) - Unexpected error")
             Log.debug("FAVORITE", "📄 Response body: \(responseBody.prefix(500))")
+            AnalyticsService.shared.captureAPIError(endpoint: "toggleFavorite", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
@@ -1664,7 +1725,7 @@ struct ChatStreamError: Error, LocalizedError {
 
         let request = requestBuilder.build()
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "getFavorites")
 
         let httpResponse = response as! HTTPURLResponse
 
@@ -1678,6 +1739,7 @@ struct ChatStreamError: Error, LocalizedError {
                 "status_code": httpResponse.statusCode,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
+            AnalyticsService.shared.captureAPIError(endpoint: "getFavorites", errorType: "http", statusCode: httpResponse.statusCode)
 
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
@@ -1706,6 +1768,7 @@ struct ChatStreamError: Error, LocalizedError {
                 "error": error.localizedDescription,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
             ])
+            AnalyticsService.shared.captureAPIError(endpoint: "getFavorites", errorType: "decode", error: error.localizedDescription)
 
             throw NetworkError.decodingError
         }
@@ -1763,12 +1826,12 @@ struct ChatStreamError: Error, LocalizedError {
         }
 
         let request = buildRequest(token)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
+        let (data, response) = try await performRequest(request, endpoint: "addOrEditDietaryPreference")
+
         let httpResponse = response as! HTTPURLResponse
 
         guard ([200, 201, 204, 422].contains(httpResponse.statusCode)) else {
-            
+
             PostHogSDK.shared.capture("User Input Validation: Bad response from the server", properties: [
                 "request_id": requestId,
                 "client_activity_id": clientActivityId,
@@ -1776,7 +1839,8 @@ struct ChatStreamError: Error, LocalizedError {
                 "status_code": httpResponse.statusCode,
                 "latency_ms": Date().timeIntervalSince1970 * 1000 - startTime * 1000
             ])
-            
+            AnalyticsService.shared.captureAPIError(endpoint: "addOrEditDietaryPreference", errorType: "http", statusCode: httpResponse.statusCode)
+
             print("Bad response from server: \(httpResponse.statusCode)")
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
@@ -1798,7 +1862,8 @@ struct ChatStreamError: Error, LocalizedError {
                 "latency_ms": Date().timeIntervalSince1970 * 1000 - startTime * 1000,
                 "error": error.localizedDescription
             ])
-            
+            AnalyticsService.shared.captureAPIError(endpoint: "addOrEditDietaryPreference", errorType: "decode", error: error.localizedDescription)
+
             print("Failed to decode PreferenceValidationResult object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
@@ -1817,11 +1882,12 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "getDietaryPreferences")
         let httpResponse = response as! HTTPURLResponse
 
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "getDietaryPreferences", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
@@ -1831,6 +1897,7 @@ struct ChatStreamError: Error, LocalizedError {
             print("Failed to decode [DTO.DietaryPreference] object: \(error)")
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
+            AnalyticsService.shared.captureAPIError(endpoint: "getDietaryPreferences", errorType: "decode", error: error.localizedDescription)
             throw NetworkError.decodingError
         }
     }
@@ -1850,15 +1917,16 @@ struct ChatStreamError: Error, LocalizedError {
                 .setMethod(to: "DELETE")
                 .setFormData(name: "clientActivityId", value: clientActivityId)
                 .build()
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await performRequest(request, endpoint: "deleteDietaryPreference")
         let httpResponse = response as! HTTPURLResponse
 
         guard httpResponse.statusCode == 204 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "deleteDietaryPreference", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
-    
+
     func uploadGrandFatheredPreferences(_ preferences: [String]) async throws -> Void {
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
@@ -1873,15 +1941,16 @@ struct ChatStreamError: Error, LocalizedError {
                     to: try! JSONSerialization.data(withJSONObject: preferences, options: [])
                 )
                 .build()
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await performRequest(request, endpoint: "uploadGrandFatheredPreferences")
         let httpResponse = response as! HTTPURLResponse
 
         guard httpResponse.statusCode == 201 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "uploadGrandFatheredPreferences", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
-    
+
     func deleteUserAccount() async throws -> Void {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
@@ -1893,15 +1962,16 @@ struct ChatStreamError: Error, LocalizedError {
                 .setMethod(to: "POST")
                 .build()
 
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await performRequest(request, endpoint: "deleteUserAccount")
         let httpResponse = response as! HTTPURLResponse
 
         guard httpResponse.statusCode == 204 else {
             print("Bad response from server: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "deleteUserAccount", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
-    
+
     func registerDevice(
         deviceId: String,
         platform: String? = nil,
@@ -1951,27 +2021,29 @@ struct ChatStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBodyData)
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "registerDevice")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             print("Failed to register device: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "registerDevice", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         struct RegisterDeviceResponse: Codable {
             let is_internal: Bool
         }
-        
+
         do {
             let response = try JSONDecoder().decode(RegisterDeviceResponse.self, from: data)
             return response.is_internal
         } catch {
             print("Failed to decode register device response: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "registerDevice", errorType: "decode", error: error.localizedDescription)
             throw NetworkError.decodingError
         }
     }
-    
+
     func registerDeviceAfterLogin(deviceId: String, completion: @escaping (Bool?) -> Void) {
         Task.detached {
             do {
@@ -2009,6 +2081,7 @@ struct ChatStreamError: Error, LocalizedError {
             } catch {
                 // Silently handle errors - fire-and-forget
                 print("Failed to register device after login: \(error)")
+                AnalyticsService.shared.captureAPIError(endpoint: "registerDeviceAfterLogin", errorType: "network", error: error.localizedDescription)
                 completion(nil)
             }
         }
@@ -2028,28 +2101,30 @@ struct ChatStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBodyData)
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "markDeviceInternal")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             print("Failed to mark device internal: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "markDeviceInternal", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         struct MarkInternalResponse: Codable {
             let device_id: String
             let affected_users: Int
         }
-        
+
         do {
             let response = try JSONDecoder().decode(MarkInternalResponse.self, from: data)
             return (response.device_id, response.affected_users)
         } catch {
             print("Failed to decode mark device internal response: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "markDeviceInternal", errorType: "decode", error: error.localizedDescription)
             throw NetworkError.decodingError
         }
     }
-    
+
     func isDeviceInternal(deviceId: String) async throws -> Bool {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
@@ -2060,27 +2135,29 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "isDeviceInternal")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             print("Failed to check device internal status: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "isDeviceInternal", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         struct IsInternalResponse: Codable {
             let is_internal: Bool
         }
-        
+
         do {
             let response = try JSONDecoder().decode(IsInternalResponse.self, from: data)
             return response.is_internal
         } catch {
             print("Failed to decode is device internal response: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "isDeviceInternal", errorType: "decode", error: error.localizedDescription)
             throw NetworkError.decodingError
         }
     }
-    
+
     // MARK: - Network Information Helpers
     
     private func getNetworkType() -> String {
@@ -2193,10 +2270,11 @@ struct ChatStreamError: Error, LocalizedError {
                 }
             } catch {
                 // Non-critical, silently ignore
+                AnalyticsService.shared.captureAPIError(endpoint: "pingFlyIO", errorType: "network", error: error.localizedDescription)
             }
         }
     }
-    
+
     func ping() {
         Task.detached { [self] in
             let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
@@ -2233,10 +2311,11 @@ struct ChatStreamError: Error, LocalizedError {
                 }
             } catch {
                 // Non-critical, silently ignore
+                AnalyticsService.shared.captureAPIError(endpoint: "ping", errorType: "network", error: error.localizedDescription)
             }
         }
     }
-    
+
     // MARK: - Food Notes API
     
     // Pretty-print helper for logging JSON responses in the console.
@@ -2282,29 +2361,31 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
+        let (data, response) = try await performRequest(request, endpoint: "fetchFoodNotes")
+
         Log.debug("WebService", "fetchFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             // 404 means no food notes exist yet, which is fine
             if httpResponse.statusCode == 404 {
                 Log.debug("WebService", "fetchFoodNotes: No food notes found (404), returning nil")
+                AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotes", errorType: "http", statusCode: 404)
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Log.error("WebService", "fetchFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotes", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         // Backend returns null if no food notes exist (status 200 with null body)
         let responseString = String(data: data, encoding: .utf8) ?? ""
         if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
             Log.debug("WebService", "fetchFoodNotes: No food notes found (null response), returning nil")
             return nil
         }
-        
+
         // Parse response - include content, version and updatedAt
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = jsonObject["version"] as? Int,
@@ -2312,6 +2393,7 @@ struct ChatStreamError: Error, LocalizedError {
               let content = jsonObject["content"] as? [String: Any] else {
             Log.error("WebService", "fetchFoodNotes: ❌ Failed to parse response")
             Log.debug("WebService", "fetchFoodNotes: Response body: \(responseString)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotes", errorType: "decode")
             throw NetworkError.decodingError
         }
         
@@ -2332,33 +2414,36 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
+        let (data, response) = try await performRequest(request, endpoint: "fetchFoodNotesAll")
+
         Log.debug("WebService", "fetchFoodNotesAll: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             // 404 means no food notes exist yet, which is fine
             if httpResponse.statusCode == 404 {
                 Log.debug("WebService", "fetchFoodNotesAll: No food notes found (404), returning nil")
+                AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotesAll", errorType: "http", statusCode: 404)
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Log.error("WebService", "fetchFoodNotesAll: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotesAll", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         // Backend returns null if no food notes exist (status 200 with null body)
         let responseString = String(data: data, encoding: .utf8) ?? ""
         if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
             Log.debug("WebService", "fetchFoodNotesAll: No food notes found (null response), returning nil")
             return nil
         }
-        
+
         // Parse response - includes familyNote and memberNotes
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             Log.error("WebService", "fetchFoodNotesAll: ❌ Failed to parse response")
             Log.debug("WebService", "fetchFoodNotesAll: Response body: \(responseString)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotesAll", errorType: "decode")
             throw NetworkError.decodingError
         }
         
@@ -2402,7 +2487,7 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await performRequest(request, endpoint: "fetchFoodNotesSummary")
 
         let httpResponse = response as! HTTPURLResponse
 
@@ -2410,10 +2495,12 @@ struct ChatStreamError: Error, LocalizedError {
             // 404 means no food notes exist yet
             if httpResponse.statusCode == 404 {
                 Log.debug("WebService", "fetchFoodNotesSummary: No food notes found (404)")
+                AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotesSummary", errorType: "http", statusCode: 404)
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Log.error("WebService", "fetchFoodNotesSummary: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotesSummary", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
 
@@ -2430,6 +2517,7 @@ struct ChatStreamError: Error, LocalizedError {
             return decoded
         } catch {
             Log.error("WebService", "fetchFoodNotesSummary: ❌ Decoding failed: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchFoodNotesSummary", errorType: "decode", error: error.localizedDescription)
             throw NetworkError.decodingError
         }
     }
@@ -2453,15 +2541,15 @@ struct ChatStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBodyData)
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
+        let (data, response) = try await performRequest(request, endpoint: "updateFoodNotes")
+
         Log.debug("WebService", "updateFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Log.error("WebService", "updateFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
-            
+
             // Handle version mismatch (409 Conflict) - backend now returns currentNote in response.
             // For family notes, currentNote may be null when there is no existing note yet.
             if httpResponse.statusCode == 409 {
@@ -2485,22 +2573,24 @@ struct ChatStreamError: Error, LocalizedError {
                     }
                 }
             }
-            
+
+            AnalyticsService.shared.captureAPIError(endpoint: "updateFoodNotes", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         // Parse response - include content, version and updatedAt
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = jsonObject["version"] as? Int,
               let updatedAt = jsonObject["updatedAt"] as? String,
               let content = jsonObject["content"] as? [String: Any] else {
             Log.error("WebService", "updateFoodNotes: Failed to parse response")
+            AnalyticsService.shared.captureAPIError(endpoint: "updateFoodNotes", errorType: "decode")
             throw NetworkError.decodingError
         }
-        
+
         return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
     }
-    
+
     // MARK: - Member-specific Food Notes API
     
     /// Fetch food notes for a specific family member by ID.
@@ -2516,29 +2606,31 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
+        let (data, response) = try await performRequest(request, endpoint: "fetchMemberFoodNotes")
+
         Log.debug("WebService", "fetchMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             // 404 means no food notes exist yet for this member, which is fine
             if httpResponse.statusCode == 404 {
                 Log.debug("WebService", "fetchMemberFoodNotes: No member food notes found (404), returning nil")
+                AnalyticsService.shared.captureAPIError(endpoint: "fetchMemberFoodNotes", errorType: "http", statusCode: 404)
                 return nil
             }
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Log.error("WebService", "fetchMemberFoodNotes: ❌ Failed with status \(httpResponse.statusCode): \(errorMessage)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchMemberFoodNotes", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         // Backend returns null if no food notes exist (status 200 with null body)
         let responseString = String(data: data, encoding: .utf8) ?? ""
         if responseString.trimmingCharacters(in: .whitespacesAndNewlines) == "null" || data.isEmpty {
             Log.debug("WebService", "fetchMemberFoodNotes: No food notes found (null response), returning nil")
             return nil
         }
-        
+
         // Parse response - include content, version and updatedAt
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = jsonObject["version"] as? Int,
@@ -2546,6 +2638,7 @@ struct ChatStreamError: Error, LocalizedError {
               let content = jsonObject["content"] as? [String: Any] else {
             Log.error("WebService", "fetchMemberFoodNotes: ❌ Failed to parse response")
             Log.debug("WebService", "fetchMemberFoodNotes: Response body: \(responseString)")
+            AnalyticsService.shared.captureAPIError(endpoint: "fetchMemberFoodNotes", errorType: "decode")
             throw NetworkError.decodingError
         }
         
@@ -2574,11 +2667,11 @@ struct ChatStreamError: Error, LocalizedError {
             .setJsonBody(to: requestBodyData)
             .build()
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
+        let (data, response) = try await performRequest(request, endpoint: "updateMemberFoodNotes")
+
         Log.debug("WebService", "updateMemberFoodNotes: Raw response body (pretty-printed if JSON):\n\(prettyPrintedJSON(from: data))")
         let httpResponse = response as! HTTPURLResponse
-        
+
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Log.error("WebService", "updateMemberFoodNotes failed with status \(httpResponse.statusCode): \(errorMessage)")
@@ -2607,10 +2700,11 @@ struct ChatStreamError: Error, LocalizedError {
                     }
                 }
             }
-            
+
+            AnalyticsService.shared.captureAPIError(endpoint: "updateMemberFoodNotes", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
-        
+
         // Parse response - include content, version and updatedAt
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = jsonObject["version"] as? Int,
@@ -2618,9 +2712,10 @@ struct ChatStreamError: Error, LocalizedError {
               let content = jsonObject["content"] as? [String: Any] else {
             Log.error("WebService", "updateMemberFoodNotes: Failed to parse response")
             Log.debug("WebService", "updateMemberFoodNotes: Response body: \(String(data: data, encoding: .utf8) ?? "nil")")
+            AnalyticsService.shared.captureAPIError(endpoint: "updateMemberFoodNotes", errorType: "decode")
             throw NetworkError.decodingError
         }
-        
+
         return FoodNotesResponse(content: content, version: version, updatedAt: updatedAt)
     }
     // MARK: - Feedback API
@@ -2643,12 +2738,13 @@ struct ChatStreamError: Error, LocalizedError {
         
         Log.debug("WebService", "submitFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
         
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        
+        let (data, response) = try await performRequest(urlRequest, endpoint: "submitFeedback")
+
         guard let httpResponse = response as? HTTPURLResponse else {
+            AnalyticsService.shared.captureAPIError(endpoint: "submitFeedback", errorType: "http", statusCode: 0)
             throw NetworkError.invalidResponse(0)
         }
-        
+
         if httpResponse.statusCode == 200 {
             if let responseString = String(data: data, encoding: .utf8) {
                 Log.debug("WebService", "submitFeedback Response Body: \(responseString)")
@@ -2658,14 +2754,16 @@ struct ChatStreamError: Error, LocalizedError {
                 return scan
             } catch {
                 print("Decoding error: \(error)")
+                AnalyticsService.shared.captureAPIError(endpoint: "submitFeedback", errorType: "decode", error: error.localizedDescription)
                 throw NetworkError.decodingError
             }
         } else {
             print("Feedback API Error Status: \(httpResponse.statusCode)")
+            AnalyticsService.shared.captureAPIError(endpoint: "submitFeedback", errorType: "http", statusCode: httpResponse.statusCode)
             throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }
-    
+
     func updateFeedback(feedbackId: String, vote: String) async throws -> DTO.Scan {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
              throw NetworkError.authError
@@ -2685,12 +2783,13 @@ struct ChatStreamError: Error, LocalizedError {
         
         Log.debug("WebService", "updateFeedback URL: \(urlRequest.url?.absoluteString ?? "nil")")
         
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        
+        let (data, response) = try await performRequest(urlRequest, endpoint: "updateFeedback")
+
         guard let httpResponse = response as? HTTPURLResponse else {
+             AnalyticsService.shared.captureAPIError(endpoint: "updateFeedback", errorType: "http", statusCode: 0)
              throw NetworkError.invalidResponse(0)
         }
-         
+
         if httpResponse.statusCode == 200 {
              if let responseString = String(data: data, encoding: .utf8) {
                  Log.debug("WebService", "updateFeedback Response Body: \(responseString)")
@@ -2700,9 +2799,11 @@ struct ChatStreamError: Error, LocalizedError {
                  return scan
              } catch {
                  print("Decoding error: \(error)")
+                 AnalyticsService.shared.captureAPIError(endpoint: "updateFeedback", errorType: "decode", error: error.localizedDescription)
                  throw NetworkError.decodingError
              }
         } else {
+             AnalyticsService.shared.captureAPIError(endpoint: "updateFeedback", errorType: "http", statusCode: httpResponse.statusCode)
              throw NetworkError.invalidResponse(httpResponse.statusCode)
         }
     }

@@ -47,6 +47,23 @@ final class AnalyticsService {
         }
     }
 
+    func captureAPIError(
+        endpoint: String,
+        errorType: String,
+        statusCode: Int? = nil,
+        error: String? = nil
+    ) {
+        Task.detached {
+            var properties: [String: Any] = [
+                "endpoint": endpoint,
+                "error_type": errorType
+            ]
+            if let statusCode { properties["status_code"] = statusCode }
+            if let error { properties["error"] = error }
+            PostHogSDK.shared.capture("API Error", properties: properties)
+        }
+    }
+
     func refreshAnalyticsIdentity(session: Session, isInternalUser: Bool, authProvider: String) {
         Task.detached {
             var properties: [String: Any] = [:]

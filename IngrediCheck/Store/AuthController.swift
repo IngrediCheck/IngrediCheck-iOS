@@ -282,6 +282,7 @@ private enum AuthFlowMode {
                 return
             }
             Log.error("AuthController", "Signout failed: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "signOut", errorType: "auth", error: error.localizedDescription)
         }
     }
 
@@ -355,6 +356,7 @@ private enum AuthFlowMode {
             isUpgradingAccount = false
             accountUpgradeError = error
             Log.error("AuthController", "Account upgrade failed: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "upgradeCurrentAccount", errorType: "auth", error: error.localizedDescription)
         }
     }
 
@@ -373,6 +375,7 @@ private enum AuthFlowMode {
             }
         } catch {
             Log.error("AuthController", "signInAnonymously failed: \(error)")
+            AnalyticsService.shared.captureAPIError(endpoint: "signInAnonymously", errorType: "auth", error: error.localizedDescription)
         }
     }
     
@@ -386,6 +389,7 @@ private enum AuthFlowMode {
                 }
             } catch {
                 Log.error("AuthController", "Apple sign-in failed: \(error)")
+                AnalyticsService.shared.captureAPIError(endpoint: "handleSignInWithAppleCompletion", errorType: "auth", error: error.localizedDescription)
             }
         }
     }
@@ -540,6 +544,7 @@ private enum AuthFlowMode {
                 }
             } catch {
                 Log.error("AuthController", "Google sign-in failed: \(error)")
+                AnalyticsService.shared.captureAPIError(endpoint: "signInWithGoogle", errorType: "auth", error: error.localizedDescription)
                 await MainActor.run {
                     completion?(.failure(error))
                 }
@@ -558,6 +563,7 @@ private enum AuthFlowMode {
                 }
             } catch {
                 Log.error("AuthController", "Apple sign-in failed: \(error)")
+                AnalyticsService.shared.captureAPIError(endpoint: "signInWithApple", errorType: "auth", error: error.localizedDescription)
                 await MainActor.run {
                     completion?(.failure(error))
                 }
