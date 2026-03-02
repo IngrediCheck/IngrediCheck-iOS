@@ -67,9 +67,19 @@ final class FoodNotesStore {
 
     /// Whether the current account effectively has no food notes configured.
     /// Uses loaded cache state as source of truth, then summary as fallback.
+    /// Treats BOTH structured preferences and misc notes as "food notes" – if
+    /// either exists for any member, this returns false.
     var hasNoFoodNotes: Bool {
         if hasLoadedFoodNotes {
-            return canvasPreferences.sections.isEmpty
+            // Check for any structured preferences on the canvas
+            let hasStructuredNotes = !canvasPreferences.sections.isEmpty
+
+            // Check for any misc notes for any member (including "Everyone")
+            let hasMiscNotes = memberMiscNotes.values.contains { notes in
+                !notes.isEmpty
+            }
+
+            return !(hasStructuredNotes || hasMiscNotes)
         }
         if let summary = foodNotesSummary {
             let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)

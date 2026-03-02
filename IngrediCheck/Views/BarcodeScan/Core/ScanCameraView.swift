@@ -632,6 +632,9 @@ struct ScanCameraView: View {
 
     /// Ensures scanIds and historyScanIds never contain duplicate scanIds (case-insensitive),
     /// and that any scanId present in the active list is not also present in history.
+    /// Deduplication is case-insensitive, but we ALWAYS preserve the original
+    /// casing of IDs in the arrays so that exact-match lookups (e.g. in caches
+    /// or for pending_ placeholders) continue to work correctly.
     private func normalizeScanLists() {
         // 1. De-duplicate active scanIds while preserving order (case-insensitive)
         var seenLowercased = Set<String>()
@@ -640,8 +643,8 @@ struct ScanCameraView: View {
             let key = id.lowercased()
             if !seenLowercased.contains(key) {
                 seenLowercased.insert(key)
-                // Normalize to lowercase so IDs match the backend / history IDs
-                normalizedActive.append(key)
+                // Preserve the original casing of the ID in the active list
+                normalizedActive.append(id)
             }
         }
         scanIds = normalizedActive
@@ -655,7 +658,8 @@ struct ScanCameraView: View {
             guard !activeSetLowercased.contains(key) else { continue }
             if !seenLowercased.contains(key) {
                 seenLowercased.insert(key)
-                normalizedHistory.append(key)
+                // Preserve the original casing of the ID in history as well
+                normalizedHistory.append(id)
             }
         }
         historyScanIds = normalizedHistory
