@@ -290,6 +290,9 @@ struct RecentScanCard: View {
             Text(matchStatus.displayText)
                 .font(ManropeFont.semiBold.size(12))
                 .foregroundStyle(matchStatus.badgeTextColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .allowsTightening(true)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
