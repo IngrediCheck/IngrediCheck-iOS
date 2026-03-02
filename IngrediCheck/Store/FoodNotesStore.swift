@@ -64,6 +64,19 @@ final class FoodNotesStore {
 
     /// Debounce task for summary refresh
     private var summaryRefreshTask: Task<Void, Never>? = nil
+
+    /// Whether the current account effectively has no food notes configured.
+    /// Uses loaded cache state as source of truth, then summary as fallback.
+    var hasNoFoodNotes: Bool {
+        if hasLoadedFoodNotes {
+            return canvasPreferences.sections.isEmpty
+        }
+        if let summary = foodNotesSummary {
+            let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty || trimmed == "No Food Notes yet."
+        }
+        return false
+    }
     
     init(webService: WebService, onboardingStore: Onboarding) {
         self.webService = webService
