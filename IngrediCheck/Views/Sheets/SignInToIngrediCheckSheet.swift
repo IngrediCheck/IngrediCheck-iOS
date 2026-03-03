@@ -105,7 +105,7 @@ struct SignInToIngrediCheckSheet: View {
                             AnalyticsService.shared.trackOnboarding("Onboarding Existing User Completed", properties: ["sign_in_method": "google"])
                             OnboardingPersistence.shared.markCompleted()
                             coordinator.showCanvas(.home)
-                        } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
+                        } else if let metadata = metadata, let stage = metadata.stage, stage != .none, stage != .preOnboarding {
                             let (canvas, sheet) = AppNavigationCoordinator.restoreState(from: metadata)
                             Log.debug("SignInToIngrediCheckSheet", "Restoring to canvas=\(canvas), sheet=\(sheet)")
                             coordinator.showCanvas(canvas)
@@ -138,7 +138,7 @@ struct SignInToIngrediCheckSheet: View {
                             AnalyticsService.shared.trackOnboarding("Onboarding Existing User Completed", properties: ["sign_in_method": "apple"])
                             OnboardingPersistence.shared.markCompleted()
                             coordinator.showCanvas(.home)
-                        } else if let metadata = metadata, let stage = metadata.stage, stage != .none {
+                        } else if let metadata = metadata, let stage = metadata.stage, stage != .none, stage != .preOnboarding {
                             let (canvas, sheet) = AppNavigationCoordinator.restoreState(from: metadata)
                             Log.debug("SignInToIngrediCheckSheet", "Restoring to canvas=\(canvas), sheet=\(sheet)")
                             coordinator.showCanvas(canvas)
