@@ -136,9 +136,14 @@ struct ChatStreamError: Error, LocalizedError {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
+            // Don't report normal task cancellations (e.g. SwiftUI .task(id:) changes,
+            // debounce cancellations) — URLSession surfaces these as URLError.cancelled
+            if Task.isCancelled {
+                throw error
+            }
             AnalyticsService.shared.captureAPIError(
                 endpoint: endpoint,
-                errorType: "network",
+                errorType: (error as? URLError)?.code == .cancelled ? "cancelled" : "network",
                 error: error.localizedDescription
             )
             throw error
