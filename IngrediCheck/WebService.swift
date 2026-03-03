@@ -1989,6 +1989,7 @@ struct ChatStreamError: Error, LocalizedError {
         platform: String? = nil,
         osVersion: String? = nil,
         appVersion: String? = nil,
+        buildNumber: String? = nil,
         markInternal: Bool? = nil,
         timezone: String? = nil,
         localeRegion: String? = nil,
@@ -2008,6 +2009,9 @@ struct ChatStreamError: Error, LocalizedError {
         }
         if let appVersion = appVersion {
             requestBody["appVersion"] = appVersion
+        }
+        if let buildNumber = buildNumber {
+            requestBody["buildNumber"] = buildNumber
         }
         if let markInternal = markInternal {
             requestBody["markInternal"] = markInternal
@@ -2063,6 +2067,7 @@ struct ChatStreamError: Error, LocalizedError {
             let platform = UIDevice.current.systemName.lowercased()
             let osVersion = UIDevice.current.systemVersion
             let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
 
             // Approximate location fields
             let timezone = TimeZone.current.identifier
@@ -2102,6 +2107,7 @@ struct ChatStreamError: Error, LocalizedError {
                         platform: platform,
                         osVersion: osVersion,
                         appVersion: appVersion,
+                        buildNumber: buildNumber,
                         markInternal: markInternal,
                         timezone: timezone,
                         localeRegion: localeRegion,

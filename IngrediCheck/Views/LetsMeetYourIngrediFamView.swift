@@ -198,7 +198,7 @@ struct LetsMeetYourIngrediFamView: View {
                                                 .fill(Color(hex: "FFF7E6"))
                                         )
                                     } else {
-                                        Text("Not joined yet !")
+                                        Text("Not joined yet!")
                                             .font(NunitoFont.regular.size(12))
                                             .foregroundStyle(.grayScale100)
                                     }
@@ -260,7 +260,7 @@ struct LetsMeetYourIngrediFamView: View {
                     .font(ManropeFont.bold.size(16))
                     .padding(.top, 24)
                     .padding(.bottom ,4)
-                Text("Add profiles so IngredientCheck can personalize results for each person.")
+                Text("Add profiles so IngrediCheck can personalize results for each person.")
                     .font(ManropeFont.regular.size(13))
                     .foregroundColor(Color(hex: "#BDBDBD"))
                     .lineLimit(2)

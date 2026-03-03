@@ -332,7 +332,7 @@ struct HomeView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 120, height: 120)
-                                Text("Ooops, No scans yet!")
+                                Text("Oops, no scans yet!")
                                     .font(NunitoFont.semiBold.size(16))
                                     .foregroundStyle(.grayScale100)
                                     .multilineTextAlignment(.center)
