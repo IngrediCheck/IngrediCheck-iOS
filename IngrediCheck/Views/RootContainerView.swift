@@ -208,7 +208,9 @@ struct RootContainerView: View {
                 // Family load runs concurrently — FamilyStore's isFetchInFlight
                 // guard prevents duplicate calls if prefetch is already in-flight
                 group.addTask { @MainActor in
-                    await familyStore.loadCurrentFamily()
+                    if authController.session != nil {
+                        await familyStore.loadCurrentFamily()
+                    }
                 }
                 // Onboarding restoration runs concurrently
                 group.addTask { @MainActor in
