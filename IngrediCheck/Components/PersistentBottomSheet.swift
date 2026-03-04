@@ -406,6 +406,8 @@ struct PersistentBottomSheet: View {
         switch routeToCheck {
         case .alreadyHaveAnAccount:
             return 244
+        case .signInToIngrediCheck:
+            return nil
         case  .doYouHaveAnInviteCode:
             return 220
         case .welcomeBack:
@@ -413,7 +415,7 @@ struct PersistentBottomSheet: View {
         case .enterInviteCode:
             return 380
         case .whosThisFor:
-            return 264
+            return 300
         case .letsMeetYourIngrediFam:
             return 397
         case .whatsYourName, .addMoreMembers:
@@ -558,6 +560,9 @@ struct PersistentBottomSheet: View {
             
         case .welcomeBack:
             WelcomeBack()
+
+        case .signInToIngrediCheck:
+            SignInToIngrediCheckSheet()
             
         case .doYouHaveAnInviteCode:
             DoYouHaveAnInviteCode {

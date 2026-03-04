@@ -21,6 +21,7 @@ struct ScanDataCard: View {
     @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
     @Environment(UserPreferences.self) private var userPreferences
+    @Environment(FoodNotesStore.self) private var foodNotesStore
 
     @State private var scan: DTO.Scan?
     @State private var cachedInitialScan: DTO.Scan?  // Store initialScan as state to watch for changes
@@ -34,7 +35,17 @@ struct ScanDataCard: View {
     }
     
     private var matchStatus: DTO.ProductRecommendation? {
-        scan?.toProductRecommendation()
+        guard let scan = scan else { return nil }
+
+        // If user has no food notes at all, always show a neutral "no preferences"
+        // state regardless of scan type/state, so the card never flips to "Unknown"
+        // or a match verdict while preferences are empty.
+        if hasNoFoodNotes {
+            print("[ScanDataCard] 🟦 noPreferences (hasNoFoodNotes=true) for scan_id=\(scan.id)")
+            return .noPreferences
+        }
+
+        return scan.toProductRecommendation()
     }
     
     private var ingredientRecommendations: [DTO.IngredientRecommendation]? {
@@ -43,6 +54,10 @@ struct ScanDataCard: View {
     
     private var overallAnalysis: String? {
         scan?.analysis_result?.overall_analysis
+    }
+
+    private var hasNoFoodNotes: Bool {
+        foodNotesStore.hasNoFoodNotes
     }
     
     private var isAnalyzing: Bool {
@@ -87,7 +102,7 @@ struct ScanDataCard: View {
     ) {
         var inventoryImages: [DTO.ImageLocationInfo] = []
         var userImages: [DTO.ImageLocationInfo] = []
-        var processedHashes: Set<String> = []  // Track which hashes are already processed
+        var processedHashes: Set<String> = []  // Track which hashes are already processed (normalized lowercase)
 
         // Extract images from scan.images (has type information)
         if let scan = scan {
@@ -100,7 +115,8 @@ struct ScanDataCard: View {
                 case .user(let img):
                     if img.status == "processed", let storagePath = img.storage_path {
                         userImages.append(.scanImagePath(storagePath))
-                        processedHashes.insert(img.content_hash)  // Mark as processed
+                        // Normalize to lowercase so we match local hashes regardless of case
+                        processedHashes.insert(img.content_hash.lowercased())  // Mark as processed
                     }
                 }
             }
@@ -111,7 +127,10 @@ struct ScanDataCard: View {
         var pendingLocalImages: [UIImage] = []
         if let locals = localImages {
             for (image, hash) in locals {
-                if !processedHashes.contains(hash) {
+                // Compare using lowercase to avoid duplicates when API returns
+                // the same hash with a different case than our local hash.
+                let key = hash.lowercased()
+                if !processedHashes.contains(key) {
                     pendingLocalImages.append(image)
                 }
             }
@@ -639,7 +658,11 @@ struct ScanDataCard: View {
                 if isAnalyzing && ingredientRecommendations == nil {
                     analyzingBadge
                 } else if let matchStatus = matchStatus {
-                    matchStatusBadge(matchStatus: matchStatus)
+                    if matchStatus == .noPreferences {
+                        addFoodNotesButton
+                    } else {
+                        matchStatusBadge(matchStatus: matchStatus)
+                    }
                 } else if errorState != nil {
                     retryButton
                 }
@@ -726,6 +749,29 @@ struct ScanDataCard: View {
                     )
                 )
         )
+    }
+
+    // MARK: - Add Food Notes Button (noPreferences)
+    @ViewBuilder
+    private var addFoodNotesButton: some View {
+        Button(action: {
+            appState.navigate(to: .editableCanvas(targetSection: nil))
+        }) {
+            PrimaryButton(
+                title: "Add food notes",
+                icon: "plus",
+                iconWidth: 12,
+                iconHeight: 12,
+                width: 125,
+                height: 31,
+                takeFullWidth: false,
+                isLoading: false,
+                isDisabled: false,
+                labelFont: NunitoFont.medium.size(12),
+                shadowDisabled: true
+            )
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Retry Button

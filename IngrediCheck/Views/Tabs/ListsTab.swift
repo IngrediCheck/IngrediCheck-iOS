@@ -225,6 +225,7 @@ import os
             appState.listsTabState.scans = scans
         }
     }
+
 }
 
 @Observable @MainActor class ScanHistorySearchingViewModel {

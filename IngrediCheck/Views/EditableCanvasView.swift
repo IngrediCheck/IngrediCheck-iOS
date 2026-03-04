@@ -134,9 +134,11 @@ struct EditableCanvasView: View {
             isLoadingMemberPreferences = false
         }
         .onChange(of: navCoordinator.isEditSheetPresented) { oldValue, newValue in
-            // When edit sheet is dismissed, refresh canvas to show updated selections (only after initial load)
+            // When edit sheet is dismissed, flush preferences to cache first so the first selection is never lost,
+            // then refresh from cache (only after initial load)
             if oldValue == true && newValue == false && didFinishInitialLoad {
-                foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+                foodNotesStore.applyLocalPreferencesOptimistic()
+                foodNotesStore.preparePreferencesForMember(selectedMemberId: navCoordinator.editingMemberId ?? selectedMemberId)
             }
         }
         .onDisappear {
@@ -761,6 +763,8 @@ private extension EditableCanvasView {
         }
         navCoordinator.editingStepId = card.stepId
         navCoordinator.editingMemberId = selectedMemberId  // Pass selected member to edit sheet
+        // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
+        foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             navCoordinator.isEditSheetPresented = true
         }

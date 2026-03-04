@@ -59,11 +59,42 @@ final class FoodNotesStore {
     /// Cached summary of food notes from API
     var foodNotesSummary: String? = nil
 
+    /// Returns true if a summary string is a server-sent placeholder
+    /// rather than a real AI-generated summary.
+    static func isPlaceholderSummary(_ summary: String) -> Bool {
+        let lower = summary.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return lower.isEmpty || lower.contains("no food notes") || lower.contains("no data yet")
+    }
+
     /// Loading state for summary
     private(set) var isLoadingSummary: Bool = false
 
     /// Debounce task for summary refresh
     private var summaryRefreshTask: Task<Void, Never>? = nil
+
+    /// Whether the current account effectively has no food notes configured.
+    /// Uses loaded cache state as source of truth, then summary as fallback.
+    /// Treats BOTH structured preferences and misc notes as "food notes" – if
+    /// either exists for any member, this returns false.
+    var hasNoFoodNotes: Bool {
+        if hasLoadedFoodNotes {
+            // Check for any structured preferences on the canvas
+            let hasStructuredNotes = !canvasPreferences.sections.isEmpty
+
+            // Check for any misc notes for any member (including "Everyone")
+            let hasMiscNotes = memberMiscNotes.values.contains { notes in
+                !notes.isEmpty
+            }
+
+            return !(hasStructuredNotes || hasMiscNotes)
+        }
+        if let summary = foodNotesSummary {
+            // Fallback: if we only have a summary string, treat it as
+            // having notes unless it's a known placeholder.
+            return FoodNotesStore.isPlaceholderSummary(summary)
+        }
+        return false
+    }
     
     init(webService: WebService, onboardingStore: Onboarding) {
         self.webService = webService

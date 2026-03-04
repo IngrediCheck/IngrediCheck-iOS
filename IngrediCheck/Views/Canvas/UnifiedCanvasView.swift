@@ -124,9 +124,11 @@ struct UnifiedCanvasView: View {
             // When edit sheet is dismissed, scroll to the edited section and refresh canvas
             if oldValue == true && newValue == false, let stepId = coordinator.editingStepId {
                 scrollToEditedSection = stepId
-                // Force refresh of canvas cards to show updated selections (only in editing mode and after initial load)
+                // Flush current preferences to cache/canvas first so the first selection is never lost
+                // (handlePreferencesChange runs in a Task and may not have completed before dismiss)
                 if mode == .editing && didFinishInitialLoad {
-                    foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+                    foodNotesStore.applyLocalPreferencesOptimistic()
+                    foodNotesStore.preparePreferencesForMember(selectedMemberId: coordinator.editingMemberId ?? selectedMemberId)
                 }
             }
         }
@@ -234,11 +236,16 @@ struct UnifiedCanvasView: View {
                     if !hasStoreData && !didFinishInitialLoad {
                         redactedLoadingContent
                     } else {
-                        // AI Summary Card at top (only show if we have a summary and no member filter applied)
-                        let hasSummary = selectedMemberId == nil &&
-                            foodNotesStore.foodNotesSummary != nil &&
-                            !foodNotesStore.foodNotesSummary!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                            foodNotesStore.foodNotesSummary != "No Food Notes yet."
+                        // AI Summary Card at top (only show if we have a non-empty summary
+                        // and no member filter applied). Treat any non-empty summary as
+                        // having content; avoid relying on specific backend copy.
+                        let hasSummary: Bool = {
+                            guard selectedMemberId == nil,
+                                  let summary = foodNotesStore.foodNotesSummary else {
+                                return false
+                            }
+                            return !FoodNotesStore.isPlaceholderSummary(summary)
+                        }()
 
                         if hasSummary {
                             AISummaryCard(
@@ -586,6 +593,8 @@ struct UnifiedCanvasView: View {
         }
         coordinator.editingStepId = card.stepId
         coordinator.editingMemberId = selectedMemberId  // Pass selected member to edit sheet
+        // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
+        foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             coordinator.isEditSheetPresented = true
         }

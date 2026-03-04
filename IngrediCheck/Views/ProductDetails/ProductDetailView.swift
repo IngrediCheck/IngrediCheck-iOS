@@ -20,6 +20,7 @@ struct ProductDetailView: View {
     @Environment(ScanHistoryStore.self) private var scanHistoryStore
     @Environment(AppState.self) private var appState: AppState?  // Optional - for push navigation
     @Environment(AppNavigationCoordinator.self) private var coordinator: AppNavigationCoordinator?
+    @Environment(FoodNotesStore.self) private var foodNotesStore
 
     @State private var isFavorite = false
     @AppStorage("ingredientsSectionExpanded") private var isIngredientsExpanded = true  // Default: expanded, persists user choice
@@ -91,6 +92,11 @@ struct ProductDetailView: View {
 
     private var resolvedIsStale: Bool {
         return scan?.analysis_result?.is_stale ?? false
+    }
+
+    private var hasIngredients: Bool {
+        guard let product = resolvedProduct else { return false }
+        return !product.ingredients.isEmpty
     }
 
     // Check if analysis is in progress
@@ -214,6 +220,16 @@ struct ProductDetailView: View {
     }
     
     private var resolvedStatus: ProductMatchStatus {
+        // If user has no food notes at all, always show a neutral "no preferences"
+        // status regardless of scan type/state, so the header never flips to
+        // "Unknown" or "Analyzing" while preferences are empty.
+        if hasNoFoodNotes {
+            if let scan = scan {
+                print("[ProductDetailView] 🟦 noPreferences (hasNoFoodNotes=true) for scan_id=\(scan.id)")
+            }
+            return .noPreferences
+        }
+
         // Show "analyzing" status if analysis is in progress
         if isAnalyzing {
             return .analyzing
@@ -231,6 +247,8 @@ struct ProductDetailView: View {
             return .unmatched
         case .unknown:
             return .unknown
+        case .noPreferences:
+            return .noPreferences
         }
     }
     
@@ -257,6 +275,10 @@ struct ProductDetailView: View {
                     rawIngredientName: analysis?.ingredient
                 )
             }
+    }
+
+    private var hasNoFoodNotes: Bool {
+        foodNotesStore.hasNoFoodNotes
     }
     
     private var resolvedIngredientParagraphs: [IngredientParagraph] {
@@ -326,6 +348,18 @@ struct ProductDetailView: View {
                         Group {
                             productInformation
                             dietaryTagsRow
+
+                            if resolvedStatus == .noPreferences, hasIngredients {
+                                AddFoodNotesPromptCard(
+                                    onAddFoodNotes: {
+                                        if let appState = appState {
+                                            appState.navigate(to: .editableCanvas(targetSection: nil))
+                                        }
+                                    }
+                                )
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 15)
+                            }
 
                             // Show Missing Ingredients UI or regular content
                             if hasMissingIngredients {
@@ -1342,18 +1376,27 @@ struct ProductDetailView: View {
                     }
                 }
                 
-                Spacer()
+//                if !(resolvedStatus == .noPreferences) {
+                    Spacer()
+//                }
                 
-                HStack(spacing: 4) {
-                    StatusDotView(status: resolvedStatus)
-
-                    Text(resolvedStatus.title)
-                        .font(NunitoFont.bold.size(14))
-                        .foregroundStyle(resolvedStatus.color)
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(resolvedStatus.badgeBackground, in: Capsule())
+                
+                    HStack(spacing: 4) {
+                        StatusDotView(status: resolvedStatus)
+                        
+                        Text(resolvedStatus.title)
+                            .font(NunitoFont.bold.size(14))
+                            .foregroundStyle(resolvedStatus.color)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .allowsTightening(true)
+                            .layoutPriority(1)
+                    }
+                    
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(resolvedStatus.badgeBackground, in: Capsule())
+                
             }
         }
         .padding(.horizontal, 20)
@@ -1453,6 +1496,7 @@ enum ProductMatchStatus {
     case unmatched
     case unknown
     case analyzing  // Analysis in progress
+    case noPreferences
 
     var title: String {
         switch self {
@@ -1461,6 +1505,7 @@ enum ProductMatchStatus {
         case .unmatched: return "Unmatched"
         case .unknown: return "Unknown"
         case .analyzing: return "Analyzing"
+        case .noPreferences: return "Not Personalized"
         }
     }
 
@@ -1471,6 +1516,7 @@ enum ProductMatchStatus {
         case .unmatched: return Color(hex: "#FF4E50")
         case .unknown: return Color.grayScale100
         case .analyzing: return Color(hex: "#007AFF")  // Blue for analyzing
+        case .noPreferences: return Color.grayScale100
         }
     }
 
@@ -1481,6 +1527,7 @@ enum ProductMatchStatus {
         case .unmatched: return Color(hex: "#FFE3E2")
         case .unknown: return Color.grayScale40
         case .analyzing: return Color(hex: "#E3F2FF")  // Light blue for analyzing
+        case .noPreferences: return Color.grayScale40
         }
     }
 
@@ -1491,6 +1538,7 @@ enum ProductMatchStatus {
         case .unmatched: return "Ingredients Alerts"
         case .unknown: return "Status Unknown"
         case .analyzing: return "Analyzing Product"
+        case .noPreferences: return "Not Personalized"
         }
     }
 
@@ -1501,6 +1549,7 @@ enum ProductMatchStatus {
         case .unmatched: return Color(hex: "#FFEAEA")
         case .unknown: return Color.grayScale40
         case .analyzing: return Color(hex: "#F0F8FF")  // Light blue for analyzing
+        case .noPreferences: return Color.grayScale40
         }
     }
 
@@ -1508,5 +1557,3 @@ enum ProductMatchStatus {
         badgeBackground
     }
 }
-
-

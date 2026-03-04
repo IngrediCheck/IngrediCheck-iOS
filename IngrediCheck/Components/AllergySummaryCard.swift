@@ -439,8 +439,7 @@ struct AllergySummaryCard: View {
     /// Returns true if we should show the empty state (no data yet)
     private var isEmptyState: Bool {
         guard let summary = summary else { return true }
-        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed == "No Food Notes yet."
+        return FoodNotesStore.isPlaceholderSummary(summary)
     }
 
     /// Summary text with emoji icons injected (server sends **bold** markdown)
@@ -504,28 +503,28 @@ struct AllergySummaryCard: View {
                 // Content with text exclusion for bottom-right cutout
                 VStack(alignment: .leading, spacing: 8) {
                     if isEmptyState {
-                        // Empty state: "No Data Yet" badge + placeholder text
-                        Text("No Data Yet")
-                            .font(ManropeFont.regular.size(8))
-                            .foregroundStyle(.grayScale130)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 8)
-                            .background(.grayScale30, in: .capsule)
-                            .overlay(
-                                Capsule()
-                                    .stroke(lineWidth: 0.5)
-                                    .foregroundStyle(.grayScale70)
-                            )
+                        // Empty state: title + copy + green CTA
+                        Text("Food Notes")
+                            .font(ManropeFont.bold.size(14))
+                            .foregroundStyle(.grayScale150)
 
-                        ExclusionMultiColorText(
-                            text: emptyStateFormattedText,
-                            font: UIFont(name: "Manrope-Bold", size: 14) ?? .boldSystemFont(ofSize: 14),
-                            containerSize: textContainerSize(for: geometry.size),
-                            exclusionRect: exclusionRect(for: geometry.size)
-                        )
-                        .frame(width: textContainerSize(for: geometry.size).width,
-                               height: textContainerSize(for: geometry.size).height,
-                               alignment: .topLeading)
+                        Text("Tell us your dietary preferences so we can check ingredients for you.")
+                            .font(ManropeFont.regular.size(12))
+                            .foregroundStyle(.grayScale110)
+
+                        Spacer()
+
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 9, weight: .bold))
+                            Text("Add Food Notes")
+                                .font(ManropeFont.bold.size(11))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 12)
+                        .background(Capsule().fill(Color(hex: "#75990E")))
+                        .padding(.bottom, 36)
                     } else {
                         // Has summary: show the AI-generated summary text with emojis (server sends **bold** markdown)
                         ExclusionMarkdownText(

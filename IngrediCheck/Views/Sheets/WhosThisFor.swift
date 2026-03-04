@@ -20,37 +20,24 @@ struct WhosThisFor: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                HStack {
-                    Text("Hey there! Who’s this for?")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                .frame(maxWidth: .infinity)
-                .overlay(alignment: .leading) {
-                    Button {
-                        coordinator.navigateInBottomSheet(.doYouHaveAnInviteCode)
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.black)
-                            .frame(width: 24, height: 24)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
+                Text("Who do you grocery shop for?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
 
-                Text("Is it just you, or your whole IngrediFam — family, friends, anyone you care about?")
+                Text("This helps us personalize ingredient checks for everyone.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
             }
-            .padding(.bottom, 40)
+            .padding(.bottom, 28)
 
             HStack(spacing: 16) {
                 SecondaryButton(
                     title: "Just Me",
                     icon: "justMe",
+                    iconWidth: 17,
+                    iconHeight: 17,
                     takeFullWidth: true,
                     isLoading: isJustMeLoading,
                     isDisabled: isJustMeLoading || isAddFamilyLoading,
@@ -91,16 +78,55 @@ struct WhosThisFor: View {
                 )
                 
             }
-            .padding(.bottom, 20)
+            
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(colors: [Color(hex: "#D6D4D4"), .white], startPoint: .trailing, endPoint: .leading)
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 1)
 
-            Text("You can always add or edit members later.")
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale90)
-                .multilineTextAlignment(.center)
+                Text("Or")
+                    .font(ManropeFont.medium.size(10))
+                    .foregroundStyle(.grayScale120)
+                    .padding(.horizontal, 7)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(colors: [Color(hex: "#D6D4D4"), .white], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 1)
+            }
+            .padding(.top, 14)
+
+            Button {
+                coordinator.navigateInBottomSheet(.enterInviteCode)
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Have a family invite?")
+                        .font(ManropeFont.medium.size(12))
+                        .foregroundStyle(.grayScale120)
+
+                    Text("Join a Family")
+                        .font(ManropeFont.bold.size(12))
+                        .foregroundStyle(Color(hex: "#75990E"))
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .background(
+                    Capsule()
+                        .fill(Color(hex: "#F5F5F5"))
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 14)
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)
-        .padding(.bottom, 20)
+        .padding(.bottom, 52)
+//        .background(.blue)
 //        .overlay(
 //            RoundedRectangle(cornerRadius: 4)
 //                .fill(.neutral500)

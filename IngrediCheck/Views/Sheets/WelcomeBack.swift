@@ -41,7 +41,11 @@ struct WelcomeBack: View {
             .padding(.bottom, 40)
 
             HStack(spacing: 16) {
-                Button {
+                AuthProviderCapsuleButton(
+                    title: "Google",
+                    iconAssetName: "google_logo",
+                    isDisabled: isSigningIn,
+                    action: {
                     isSigningIn = true
                     authController.signInWithGoogle { result in
                         switch result {
@@ -72,26 +76,14 @@ struct WelcomeBack: View {
                             isSigningIn = false
                         }
                     }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image("google_logo")
-                            .resizable()
-                            .frame(width: 24, height: 24)
-                        Text("Google")
-                            .font(NunitoFont.semiBold.size(16))
-                            .foregroundStyle(.grayScale150)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.white, in: .capsule)
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.grayScale40, lineWidth: 1)
-                    )
-                }
-                .disabled(isSigningIn)
+                )
 
-                Button {
+                AuthProviderCapsuleButton(
+                    title: "Apple",
+                    iconAssetName: "apple_logo",
+                    isDisabled: isSigningIn,
+                    action: {
                     isSigningIn = true
                     authController.signInWithApple { result in
                         switch result {
@@ -122,24 +114,8 @@ struct WelcomeBack: View {
                             isSigningIn = false
                         }
                     }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image("apple_logo")
-                            .resizable()
-                            .frame(width: 24, height: 24)
-                        Text("Apple")
-                            .font(NunitoFont.semiBold.size(16))
-                            .foregroundStyle(.grayScale150)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.white, in: .capsule)
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.grayScale40, lineWidth: 1)
-                    )
-                }
-                .disabled(isSigningIn)
+                )
             }
            .padding(.bottom, 20)
 

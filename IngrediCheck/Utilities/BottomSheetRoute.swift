@@ -11,6 +11,7 @@ enum BottomSheetRoute: Hashable {
     // HeyThereScreen routes
     case alreadyHaveAnAccount
     case welcomeBack
+    case signInToIngrediCheck
     
     // BlankScreen routes
     case doYouHaveAnInviteCode
@@ -63,5 +64,4 @@ enum BottomSheetRoute: Hashable {
     case quickAccessNeeded
     case loginToContinue
 }
-
 

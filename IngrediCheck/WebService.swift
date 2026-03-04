@@ -660,6 +660,9 @@ struct ChatStreamError: Error, LocalizedError {
         var request = SupabaseRequestBuilder(endpoint: .scan_barcode)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "nullable_analysis", value: "true")
+            ])
             .setJsonBody(to: requestBody)
             .build()
         
@@ -972,6 +975,9 @@ struct ChatStreamError: Error, LocalizedError {
         let request = SupabaseRequestBuilder(endpoint: .scan_reanalyze, itemId: scanId)
             .setAuthorization(with: token)
             .setMethod(to: "POST")
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "nullable_analysis", value: "true")
+            ])
             .build()
         
         Log.debug("REANALYZE", "📡 API Call: POST \(endpoint)")
@@ -1322,6 +1328,9 @@ struct ChatStreamError: Error, LocalizedError {
         let request = SupabaseRequestBuilder(endpoint: .scan_get, itemId: scanId)
             .setAuthorization(with: token)
             .setMethod(to: "GET")
+            .setQueryItems(queryItems: [
+                URLQueryItem(name: "nullable_analysis", value: "true")
+            ])
             .build()
         
         Log.debug("PHOTO_SCAN", "🔄 Polling: GET \(endpoint)")
@@ -1427,7 +1436,8 @@ struct ChatStreamError: Error, LocalizedError {
             .setMethod(to: "GET")
             .setQueryItems(queryItems: [
                 URLQueryItem(name: "limit", value: String(limit)),
-                URLQueryItem(name: "offset", value: String(offset))
+                URLQueryItem(name: "offset", value: String(offset)),
+                URLQueryItem(name: "nullable_analysis", value: "true")
             ])
             .build()
 

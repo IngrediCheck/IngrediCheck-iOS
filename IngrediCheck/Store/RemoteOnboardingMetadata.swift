@@ -22,6 +22,7 @@ enum RemoteOnboardingStage: String, Codable {
 enum BottomSheetRouteIdentifier: String, Codable {
     case alreadyHaveAnAccount
     case welcomeBack
+    case signInToIngrediCheck
     case doYouHaveAnInviteCode
     case enterInviteCode
     case whosThisFor
@@ -63,4 +64,3 @@ struct RemoteOnboardingMetadata: Codable {
     var bottomSheetRoute: BottomSheetRouteIdentifier?  // which bottom sheet route
     var bottomSheetRouteParam: String?  // associated value (name, isFamilyFlow as string, etc.)
 }
-

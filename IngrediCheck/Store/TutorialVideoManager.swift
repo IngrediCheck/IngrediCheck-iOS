@@ -5,7 +5,7 @@ final class TutorialVideoManager {
     static let shared = TutorialVideoManager()
 
     private let bucket = "assets-client"
-    private let fileName = "app-tutorial.mov"
+    private let fileName = "app-tutorial-v2.mov"
     private var isDownloading = false
 
     private init() {}
