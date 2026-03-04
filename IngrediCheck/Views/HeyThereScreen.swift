@@ -84,17 +84,21 @@ struct HeyThereScreen: View {
         }
         .task(id: coordinator.currentBottomSheetRoute) {
             if coordinator.currentBottomSheetRoute == .whosThisFor {
+                // Start video prefetch as soon as user reaches this screen,
+                // regardless of auth state, so it's ready by the time they
+                // reach the tutorial screen.
+                Task { await TutorialVideoManager.shared.downloadIfNeeded() }
+
                 if authController.session == nil {
                     print("[OnboardingMeta] Auto-triggering guest login on .whosThisFor screen")
                     await authController.signIn()
 
                     // signIn() creates an internal unstructured Task that survives
                     // cancellation, so the sign-in completes regardless. But post-work
-                    // (sync, video download) should only run if we're still on this route.
+                    // (sync) should only run if we're still on this route.
                     if !Task.isCancelled {
                         print("[OnboardingMeta] Syncing initial state after guest login")
                         await OnboardingPersistence.shared.sync(from: coordinator)
-                        Task { await TutorialVideoManager.shared.downloadIfNeeded() }
                     }
                 }
             }
