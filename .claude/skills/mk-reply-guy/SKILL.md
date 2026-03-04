@@ -210,7 +210,7 @@ Cast a wide net across these; prioritize subs where people discuss checking ingr
 1. **ALWAYS verify the post is NOT archived BEFORE proposing** - Reddit archives posts after 6 months. Check post age (e.g. "6mo ago", "1y ago", "2y ago" = archived; skip immediately). Look for "Archived" or "New comments cannot be posted" in the page. If archived, skip and move to the next candidate. Do NOT propose a comment on archived posts.
 2. **ALWAYS read the full post AND top 5-10 comments before proposing a comment**
 3. **ALWAYS check post relevance first** - Use the "Post Relevance Checklist" in "Lessons Learned" section. Skip posts about nutrition info, restaurant items without labels, or general food questions without ingredient checking focus.
-4. **ALWAYS thoroughly check if user already commented** - Use multiple methods (fetch, grep, browser snapshot). If user says "we already commented," trust them and skip immediately.
+4. **ALWAYS thoroughly check if user already commented** - Fetch the full thread (old.reddit.com or Reddit JSON API) and grep for username, "justanotheratom", and "IngrediCheck" before proposing. Do NOT rely on browser snapshot alone. If user says "we already commented," trust them and skip immediately.
 5. Make it relevant to the specific post and thread
 6. Reference other comments, OP's phrasing, or shared pain points
 7. Use "I built" or "I created" (not "I use")
@@ -331,12 +331,13 @@ https://apps.apple.com/us/app/ingredicheck/id6477521615
 - **Don't promote on posts about severe medical issues** - If someone is describing losing the ability to eat, severe reactions, or medical emergencies, skip the post or be extremely empathetic and helpful without heavy promotion.
 
 ### Duplicate Comment Prevention:
-- **ALWAYS check thoroughly** - Use multiple methods:
-  1. Fetch full post page with `mcp_web_fetch` on old.reddit.com
-  2. Use `grep` to search for exact username match
-  3. Search for "IngrediCheck" or "ingredicheck" (case-insensitive)
-  4. Scroll through ALL visible comments in browser snapshot
-  5. If ANY match found, IMMEDIATELY skip - do NOT propose
+- **MANDATORY: You MUST complete a successful fetch + grep before proposing.** Do NOT propose based on browser snapshot alone. Snapshots often do not show all comments (collapsed, nested, or below fold). If you cannot complete the duplicate check, skip the post.
+- **Search terms:** Always search for BOTH (1) the current Reddit username from Step 0, AND (2) "justanotheratom" (known IngrediCheck account), AND (3) "IngrediCheck" or "ingredicheck" (case-insensitive). If ANY match is found, skip immediately.
+- **Primary method - Fetch + grep:**
+  1. Fetch the full thread with `mcp_web_fetch` on `https://old.reddit.com/r/SUBREDDIT/comments/POST_ID/TITLE_SLUG/`
+  2. Use `grep` on the fetched content for: username, "justanotheratom", "IngrediCheck", "ingredicheck"
+- **Fallback if old.reddit.com fetch fails (blocked, 404, etc.):** Try Reddit JSON API: `https://www.reddit.com/r/SUBREDDIT/comments/POST_ID.json` - this returns the full comment tree. Parse or grep the JSON response for the same terms.
+- **If both fetch methods fail:** Do NOT propose. Skip the post and move to the next candidate. Never risk proposing on a thread you could not fully check.
 - **User feedback overrides** - If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately
 
 ## Procedure (run from this skill only — no external scripts)
@@ -363,13 +364,13 @@ Execute these steps using browser and fetch tools only. Do not create or call se
   1. Check the post age in the page or snapshot. If it shows **6mo ago**, **1y ago**, **2y ago**, or any age ≥ 6 months, the post is archived. **SKIP immediately** - do NOT propose a comment.
   2. Look for text such as **"Archived"**, **"archived"**, or **"New comments cannot be posted"** in the page or snapshot. If found, **SKIP immediately**.
   3. Reddit archives posts after 6 months. Only propose comments on posts that are clearly still open for new comments.
-- **CRITICAL: Thoroughly check if current user already commented BEFORE proposing:**
-  1. Fetch the full post page using `mcp_web_fetch` on `https://old.reddit.com/r/.../comments/POST_ID/...` (old.reddit.com is easier to parse)
-  2. Use `grep` to search the fetched content for the current Reddit username (from Step 0) - search for exact username match
-  3. Also search for "IngrediCheck" or "ingredicheck" (case-insensitive) in the comments to catch any previous mentions
-  4. Scroll through ALL visible comments in the browser snapshot if needed
-  5. **If ANY match is found, IMMEDIATELY skip this post and move to the next candidate. Do NOT propose a comment.**
-  6. **If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately**
+- **CRITICAL: Duplicate check is MANDATORY before proposing. Do NOT skip this step.**
+  1. **Fetch the full thread** - Use `mcp_web_fetch` on `https://old.reddit.com/r/SUBREDDIT/comments/POST_ID/TITLE_SLUG/`. If this fails (blocked, error), try the Reddit JSON API: `https://www.reddit.com/r/SUBREDDIT/comments/POST_ID.json`
+  2. **Grep the fetched content** - Search for: (a) current Reddit username from Step 0, (b) "justanotheratom", (c) "IngrediCheck", (d) "ingredicheck"
+  3. **If fetch fails for BOTH methods** - Do NOT propose. Skip the post and move to the next candidate.
+  4. **If ANY match is found** - IMMEDIATELY skip this post. Do NOT propose a comment.
+  5. **User feedback overrides** - If user says "we already commented on this" even if your check didn't find it, trust them and skip immediately.
+  - *Do NOT rely on browser snapshot alone for duplicate checking.* Snapshots often omit collapsed, nested, or below-fold comments.
 - **CRITICAL: Check post relevance using the "Post Relevance Checklist" above:**
   1. Is this about checking ingredients on **packaged products**? (Skip if restaurant items without labels)
   2. Does this involve **reading labels** or **scanning products**? (Skip if just general food questions)
