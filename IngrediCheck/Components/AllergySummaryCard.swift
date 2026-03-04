@@ -439,11 +439,7 @@ struct AllergySummaryCard: View {
     /// Returns true if we should show the empty state (no data yet)
     private var isEmptyState: Bool {
         guard let summary = summary else { return true }
-        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return true }
-        // Server sends this placeholder when user has no food notes
-        let lower = trimmed.lowercased()
-        return lower.contains("no food notes") || lower.contains("no data yet")
+        return FoodNotesStore.isPlaceholderSummary(summary)
     }
 
     /// Summary text with emoji icons injected (server sends **bold** markdown)

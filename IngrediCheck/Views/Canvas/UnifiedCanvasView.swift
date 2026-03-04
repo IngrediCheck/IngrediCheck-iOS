@@ -244,8 +244,7 @@ struct UnifiedCanvasView: View {
                                   let summary = foodNotesStore.foodNotesSummary else {
                                 return false
                             }
-                            let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-                            return !trimmed.isEmpty
+                            return !FoodNotesStore.isPlaceholderSummary(summary)
                         }()
 
                         if hasSummary {

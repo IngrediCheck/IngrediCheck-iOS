@@ -59,6 +59,13 @@ final class FoodNotesStore {
     /// Cached summary of food notes from API
     var foodNotesSummary: String? = nil
 
+    /// Returns true if a summary string is a server-sent placeholder
+    /// rather than a real AI-generated summary.
+    static func isPlaceholderSummary(_ summary: String) -> Bool {
+        let lower = summary.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return lower.isEmpty || lower.contains("no food notes") || lower.contains("no data yet")
+    }
+
     /// Loading state for summary
     private(set) var isLoadingSummary: Bool = false
 
@@ -82,11 +89,9 @@ final class FoodNotesStore {
             return !(hasStructuredNotes || hasMiscNotes)
         }
         if let summary = foodNotesSummary {
-            let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-            // Fallback: if we only have a summary string, treat any non-empty
-            // summary as indicating that some notes exist. Avoid depending on
-            // a specific copy string from the backend.
-            return trimmed.isEmpty
+            // Fallback: if we only have a summary string, treat it as
+            // having notes unless it's a known placeholder.
+            return FoodNotesStore.isPlaceholderSummary(summary)
         }
         return false
     }
