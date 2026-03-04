@@ -13,7 +13,7 @@ struct SignInToIngrediCheckSheet: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 26)
 
-            Text("Continue to personalized ingredient insights\nfor you and your family.")
+            Text("Sign in to sync your preferences\nand pick up where you left off.")
                 .font(ManropeFont.medium.size(12))
                 .foregroundStyle(.grayScale120)
                 .multilineTextAlignment(.center)
@@ -45,12 +45,12 @@ struct SignInToIngrediCheckSheet: View {
                     )
                     .frame(maxWidth: .infinity)
                     .frame(height: 1)
-                
+
                 Text("Or")
                     .font(ManropeFont.medium.size(10))
                     .foregroundStyle(.grayScale120)
                     .padding(.horizontal, 7)
-                
+
                 Rectangle()
                     .fill(
                         LinearGradient(colors: [Color(hex: "#D6D4D4"), .white], startPoint: .leading, endPoint: .trailing)
@@ -61,22 +61,24 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.top, 18)
             .padding(.horizontal, 24)
 
-            AuthProviderCapsuleButton(title: "Continue as Guest", iconAssetName: nil, action: {
+            Button {
                 Task {
                     isSigningIn = true
                     await authController.signIn()
                     coordinator.navigateInBottomSheet(.whosThisFor)
                     isSigningIn = false
                 }
-            }, titleColor: .primary800)
+            } label: {
+                GreenCapsule(title: "Sign in later", takeFullWidth: true)
+            }
             .buttonStyle(.plain)
             .disabled(isSigningIn)
             .padding(.top, 18)
             .padding(.horizontal, 24)
 
             LegalDisclaimerView()
-            .padding(.top, 36)
-            .padding(.bottom, 28)
+            .padding(.top, 24)
+            .padding(.bottom, 24)
             .padding(.horizontal, 24)
         }
         .background(Color.white)

@@ -1,32 +1,42 @@
 import SwiftUI
 
 struct AuthProviderCapsuleButton: View {
+    enum Style {
+        case outlined   // white background, gray border
+        case filled     // black background, white text/icon
+    }
+
     let title: String
     let iconAssetName: String?
+    var systemIconName: String? = nil
     var isDisabled: Bool = false
     var action: () -> Void
     var titleColor: Color = .grayScale150
+    var style: Style = .outlined
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                if let iconAssetName {
+                if let systemIconName {
+                    Image(systemName: systemIconName)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(style == .filled ? .white : titleColor)
+                } else if let iconAssetName {
                     Image(iconAssetName)
                         .resizable()
                         .frame(width: 24, height: 24)
                 }
-                
 
                 Text(title)
                     .font(NunitoFont.semiBold.size(16))
-                    .foregroundStyle(titleColor)
+                    .foregroundStyle(style == .filled ? .white : titleColor)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Color.white, in: .capsule)
+            .background(style == .filled ? Color.black : Color.white, in: .capsule)
             .overlay(
                 Capsule()
-                    .stroke(Color.grayScale40, lineWidth: 1)
+                    .stroke(style == .filled ? Color.clear : Color.grayScale40, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

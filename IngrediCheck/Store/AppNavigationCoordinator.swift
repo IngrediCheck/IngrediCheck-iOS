@@ -531,6 +531,9 @@ class AppNavigationCoordinator {
         switch metadata.stage ?? .none {
         case .none, .preOnboarding:
             canvas = .heyThere
+            // For fresh/pre-onboarding accounts, always show the sign-in sheet
+            // rather than restoring a stale sheet route from remote metadata.
+            return (canvas: canvas, sheet: .signInToIngrediCheck)
         case .choosingFlow:
             canvas = .letsMeetYourIngrediFam
         case .dietaryIntro:
