@@ -415,7 +415,7 @@ struct PersistentBottomSheet: View {
         case .enterInviteCode:
             return 380
         case .whosThisFor:
-            return 264
+            return 300
         case .letsMeetYourIngrediFam:
             return 397
         case .whatsYourName, .addMoreMembers:

@@ -20,15 +20,12 @@ struct WhosThisFor: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                HStack {
-                    Text("Let’s set up your account !")
-                        .font(NunitoFont.bold.size(22))
-                        .foregroundStyle(.grayScale150)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                .frame(maxWidth: .infinity)
+                Text("Who do you grocery shop for?")
+                    .font(NunitoFont.bold.size(22))
+                    .foregroundStyle(.grayScale150)
+                    .multilineTextAlignment(.center)
 
-                Text("Choose who you'd like to create profiles for.")
+                Text("This helps us personalize ingredient checks for everyone.")
                     .font(ManropeFont.medium.size(12))
                     .foregroundStyle(.grayScale120)
                     .multilineTextAlignment(.center)
@@ -39,6 +36,8 @@ struct WhosThisFor: View {
                 SecondaryButton(
                     title: "Just Me",
                     icon: "justMe",
+                    iconWidth: 17,
+                    iconHeight: 17,
                     takeFullWidth: true,
                     isLoading: isJustMeLoading,
                     isDisabled: isJustMeLoading || isAddFamilyLoading,
@@ -87,12 +86,12 @@ struct WhosThisFor: View {
                     )
                     .frame(maxWidth: .infinity)
                     .frame(height: 1)
-                
+
                 Text("Or")
                     .font(ManropeFont.medium.size(10))
                     .foregroundStyle(.grayScale120)
                     .padding(.horizontal, 7)
-                
+
                 Rectangle()
                     .fill(
                         LinearGradient(colors: [Color(hex: "#D6D4D4"), .white], startPoint: .leading, endPoint: .trailing)
@@ -100,24 +99,29 @@ struct WhosThisFor: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 1)
             }
-            .padding(.vertical, 16)
+            .padding(.top, 14)
 
-            HStack(spacing: 2) {
-                Text("Got a family invite to IngrediFam?")
-                    .font(ManropeFont.medium.size(12))
-                    .foregroundStyle(.grayScale120)
-                    .multilineTextAlignment(.center)
+            Button {
+                coordinator.navigateInBottomSheet(.enterInviteCode)
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Have a family invite?")
+                        .font(ManropeFont.medium.size(12))
+                        .foregroundStyle(.grayScale120)
 
-                Button {
-                    coordinator.navigateInBottomSheet(.enterInviteCode)
-                } label: {
                     Text("Join a Family")
                         .font(ManropeFont.bold.size(12))
                         .foregroundStyle(Color(hex: "#75990E"))
-                        .underline()
                 }
-                .buttonStyle(.plain)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .background(
+                    Capsule()
+                        .fill(Color(hex: "#F5F5F5"))
+                )
             }
+            .buttonStyle(.plain)
+            .padding(.top, 14)
         }
         .padding(.horizontal, 20)
         .padding(.top, 24)
