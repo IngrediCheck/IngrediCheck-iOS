@@ -122,8 +122,8 @@ struct ScanDataCard: View {
             }
         }
 
-        // Filter local images - only show those NOT yet processed by API
-        // This prevents duplicate display of the same image
+        // Filter local images - only show those NOT yet processed by API.
+        // This prevents duplicate display of the same image.
         var pendingLocalImages: [UIImage] = []
         if let locals = localImages {
             for (image, hash) in locals {
@@ -134,6 +134,22 @@ struct ScanDataCard: View {
                     pendingLocalImages.append(image)
                 }
             }
+        }
+
+        // If we have any processed user images from the API, treat those as the
+        // single source of truth and clear pending local images. This avoids the
+        // "double image" effect where the same photo appears once as a local
+        // image with a loader overlay and once as a processed API user image.
+        if !userImages.isEmpty {
+            pendingLocalImages = []
+        }
+
+        // As an extra safety net, once the scan reaches a terminal "done" state,
+        // never show pending local overlays anymore. Even if the backend didn't
+        // return a matching user image hash, we don't want to keep showing a
+        // loading spinner over the photo after analysis is complete.
+        if let scan = scan, scan.state == "done" {
+            pendingLocalImages = []
         }
 
         return (inventoryImages: inventoryImages, userImages: userImages, pendingLocalImages: pendingLocalImages)
