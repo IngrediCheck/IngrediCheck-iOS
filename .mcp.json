@@ -4,6 +4,10 @@
       "command": "npx",
       "args": ["-y", "xcodebuildmcp@latest", "mcp"]
     },
+    "xcode": {
+      "command": "xcrun",
+      "args": ["mcpbridge"]
+    },
     "posthog": {
       "type": "http",
       "url": "https://mcp.posthog.com/mcp"
