@@ -455,7 +455,7 @@ extension DTO.ProductRecommendation {
         case .notMatch:
             return Color(hex: "#FF1100")
         case .needsReview:
-            return Color(hex: "#FF594E")
+            return Color(hex: "#FCDE00")
         case .unknown:
             return Color(hex: "#757575")
         case .noPreferences:
