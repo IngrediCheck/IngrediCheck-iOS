@@ -479,11 +479,6 @@ struct UnifiedCanvasView: View {
 
             foodNotesStore.applyLocalPreferencesOptimistic()
             foodNotesStore.updateFoodNotes()
-
-            // Trigger scan history refresh when user navigates back to HomeView
-            await MainActor.run {
-                appState.needsScanHistoryRefresh = true
-            }
         }
     }
 

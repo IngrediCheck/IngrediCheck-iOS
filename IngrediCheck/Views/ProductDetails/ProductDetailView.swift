@@ -30,6 +30,7 @@ struct ProductDetailView: View {
     @State private var isImageViewerPresented = false
     @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
     @State private var reanalysisRotation: Double = 0  // Rotation for sync icon animation
+    @State private var didAutoTriggerReanalysis = false
     // Real-time scan observation (new approach)
     var scanId: String? = nil  // If provided, view will fetch/poll for scan updates
     var initialScan: DTO.Scan? = nil  // Initial scan data (if from cache/SSE)
@@ -588,6 +589,14 @@ struct ProductDetailView: View {
                     self.isFavorite = isFavorited
                 }
             }
+        }
+        .onChange(of: scan?.id) { _, newScanId in
+            guard newScanId != nil,
+                  !didAutoTriggerReanalysis,
+                  !isReanalyzingLocally,
+                  resolvedIsStale else { return }
+            didAutoTriggerReanalysis = true
+            performReanalysis()
         }
         .onAppear {
             setDisplayedScanContext()

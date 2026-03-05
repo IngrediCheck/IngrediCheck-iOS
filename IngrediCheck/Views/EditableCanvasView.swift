@@ -114,9 +114,6 @@ struct EditableCanvasView: View {
             foodNotesStore.applyLocalPreferencesOptimistic()
 
             foodNotesStore.updateFoodNotes()
-
-            // Trigger scan history refresh when user navigates back to HomeView
-            appState.needsScanHistoryRefresh = true
         }
         .onChange(of: familyStore.selectedMemberId) { newValue in
             // Don't switch members before initial load completes - it would clear preferences
