@@ -1194,43 +1194,12 @@ struct ScanCameraView: View {
 
                                     updateToastState()
                                 },
-                                onFavoriteToggle: { scanId, isFavorited in
-                                    // Toggle favorite status via API
-                                    Task {
-                                        do {
-                                            // Use new toggleFavorite API which returns actual state
-                                            let newFavoriteState = try await webService.toggleFavorite(scanId: scanId)
-                                            Log.debug("FAVORITE", "✅ Toggled favorite - scanId: \(scanId), is_favorited: \(newFavoriteState)")
-
-                                            // Update cache with new favorite status from API response
-                                            if let cachedScan = scanDataCache[scanId] {
-                                                // Create updated scan with new favorite status
-                                                let updatedScan = DTO.Scan(
-                                                    id: cachedScan.id,
-                                                    scan_type: cachedScan.scan_type,
-                                                    barcode: cachedScan.barcode,
-                                                    state: cachedScan.state,
-                                                    product_info: cachedScan.product_info,
-                                                    product_info_source: cachedScan.product_info_source,
-                                                    analysis_result: cachedScan.analysis_result,
-                                                    images: cachedScan.images,
-                                                    latest_guidance: cachedScan.latest_guidance,
-                                                    created_at: cachedScan.created_at,
-                                                    last_activity_at: cachedScan.last_activity_at,
-                                                    is_favorited: newFavoriteState,
-                                                    analysis_id: cachedScan.analysis_id
-                                                )
-
-                                                // Update cache AND store
-                                                await MainActor.run {
-                                                    scanDataCache[scanId] = updatedScan
-                                                    scanHistoryStore.updateFavoriteStatus(scanId: scanId, isFavorited: newFavoriteState)
-                                                }
-                                            }
-                                        } catch {
-                                            Log.error("FAVORITE", "❌ Failed to toggle favorite - scanId: \(scanId), error: \(error.localizedDescription)")
-                                        }
+                                onFavoriteChanged: { scanId, isFavorited in
+                                    if var cached = scanDataCache[scanId] {
+                                        cached.is_favorited = isFavorited
+                                        scanDataCache[scanId] = cached
                                     }
+                                    scanHistoryStore.updateFavoriteStatus(scanId: scanId, isFavorited: isFavorited)
                                 },
                                 onTap: { product, matchStatus, ingredientRecommendations, overallAnalysis, tappedScanId in
                                         selectedProduct = product

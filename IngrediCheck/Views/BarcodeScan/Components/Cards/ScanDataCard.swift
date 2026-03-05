@@ -15,7 +15,7 @@ struct ScanDataCard: View {
     var onRetryHidden: (() -> Void)? = nil
     var onResultUpdated: (() -> Void)? = nil
     var onScanUpdated: ((DTO.Scan) -> Void)? = nil  // NEW: Called when scan data updates (for cache sync)
-    var onFavoriteToggle: ((String, Bool) -> Void)? = nil // NEW: Callback for favorite toggle
+    var onFavoriteChanged: ((String, Bool) -> Void)? = nil // Called with confirmed state after successful API toggle
     var onTap: ((DTO.Product, DTO.ProductRecommendation?, [DTO.IngredientRecommendation]?, String?, String) -> Void)? = nil  // Added scanId parameter
 
     @Environment(WebService.self) private var webService
@@ -61,14 +61,8 @@ struct ScanDataCard: View {
         foodNotesStore.hasNoFoodNotes
     }
 
-    /// Resolved favorite state for optimistic UI:
-    /// - Prefer locally toggled value if present
-    /// - Fall back to scan.is_favorited from backend
     private var resolvedIsFavorited: Bool {
-        if let local = isFavoritedLocal {
-            return local
-        }
-        return scan?.is_favorited ?? false
+        isFavoritedLocal ?? scan?.is_favorited ?? false
     }
     
     private var isAnalyzing: Bool {
@@ -235,7 +229,7 @@ struct ScanDataCard: View {
                 Log.debug("SCAN_CARD", "📦 Using initialScan (SSE/cache) - scan_id: \(scanId), scan_type: \(initialScan.scan_type)")
                 await MainActor.run {
                     self.scan = initialScan
-                    self.isFavoritedLocal = nil
+
                     cachedInitialScan = initialScan
                     self.isLoading = false
                     onResultUpdated?()
@@ -285,7 +279,7 @@ struct ScanDataCard: View {
                     // Only update if the scan data has actually changed
                     if cachedInitialScan != initialScan {
                         self.scan = initialScan
-                        self.isFavoritedLocal = nil
+    
                         cachedInitialScan = initialScan
                         onResultUpdated?()
                         Log.debug("SCAN_CARD", "🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
@@ -716,10 +710,19 @@ struct ScanDataCard: View {
     @ViewBuilder
     private func heartButton(isFavorited: Bool) -> some View {
         Button(action: {
-            let newValue = !isFavorited
-            // Optimistically update local favorite state for snappy UI
-            isFavoritedLocal = newValue
-            onFavoriteToggle?(scanId, newValue)
+            let previous = isFavorited
+            isFavoritedLocal = !previous
+            Task {
+                do {
+                    let confirmed = try await webService.toggleFavorite(scanId: scanId)
+                    await MainActor.run {
+                        isFavoritedLocal = confirmed
+                        onFavoriteChanged?(scanId, confirmed)
+                    }
+                } catch {
+                    await MainActor.run { isFavoritedLocal = previous }
+                }
+            }
         }) {
             Circle()
                 .fill(.ultraThinMaterial)
@@ -958,7 +961,7 @@ struct ScanDataCard: View {
                     
                     await MainActor.run {
                         self.scan = fetchedScan
-                        self.isFavoritedLocal = nil
+    
                         onResultUpdated?()
                         onScanUpdated?(fetchedScan)  // Update parent cache with latest data
 
