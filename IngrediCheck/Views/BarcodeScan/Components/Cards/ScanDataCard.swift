@@ -30,6 +30,7 @@ struct ScanDataCard: View {
     @State private var errorState: String?
     @State private var pollingTask: Task<Void, Never>?
     @State private var isFavoritedLocal: Bool? = nil
+    @State private var isTogglingFavorite = false
     
     private var product: DTO.Product? {
         scan?.toProduct()
@@ -229,7 +230,7 @@ struct ScanDataCard: View {
                 Log.debug("SCAN_CARD", "📦 Using initialScan (SSE/cache) - scan_id: \(scanId), scan_type: \(initialScan.scan_type)")
                 await MainActor.run {
                     self.scan = initialScan
-
+                    self.isFavoritedLocal = nil
                     cachedInitialScan = initialScan
                     self.isLoading = false
                     onResultUpdated?()
@@ -279,7 +280,7 @@ struct ScanDataCard: View {
                     // Only update if the scan data has actually changed
                     if cachedInitialScan != initialScan {
                         self.scan = initialScan
-    
+                        self.isFavoritedLocal = nil
                         cachedInitialScan = initialScan
                         onResultUpdated?()
                         Log.debug("SCAN_CARD", "🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
@@ -710,6 +711,8 @@ struct ScanDataCard: View {
     @ViewBuilder
     private func heartButton(isFavorited: Bool) -> some View {
         Button(action: {
+            guard !isTogglingFavorite else { return }
+            isTogglingFavorite = true
             let previous = isFavorited
             isFavoritedLocal = !previous
             Task {
@@ -717,10 +720,14 @@ struct ScanDataCard: View {
                     let confirmed = try await webService.toggleFavorite(scanId: scanId)
                     await MainActor.run {
                         isFavoritedLocal = confirmed
+                        isTogglingFavorite = false
                         onFavoriteChanged?(scanId, confirmed)
                     }
                 } catch {
-                    await MainActor.run { isFavoritedLocal = previous }
+                    await MainActor.run {
+                        isFavoritedLocal = nil
+                        isTogglingFavorite = false
+                    }
                 }
             }
         }) {
@@ -961,7 +968,7 @@ struct ScanDataCard: View {
                     
                     await MainActor.run {
                         self.scan = fetchedScan
-    
+                        self.isFavoritedLocal = nil
                         onResultUpdated?()
                         onScanUpdated?(fetchedScan)  // Update parent cache with latest data
 
