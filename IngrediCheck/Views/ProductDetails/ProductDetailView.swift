@@ -711,11 +711,24 @@ struct ProductDetailView: View {
                 }
                 
                 let updatedScan = try await webService.reanalyzeScan(scanId: scanId)
-                
+
                 await MainActor.run {
+                    // Update local scan displayed in ProductDetailView
                     self.scan = updatedScan
                     self.isReanalyzingLocally = false // Reset local state as scan state takes over
-                    
+
+                    // Sync updated scan to central history store so Recent list and
+                    // other views see the new analysis/result when navigating back.
+                    scanHistoryStore.upsertScan(updatedScan)
+
+                    // Also update AppState.listsTabState.scans for backwards compatibility,
+                    // mirroring how RecentScanCard callbacks update this state.
+                    if var scans = appState?.listsTabState.scans,
+                       let idx = scans.firstIndex(where: { $0.id == updatedScan.id }) {
+                        scans[idx] = updatedScan
+                        appState?.listsTabState.scans = scans
+                    }
+
                     // If state became one that requires polling, restart polling
                     if updatedScan.state != "done" {
                         startPolling(scanId: scanId)
