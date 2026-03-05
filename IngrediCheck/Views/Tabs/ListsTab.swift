@@ -172,7 +172,7 @@ import os
                     try? await Task.sleep(nanoseconds: 100_000_000)
                 }
             } else {
-                await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+                await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
             }
             await MainActor.run {
                 appState.listsTabState.scans = scanHistoryStore.scans

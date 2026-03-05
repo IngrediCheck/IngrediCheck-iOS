@@ -590,13 +590,11 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .onChange(of: scan?.id) { _, newScanId in
-            guard newScanId != nil,
-                  !didAutoTriggerReanalysis,
-                  !isReanalyzingLocally,
-                  resolvedIsStale else { return }
-            didAutoTriggerReanalysis = true
-            performReanalysis()
+        .onChange(of: scan?.id) { _, _ in
+            maybeAutoTriggerReanalysis()
+        }
+        .onChange(of: foodNotesStore.hasLoadedFoodNotes) { _, _ in
+            maybeAutoTriggerReanalysis()
         }
         .onAppear {
             setDisplayedScanContext()
@@ -617,6 +615,16 @@ struct ProductDetailView: View {
     private func setDisplayedScanContext() {
         appState?.displayedScanId = scanId
         appState?.displayedAnalysisId = scan?.analysis_result?.id ?? scan?.analysis_id
+    }
+
+    private func maybeAutoTriggerReanalysis() {
+        guard scan?.id != nil,
+              foodNotesStore.hasLoadedFoodNotes,
+              !didAutoTriggerReanalysis,
+              !isReanalyzingLocally,
+              resolvedIsStale else { return }
+        didAutoTriggerReanalysis = true
+        performReanalysis()
     }
 
 
