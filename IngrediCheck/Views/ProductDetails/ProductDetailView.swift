@@ -30,6 +30,7 @@ struct ProductDetailView: View {
     @State private var isImageViewerPresented = false
     @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
     @State private var reanalysisRotation: Double = 0  // Rotation for sync icon animation
+    @State private var hasLoggedRawScanJSONOnAppear = false
 
     // Real-time scan observation (new approach)
     var scanId: String? = nil  // If provided, view will fetch/poll for scan updates
@@ -91,7 +92,20 @@ struct ProductDetailView: View {
     }
 
     private var resolvedIsStale: Bool {
-        return scan?.analysis_result?.is_stale ?? false
+        guard let analysis = scan?.analysis_result else {
+            return false
+        }
+
+        let backendStale = analysis.is_stale ?? false
+
+        // Same nullable-analysis detection as in RecentScanCard: if this scan
+        // was analyzed when there were no preferences (overall_match is nil and
+        // ingredient_analysis is empty), then once the user adds any food notes
+        // we treat it as effectively stale so they can trigger a re-analysis.
+        let nullableShape = (analysis.overall_match == nil && analysis.ingredient_analysis.isEmpty)
+        let needsReanalysisForPreferences = !hasNoFoodNotes && nullableShape
+
+        return backendStale || needsReanalysisForPreferences
     }
 
     private var hasIngredients: Bool {
@@ -279,6 +293,12 @@ struct ProductDetailView: View {
 
     private var hasNoFoodNotes: Bool {
         foodNotesStore.hasNoFoodNotes
+    }
+
+    private var scanLogTrigger: String {
+        guard let scan = scan else { return "nil" }
+        let analysisId = scan.analysis_result?.id ?? scan.analysis_id ?? ""
+        return "\(scan.id)|\(scan.state)|\(scan.last_activity_at)|\(analysisId)"
     }
     
     private var resolvedIngredientParagraphs: [IngredientParagraph] {
@@ -577,11 +597,23 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .onAppear { setDisplayedScanContext() }
+        .onAppear {
+            hasLoggedRawScanJSONOnAppear = false
+            setDisplayedScanContext()
+
+            if let currentScan = scan ?? initialScan {
+                logRawScanJSONIfNeeded(scan: currentScan, source: "onAppear")
+            }
+        }
+        .onChange(of: scanLogTrigger) { _, _ in
+            guard let currentScan = scan else { return }
+            logRawScanJSONIfNeeded(scan: currentScan, source: "scanUpdate")
+        }
         .onDisappear {
             // Cancel polling when view disappears
             pollingTask?.cancel()
             pollingTask = nil
+            hasLoggedRawScanJSONOnAppear = false
 
             // Clear displayed scan context
             appState?.displayedScanId = nil
@@ -594,6 +626,19 @@ struct ProductDetailView: View {
     private func setDisplayedScanContext() {
         appState?.displayedScanId = scanId
         appState?.displayedAnalysisId = scan?.analysis_result?.id ?? scan?.analysis_id
+    }
+
+    private func logRawScanJSONIfNeeded(scan: DTO.Scan, source: String) {
+        guard !hasLoggedRawScanJSONOnAppear else { return }
+        hasLoggedRawScanJSONOnAppear = true
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let data = try? encoder.encode(scan), let json = String(data: data, encoding: .utf8) {
+            print("[ProductDetailView] 🧾 Raw scan JSON (\(source)):\n\(json)")
+        } else {
+            print("[ProductDetailView] ⚠️ Failed to encode raw scan JSON (\(source)) for scan_id=\(scan.id)")
+        }
     }
 
     // MARK: - Favorite Toggle
