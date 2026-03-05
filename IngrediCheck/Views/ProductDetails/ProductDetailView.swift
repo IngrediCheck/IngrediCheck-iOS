@@ -30,7 +30,7 @@ struct ProductDetailView: View {
     @State private var isImageViewerPresented = false
     @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
     @State private var reanalysisRotation: Double = 0  // Rotation for sync icon animation
-
+    @State private var didAutoTriggerReanalysis = false
     // Real-time scan observation (new approach)
     var scanId: String? = nil  // If provided, view will fetch/poll for scan updates
     var initialScan: DTO.Scan? = nil  // Initial scan data (if from cache/SSE)
@@ -91,7 +91,20 @@ struct ProductDetailView: View {
     }
 
     private var resolvedIsStale: Bool {
-        return scan?.analysis_result?.is_stale ?? false
+        guard let analysis = scan?.analysis_result else {
+            return false
+        }
+
+        let backendStale = analysis.is_stale ?? false
+
+        // Same nullable-analysis detection as in RecentScanCard: if this scan
+        // was analyzed when there were no preferences (overall_match is nil and
+        // ingredient_analysis is empty), then once the user adds any food notes
+        // we treat it as effectively stale so they can trigger a re-analysis.
+        let nullableShape = (analysis.overall_match == nil && analysis.ingredient_analysis.isEmpty)
+        let needsReanalysisForPreferences = !hasNoFoodNotes && nullableShape
+
+        return backendStale || needsReanalysisForPreferences
     }
 
     private var hasIngredients: Bool {
@@ -280,7 +293,7 @@ struct ProductDetailView: View {
     private var hasNoFoodNotes: Bool {
         foodNotesStore.hasNoFoodNotes
     }
-    
+
     private var resolvedIngredientParagraphs: [IngredientParagraph] {
         guard let product = resolvedProduct else {
             print("[ProductDetailView] ⚠️ No product data available for ingredients")
@@ -577,7 +590,15 @@ struct ProductDetailView: View {
                 }
             }
         }
-        .onAppear { setDisplayedScanContext() }
+        .onChange(of: scan?.id) { _, _ in
+            maybeAutoTriggerReanalysis()
+        }
+        .onChange(of: foodNotesStore.hasLoadedFoodNotes) { _, _ in
+            maybeAutoTriggerReanalysis()
+        }
+        .onAppear {
+            setDisplayedScanContext()
+        }
         .onDisappear {
             // Cancel polling when view disappears
             pollingTask?.cancel()
@@ -595,6 +616,17 @@ struct ProductDetailView: View {
         appState?.displayedScanId = scanId
         appState?.displayedAnalysisId = scan?.analysis_result?.id ?? scan?.analysis_id
     }
+
+    private func maybeAutoTriggerReanalysis() {
+        guard scan?.id != nil,
+              foodNotesStore.hasLoadedFoodNotes,
+              !didAutoTriggerReanalysis,
+              !isReanalyzingLocally,
+              resolvedIsStale else { return }
+        didAutoTriggerReanalysis = true
+        performReanalysis()
+    }
+
 
     // MARK: - Favorite Toggle
 
@@ -666,11 +698,24 @@ struct ProductDetailView: View {
                 }
                 
                 let updatedScan = try await webService.reanalyzeScan(scanId: scanId)
-                
+
                 await MainActor.run {
+                    // Update local scan displayed in ProductDetailView
                     self.scan = updatedScan
                     self.isReanalyzingLocally = false // Reset local state as scan state takes over
-                    
+
+                    // Sync updated scan to central history store so Recent list and
+                    // other views see the new analysis/result when navigating back.
+                    scanHistoryStore.upsertScan(updatedScan)
+
+                    // Also update AppState.listsTabState.scans for backwards compatibility,
+                    // mirroring how RecentScanCard callbacks update this state.
+                    if var scans = appState?.listsTabState.scans,
+                       let idx = scans.firstIndex(where: { $0.id == updatedScan.id }) {
+                        scans[idx] = updatedScan
+                        appState?.listsTabState.scans = scans
+                    }
+
                     // If state became one that requires polling, restart polling
                     if updatedScan.state != "done" {
                         startPolling(scanId: scanId)

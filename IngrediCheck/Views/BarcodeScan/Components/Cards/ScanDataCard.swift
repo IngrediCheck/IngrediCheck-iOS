@@ -15,7 +15,7 @@ struct ScanDataCard: View {
     var onRetryHidden: (() -> Void)? = nil
     var onResultUpdated: (() -> Void)? = nil
     var onScanUpdated: ((DTO.Scan) -> Void)? = nil  // NEW: Called when scan data updates (for cache sync)
-    var onFavoriteToggle: ((String, Bool) -> Void)? = nil // NEW: Callback for favorite toggle
+    var onFavoriteChanged: ((String, Bool) -> Void)? = nil // Called with confirmed state after successful API toggle
     var onTap: ((DTO.Product, DTO.ProductRecommendation?, [DTO.IngredientRecommendation]?, String?, String) -> Void)? = nil  // Added scanId parameter
 
     @Environment(WebService.self) private var webService
@@ -29,6 +29,8 @@ struct ScanDataCard: View {
     @State private var isPolling = false
     @State private var errorState: String?
     @State private var pollingTask: Task<Void, Never>?
+    @State private var isFavoritedLocal: Bool? = nil
+    @State private var isTogglingFavorite = false
     
     private var product: DTO.Product? {
         scan?.toProduct()
@@ -58,6 +60,10 @@ struct ScanDataCard: View {
 
     private var hasNoFoodNotes: Bool {
         foodNotesStore.hasNoFoodNotes
+    }
+
+    private var resolvedIsFavorited: Bool {
+        isFavoritedLocal ?? scan?.is_favorited ?? false
     }
     
     private var isAnalyzing: Bool {
@@ -122,8 +128,8 @@ struct ScanDataCard: View {
             }
         }
 
-        // Filter local images - only show those NOT yet processed by API
-        // This prevents duplicate display of the same image
+        // Filter local images - only show those NOT yet processed by API.
+        // This prevents duplicate display of the same image.
         var pendingLocalImages: [UIImage] = []
         if let locals = localImages {
             for (image, hash) in locals {
@@ -134,6 +140,22 @@ struct ScanDataCard: View {
                     pendingLocalImages.append(image)
                 }
             }
+        }
+
+        // If we have any processed user images from the API, treat those as the
+        // single source of truth and clear pending local images. This avoids the
+        // "double image" effect where the same photo appears once as a local
+        // image with a loader overlay and once as a processed API user image.
+        if !userImages.isEmpty {
+            pendingLocalImages = []
+        }
+
+        // As an extra safety net, once the scan reaches a terminal "done" state,
+        // never show pending local overlays anymore. Even if the backend didn't
+        // return a matching user image hash, we don't want to keep showing a
+        // loading spinner over the photo after analysis is complete.
+        if let scan = scan, scan.state == "done" {
+            pendingLocalImages = []
         }
 
         return (inventoryImages: inventoryImages, userImages: userImages, pendingLocalImages: pendingLocalImages)
@@ -208,6 +230,7 @@ struct ScanDataCard: View {
                 Log.debug("SCAN_CARD", "📦 Using initialScan (SSE/cache) - scan_id: \(scanId), scan_type: \(initialScan.scan_type)")
                 await MainActor.run {
                     self.scan = initialScan
+                    self.isFavoritedLocal = nil
                     cachedInitialScan = initialScan
                     self.isLoading = false
                     onResultUpdated?()
@@ -257,6 +280,7 @@ struct ScanDataCard: View {
                     // Only update if the scan data has actually changed
                     if cachedInitialScan != initialScan {
                         self.scan = initialScan
+                        self.isFavoritedLocal = nil
                         cachedInitialScan = initialScan
                         onResultUpdated?()
                         Log.debug("SCAN_CARD", "🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
@@ -648,7 +672,7 @@ struct ScanDataCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Heart button (top right)
-                heartButton(isFavorited: scan?.is_favorited ?? false)
+                heartButton(isFavorited: resolvedIsFavorited)
             }
 
             Spacer(minLength: 4)
@@ -687,7 +711,25 @@ struct ScanDataCard: View {
     @ViewBuilder
     private func heartButton(isFavorited: Bool) -> some View {
         Button(action: {
-            onFavoriteToggle?(scanId, !isFavorited)
+            guard !isTogglingFavorite else { return }
+            isTogglingFavorite = true
+            let previous = isFavorited
+            isFavoritedLocal = !previous
+            Task {
+                do {
+                    let confirmed = try await webService.toggleFavorite(scanId: scanId)
+                    await MainActor.run {
+                        isFavoritedLocal = confirmed
+                        isTogglingFavorite = false
+                        onFavoriteChanged?(scanId, confirmed)
+                    }
+                } catch {
+                    await MainActor.run {
+                        isFavoritedLocal = nil
+                        isTogglingFavorite = false
+                    }
+                }
+            }
         }) {
             Circle()
                 .fill(.ultraThinMaterial)
@@ -860,6 +902,7 @@ struct ScanDataCard: View {
             
             await MainActor.run {
                 self.scan = fetchedScan
+                self.isFavoritedLocal = nil
                 self.isLoading = false
                 onResultUpdated?()
                 onScanUpdated?(fetchedScan)  // Update parent cache with fetched data
@@ -925,6 +968,7 @@ struct ScanDataCard: View {
                     
                     await MainActor.run {
                         self.scan = fetchedScan
+                        self.isFavoritedLocal = nil
                         onResultUpdated?()
                         onScanUpdated?(fetchedScan)  // Update parent cache with latest data
 

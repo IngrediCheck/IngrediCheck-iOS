@@ -653,7 +653,7 @@ class DTO {
         let error: String?  // Error message when state is "error"
 
         // Additional fields that may be present in API response but not always used
-        let is_favorited: Bool?
+        var is_favorited: Bool?
         let analysis_id: String?
 
         enum CodingKeys: String, CodingKey {

@@ -104,7 +104,17 @@ struct RecentScanCard: View {
     }
 
     private var isStale: Bool {
-        currentScan.analysis_result?.is_stale ?? false
+        let analysis = currentScan.analysis_result
+        let backendStale = analysis?.is_stale ?? false
+
+        // Detect old "nullable analysis" scans: analysis_result present, but no
+        // overall_match and no ingredient_analysis entries. These were created
+        // when the account had no food notes. Once the user adds notes, we want
+        // to treat these as effectively stale so the user can re-analyze them.
+        let nullableShape = (analysis?.overall_match == nil && (analysis?.ingredient_analysis.isEmpty ?? true))
+        let needsReanalysisForPreferences = !hasNoFoodNotes && nullableShape
+
+        return backendStale || needsReanalysisForPreferences
     }
 
     private var productName: String {
@@ -155,8 +165,10 @@ struct RecentScanCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     HStack(spacing: 8) {
-                        // Stale indicator / Reanalysis button (only show when stale or reanalyzing)
-                        if isStale || isReanalyzing {
+                        // Stale indicator / Reanalysis button (only show when stale/reanalyzing
+                        // and the match status is not "Unknown". Design does not show a retry
+                        // affordance for Unknown state items in the recent scans list.
+                        if (isStale || isReanalyzing) && matchStatus != .unknown {
                             Button {
                                 if !isReanalyzing {
                                     performReanalysis()
@@ -443,7 +455,7 @@ extension DTO.ProductRecommendation {
         case .notMatch:
             return Color(hex: "#FF1100")
         case .needsReview:
-            return Color(hex: "#FF594E")
+            return Color(hex: "#FCDE00")
         case .unknown:
             return Color(hex: "#757575")
         case .noPreferences:

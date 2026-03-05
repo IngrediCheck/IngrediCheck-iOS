@@ -166,17 +166,16 @@ import os
             }
         }
         .task {
-            if appState.listsTabState.scans == nil || appState.listsTabState.scans?.isEmpty == true {
-                if scanHistoryStore.isLoading {
-                    while scanHistoryStore.isLoading {
-                        try? await Task.sleep(nanoseconds: 100_000_000)
-                    }
-                } else if scanHistoryStore.scans.isEmpty {
-                    await scanHistoryStore.loadHistory(limit: 20, offset: 0)
+            // Always force-refresh scan history on appearance
+            if scanHistoryStore.isLoading {
+                while scanHistoryStore.isLoading {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
                 }
-                await MainActor.run {
-                    appState.listsTabState.scans = scanHistoryStore.scans
-                }
+            } else {
+                await scanHistoryStore.loadHistory(limit: 20, offset: 0, forceRefresh: true)
+            }
+            await MainActor.run {
+                appState.listsTabState.scans = scanHistoryStore.scans
             }
         }
     }

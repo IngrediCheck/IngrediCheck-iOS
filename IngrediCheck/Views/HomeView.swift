@@ -515,15 +515,6 @@ struct HomeView: View {
                         }
                     }
                 }
-            // Refresh scan history when food preferences are modified
-                .onChange(of: appState.needsScanHistoryRefresh) { _, needsRefresh in
-                    if needsRefresh {
-                        appState.needsScanHistoryRefresh = false
-                        Task {
-                            await refreshRecentScans()
-                        }
-                    }
-                }
             
             // ------------ SETTINGS SCREEN ------------
             // Use SettingsContentView (without NavigationStack) in navigationDestination
@@ -619,6 +610,10 @@ struct HomeView: View {
                         if appState.listsTabState.scans != nil || stats != nil {
                             didFinishInitialLoad = true
                         }
+                    }
+                    // Refresh recent scans on every appearance (e.g. returning from food notes edit)
+                    Task {
+                        await refreshRecentScans()
                     }
                 }
                 .onAppear {
