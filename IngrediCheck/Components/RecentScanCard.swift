@@ -165,8 +165,10 @@ struct RecentScanCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     HStack(spacing: 8) {
-                        // Stale indicator / Reanalysis button (only show when stale or reanalyzing)
-                        if isStale || isReanalyzing {
+                        // Stale indicator / Reanalysis button (only show when stale/reanalyzing
+                        // and the match status is not "Unknown". Design does not show a retry
+                        // affordance for Unknown state items in the recent scans list.
+                        if (isStale || isReanalyzing) && matchStatus != .unknown {
                             Button {
                                 if !isReanalyzing {
                                     performReanalysis()
