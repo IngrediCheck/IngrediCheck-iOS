@@ -29,6 +29,7 @@ struct ScanDataCard: View {
     @State private var isPolling = false
     @State private var errorState: String?
     @State private var pollingTask: Task<Void, Never>?
+    @State private var isFavoritedLocal: Bool? = nil
     
     private var product: DTO.Product? {
         scan?.toProduct()
@@ -58,6 +59,16 @@ struct ScanDataCard: View {
 
     private var hasNoFoodNotes: Bool {
         foodNotesStore.hasNoFoodNotes
+    }
+
+    /// Resolved favorite state for optimistic UI:
+    /// - Prefer locally toggled value if present
+    /// - Fall back to scan.is_favorited from backend
+    private var resolvedIsFavorited: Bool {
+        if let local = isFavoritedLocal {
+            return local
+        }
+        return scan?.is_favorited ?? false
     }
     
     private var isAnalyzing: Bool {
@@ -664,7 +675,7 @@ struct ScanDataCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Heart button (top right)
-                heartButton(isFavorited: scan?.is_favorited ?? false)
+                heartButton(isFavorited: resolvedIsFavorited)
             }
 
             Spacer(minLength: 4)
@@ -703,7 +714,10 @@ struct ScanDataCard: View {
     @ViewBuilder
     private func heartButton(isFavorited: Bool) -> some View {
         Button(action: {
-            onFavoriteToggle?(scanId, !isFavorited)
+            let newValue = !isFavorited
+            // Optimistically update local favorite state for snappy UI
+            isFavoritedLocal = newValue
+            onFavoriteToggle?(scanId, newValue)
         }) {
             Circle()
                 .fill(.ultraThinMaterial)
