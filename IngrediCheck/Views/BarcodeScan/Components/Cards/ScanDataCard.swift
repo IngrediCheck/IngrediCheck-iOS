@@ -235,6 +235,7 @@ struct ScanDataCard: View {
                 Log.debug("SCAN_CARD", "📦 Using initialScan (SSE/cache) - scan_id: \(scanId), scan_type: \(initialScan.scan_type)")
                 await MainActor.run {
                     self.scan = initialScan
+                    self.isFavoritedLocal = nil
                     cachedInitialScan = initialScan
                     self.isLoading = false
                     onResultUpdated?()
@@ -284,6 +285,7 @@ struct ScanDataCard: View {
                     // Only update if the scan data has actually changed
                     if cachedInitialScan != initialScan {
                         self.scan = initialScan
+                        self.isFavoritedLocal = nil
                         cachedInitialScan = initialScan
                         onResultUpdated?()
                         Log.debug("SCAN_CARD", "🔄 Updated scan from initialScan change - scan_id: \(scanId), state: \(initialScan.state)")
@@ -890,6 +892,7 @@ struct ScanDataCard: View {
             
             await MainActor.run {
                 self.scan = fetchedScan
+                self.isFavoritedLocal = nil
                 self.isLoading = false
                 onResultUpdated?()
                 onScanUpdated?(fetchedScan)  // Update parent cache with fetched data
@@ -955,6 +958,7 @@ struct ScanDataCard: View {
                     
                     await MainActor.run {
                         self.scan = fetchedScan
+                        self.isFavoritedLocal = nil
                         onResultUpdated?()
                         onScanUpdated?(fetchedScan)  // Update parent cache with latest data
 

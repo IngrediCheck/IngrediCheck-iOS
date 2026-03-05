@@ -30,8 +30,6 @@ struct ProductDetailView: View {
     @State private var isImageViewerPresented = false
     @State private var isReanalyzingLocally = false  // Temporary state to show analyzing UI immediately
     @State private var reanalysisRotation: Double = 0  // Rotation for sync icon animation
-    @State private var hasLoggedRawScanJSONOnAppear = false
-
     // Real-time scan observation (new approach)
     var scanId: String? = nil  // If provided, view will fetch/poll for scan updates
     var initialScan: DTO.Scan? = nil  // Initial scan data (if from cache/SSE)
@@ -295,12 +293,6 @@ struct ProductDetailView: View {
         foodNotesStore.hasNoFoodNotes
     }
 
-    private var scanLogTrigger: String {
-        guard let scan = scan else { return "nil" }
-        let analysisId = scan.analysis_result?.id ?? scan.analysis_id ?? ""
-        return "\(scan.id)|\(scan.state)|\(scan.last_activity_at)|\(analysisId)"
-    }
-    
     private var resolvedIngredientParagraphs: [IngredientParagraph] {
         guard let product = resolvedProduct else {
             print("[ProductDetailView] ⚠️ No product data available for ingredients")
@@ -598,22 +590,12 @@ struct ProductDetailView: View {
             }
         }
         .onAppear {
-            hasLoggedRawScanJSONOnAppear = false
             setDisplayedScanContext()
-
-            if let currentScan = scan ?? initialScan {
-                logRawScanJSONIfNeeded(scan: currentScan, source: "onAppear")
-            }
-        }
-        .onChange(of: scanLogTrigger) { _, _ in
-            guard let currentScan = scan else { return }
-            logRawScanJSONIfNeeded(scan: currentScan, source: "scanUpdate")
         }
         .onDisappear {
             // Cancel polling when view disappears
             pollingTask?.cancel()
             pollingTask = nil
-            hasLoggedRawScanJSONOnAppear = false
 
             // Clear displayed scan context
             appState?.displayedScanId = nil
@@ -628,18 +610,6 @@ struct ProductDetailView: View {
         appState?.displayedAnalysisId = scan?.analysis_result?.id ?? scan?.analysis_id
     }
 
-    private func logRawScanJSONIfNeeded(scan: DTO.Scan, source: String) {
-        guard !hasLoggedRawScanJSONOnAppear else { return }
-        hasLoggedRawScanJSONOnAppear = true
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let data = try? encoder.encode(scan), let json = String(data: data, encoding: .utf8) {
-            print("[ProductDetailView] 🧾 Raw scan JSON (\(source)):\n\(json)")
-        } else {
-            print("[ProductDetailView] ⚠️ Failed to encode raw scan JSON (\(source)) for scan_id=\(scan.id)")
-        }
-    }
 
     // MARK: - Favorite Toggle
 
