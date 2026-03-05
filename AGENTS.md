@@ -10,6 +10,36 @@
 - `xcodebuild build -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` — CI-friendly build to catch compile issues.
 - `xcodebuild test -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'platform=iOS Simulator,name=iPhone 15'` — execute unit/UI tests once targets exist.
 
+## MCP Server Preferences (Xcode Development)
+
+We run two MCP servers for iOS development: **XcodeBuildMCP** (Sentry) and **Apple Xcode MCP**.
+
+**Prerequisite for Apple Xcode MCP:** Requires Xcode 26.3+ and macOS Tahoe+. Xcode must be running with the current project open. Run `xed IngrediCheck.xcodeproj` to open it before using any `mcp__xcode__*` tools. If you had to open Xcode yourself (it wasn't already running), the `xcode` MCP server will likely show as disconnected — ask the user to run `/mcp` and reconnect the `xcode` server before proceeding.
+
+### Overlapping capabilities — prefer XcodeBuildMCP:
+| Capability | XcodeBuildMCP | Apple Xcode MCP | Prefer |
+|------------|---------------|-----------------|--------|
+| Build project | `build_sim`, `build_run_sim` | `BuildProject` | XcodeBuildMCP — session defaults reduce tokens, no Xcode IDE required |
+| Run tests | `test_sim` | `RunAllTests`, `RunSomeTests` | XcodeBuildMCP — integrates with simulator management and log capture |
+| Get build errors | `build_sim` (returns errors) | `XcodeListNavigatorIssues` | XcodeBuildMCP for build errors; Apple MCP for live Xcode diagnostics |
+| List tests | `test_sim --list` | `GetTestList` | Either — equivalent |
+
+### Apple Xcode MCP only (use when needed):
+- `RenderPreview` — SwiftUI preview screenshots (visual UI verification)
+- `DocumentationSearch` — semantic search across Apple docs + WWDC transcripts
+- `ExecuteSnippet` — Swift REPL for quick experiments without full builds
+- `XcodeListNavigatorIssues` — live Xcode Issue Navigator diagnostics
+
+### XcodeBuildMCP only (use these — no Apple equivalent):
+- Simulator management (`list_sims`, `boot_sim`, `open_sim`)
+- App lifecycle (`install_app_sim`, `launch_app_sim`, `stop_app_sim`)
+- Log capture (`start_sim_log_cap`, `stop_sim_log_cap`)
+- Screenshots and video (`screenshot`, `snapshot_ui`, `record_sim_video`)
+- UI automation (taps, swipes, gestures, text input)
+- LLDB debugging (attach, breakpoints, stack inspection)
+- Device deployment (build, install, launch on physical devices)
+- Project scaffolding and discovery
+
 ## Coding Style & Naming Conventions
 - Follow Swift 5.9 defaults: four-space indentation, 120-char line guidance, and use trailing commas for multiline literals.
 - Types use `UpperCamelCase`, methods/properties use `lowerCamelCase`, and SwiftUI view files match the primary view name (e.g., `DisclaimerView.swift`).
