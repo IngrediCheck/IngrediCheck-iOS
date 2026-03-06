@@ -180,19 +180,6 @@ actor FileCache: FileStore {
         return self.cacheDirectory?.appendingPathComponent("dictionary.json")
     }
 
-    private func copyFileToCache(_ sourceFileUrl: URL, _ fileHash: String) -> URL? {
-        let destinationUrl = self.cacheDirectory?.appendingPathComponent(fileHash)
-
-        do {
-            if let destinationUrl = destinationUrl {
-                try FileManager.default.copyItem(at: sourceFileUrl, to: destinationUrl)
-                return destinationUrl
-            }
-        } catch {
-            Log.error("FileCache", "Copy file error: \(error)")
-        }
-        return nil
-    }
 
     private func pruneCache() {
         var currentDiskUsage = inMemoryStore.values.reduce(0) { $0 + $1.fileSizeOnDisk }

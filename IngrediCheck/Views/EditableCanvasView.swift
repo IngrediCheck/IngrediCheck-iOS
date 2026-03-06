@@ -11,7 +11,6 @@ import Observation
 struct EditableCanvasView: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(\.dismiss) private var dismiss
-    @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var navCoordinator
     @Environment(AppState.self) private var appState
@@ -325,27 +324,6 @@ struct EditableCanvasView: View {
         }
         
         return cards
-    }
-    
-    private func openEditSheetForCurrentSection() {
-        if let stepId = store.currentSection.screens.first?.stepId {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                navCoordinator.currentEditingSectionIndex = store.currentSectionIndex
-                navCoordinator.editingStepId = stepId
-                navCoordinator.isEditSheetPresented = true
-            }
-        }
-    }
-    
-    private func openEditSheetForSection(at index: Int) {
-        guard store.sections.indices.contains(index),
-              let stepId = store.sections[index].screens.first?.stepId else { return }
-        
-        withAnimation(.easeInOut(duration: 0.2)) {
-            navCoordinator.currentEditingSectionIndex = index
-            navCoordinator.editingStepId = stepId
-            navCoordinator.isEditSheetPresented = true
-        }
     }
     
     // MARK: - Food Notes API Integration

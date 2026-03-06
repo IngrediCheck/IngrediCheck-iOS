@@ -8,7 +8,6 @@ import SwiftUI
 
 struct YourCurrentAvatar: View {
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
     
     let createNewPressed: () -> Void

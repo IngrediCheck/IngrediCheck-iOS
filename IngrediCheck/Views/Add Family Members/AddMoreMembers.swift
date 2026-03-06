@@ -9,7 +9,6 @@ import SwiftUI
 
 struct AddMoreMembers: View {
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(WebService.self) private var webService
     @Environment(MemojiStore.self) private var memojiStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State var name: String = ""

@@ -10,14 +10,11 @@ import SwiftUI
 
 struct IngrediBotChatView: View {
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(AppState.self) private var appState
     @Environment(WebService.self) private var webService
     @Environment(ChatStore.self) private var chatStore
 
     // Optional parameters for context-aware chat
     var scanId: String? = nil
-    var analysisId: String? = nil
-    var ingredientName: String? = nil
     var feedbackId: String? = nil  // For feedback follow-up context
     var contextKeyOverride: String? = nil  // Explicit context key (e.g., "food_notes" from editing screen)
 
@@ -418,8 +415,6 @@ struct IngrediBotChatView: View {
 
         Task {
             do {
-                let contextJson = try ChatContextBuilder.encodeContext(context)
-
                 try await webService.streamChatMessage(
                     message: userMessage,
                     context: context,
@@ -495,69 +490,6 @@ struct IngrediBotChatView: View {
         }
     }
     
-    // MARK: - Load Conversation History
-    
-    private func loadConversationHistoryIfNeeded() {
-        guard let convId = conversationId, !isLoadingHistory else { return }
-
-        isLoadingHistory = true
-
-        Task {
-            do {
-                let conversation = try await webService.getConversation(conversationId: convId)
-
-                await MainActor.run {
-                    // Convert ConversationTurn to ChatMessage
-                    var loadedMessages: [ChatMessage] = []
-
-                    // Create ISO8601 formatter with fractional seconds support
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-                    for turn in conversation.turns {
-                        let timestamp = formatter.date(from: turn.created_at) ?? Date()
-
-                        // Add user message
-                        if !turn.user_message.isEmpty {
-                            loadedMessages.append(ChatMessage(
-                                id: "\(turn.turn_id)_user",
-                                isUser: true,
-                                text: turn.user_message,
-                                timestamp: timestamp
-                            ))
-                        }
-
-                        // Add assistant response if available
-                        if let response = turn.assistant_response, !response.isEmpty {
-                            loadedMessages.append(ChatMessage(
-                                id: turn.turn_id,
-                                isUser: false,
-                                text: response,
-                                timestamp: timestamp
-                            ))
-                        }
-                    }
-
-                    self.messages = loadedMessages
-                    // Make all loaded messages visible immediately
-                    self.visibleMessageIds = Set(loadedMessages.map { $0.id })
-                    self.isLoadingHistory = false
-                    self.syncToStore()
-                }
-            } catch {
-                await MainActor.run {
-                    self.isLoadingHistory = false
-                    // Don't show error for 404 - just means no conversation yet
-                    if let networkError = error as? NetworkError,
-                       case .notFound = networkError {
-                        // 404 is expected for new conversations - don't show error
-                    } else {
-                        self.errorMessage = error.localizedDescription
-                    }
-                }
-            }
-        }
-    }
 }
 
 private struct ConversationBubble: View {

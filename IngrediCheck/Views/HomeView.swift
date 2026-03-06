@@ -671,8 +671,6 @@ struct HomeView: View {
         }) {
             IngrediBotChatView(
                 scanId: coordinator.aibotContextScanId,
-                analysisId: coordinator.aibotContextAnalysisId,
-                ingredientName: coordinator.aibotContextIngredientName,
                 feedbackId: coordinator.aibotContextFeedbackId
             )
             .presentationDetents([.medium, .large])

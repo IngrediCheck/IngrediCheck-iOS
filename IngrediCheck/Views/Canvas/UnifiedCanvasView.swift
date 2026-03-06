@@ -23,7 +23,6 @@ struct UnifiedCanvasView: View {
     @EnvironmentObject private var store: Onboarding
     @Environment(\.dismiss) private var dismiss
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(WebService.self) private var webService
     @Environment(AppState.self) private var appState
     @Environment(FamilyStore.self) private var familyStore
     @Environment(FoodNotesStore.self) private var foodNotesStore
@@ -492,15 +491,6 @@ struct UnifiedCanvasView: View {
         isLoadingMemberPreferences = true
         foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
         isLoadingMemberPreferences = false
-    }
-
-    private func handleBackButton() {
-        if coordinator.isEditSheetPresented {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                coordinator.isEditSheetPresented = false
-            }
-        }
-        dismiss()
     }
 
     // MARK: - Scroll Helpers (Onboarding)
