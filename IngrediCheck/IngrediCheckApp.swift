@@ -5,7 +5,6 @@ import PostHog
 struct IngrediCheckApp: App {
     
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var webService = WebService()
 
     var body: some Scene {
         WindowGroup {

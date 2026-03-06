@@ -176,8 +176,6 @@ struct RootContainerView: View {
         }) {
             IngrediBotChatView(
                 scanId: coordinator.aibotContextScanId,
-                analysisId: coordinator.aibotContextAnalysisId,
-                ingredientName: coordinator.aibotContextIngredientName,
                 feedbackId: coordinator.aibotContextFeedbackId,
                 contextKeyOverride: coordinator.aibotContextKeyOverride
             )

@@ -11,7 +11,6 @@ struct MainCanvasView: View {
     
     @EnvironmentObject private var store: Onboarding
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(WebService.self) private var webService
     @Environment(FamilyStore.self) private var familyStore
     @Environment(FoodNotesStore.self) private var foodNotesStore
 

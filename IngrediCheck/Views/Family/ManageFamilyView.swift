@@ -114,10 +114,8 @@ struct ManageFamilyView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AppNavigationCoordinator.self) private var coordinator
-    @Environment(WebService.self) private var webService
     @State private var familyName: String = ""
     @FocusState private var isEditingFamilyName: Bool
-    @State private var nameFieldWidth: CGFloat = 0
     @State private var shareItems: ShareItem?
     @State private var isGeneratingInviteCode: Bool = false
     
@@ -126,13 +124,6 @@ struct ManageFamilyView: View {
     struct ShareItem: Identifiable {
         let id = UUID()
         let items: [Any]
-    }
-
-    private struct NameWidthPreferenceKey: PreferenceKey {
-        static var defaultValue: CGFloat = 0
-        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-            value = nextValue()
-        }
     }
 
     private var members: [FamilyMember] {
@@ -306,43 +297,6 @@ struct ManageFamilyView: View {
                 // For now, we can't update it until the family is created
                 print("[ManageFamilyView] Cannot update family name for pending family")
             }
-        }
-    }
-
-    @ViewBuilder
-    private func familyNameEditField() -> some View {
-        HStack(spacing: 12) {
-            TextField("", text: $familyName)
-                .font(NunitoFont.semiBold.size(22))
-                .foregroundStyle(Color(hex: "#303030"))
-                .textInputAutocapitalization(.words)
-                .disableAutocorrection(true)
-                .focused($isEditingFamilyName)
-                .submitLabel(.done)
-                .onSubmit { commitFamilyName() }
-            Image("pen-line")
-                .resizable()
-                .frame(width: 12, height: 12)
-                .foregroundStyle(.grayScale100)
-                .onTapGesture { isEditingFamilyName = true }
-        }
-        .padding(.horizontal, 20)
-        .frame(minWidth: 144)
-        .frame(maxWidth: 335)
-        .frame(height: 38)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(isEditingFamilyName ? Color(hex: "#EEF5E3") : .white))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color(hex: "#E3E3E3"), lineWidth: 0.5)
-        )
-        .contentShape(Rectangle())
-        .fixedSize(horizontal: true, vertical: false)
-        .padding(.top, 10)
-        .onTapGesture { isEditingFamilyName = true }
-        .onChange(of: isEditingFamilyName) { _, editing in
-            if !editing { commitFamilyName() }
         }
     }
 

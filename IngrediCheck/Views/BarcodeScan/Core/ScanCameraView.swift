@@ -1360,38 +1360,6 @@ struct ScanCameraView: View {
     }
 }
 
-// MARK: - ScanCameraView with Initial State
-
-/// Wrapper for ScanCameraView that accepts initial mode and scanId
-struct ScanCameraViewWithInitialState: View {
-    let initialScanId: String?
-    let initialMode: CameraMode
-    let presentationSource: CameraPresentationSource
-
-    var body: some View {
-        ScanCameraViewInternal(
-            initialScanId: initialScanId,
-            initialMode: initialMode,
-            presentationSource: presentationSource
-        )
-    }
-}
-
-/// Internal view that accepts initial state parameters
-private struct ScanCameraViewInternal: View {
-    let initialScanId: String?
-    let initialMode: CameraMode
-    let presentationSource: CameraPresentationSource
-
-    var body: some View {
-        ScanCameraView(
-            initialMode: initialMode,
-            initialScrollTarget: initialScanId,
-            presentationSource: presentationSource
-        )
-    }
-}
-
 extension ScanCameraView {
 
     // MARK: - Initializer with initial state

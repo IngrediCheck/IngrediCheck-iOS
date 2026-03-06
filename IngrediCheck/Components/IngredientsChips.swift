@@ -20,7 +20,6 @@ struct IngredientsChips: View {
     var outlined: Bool = true
     
     @Environment(FamilyStore.self) private var familyStore
-    @Environment(WebService.self) private var webService
     
     var body: some View {
         Button {
