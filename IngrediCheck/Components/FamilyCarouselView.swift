@@ -143,12 +143,6 @@ struct FamilyCarouselView: View {
             familyStore.selectedMemberId = nil
         }
         
-        // Load food notes for the selected member using FoodNotesStore
-        if let memberId = memberId {
-            await foodNotesStore.loadFoodNotesForMember(memberId: memberId)
-        } else {
-            await foodNotesStore.loadFoodNotesForFamily()
-        }
     }
 }
 

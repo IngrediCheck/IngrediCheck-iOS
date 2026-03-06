@@ -26,20 +26,6 @@ class ChatContextBuilder {
         return DTO.FeedbackContext(screen: "feedback", feedback_id: feedbackId)
     }
     
-    // Infer context from current navigation state
-    // This is a helper that can be called from views to determine context
-    static func contextFromCurrentScreen(
-        coordinator: AppNavigationCoordinator,
-        currentScan: DTO.Scan? = nil,
-        analysisId: String? = nil,
-        ingredientName: String? = nil
-    ) -> any Codable {
-        // Default to home context
-        // Views should pass specific context when they know the screen type
-        // This is a fallback for general cases
-        return buildHomeContext()
-    }
-    
     // Encode context to JSON string for API
     static func encodeContext(_ context: any Codable) throws -> String {
         let encoder = JSONEncoder()

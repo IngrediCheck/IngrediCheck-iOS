@@ -529,7 +529,4 @@ final class FoodNotesStore {
         return misc
     }
 
-    // Stub for loadFoodNotesForMember/Family if views still call them (they shouldn't with new logic)
-    func loadFoodNotesForMember(memberId: String) async {}
-    func loadFoodNotesForFamily() async {}
 }

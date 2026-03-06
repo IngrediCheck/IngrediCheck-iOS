@@ -1464,22 +1464,6 @@ struct ProductDetailView: View {
     }
 }
 
-// MARK: - ScanCameraView Wrapper
-
-/// Wrapper to initialize ScanCameraView with specific mode and scanId
-struct ScanCameraViewWrapper: View {
-    let initialScanId: String?
-    let initialMode: CameraMode
-
-    var body: some View {
-        ScanCameraViewWithInitialState(
-            initialScanId: initialScanId,
-            initialMode: initialMode,
-            presentationSource: .productDetailView
-        )
-    }
-}
-
 #if DEBUG
 // Sample product with ingredients for preview
 private let sampleProductWithIngredients = DTO.Product(

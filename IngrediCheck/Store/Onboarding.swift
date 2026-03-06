@@ -29,19 +29,6 @@ enum OnboardingFlowType: String, Codable {
     case singleMember  // For adding a specific family member from home
 }
 
-enum OnboardingScreenId: String {
-    case allergies
-    case intolerances
-    case healthConditions
-    case lifeStage
-    case region
-    case avoid
-    case lifeStyle
-    case nutrition
-    case ethical
-    case taste
-}
-
 struct OnboardingScreen: Identifiable {
     var id = UUID()
     var stepId: String  // Use step ID from JSON instead of enum

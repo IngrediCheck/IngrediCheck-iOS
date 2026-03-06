@@ -114,9 +114,6 @@ actor FileCache: FileStore {
     let fileStore: FileStore
     var inMemoryStore: [FileLocation: FileCacheEntry] = [:]
     
-    var cacheHit: Int = 0
-    var cacheMiss: Int = 0
-
     init(
         cacheName: String,
         maximumDiskUsage: Int64,
@@ -248,7 +245,6 @@ actor FileCache: FileStore {
                 persistInMemoryStore()
                 do {
                     let data = try Data(contentsOf: cacheEntry.localFileUrl)
-                    self.cacheHit += 1
                     return data
                 } catch {
                     Log.error("FileCache", "Error reading file: \(error)")
@@ -256,7 +252,6 @@ actor FileCache: FileStore {
                 }
             }
         }
-        self.cacheMiss += 1
         return try await cacheFile(fileLocation: fileLocation)
     }
 

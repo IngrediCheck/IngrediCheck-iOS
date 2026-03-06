@@ -164,21 +164,6 @@ class DTO {
         }
     }
     
-    struct AnnotatedIngredient {
-        let name: String
-        let safetyRecommendation: SafetyRecommendation
-        let reasoning: String?
-        let preference: String?
-        let ingredient: [AnnotatedIngredient]
-    }
-    
-    struct DecoratedIngredientListFragment {
-        let fragment: String
-        let safetyRecommendation: SafetyRecommendation
-        let reasoning: String?
-        let preference: String?
-    }
-    
     struct ListItem: Codable, Hashable, Equatable {
         let created_at: String
         let list_id: String
@@ -351,109 +336,6 @@ class DTO {
         }
     }
 
-    static func decoratedIngredientsList(
-        ingredients: [Ingredient],
-        ingredientRecommendations: [IngredientRecommendation]?
-    ) -> [DecoratedIngredientListFragment] {
-        func annotatedIngredients(ingredients: [Ingredient]) -> [AnnotatedIngredient] {
-            return ingredients.map { i in
-                let recommendation = ingredientRecommendations?.first { r in
-                    return i.name.localizedCaseInsensitiveContains(r.ingredientName)
-                }
-                if let recommendation {
-                    return AnnotatedIngredient(
-                        name: i.name,
-                        safetyRecommendation: recommendation.safetyRecommendation,
-                        reasoning: recommendation.reasoning,
-                        preference: recommendation.preference,
-                        ingredient: annotatedIngredients(ingredients: i.ingredients)
-                    )
-                } else {
-                    return AnnotatedIngredient(
-                        name: i.name,
-                        safetyRecommendation: .safe,
-                        reasoning: nil,
-                        preference: nil,
-                        ingredient: annotatedIngredients(ingredients: i.ingredients)
-                    )
-                }
-            }
-        }
-        func decoratedIngredientListFragments(annotatedIngredients: [AnnotatedIngredient]) -> [DecoratedIngredientListFragment] {
-            var result: [DecoratedIngredientListFragment] = []
-            for (i, ai) in annotatedIngredients.enumerated() {
-                if ai.ingredient.isEmpty {
-                    var fragment = ai.name.capitalized
-                    if i != (annotatedIngredients.count - 1) {
-                        fragment += ", "
-                    }
-                    result.append(DecoratedIngredientListFragment(
-                        fragment: fragment,
-                        safetyRecommendation: ai.safetyRecommendation,
-                        reasoning: ai.reasoning,
-                        preference: ai.preference
-                    ))
-                } else {
-                    result.append(contentsOf: [
-                        DecoratedIngredientListFragment(
-                            fragment: ai.name.capitalized + " ",
-                            safetyRecommendation: ai.safetyRecommendation,
-                            reasoning: ai.reasoning,
-                            preference: ai.preference
-                        ),
-                        DecoratedIngredientListFragment(
-                            fragment: "(",
-                            safetyRecommendation: .none,
-                            reasoning: nil,
-                            preference: nil
-                        )
-                    ])
-                    var subFragments = decoratedIngredientListFragments(annotatedIngredients: ai.ingredient)
-                    let suffix = (i == annotatedIngredients.count - 1) ? ")" : "), "
-                    let lastFragment = DecoratedIngredientListFragment(
-                        fragment: subFragments.last!.fragment + suffix,
-                        safetyRecommendation: subFragments.last!.safetyRecommendation,
-                        reasoning: subFragments.last?.reasoning,
-                        preference: subFragments.last?.preference
-                    )
-                    subFragments[subFragments.count - 1] = lastFragment
-                    result.append(contentsOf: subFragments)
-                }
-            }
-            return result
-        }
-        func splitStringPreservingSpaces(_ input: String) -> [String] {
-            var result = input.split(separator: " ", omittingEmptySubsequences: true).map { String($0) + " " }
-
-            if let last = result.last, input.last != " " {
-                result[result.count - 1] = last.trimmingCharacters(in: .whitespaces)
-            }
-
-            return result
-        }
-        func splitDecoratedFragmentsIfNeeded(decoratedFragments: [DecoratedIngredientListFragment]) -> [DecoratedIngredientListFragment] {
-            var result: [DecoratedIngredientListFragment] = []
-            for fragment in decoratedFragments {
-                if case .safe = fragment.safetyRecommendation {
-                    for word in splitStringPreservingSpaces(fragment.fragment) {
-                        result.append(DecoratedIngredientListFragment(
-                            fragment: word,
-                            safetyRecommendation: .safe,
-                            reasoning: nil,
-                            preference: nil
-                        ))
-                    }
-                } else {
-                    result.append(fragment)
-                }
-            }
-            return result
-        }
-        let annotatedIngredients = annotatedIngredients(ingredients: ingredients)
-        let decoratedFragments = decoratedIngredientListFragments(annotatedIngredients: annotatedIngredients)
-        return splitDecoratedFragmentsIfNeeded(decoratedFragments: decoratedFragments)
-    }
-    
     // MARK: - Scan API Models
     
     struct ScanProductInfo: Codable, Hashable {
@@ -568,21 +450,6 @@ class DTO {
         var vote: Vote?
         
         // Note: API uses snake_case (members_affected), so we use default CodingKeys
-    }
-    
-    // SSE Event payloads
-    struct ScanProductInfoEvent: Codable {
-        let scan_id: String
-        let product_info: ScanProductInfo
-        let product_info_source: String
-        let images: [ScanImage]
-    }
-    
-    struct ScanAnalysisEvent: Codable {
-        let analysis_status: String
-        let analysis_result: ScanAnalysisResult?
-        
-        // Note: API uses snake_case throughout (analysis_status, analysis_result, overall_match, overall_analysis, ingredient_analysis)
     }
     
     // Image types in scan response
