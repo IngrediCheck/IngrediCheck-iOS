@@ -42,6 +42,11 @@ enum AppRoute: Hashable {
     /// - Parameter targetSection: Optional section to scroll to
     case editableCanvas(targetSection: String?)
 
+    // MARK: - Inventory Search
+
+    /// Navigate to inventory search/discovery screen
+    case inventorySearch
+
     // MARK: - Hashable Conformance
 
     func hash(into hasher: inout Hasher) {
@@ -67,6 +72,8 @@ enum AppRoute: Hashable {
         case .editableCanvas(let section):
             hasher.combine("editableCanvas")
             hasher.combine(section)
+        case .inventorySearch:
+            hasher.combine("inventorySearch")
         }
     }
 
@@ -88,6 +95,8 @@ enum AppRoute: Hashable {
             return true
         case (.editableCanvas(let lSection), .editableCanvas(let rSection)):
             return lSection == rSection
+        case (.inventorySearch, .inventorySearch):
+            return true
         default:
             return false
         }

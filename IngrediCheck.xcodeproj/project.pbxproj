@@ -189,6 +189,7 @@
 		D3BECC732ED98CFF0088E044 /* Splash Screen */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Splash Screen"; sourceTree = "<group>"; };
 		D3BECC742ED98CFF0088E044 /* Add Family Members */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Add Family Members"; sourceTree = "<group>"; };
 		FAA88CBC2EF6B62300449EDF /* Resource */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resource; sourceTree = "<group>"; };
+		AA1111012F4F000000000001 /* InventorySearch */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = InventorySearch; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -329,6 +330,7 @@
 				D3BECC142ED98A3E0088E044 /* BarcodeScan */,
 				D3BECC172ED98A3E0088E044 /* ChatBot */,
 				D3BECC372ED98A3E0088E044 /* ProductDetails */,
+				AA1111012F4F000000000001 /* InventorySearch */,
 				1F5987782E30C4F200381E32 /* TipJar */,
 				39705AED2BD490BC000E487D /* Onboarding */,
 				392D9C0A2B754FDA00166CF1 /* Lib */,
@@ -436,6 +438,7 @@
 				D3BECC732ED98CFF0088E044 /* Splash Screen */,
 				D3BECC742ED98CFF0088E044 /* Add Family Members */,
 				FAA88CBC2EF6B62300449EDF /* Resource */,
+				AA1111012F4F000000000001 /* InventorySearch */,
 			);
 			name = IngrediCheck;
 			packageProductDependencies = (

@@ -258,6 +258,9 @@ struct HomeView: View {
                         unmatchedCount: stats?.matchingStats.unmatched ?? 0
                     )
 
+                    // Discover Products Card
+                    discoverProductsCard
+
                     CreateYourAvatarCard()
 
                         .onTapGesture {
@@ -602,6 +605,8 @@ struct HomeView: View {
                         UnifiedCanvasView(mode: .editing, targetSectionName: targetSection)
                             .environment(memojiStore)
                             .environment(coordinator)
+                    case .inventorySearch:
+                        InventorySearchView()
                     }
                 }
                 .onAppear {
@@ -680,6 +685,79 @@ struct HomeView: View {
             .environment(coordinator)
             .environment(appState)
         }
+    }
+
+    // MARK: - Discover Products Card
+
+    private var discoverProductsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Discover Products")
+                        .font(ManropeFont.semiBold.size(18))
+                        .foregroundStyle(.grayScale150)
+
+                    Text("Find products that match your food notes")
+                        .font(ManropeFont.regular.size(12))
+                        .foregroundStyle(.grayScale100)
+                }
+
+                Spacer()
+
+                NavigationLink(value: AppRoute.inventorySearch) {
+                    Text("Explore All")
+                        .underline()
+                        .font(ManropeFont.bold.size(14))
+                        .foregroundStyle(Color(hex: "#82B611"))
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Tappable search placeholder
+            NavigationLink(value: AppRoute.inventorySearch) {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.gray)
+                    Text("Search products...")
+                        .font(ManropeFont.regular.size(14))
+                        .foregroundStyle(.grayScale80)
+                    Spacer()
+                }
+                .padding(10)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+
+            // Category preview chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(MockInventoryCategory.allCases.prefix(4))) { category in
+                        NavigationLink(value: AppRoute.inventorySearch) {
+                            Text(category.rawValue)
+                                .font(ManropeFont.medium.size(12))
+                                .foregroundStyle(.grayScale100)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.grayScale20)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color(hex: "#EEEEEE"), lineWidth: 1)
+        )
     }
 
     // MARK: - AIBot FAB
