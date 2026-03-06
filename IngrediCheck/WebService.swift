@@ -2579,7 +2579,7 @@ struct ChatStreamError: Error, LocalizedError {
         }
     }
 
-    func updateFoodNotes(content: [String: Any], version: Int) async throws -> FoodNotesResponse {
+    func updateFoodNotes(content: [String: Any], version: Int, isRetry: Bool = false) async throws -> FoodNotesResponse {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2625,8 +2625,13 @@ struct ChatStreamError: Error, LocalizedError {
                     } else {
                         // currentNote is null or missing: treat this as "no existing note",
                         // so retry once with version=0 to create the family note.
+                        guard !isRetry else {
+                            Log.error("WebService", "updateFoodNotes: version_mismatch with currentNote=null on retry, giving up")
+                            AnalyticsService.shared.captureAPIError(endpoint: "updateFoodNotes", errorType: "http", statusCode: 409)
+                            throw NetworkError.invalidResponse(409)
+                        }
                         Log.debug("WebService", "updateFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
-                        return try await updateFoodNotes(content: content, version: 0)
+                        return try await updateFoodNotes(content: content, version: 0, isRetry: true)
                     }
                 }
             }
@@ -2705,7 +2710,7 @@ struct ChatStreamError: Error, LocalizedError {
     }
     
     /// Update food notes for a specific family member by ID.
-    func updateMemberFoodNotes(memberId: String, content: [String: Any], version: Int) async throws -> FoodNotesResponse {
+    func updateMemberFoodNotes(memberId: String, content: [String: Any], version: Int, isRetry: Bool = false) async throws -> FoodNotesResponse {
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2752,8 +2757,13 @@ struct ChatStreamError: Error, LocalizedError {
                     } else {
                         // currentNote is null or missing: treat this as "no existing note",
                         // so retry once with version=0 to create the member note.
+                        guard !isRetry else {
+                            Log.error("WebService", "updateMemberFoodNotes: version_mismatch with currentNote=null on retry, giving up")
+                            AnalyticsService.shared.captureAPIError(endpoint: "updateMemberFoodNotes", errorType: "http", statusCode: 409)
+                            throw NetworkError.invalidResponse(409)
+                        }
                         Log.debug("WebService", "updateMemberFoodNotes: version_mismatch with currentNote=null. Retrying once with version=0.")
-                        return try await updateMemberFoodNotes(memberId: memberId, content: content, version: 0)
+                        return try await updateMemberFoodNotes(memberId: memberId, content: content, version: 0, isRetry: true)
                     }
                 }
             }

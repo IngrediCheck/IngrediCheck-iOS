@@ -147,7 +147,16 @@ final class FoodNotesStore {
         do {
             if let response = try await webService.fetchFoodNotesAll() {
                 Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Received food notes data")
-                
+
+                // Preserve in-progress edits before clearing caches
+                if let ownerKey = currentPreferencesOwnerKey {
+                    memberPreferencesCache[ownerKey] = onboardingStore.preferences
+                }
+                // Clear caches to remove stale members/data
+                memberPreferencesCache = [:]
+                memberVersions = [:]
+                memberMiscNotes = [:]
+
                 // 1. Parse Family Note ("Everyone")
                 if let familyNote = response.familyNote {
                     familyVersion = familyNote.version
@@ -363,14 +372,9 @@ final class FoodNotesStore {
     }
     
     private func rebuildAssociationsAndCanvasFromCache() {
-        var associations: [String: [String: [String]]] = [:]
-        var unifiedContent: [String: Any] = [:] // We can reuse the buildContent logic if we want, or just manual
-        
-        // We need to merge all cached preferences into one canvas view
-        // And build associations
-        
-        var newCanvas = Preferences()
-        
+        itemMemberAssociations = [:]
+        canvasPreferences = Preferences()
+
         for (memberKey, prefs) in memberPreferencesCache {
             updateAssociationsAndCanvas(for: memberKey, with: prefs)
         }
@@ -405,7 +409,7 @@ final class FoodNotesStore {
         refreshSummary()
     }
     
-    private func syncMember(_ memberKey: String) async {
+    private func syncMember(_ memberKey: String, retryCount: Int = 0) async {
         guard let prefs = memberPreferencesCache[memberKey] else { return }
 
         Log.debug("FoodNotesStore", "📤 [FoodNotesStore] syncMember: Syncing \(memberKey)")
@@ -437,12 +441,17 @@ final class FoodNotesStore {
             }
             Log.debug("FoodNotesStore", "✅ [FoodNotesStore] syncMember: Success \(memberKey) v\(response.version)")
         } catch let error as WebService.VersionMismatchError {
-            Log.warning("FoodNotesStore", "⚠️ [FoodNotesStore] syncMember: Version mismatch \(memberKey)")
+            Log.warning("FoodNotesStore", "⚠️ [FoodNotesStore] syncMember: Version mismatch \(memberKey), attempt \(retryCount + 1)")
             // Re-extract misc from server's current content before retrying
             memberMiscNotes[memberKey] = extractMiscNotes(from: error.currentNote.content)
             if isEveryone { familyVersion = error.currentNote.version }
             else { memberVersions[memberKey] = error.currentNote.version }
-            await syncMember(memberKey) // Retry
+            guard retryCount < 3 else {
+                Log.error("FoodNotesStore", "❌ [FoodNotesStore] syncMember: Max retries for \(memberKey), scheduling deferred retry")
+                scheduleSync(for: memberKey)
+                return
+            }
+            await syncMember(memberKey, retryCount: retryCount + 1)
         } catch {
             Log.error("FoodNotesStore", "❌ [FoodNotesStore] syncMember: Failed \(error)")
         }
