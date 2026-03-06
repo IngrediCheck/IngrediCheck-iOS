@@ -110,21 +110,48 @@ if [[ "${SKIP_UPLOAD:-0}" != "1" && -z "${APP_STORE_CONNECT_API_KEY:-}" ]]; then
   fi
 fi
 
+# Read marketing version from project
+MARKETING_VERSION=$(xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | awk '/MARKETING_VERSION/ {print $3; exit}')
+if [[ -z "${MARKETING_VERSION:-}" ]]; then
+  echo "❌ Unable to detect MARKETING_VERSION from project." >&2
+  exit 1
+fi
+
 # Get latest build number from App Store Connect
 if [[ -n "${BUILD_NUMBER:-}" ]]; then
   NEW_BUILD="$BUILD_NUMBER"
   echo "📦 Using override build number: $NEW_BUILD"
 else
   echo "📡 Fetching latest build from App Store Connect..."
-  LATEST_BUILD=$(asc builds latest --app "$ASC_APP_ID" 2>/dev/null | jq -r '.data.attributes.version // "0"')
 
-  if [[ ! "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
-    echo "⚠️  Could not parse latest build number ('$LATEST_BUILD'), starting from 1"
-    LATEST_BUILD=0
+  # Check if this marketing version already has builds in ASC.
+  # If not, it's a new version and we start at build 1.
+  VERSION_EXISTS=$(asc pre-release-versions list --app "$ASC_APP_ID" --output json 2>/dev/null | python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+target = '$MARKETING_VERSION'
+for v in data.get('data', []):
+    if v.get('attributes', {}).get('version') == target:
+        print('yes')
+        break
+else:
+    print('no')
+" 2>/dev/null || echo "no")
+
+  if [[ "$VERSION_EXISTS" == "no" ]]; then
+    NEW_BUILD=1
+    echo "📦 New version $MARKETING_VERSION → Starting at build 1"
+  else
+    LATEST_BUILD=$(asc builds latest --app "$ASC_APP_ID" 2>/dev/null | jq -r '.data.attributes.version // "0"')
+
+    if [[ ! "$LATEST_BUILD" =~ ^[0-9]+$ ]]; then
+      echo "⚠️  Could not parse latest build number ('$LATEST_BUILD'), starting from 1"
+      LATEST_BUILD=0
+    fi
+
+    NEW_BUILD=$((LATEST_BUILD + 1))
+    echo "📦 Latest build in ASC: $LATEST_BUILD → New build: $NEW_BUILD"
   fi
-
-  NEW_BUILD=$((LATEST_BUILD + 1))
-  echo "📦 Latest build in ASC: $LATEST_BUILD → New build: $NEW_BUILD"
 fi
 
 # Locate iTMSTransporter for upload
@@ -314,7 +341,6 @@ echo "🚀 Uploading IPA via iTMSTransporter..."
 echo ""
 echo "========================================="
 echo "✅ Upload complete!"
-MARKETING_VERSION=$(xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | awk '/MARKETING_VERSION/ {print $3; exit}')
 echo "   Version: ${MARKETING_VERSION:-unknown}"
 echo "   Build:   $NEW_BUILD"
 echo ""
