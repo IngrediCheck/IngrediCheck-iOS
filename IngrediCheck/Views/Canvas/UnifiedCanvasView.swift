@@ -577,9 +577,19 @@ struct UnifiedCanvasView: View {
             store.currentSectionIndex = sectionIndex
         }
         coordinator.editingStepId = card.stepId
-        coordinator.editingMemberId = selectedMemberId  // Pass selected member to edit sheet
+        // For single-member families viewing "Everyone", use the sole member's preferences
+        // so the edit sheet reflects what the card displays (union includes member items).
+        let effectiveMemberId: UUID? = {
+            if selectedMemberId == nil,
+               let family = familyStore.family,
+               family.otherMembers.isEmpty {
+                return family.selfMember.id
+            }
+            return selectedMemberId
+        }()
+        coordinator.editingMemberId = effectiveMemberId
         // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
-        foodNotesStore.preparePreferencesForMember(selectedMemberId: selectedMemberId)
+        foodNotesStore.preparePreferencesForMember(selectedMemberId: effectiveMemberId)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             coordinator.isEditSheetPresented = true
         }
