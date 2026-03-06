@@ -81,30 +81,6 @@ struct HighlightableParagraph: View {
     }
 }
 
-struct IngredientTooltipView: View {
-    let highlight: IngredientHighlight
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(highlight.phrase)
-                .font(NunitoFont.bold.size(13))
-                .foregroundStyle(.grayScale150)
-            
-            Text(highlight.reason)
-                .font(ManropeFont.regular.size(12))
-                .foregroundStyle(.grayScale120)
-                .lineSpacing(3)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
-        )
-        .padding(.top, 8)
-    }
-}
-
 // MARK: - Highlight Support
 
 enum IngredientSegment {

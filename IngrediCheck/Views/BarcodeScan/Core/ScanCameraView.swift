@@ -1489,51 +1489,6 @@ extension ScanCameraView {
             }
         }
         
-        // MARK: - Photo card matching ContentView4 style
-        
-        struct PhotoContentView4: View {
-            let image: UIImage
-            
-            var body: some View {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.thinMaterial.opacity(0.2))
-                        .frame(width: 300, height: 120)
-                    
-                    HStack {
-                        HStack(spacing: 47) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(.thinMaterial.opacity(0.4))
-                                    .frame(width: 68, height: 92)
-                                
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 64, height: 88)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                            }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(.thinMaterial.opacity(0.4))
-                                .frame(width: 185, height: 25)
-                                .opacity(0.3)
-                            
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(.thinMaterial.opacity(0.4))
-                                .frame(width: 132, height: 20)
-                                .padding(.bottom, 7)
-                            
-                            RoundedRectangle(cornerRadius: 52)
-                                .fill(.thinMaterial.opacity(0.4))
-                                .frame(width: 79, height: 24)
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
