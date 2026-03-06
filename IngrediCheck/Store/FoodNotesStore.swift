@@ -149,9 +149,9 @@ final class FoodNotesStore {
                 Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Received food notes data")
 
                 // Preserve in-progress edits before clearing caches
-                if let ownerKey = currentPreferencesOwnerKey {
-                    memberPreferencesCache[ownerKey] = onboardingStore.preferences
-                }
+                let preservedOwnerKey = currentPreferencesOwnerKey
+                let preservedPreferences = preservedOwnerKey != nil ? onboardingStore.preferences : nil
+
                 // Clear caches to remove stale members/data
                 memberPreferencesCache = [:]
                 memberVersions = [:]
@@ -177,7 +177,12 @@ final class FoodNotesStore {
                     memberMiscNotes[normalizedId] = extractMiscNotes(from: memberNote.content)
                 }
                 
-                // 3. Rebuild Associations and Canvas from the cache
+                // 3. Re-apply in-progress edits so pending syncs pick up local changes
+                if let ownerKey = preservedOwnerKey, let prefs = preservedPreferences {
+                    memberPreferencesCache[ownerKey] = prefs
+                }
+
+                // 4. Rebuild Associations and Canvas from the cache
                 rebuildAssociationsAndCanvasFromCache()
                 
                 Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Successfully loaded and cached data")
