@@ -244,6 +244,45 @@ final class FoodNotesStore {
         onboardingStore.updateSectionCompletionStatus()
         currentPreferencesOwnerKey = newMemberKey
     }
+
+    /// For single-member families, returns the sole member's ID so the edit
+    /// sheet binds to the member key (where data actually lives).
+    func resolveEditingMemberId(selectedMemberId: UUID?, family: Family?) -> UUID? {
+        guard selectedMemberId == nil,
+              let family,
+              family.otherMembers.isEmpty else {
+            return selectedMemberId
+        }
+        return family.selfMember.id
+    }
+
+    /// Migrates legacy "Everyone" data to the self-member key for single-member
+    /// families. Safe to call multiple times; no-ops when already migrated.
+    /// Should be called once after data loads, not on every edit tap.
+    func migrateSingleMemberEveryoneData(family: Family?) {
+        guard let family, family.otherMembers.isEmpty else { return }
+
+        let selfKey = family.selfMember.id.uuidString.lowercased()
+
+        let everyonePrefs = memberPreferencesCache["Everyone"] ?? Preferences()
+        let everyoneMisc = memberMiscNotes["Everyone"] ?? []
+
+        guard hasAnyData(preferences: everyonePrefs, miscNotes: everyoneMisc) else { return }
+
+        let selfPrefs = memberPreferencesCache[selfKey] ?? Preferences()
+        let selfMisc = memberMiscNotes[selfKey] ?? []
+
+        memberPreferencesCache[selfKey] = mergePreferences(base: selfPrefs, with: everyonePrefs)
+        memberMiscNotes[selfKey] = mergeUniqueStrings(base: selfMisc, with: everyoneMisc)
+
+        memberPreferencesCache["Everyone"] = Preferences()
+        memberMiscNotes["Everyone"] = []
+
+        rebuildAssociationsAndCanvasFromCache()
+        scheduleSync(for: selfKey)
+        scheduleSync(for: "Everyone")
+        Log.debug("FoodNotesStore", "migrateSingleMemberEveryoneData: Migrated Everyone → \(selfKey)")
+    }
     
     // MARK: - Updates & Sync
     
@@ -519,6 +558,58 @@ final class FoodNotesStore {
             }
         }
         return content
+    }
+
+    private func hasAnyData(preferences: Preferences, miscNotes: [String]) -> Bool {
+        hasAnySelections(in: preferences) || !miscNotes.isEmpty
+    }
+
+    private func hasAnySelections(in preferences: Preferences) -> Bool {
+        for value in preferences.sections.values {
+            switch value {
+            case .list(let items):
+                if !items.isEmpty { return true }
+            case .nested(let nested):
+                if nested.values.contains(where: { !$0.isEmpty }) { return true }
+            }
+        }
+        return false
+    }
+
+    private func mergePreferences(base: Preferences, with incoming: Preferences) -> Preferences {
+        var merged = base
+
+        for (sectionName, incomingValue) in incoming.sections {
+            guard let existingValue = merged.sections[sectionName] else {
+                merged.sections[sectionName] = incomingValue
+                continue
+            }
+
+            switch (existingValue, incomingValue) {
+            case (.list(let existingItems), .list(let incomingItems)):
+                merged.sections[sectionName] = .list(mergeUniqueStrings(base: existingItems, with: incomingItems))
+            case (.nested(let existingNested), .nested(let incomingNested)):
+                var combined = existingNested
+                for (nestedKey, incomingItems) in incomingNested {
+                    let existingItems = combined[nestedKey] ?? []
+                    combined[nestedKey] = mergeUniqueStrings(base: existingItems, with: incomingItems)
+                }
+                merged.sections[sectionName] = .nested(combined)
+            default:
+                // Step schema may have changed; keep existing owner shape.
+                continue
+            }
+        }
+
+        return merged
+    }
+
+    private func mergeUniqueStrings(base: [String], with incoming: [String]) -> [String] {
+        var merged = base
+        for item in incoming where !merged.contains(item) {
+            merged.append(item)
+        }
+        return merged
     }
     
     private func extractMiscNotes(from content: [String: Any]) -> [String] {

@@ -86,6 +86,7 @@ struct EditableCanvasView: View {
 
             // Fetch and load food notes data when view appears
             await foodNotesStore.loadFoodNotesAll()
+            foodNotesStore.migrateSingleMemberEveryoneData(family: familyStore.family)
 
             // Prepare preferences for the current selection locally from the loaded data
             foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
@@ -737,16 +738,10 @@ private extension EditableCanvasView {
             store.currentSectionIndex = sectionIndex
         }
         navCoordinator.editingStepId = card.stepId
-        // For single-member families viewing "Everyone", use the sole member's preferences
-        // so the edit sheet reflects what the card displays (union includes member items).
-        let effectiveMemberId: UUID? = {
-            if selectedMemberId == nil,
-               let family = familyStore.family,
-               family.otherMembers.isEmpty {
-                return family.selfMember.id
-            }
-            return selectedMemberId
-        }()
+        let effectiveMemberId = foodNotesStore.resolveEditingMemberId(
+            selectedMemberId: selectedMemberId,
+            family: familyStore.family
+        )
         navCoordinator.editingMemberId = effectiveMemberId
         // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
         foodNotesStore.preparePreferencesForMember(selectedMemberId: effectiveMemberId)
@@ -803,4 +798,3 @@ private extension EditableCanvasView {
         .environment(webService)
         .environment(foodNotesStore)
 }
-

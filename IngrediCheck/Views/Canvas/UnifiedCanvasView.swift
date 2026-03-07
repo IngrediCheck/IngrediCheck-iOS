@@ -443,6 +443,7 @@ struct UnifiedCanvasView: View {
         Log.debug("UnifiedCanvasView", "Food notes load task triggered")
 
         await foodNotesStore.loadFoodNotesAll()
+        foodNotesStore.migrateSingleMemberEveryoneData(family: familyStore.family)
         foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
         didFinishInitialLoad = true
     }
@@ -577,16 +578,10 @@ struct UnifiedCanvasView: View {
             store.currentSectionIndex = sectionIndex
         }
         coordinator.editingStepId = card.stepId
-        // For single-member families viewing "Everyone", use the sole member's preferences
-        // so the edit sheet reflects what the card displays (union includes member items).
-        let effectiveMemberId: UUID? = {
-            if selectedMemberId == nil,
-               let family = familyStore.family,
-               family.otherMembers.isEmpty {
-                return family.selfMember.id
-            }
-            return selectedMemberId
-        }()
+        let effectiveMemberId = foodNotesStore.resolveEditingMemberId(
+            selectedMemberId: selectedMemberId,
+            family: familyStore.family
+        )
         coordinator.editingMemberId = effectiveMemberId
         // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
         foodNotesStore.preparePreferencesForMember(selectedMemberId: effectiveMemberId)
