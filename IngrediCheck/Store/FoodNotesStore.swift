@@ -27,6 +27,7 @@ final class FoodNotesStore {
 
     private(set) var activeOwnerKey: OwnerKey = FoodNotesConstants.everyoneKey
     private(set) var currentPreferences: Preferences
+    private(set) var ownerPreferences: [OwnerKey: Preferences] = [:]
     var canvasPreferences: Preferences = Preferences()
     var itemMemberAssociations: [String: [String: [String]]] = [:]
 
@@ -56,6 +57,7 @@ final class FoodNotesStore {
         self.onboardingStore = onboardingStore
         self.schema = FoodNotesSchema(dynamicSteps: onboardingStore.dynamicSteps)
         self.currentPreferences = onboardingStore.preferences
+        self.ownerPreferences = [FoodNotesConstants.everyoneKey: onboardingStore.preferences]
 
         let bridge = FoodNotesSnapshotBridge()
         self.bridge = bridge
@@ -112,7 +114,9 @@ final class FoodNotesStore {
     // MARK: - Bootstrap / Refresh
 
     func bootstrap(family: Family?, selectedMemberId: UUID?) async {
-        await engine.setActiveOwner(Self.ownerKey(for: selectedMemberId))
+        let ownerKey = resolveBootstrapOwnerKey(selectedMemberId: selectedMemberId, family: family)
+        projectActiveOwnerLocally(ownerKey)
+        await engine.setActiveOwner(ownerKey)
         await refreshFromServer(family: family)
     }
 
@@ -128,7 +132,9 @@ final class FoodNotesStore {
     }
 
     func setActiveMember(_ selectedMemberId: UUID?) async {
-        await engine.setActiveOwner(Self.ownerKey(for: selectedMemberId))
+        let ownerKey = Self.ownerKey(for: selectedMemberId)
+        projectActiveOwnerLocally(ownerKey)
+        await engine.setActiveOwner(ownerKey)
     }
 
     // MARK: - Explicit Preference Writes
@@ -137,20 +143,21 @@ final class FoodNotesStore {
         await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences, sessionEpoch: writeEpoch)
     }
 
-    func binding(for step: DynamicStep) -> Binding<PreferenceValue?> {
+    func binding(for step: DynamicStep, ownerKey: OwnerKey) -> Binding<PreferenceValue?> {
         let sectionName = step.header.name
 
         return Binding(
-            get: { self.currentPreferences.sections[sectionName] },
+            get: { self.preferences(for: ownerKey).sections[sectionName] },
             set: { newValue in
-                self.updateSectionValue(newValue, sectionName: sectionName, ownerKey: self.activeOwnerKey)
+                self.updateSectionValue(newValue, sectionName: sectionName, ownerKey: ownerKey)
             }
         )
     }
 
     func updateSectionValue(_ value: PreferenceValue?, sectionName: String, ownerKey: OwnerKey) {
         let normalizedValue = FoodNotesNormalizer.normalizeSectionValue(value)
-        var nextPreferences = currentPreferences
+        let existingPreferences = preferences(for: ownerKey)
+        var nextPreferences = existingPreferences
 
         if let normalizedValue {
             nextPreferences.sections[sectionName] = normalizedValue
@@ -158,13 +165,18 @@ final class FoodNotesStore {
             nextPreferences.sections.removeValue(forKey: sectionName)
         }
 
-        guard nextPreferences != currentPreferences else { return }
+        guard nextPreferences != existingPreferences else { return }
 
-        currentPreferences = nextPreferences
-        if onboardingStore.preferences != nextPreferences {
+        ownerPreferences[ownerKey] = nextPreferences
+        if ownerKey == activeOwnerKey {
+            currentPreferences = nextPreferences
+        }
+        if ownerKey == activeOwnerKey, onboardingStore.preferences != nextPreferences {
             onboardingStore.preferences = nextPreferences
         }
-        onboardingStore.updateSectionCompletionStatus()
+        if ownerKey == activeOwnerKey {
+            onboardingStore.updateSectionCompletionStatus()
+        }
 
         queuePreferencesWrite(nextPreferences, ownerKey: ownerKey)
     }
@@ -191,6 +203,7 @@ final class FoodNotesStore {
         pendingWriteTask?.cancel()
         pendingWriteTask = nil
         foodNotesSummary = nil
+        ownerPreferences = [:]
         await engine.reset()
     }
 
@@ -205,8 +218,36 @@ final class FoodNotesStore {
         return family.selfMember.id
     }
 
+    func resolveEditingOwnerKey(selectedMemberId: UUID?, family: Family?) -> OwnerKey {
+        Self.ownerKey(for: resolveEditingMemberId(selectedMemberId: selectedMemberId, family: family))
+    }
+
+    func resolveOnboardingOwnerKey(
+        selectedMemberId: UUID?,
+        family: Family?,
+        flowType: OnboardingFlowType
+    ) -> OwnerKey {
+        switch flowType {
+        case .individual:
+            return FoodNotesConstants.everyoneKey
+        case .family:
+            return Self.ownerKey(for: selectedMemberId)
+        case .singleMember:
+            return resolveEditingOwnerKey(selectedMemberId: selectedMemberId, family: family)
+        }
+    }
+
+    private func resolveBootstrapOwnerKey(selectedMemberId: UUID?, family: Family?) -> OwnerKey {
+        if let family, family.otherMembers.isEmpty {
+            return resolveEditingOwnerKey(selectedMemberId: selectedMemberId, family: family)
+        }
+
+        return Self.ownerKey(for: selectedMemberId)
+    }
+
     fileprivate func apply(_ snapshot: FoodNotesSnapshot) {
         activeOwnerKey = snapshot.activeOwnerKey
+        ownerPreferences = snapshot.ownerPreferences
         currentPreferences = snapshot.currentPreferences
         canvasPreferences = snapshot.canvasPreferences
         itemMemberAssociations = snapshot.itemMemberAssociations
@@ -239,6 +280,20 @@ final class FoodNotesStore {
             guard !Task.isCancelled, self.writeEpoch == writeEpoch else { return }
             await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences, sessionEpoch: writeEpoch)
         }
+    }
+
+    private func preferences(for ownerKey: OwnerKey) -> Preferences {
+        ownerPreferences[ownerKey] ?? Preferences()
+    }
+
+    private func projectActiveOwnerLocally(_ ownerKey: OwnerKey) {
+        activeOwnerKey = ownerKey
+        currentPreferences = preferences(for: ownerKey)
+
+        if onboardingStore.preferences != currentPreferences {
+            onboardingStore.preferences = currentPreferences
+        }
+        onboardingStore.updateSectionCompletionStatus()
     }
 }
 
@@ -300,7 +355,7 @@ private actor FoodNotesEngine {
     func replacePreferences(ownerKey: OwnerKey, preferences: Preferences, sessionEpoch: UInt64) async {
         guard sessionEpoch == self.sessionEpoch else { return }
         ensureOwnerExists(ownerKey)
-        var owner = owners[ownerKey] ?? FoodNotesOwnerState()
+        var owner = owners[ownerKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
         let normalized = FoodNotesNormalizer.normalize(preferences)
         owner.pendingReplacement = FoodNotesPendingReplacement(id: UUID(), preferences: normalized)
         owner.working = normalized
@@ -323,7 +378,7 @@ private actor FoodNotesEngine {
 
     func clearOwnerState(ownerKey: OwnerKey) async {
         ensureOwnerExists(ownerKey)
-        var owner = owners[ownerKey] ?? FoodNotesOwnerState()
+        var owner = owners[ownerKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
         owner.base = Preferences()
         owner.working = Preferences()
         owner.pendingReplacement = nil
@@ -405,8 +460,8 @@ private actor FoodNotesEngine {
         ensureOwnerExists(selfKey)
         ensureOwnerExists(FoodNotesConstants.everyoneKey)
 
-        let everyone = owners[FoodNotesConstants.everyoneKey] ?? FoodNotesOwnerState()
-        let selfOwner = owners[selfKey] ?? FoodNotesOwnerState()
+        let everyone = owners[FoodNotesConstants.everyoneKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
+        let selfOwner = owners[selfKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
 
         let everyoneHasStructuredData = FoodNotesNormalizer.hasAnySelections(in: everyone.working)
         let everyoneHasMiscNotes = !everyone.miscNotes.isEmpty
@@ -556,6 +611,7 @@ private actor FoodNotesEngine {
         return FoodNotesSnapshot(
             activeOwnerKey: activeOwnerKey,
             currentPreferences: currentPreferences,
+            ownerPreferences: owners.mapValues { $0.working },
             canvasPreferences: projection.canvasPreferences,
             itemMemberAssociations: projection.itemMemberAssociations,
             memberMiscNotes: owners.mapValues { $0.miscNotes },
@@ -829,6 +885,7 @@ private struct FoodNotesSchemaStep: Sendable {
 private struct FoodNotesSnapshot: Sendable {
     let activeOwnerKey: String
     let currentPreferences: Preferences
+    let ownerPreferences: [String: Preferences]
     let canvasPreferences: Preferences
     let itemMemberAssociations: [String: [String: [String]]]
     let memberMiscNotes: [String: [String]]

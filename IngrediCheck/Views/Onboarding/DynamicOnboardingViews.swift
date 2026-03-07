@@ -752,6 +752,13 @@ struct EditSectionBottomSheet: View {
         return .individual
     }
 
+    private var editingOwnerKey: FoodNotesStore.OwnerKey {
+        foodNotesStore.resolveEditingOwnerKey(
+            selectedMemberId: initialMemberId,
+            family: familyStore.family
+        )
+    }
+
     private var bottomSafeAreaInset: CGFloat {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
@@ -795,7 +802,7 @@ struct EditSectionBottomSheet: View {
                     DynamicOnboardingStepView(
                         step: step,
                         flowType: effectiveFlowType,
-                        sectionValue: foodNotesStore.binding(for: step)
+                        sectionValue: foodNotesStore.binding(for: step, ownerKey: editingOwnerKey)
                     )
                     .frame(maxWidth: .infinity, alignment: .top)
                     .padding(.top, 8)
@@ -806,7 +813,7 @@ struct EditSectionBottomSheet: View {
             
             Button(action: {
                 Task { @MainActor in
-                    await foodNotesStore.flushPendingSyncs(ownerKey: foodNotesStore.activeOwnerKey)
+                    await foodNotesStore.flushPendingSyncs(ownerKey: editingOwnerKey)
                 }
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                     isPresented = false

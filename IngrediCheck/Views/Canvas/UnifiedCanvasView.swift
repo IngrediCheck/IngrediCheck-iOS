@@ -120,7 +120,11 @@ struct UnifiedCanvasView: View {
             if oldValue == true && newValue == false, let stepId = coordinator.editingStepId {
                 scrollToEditedSection = stepId
                 Task { @MainActor in
-                    await foodNotesStore.flushPendingSyncs(ownerKey: foodNotesStore.activeOwnerKey)
+                    let ownerKey = foodNotesStore.resolveEditingOwnerKey(
+                        selectedMemberId: coordinator.editingMemberId,
+                        family: familyStore.family
+                    )
+                    await foodNotesStore.flushPendingSyncs(ownerKey: ownerKey)
                 }
             }
         }
