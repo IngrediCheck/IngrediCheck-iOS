@@ -62,6 +62,9 @@ struct ScanCameraView: View {
     @State private var awaitingRatingOutcome = false
     @State private var ratingPromptPresentedAt: Date?
     @State private var dismissalFallbackTask: Task<Void, Never>?
+#if DEBUG
+    @State private var isShowingDebugBarcodeInjector = false
+#endif
 
     // MARK: - Presentation Source Tracking
     @State private var presentationSource: CameraPresentationSource = .homeView
@@ -353,6 +356,62 @@ struct ScanCameraView: View {
                 updateToastState()
             }
         }
+    }
+
+    @MainActor
+    private func handleDetectedBarcode(_ rawCode: String) {
+        let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+
+        // Check if this barcode was already scanned in the CURRENT SESSION (in scanIds)
+        // Only scroll to existing card if it's in the current session, not from history
+        if let existingScanId = barcodeToScanIdMap[code], scanIds.contains(existingScanId) {
+            Log.debug("BARCODE_SCAN", "🔄 CameraScreen: Barcode already scanned in this session - scrolling to existing card - barcode: \(code), scanId: \(existingScanId)")
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                scrollTargetScanId = existingScanId
+            }
+            updateToastState()
+            return
+        }
+
+        // Check if this barcode is already being scanned (pending)
+        let placeholderScanId = "pending_\(code)"
+        if pendingBarcodes.contains(code) {
+            Log.debug("BARCODE_SCAN", "⏳ CameraScreen: Barcode already being scanned - barcode: \(code)")
+            if scanIds.contains(placeholderScanId) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    scrollTargetScanId = placeholderScanId
+                }
+            }
+            return
+        }
+
+        // Track barcode for detection
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            if !codes.contains(code) {
+                codes.insert(code, at: 0)
+            }
+        }
+
+        // Mark barcode as pending and immediately show skeleton card
+        pendingBarcodes.insert(code)
+        if !scanIds.contains(placeholderScanId) {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
+                    scanIds.remove(at: skeletonIndex)
+                }
+
+                scanIds.insert(placeholderScanId, at: 0)
+                scrollTargetScanId = placeholderScanId
+            }
+            Log.debug("BARCODE_SCAN", "📋 CameraScreen: Added placeholder card for barcode - barcode: \(code), placeholderScanId: \(placeholderScanId)")
+        }
+
+        Task { @MainActor in
+            await startBarcodeScan(barcode: code)
+        }
+
+        updateToastState()
     }
     
     // MARK: - Haptics
@@ -857,6 +916,13 @@ struct ScanCameraView: View {
                         Text("Camera not available in Preview/Simulator")
                             .font(.callout)
                             .foregroundColor(.secondary)
+#if DEBUG
+                        Text("Use the barcode injector in the top-right to test live barcode flows.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+#endif
                     }
                 )
 #endif
@@ -977,59 +1043,7 @@ struct ScanCameraView: View {
                     }
                 }
                 .onReceive(camera.$scannedBarcode.compactMap { $0 }) { code in
-                    // Check if this barcode was already scanned in the CURRENT SESSION (in scanIds)
-                    // Only scroll to existing card if it's in the current session, not from history
-                    if let existingScanId = barcodeToScanIdMap[code], scanIds.contains(existingScanId) {
-                        // Barcode already scanned in this session - scroll to existing card
-                        Log.debug("BARCODE_SCAN", "🔄 CameraScreen: Barcode already scanned in this session - scrolling to existing card - barcode: \(code), scanId: \(existingScanId)")
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            scrollTargetScanId = existingScanId
-                        }
-                        updateToastState()
-                        return
-                    }
-                    
-                    // Check if this barcode is already being scanned (pending)
-                    let placeholderScanId = "pending_\(code)"
-                    if pendingBarcodes.contains(code) {
-                        Log.debug("BARCODE_SCAN", "⏳ CameraScreen: Barcode already being scanned - barcode: \(code)")
-                        // Scroll to the pending card if it exists
-                        if scanIds.contains(placeholderScanId) {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                scrollTargetScanId = placeholderScanId
-                            }
-                        }
-                        return
-                    }
-                    
-                    // Track barcode for detection
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        if !codes.contains(code) {
-                            codes.insert(code, at: 0)
-                        }
-                    }
-                    
-                    // Mark barcode as pending and immediately show skeleton card
-                    pendingBarcodes.insert(code)
-                    if !scanIds.contains(placeholderScanId) {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            // Remove skeleton card if it's the first scan
-                            if let skeletonIndex = scanIds.firstIndex(of: skeletonCardId) {
-                                scanIds.remove(at: skeletonIndex)
-                            }
-                            
-                            scanIds.insert(placeholderScanId, at: 0)
-                            scrollTargetScanId = placeholderScanId
-                        }
-                        Log.debug("BARCODE_SCAN", "📋 CameraScreen: Added placeholder card for barcode - barcode: \(code), placeholderScanId: \(placeholderScanId)")
-                    }
-                    
-                    // Start barcode scan and get scanId (will replace placeholder when received)
-                    Task { @MainActor in
-                        await startBarcodeScan(barcode: code)
-                    }
-                    
-                    updateToastState()
+                    handleDetectedBarcode(code)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
                     isCaptured = UIScreen.main.isCaptured
@@ -1326,6 +1340,13 @@ struct ScanCameraView: View {
                             await processPhoto(image: image)
                         })
         }
+#if DEBUG
+        .sheet(isPresented: $isShowingDebugBarcodeInjector) {
+            DebugBarcodeInjectorSheet { barcode in
+                handleDetectedBarcode(barcode)
+            }
+        }
+#endif
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -1337,7 +1358,19 @@ struct ScanCameraView: View {
                         .foregroundColor(.white)
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+#if DEBUG
+                if mode == .scanner {
+                    Button {
+                        isShowingDebugBarcodeInjector = true
+                    } label: {
+                        Image(systemName: "barcode.viewfinder")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .accessibilityLabel("Inject barcode")
+                }
+#endif
                 if mode == .scanner {
                     FlashToggleButton(isScannerMode: true)
                 }
@@ -1459,4 +1492,3 @@ extension ScanCameraView {
         
     }
 }
-
