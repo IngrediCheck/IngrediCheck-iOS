@@ -2,7 +2,7 @@
 //  FoodNotesStore.swift
 //  IngrediCheck
 //
-//  Created to centralize food notes/chip selection logic for reuse across the app.
+//  Centralized food notes state with a single-writer actor engine.
 //
 
 import SwiftUI
@@ -12,108 +12,84 @@ import os
 @Observable
 @MainActor
 final class FoodNotesStore {
+    typealias OwnerKey = String
+
     private let webService: WebService
     private let onboardingStore: Onboarding
-    
+    private let schema: FoodNotesSchema
+    @ObservationIgnored private let bridge: FoodNotesSnapshotBridge
+    @ObservationIgnored private let engine: FoodNotesEngine
+    @ObservationIgnored private var pendingWriteTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var pendingWriteSequence: UInt64 = 0
+    @ObservationIgnored private var writeEpoch: UInt64 = 0
+
     // MARK: - State
-    
-    /// Current version for family-level optimistic updates
-    private var familyVersion: Int = 0
-    
-    /// Current versions for member-specific optimistic updates, keyed by memberId (UUID string)
-    private var memberVersions: [String: Int] = [:]
-    
-    /// Tracks which entity currently owns the `onboardingStore.preferences`.
-    /// "Everyone" for family-level, or a member UUID string for member-level.
-    private var currentPreferencesOwnerKey: String? = nil
-    
-    /// Master cache of preferences for each member.
-    /// This is the source of truth for switching users.
-    /// Key: Member UUID string or "Everyone"
-    private var memberPreferencesCache: [String: Preferences] = [:]
-    
-    /// Union view preferences used for canvas/background cards (Everyone + all members)
-    /// This does not change when switching members in the edit sheet.
+
+    private(set) var activeOwnerKey: OwnerKey = FoodNotesConstants.everyoneKey
+    private(set) var currentPreferences: Preferences
+    private(set) var ownerPreferences: [OwnerKey: Preferences] = [:]
     var canvasPreferences: Preferences = Preferences()
-    
-    /// Tracks which members have which items: [sectionName: [itemName: [memberIds]]]
-    /// Member IDs are UUID strings or "Everyone" for family-level items.
     var itemMemberAssociations: [String: [String: [String]]] = [:]
-    
-    /// Loading state for food notes operations
+
     var isLoadingFoodNotes: Bool = false
-
-    /// Indicates if food notes have been loaded at least once (prevents showing loading on subsequent navigations)
     private(set) var hasLoadedFoodNotes: Bool = false
-
-    /// Misc notes set by IngrediBot, keyed by member UUID or "Everyone"
     private(set) var memberMiscNotes: [String: [String]] = [:]
-
-    /// Sync management - exposed for UI to show sync indicator
     private(set) var isSyncing: Bool = false
-    private var syncDebounceTask: Task<Void, Never>? = nil
-    private var pendingSyncMembers: Set<String> = []
 
-    // MARK: - Summary State
-
-    /// Cached summary of food notes from API
     var foodNotesSummary: String? = nil
+    private(set) var isLoadingSummary: Bool = false
+    private var summaryRefreshTask: Task<Void, Never>? = nil
 
-    /// Returns true if a summary string is a server-sent placeholder
-    /// rather than a real AI-generated summary.
+    var hasNoFoodNotes: Bool {
+        if hasLoadedFoodNotes {
+            let hasStructuredNotes = !canvasPreferences.sections.isEmpty
+            let hasMiscNotes = memberMiscNotes.values.contains { !$0.isEmpty }
+            return !(hasStructuredNotes || hasMiscNotes)
+        }
+        if let summary = foodNotesSummary {
+            return FoodNotesStore.isPlaceholderSummary(summary)
+        }
+        return false
+    }
+
+    init(webService: WebService, onboardingStore: Onboarding) {
+        self.webService = webService
+        self.onboardingStore = onboardingStore
+        self.schema = FoodNotesSchema(dynamicSteps: onboardingStore.dynamicSteps)
+        self.currentPreferences = onboardingStore.preferences
+        self.ownerPreferences = [FoodNotesConstants.everyoneKey: onboardingStore.preferences]
+
+        let bridge = FoodNotesSnapshotBridge()
+        self.bridge = bridge
+        self.engine = FoodNotesEngine(
+            webService: webService,
+            schema: self.schema,
+            snapshotSink: { [bridge] snapshot in
+                await bridge.deliver(snapshot: snapshot)
+            },
+            summaryRefreshSink: { [bridge] in
+                await bridge.refreshSummary()
+            }
+        )
+        bridge.attach(to: self)
+    }
+
+    // MARK: - Summary
+
     static func isPlaceholderSummary(_ summary: String) -> Bool {
         let lower = summary.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return lower.isEmpty || lower.contains("no food notes") || lower.contains("no data yet")
     }
 
-    /// Loading state for summary
-    private(set) var isLoadingSummary: Bool = false
-
-    /// Debounce task for summary refresh
-    private var summaryRefreshTask: Task<Void, Never>? = nil
-
-    /// Whether the current account effectively has no food notes configured.
-    /// Uses loaded cache state as source of truth, then summary as fallback.
-    /// Treats BOTH structured preferences and misc notes as "food notes" – if
-    /// either exists for any member, this returns false.
-    var hasNoFoodNotes: Bool {
-        if hasLoadedFoodNotes {
-            // Check for any structured preferences on the canvas
-            let hasStructuredNotes = !canvasPreferences.sections.isEmpty
-
-            // Check for any misc notes for any member (including "Everyone")
-            let hasMiscNotes = memberMiscNotes.values.contains { notes in
-                !notes.isEmpty
-            }
-
-            return !(hasStructuredNotes || hasMiscNotes)
-        }
-        if let summary = foodNotesSummary {
-            // Fallback: if we only have a summary string, treat it as
-            // having notes unless it's a known placeholder.
-            return FoodNotesStore.isPlaceholderSummary(summary)
-        }
-        return false
-    }
-    
-    init(webService: WebService, onboardingStore: Onboarding) {
-        self.webService = webService
-        self.onboardingStore = onboardingStore
-    }
-
-    // MARK: - Summary
-
-    /// Public method to refresh summary - debounced to avoid rapid-fire calls
     func refreshSummary() {
         summaryRefreshTask?.cancel()
         summaryRefreshTask = Task {
-            try? await Task.sleep(for: .milliseconds(500))  // Debounce
+            try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
             await loadFoodNotesSummaryInternal()
         }
     }
 
-    /// Loads summary directly without debounce. Use from coordinated initial loads (e.g. HomeView).
     func loadSummaryIfNeeded() async {
         if foodNotesSummary == nil {
             await loadFoodNotesSummaryInternal()
@@ -135,124 +111,105 @@ final class FoodNotesStore {
         }
     }
 
-    // MARK: - Loading Food Notes
-    
-    /// Loads the union view (family + all members) from GET /ingredicheck/family/food-notes/all.
+    // MARK: - Bootstrap / Refresh
+
+    func bootstrap(family: Family?, selectedMemberId: UUID?) async {
+        let ownerKey = resolveBootstrapOwnerKey(selectedMemberId: selectedMemberId, family: family)
+        projectActiveOwnerLocally(ownerKey)
+        await engine.setActiveOwner(ownerKey)
+        await refreshFromServer(family: family)
+    }
+
     func loadFoodNotesAll() async {
-        Log.debug("FoodNotesStore", "loadFoodNotesAll: Starting to load food notes from backend")
-        
+        await refreshFromServer(family: nil)
+    }
+
+    func refreshFromServer(family: Family?) async {
+        guard !isLoadingFoodNotes else { return }
         isLoadingFoodNotes = true
         defer { isLoadingFoodNotes = false }
-        
-        do {
-            if let response = try await webService.fetchFoodNotesAll() {
-                Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Received food notes data")
+        await engine.refreshFromServer(family: family)
+    }
 
-                // Preserve in-progress edits before clearing caches
-                let preservedOwnerKey = currentPreferencesOwnerKey
-                let preservedPreferences = preservedOwnerKey != nil ? onboardingStore.preferences : nil
+    func setActiveMember(_ selectedMemberId: UUID?) async {
+        let ownerKey = Self.ownerKey(for: selectedMemberId)
+        projectActiveOwnerLocally(ownerKey)
+        await engine.setActiveOwner(ownerKey)
+    }
 
-                // Clear caches to remove stale members/data
-                memberPreferencesCache = [:]
-                memberVersions = [:]
-                memberMiscNotes = [:]
+    // MARK: - Explicit Preference Writes
 
-                // 1. Parse Family Note ("Everyone")
-                if let familyNote = response.familyNote {
-                    familyVersion = familyNote.version
-                    let prefs = convertContentToPreferences(content: familyNote.content, dynamicSteps: onboardingStore.dynamicSteps)
-                    memberPreferencesCache["Everyone"] = prefs
-                    memberMiscNotes["Everyone"] = extractMiscNotes(from: familyNote.content)
-                } else {
-                    memberPreferencesCache["Everyone"] = Preferences()
-                    memberMiscNotes["Everyone"] = []
-                }
+    func replacePreferences(_ preferences: Preferences, ownerKey: OwnerKey) async {
+        await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences, sessionEpoch: writeEpoch)
+    }
 
-                // 2. Parse Member Notes
-                for (memberId, memberNote) in response.memberNotes {
-                    let normalizedId = memberId.lowercased()
-                    memberVersions[normalizedId] = memberNote.version
-                    let prefs = convertContentToPreferences(content: memberNote.content, dynamicSteps: onboardingStore.dynamicSteps)
-                    memberPreferencesCache[normalizedId] = prefs
-                    memberMiscNotes[normalizedId] = extractMiscNotes(from: memberNote.content)
-                }
-                
-                // 3. Re-apply in-progress edits so pending syncs pick up local changes
-                if let ownerKey = preservedOwnerKey, let prefs = preservedPreferences {
-                    memberPreferencesCache[ownerKey] = prefs
-                }
+    func binding(for step: DynamicStep, ownerKey: OwnerKey) -> Binding<PreferenceValue?> {
+        let sectionName = step.header.name
 
-                // 4. Rebuild Associations and Canvas from the cache
-                rebuildAssociationsAndCanvasFromCache()
-                
-                Log.debug("FoodNotesStore", "loadFoodNotesAll: ✅ Successfully loaded and cached data")
-                hasLoadedFoodNotes = true
-            } else {
-                // No data, init empty
-                familyVersion = 0
-                memberVersions = [:]
-                memberPreferencesCache = [:]
-                memberMiscNotes = [:]
-                itemMemberAssociations = [:]
-                canvasPreferences = Preferences()
-                hasLoadedFoodNotes = true
+        return Binding(
+            get: { self.preferences(for: ownerKey).sections[sectionName] },
+            set: { newValue in
+                self.updateSectionValue(newValue, sectionName: sectionName, ownerKey: ownerKey)
             }
-        } catch {
-            Log.debug("FoodNotesStore", "loadFoodNotesAll: ❌ Failed to load food notes: \(error.localizedDescription)")
-            // Init empty on error to prevent crash
-            memberPreferencesCache = [:]
-            memberMiscNotes = [:]
-            itemMemberAssociations = [:]
-            canvasPreferences = Preferences()
-        }
-    }
-    
-    // MARK: - Member Switching
-
-    /// Clears the current preferences owner key without saving.
-    /// Call before Onboarding.reset() to prevent stale state from corrupting the cache.
-    func clearCurrentPreferencesOwner() {
-        currentPreferencesOwnerKey = nil
-    }
-
-    /// Clears cached preferences for a specific member so they start with a clean slate.
-    func clearMemberCache(for memberId: UUID) {
-        memberPreferencesCache[memberId.uuidString.lowercased()] = nil
-    }
-
-    /// Switches the active preferences to the specified member.
-    /// For single-member families, `nil` resolves to the sole member so we do
-    /// not fall back to an empty "Everyone" cache after migration.
-    func preparePreferencesForMember(selectedMemberId: UUID?, family: Family?) {
-        let effectiveMemberId = resolveEffectiveMemberId(
-            selectedMemberId: selectedMemberId,
-            family: family
         )
-        let newMemberKey = effectiveMemberId?.uuidString.lowercased() ?? "Everyone"
-        
-        // 1. Save current preferences to cache for the OLD member
-        if let currentKey = currentPreferencesOwnerKey {
-            Log.debug("FoodNotesStore", "preparePreferencesForMember: Caching preferences for \(currentKey)")
-            memberPreferencesCache[currentKey] = onboardingStore.preferences
-        }
-        
-        // 2. Load preferences from cache for the NEW member
-        Log.debug("FoodNotesStore", "preparePreferencesForMember: Switching to \(newMemberKey)")
-        if let cachedPrefs = memberPreferencesCache[newMemberKey] {
-            onboardingStore.preferences = cachedPrefs
-        } else {
-            // If not in cache (e.g. new member), start empty
-            onboardingStore.preferences = Preferences()
-            memberPreferencesCache[newMemberKey] = Preferences()
-        }
-        
-        onboardingStore.updateSectionCompletionStatus()
-        currentPreferencesOwnerKey = newMemberKey
     }
 
-    /// For single-member families, resolves `nil` to the sole member's ID so
-    /// all food-notes flows bind to the member key where data actually lives.
-    func resolveEffectiveMemberId(selectedMemberId: UUID?, family: Family?) -> UUID? {
+    func updateSectionValue(_ value: PreferenceValue?, sectionName: String, ownerKey: OwnerKey) {
+        let normalizedValue = FoodNotesNormalizer.normalizeSectionValue(value)
+        let existingPreferences = preferences(for: ownerKey)
+        var nextPreferences = existingPreferences
+
+        if let normalizedValue {
+            nextPreferences.sections[sectionName] = normalizedValue
+        } else {
+            nextPreferences.sections.removeValue(forKey: sectionName)
+        }
+
+        guard nextPreferences != existingPreferences else { return }
+
+        ownerPreferences[ownerKey] = nextPreferences
+        if ownerKey == activeOwnerKey {
+            currentPreferences = nextPreferences
+        }
+        if ownerKey == activeOwnerKey, onboardingStore.preferences != nextPreferences {
+            onboardingStore.preferences = nextPreferences
+        }
+        if ownerKey == activeOwnerKey {
+            onboardingStore.updateSectionCompletionStatus()
+        }
+
+        queuePreferencesWrite(nextPreferences, ownerKey: ownerKey)
+    }
+
+    func flushPendingSyncs(ownerKey: OwnerKey? = nil) async {
+        while true {
+            let sequence = pendingWriteSequence
+            if let pendingWriteTask {
+                _ = await pendingWriteTask.result
+            }
+            guard sequence != pendingWriteSequence else { break }
+        }
+        await engine.flushNow(ownerKey: ownerKey)
+    }
+
+    func clearOwnerState(for memberId: UUID) async {
+        await engine.clearOwnerState(ownerKey: Self.ownerKey(for: memberId))
+    }
+
+    func resetLocalState() async {
+        summaryRefreshTask?.cancel()
+        summaryRefreshTask = nil
+        writeEpoch &+= 1
+        pendingWriteTask?.cancel()
+        pendingWriteTask = nil
+        foodNotesSummary = nil
+        ownerPreferences = [:]
+        await engine.reset()
+    }
+
+    // MARK: - Helpers
+
+    func resolveEditingMemberId(selectedMemberId: UUID?, family: Family?) -> UUID? {
         guard selectedMemberId == nil,
               let family,
               family.otherMembers.isEmpty else {
@@ -261,324 +218,573 @@ final class FoodNotesStore {
         return family.selfMember.id
     }
 
-    /// Migrates legacy "Everyone" data to the self-member key for single-member
-    /// families. Safe to call multiple times; no-ops when already migrated.
-    /// Should be called once after data loads, not on every edit tap.
-    func migrateSingleMemberEveryoneData(family: Family?) {
+    func resolveEditingOwnerKey(selectedMemberId: UUID?, family: Family?) -> OwnerKey {
+        Self.ownerKey(for: resolveEditingMemberId(selectedMemberId: selectedMemberId, family: family))
+    }
+
+    func resolveOnboardingOwnerKey(
+        selectedMemberId: UUID?,
+        family: Family?,
+        flowType: OnboardingFlowType
+    ) -> OwnerKey {
+        switch flowType {
+        case .individual:
+            return FoodNotesConstants.everyoneKey
+        case .family:
+            return Self.ownerKey(for: selectedMemberId)
+        case .singleMember:
+            return resolveEditingOwnerKey(selectedMemberId: selectedMemberId, family: family)
+        }
+    }
+
+    private func resolveBootstrapOwnerKey(selectedMemberId: UUID?, family: Family?) -> OwnerKey {
+        if let family, family.otherMembers.isEmpty {
+            return resolveEditingOwnerKey(selectedMemberId: selectedMemberId, family: family)
+        }
+
+        return Self.ownerKey(for: selectedMemberId)
+    }
+
+    fileprivate func apply(_ snapshot: FoodNotesSnapshot) {
+        activeOwnerKey = snapshot.activeOwnerKey
+        ownerPreferences = snapshot.ownerPreferences
+        currentPreferences = snapshot.currentPreferences
+        canvasPreferences = snapshot.canvasPreferences
+        itemMemberAssociations = snapshot.itemMemberAssociations
+        hasLoadedFoodNotes = snapshot.hasLoadedFoodNotes
+        memberMiscNotes = snapshot.memberMiscNotes
+        isSyncing = snapshot.isSyncing
+
+        if onboardingStore.preferences != snapshot.currentPreferences {
+            onboardingStore.preferences = snapshot.currentPreferences
+        }
+        onboardingStore.updateSectionCompletionStatus()
+    }
+
+    static func ownerKey(for selectedMemberId: UUID?) -> OwnerKey {
+        selectedMemberId?.uuidString.lowercased() ?? FoodNotesConstants.everyoneKey
+    }
+
+    static func ownerKey(for memberId: UUID) -> OwnerKey {
+        memberId.uuidString.lowercased()
+    }
+
+    private func queuePreferencesWrite(_ preferences: Preferences, ownerKey: OwnerKey) {
+        let previousTask = pendingWriteTask
+        let engine = self.engine
+        let writeEpoch = self.writeEpoch
+        pendingWriteSequence &+= 1
+
+        pendingWriteTask = Task { @MainActor in
+            _ = await previousTask?.result
+            guard !Task.isCancelled, self.writeEpoch == writeEpoch else { return }
+            await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences, sessionEpoch: writeEpoch)
+        }
+    }
+
+    private func preferences(for ownerKey: OwnerKey) -> Preferences {
+        ownerPreferences[ownerKey] ?? Preferences()
+    }
+
+    private func projectActiveOwnerLocally(_ ownerKey: OwnerKey) {
+        activeOwnerKey = ownerKey
+        currentPreferences = preferences(for: ownerKey)
+
+        if onboardingStore.preferences != currentPreferences {
+            onboardingStore.preferences = currentPreferences
+        }
+        onboardingStore.updateSectionCompletionStatus()
+    }
+}
+
+// MARK: - Engine
+
+private actor FoodNotesEngine {
+    typealias OwnerKey = FoodNotesStore.OwnerKey
+
+    private let webService: WebService
+    private let schema: FoodNotesSchema
+    private let snapshotSink: @Sendable (FoodNotesSnapshot) async -> Void
+    private let summaryRefreshSink: @Sendable () async -> Void
+
+    private var owners: [OwnerKey: FoodNotesOwnerState] = [:]
+    private var activeOwnerKey: OwnerKey = FoodNotesConstants.everyoneKey
+    private var hasLoadedFoodNotes = false
+    private var scheduledSyncTokens: [OwnerKey: UInt64] = [:]
+    private var nextSyncToken: UInt64 = 0
+    private var sessionEpoch: UInt64 = 0
+
+    init(
+        webService: WebService,
+        schema: FoodNotesSchema,
+        snapshotSink: @escaping @Sendable (FoodNotesSnapshot) async -> Void,
+        summaryRefreshSink: @escaping @Sendable () async -> Void
+    ) {
+        self.webService = webService
+        self.schema = schema
+        self.snapshotSink = snapshotSink
+        self.summaryRefreshSink = summaryRefreshSink
+    }
+
+    func setActiveOwner(_ ownerKey: OwnerKey) async {
+        ensureOwnerExists(ownerKey)
+        activeOwnerKey = ownerKey
+        await emitSnapshot()
+    }
+
+    func refreshFromServer(family: Family?) async {
+        let refreshSessionEpoch = sessionEpoch
+        do {
+            let response = try await webService.fetchFoodNotesAll()
+            guard sessionEpoch == refreshSessionEpoch else { return }
+            rebuildOwners(from: response)
+            migrateSingleMemberEveryoneDataIfNeeded(family: family)
+            hasLoadedFoodNotes = true
+            await emitSnapshot()
+        } catch {
+            guard sessionEpoch == refreshSessionEpoch else { return }
+            Log.error("FoodNotesEngine", "refreshFromServer failed: \(error)")
+            if owners.isEmpty {
+                ensureOwnerExists(FoodNotesConstants.everyoneKey)
+                hasLoadedFoodNotes = true
+            }
+            await emitSnapshot()
+        }
+    }
+
+    func replacePreferences(ownerKey: OwnerKey, preferences: Preferences, sessionEpoch: UInt64) async {
+        guard sessionEpoch == self.sessionEpoch else { return }
+        ensureOwnerExists(ownerKey)
+        var owner = owners[ownerKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
+        let normalized = FoodNotesNormalizer.normalize(preferences)
+        owner.pendingReplacement = FoodNotesPendingReplacement(id: UUID(), preferences: normalized)
+        owner.working = normalized
+        owners[ownerKey] = owner
+        await emitSnapshot()
+        scheduleSync(for: ownerKey)
+    }
+
+    func flushNow(ownerKey: OwnerKey?) async {
+        if let ownerKey {
+            await performSync(ownerKey: ownerKey, retryCount: 0)
+            return
+        }
+
+        let keys = Array(owners.keys).sorted()
+        for key in keys {
+            await performSync(ownerKey: key, retryCount: 0)
+        }
+    }
+
+    func clearOwnerState(ownerKey: OwnerKey) async {
+        ensureOwnerExists(ownerKey)
+        var owner = owners[ownerKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
+        owner.base = Preferences()
+        owner.working = Preferences()
+        owner.pendingReplacement = nil
+        owner.version = 0
+        owner.miscNotes = []
+        owner.requiresSync = false
+        owner.isSyncing = false
+        owner.resetEpoch &+= 1
+        owners[ownerKey] = owner
+        scheduledSyncTokens[ownerKey] = nil
+        await emitSnapshot()
+    }
+
+    func reset() async {
+        sessionEpoch &+= 1
+        owners = [:]
+        activeOwnerKey = FoodNotesConstants.everyoneKey
+        hasLoadedFoodNotes = false
+        scheduledSyncTokens = [:]
+        ensureOwnerExists(activeOwnerKey)
+        await emitSnapshot()
+    }
+
+    // MARK: - Refresh Merge
+
+    private func rebuildOwners(from response: WebService.FoodNotesAllResponse?) {
+        let serverNotes = parseServerNotes(response)
+        let allKeys = Set(owners.keys).union(serverNotes.keys).union([FoodNotesConstants.everyoneKey, activeOwnerKey])
+
+        var rebuilt: [OwnerKey: FoodNotesOwnerState] = [:]
+        for key in allKeys {
+            let previous = owners[key] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
+            let server = serverNotes[key]
+
+            var next = previous
+            next.base = server?.preferences ?? Preferences()
+            next.version = server?.version ?? 0
+            next.miscNotes = resolvedMiscNotes(previous: previous, server: server)
+            next.working = previous.pendingReplacement?.preferences ?? next.base
+            rebuilt[key] = next
+        }
+
+        owners = rebuilt
+        ensureOwnerExists(activeOwnerKey)
+    }
+
+    private func parseServerNotes(_ response: WebService.FoodNotesAllResponse?) -> [OwnerKey: FoodNotesServerNote] {
+        guard let response else {
+            return [:]
+        }
+
+        var notes: [OwnerKey: FoodNotesServerNote] = [:]
+
+        if let familyNote = response.familyNote {
+            notes[FoodNotesConstants.everyoneKey] = FoodNotesServerNote(
+                preferences: convertContentToPreferences(content: familyNote.content),
+                version: familyNote.version,
+                miscNotes: extractMiscNotes(from: familyNote.content)
+            )
+        }
+
+        for (memberId, note) in response.memberNotes {
+            notes[memberId.lowercased()] = FoodNotesServerNote(
+                preferences: convertContentToPreferences(content: note.content),
+                version: note.version,
+                miscNotes: extractMiscNotes(from: note.content)
+            )
+        }
+
+        return notes
+    }
+
+    // MARK: - Migration
+
+    private func migrateSingleMemberEveryoneDataIfNeeded(family: Family?) {
         guard let family, family.otherMembers.isEmpty else { return }
 
         let selfKey = family.selfMember.id.uuidString.lowercased()
+        ensureOwnerExists(selfKey)
+        ensureOwnerExists(FoodNotesConstants.everyoneKey)
 
-        let everyonePrefs = memberPreferencesCache["Everyone"] ?? Preferences()
-        let everyoneMisc = memberMiscNotes["Everyone"] ?? []
+        let everyone = owners[FoodNotesConstants.everyoneKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
+        let selfOwner = owners[selfKey] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
 
-        guard hasAnyData(preferences: everyonePrefs, miscNotes: everyoneMisc) else { return }
+        let everyoneHasStructuredData = FoodNotesNormalizer.hasAnySelections(in: everyone.working)
+        let everyoneHasMiscNotes = !everyone.miscNotes.isEmpty
+        guard everyoneHasStructuredData || everyoneHasMiscNotes else { return }
 
-        let selfPrefs = memberPreferencesCache[selfKey] ?? Preferences()
-        let selfMisc = memberMiscNotes[selfKey] ?? []
+        let mergedPreferences = mergePreferences(base: selfOwner.working, with: everyone.working)
+        let mergedMiscNotes = mergeUniqueStrings(base: selfOwner.miscNotes, with: everyone.miscNotes)
 
-        memberPreferencesCache[selfKey] = mergePreferences(base: selfPrefs, with: everyonePrefs)
-        memberMiscNotes[selfKey] = mergeUniqueStrings(base: selfMisc, with: everyoneMisc)
-
-        memberPreferencesCache["Everyone"] = Preferences()
-        memberMiscNotes["Everyone"] = []
-
-        rebuildAssociationsAndCanvasFromCache()
-        scheduleSync(for: selfKey)
-        scheduleSync(for: "Everyone")
-        Log.debug("FoodNotesStore", "migrateSingleMemberEveryoneData: Migrated Everyone → \(selfKey)")
-    }
-    
-    // MARK: - Updates & Sync
-    
-    /// Called when the user makes a change in the UI.
-    /// Updates local cache, associations, canvas, and schedules sync.
-    func handleLocalPreferenceChange() {
-        guard let currentKey = currentPreferencesOwnerKey else { return }
-        
-        Log.debug("FoodNotesStore", "handleLocalPreferenceChange: Updating for \(currentKey)")
-        
-        // 1. Update Cache
-        memberPreferencesCache[currentKey] = onboardingStore.preferences
-        
-        // 2. Optimistically update Associations and Canvas
-        // We can do this by rebuilding or by diffing. 
-        // For robustness, let's use the diff logic from applyLocalPreferencesOptimistic 
-        // but adapted to use the cache as the source of truth.
-        updateAssociationsAndCanvas(for: currentKey, with: onboardingStore.preferences)
-        
-        // 3. Schedule Sync
-        scheduleSync(for: currentKey)
-    }
-    
-    // Kept for compatibility with View calls, but delegates to handleLocalPreferenceChange
-    func applyLocalPreferencesOptimistic() {
-        handleLocalPreferenceChange()
-    }
-    
-    // Kept for compatibility with View calls
-    func updateFoodNotes() {
-        // No-op, handled by handleLocalPreferenceChange
-    }
-    
-    // MARK: - Internal Logic
-    
-    private func updateAssociationsAndCanvas(for memberKey: String, with newPrefs: Preferences) {
-        // This is the same logic as before, but we know exactly who we are updating.
-        var newAssociations = itemMemberAssociations
-        var newCanvas = canvasPreferences
-        
-        for step in onboardingStore.dynamicSteps {
-            let sectionName = step.header.name
-            let localPreference = newPrefs.sections[sectionName]
-            
-            // 1. Identify what the member currently has in associations
-            let serverItemsForSection = newAssociations[sectionName] ?? [:]
-            let serverSelectedItems = serverItemsForSection.filter { $0.value.contains(memberKey) }.map { $0.key }
-            let serverSelectedSet = Set(serverSelectedItems)
-            
-            // 2. Identify what the member has in newPrefs
-            var localSelectedSet = Set<String>()
-            if case .list(let items) = localPreference {
-                localSelectedSet = Set(items)
-            } else if case .nested(let nestedDict) = localPreference {
-                localSelectedSet = Set(nestedDict.values.flatMap { $0 })
-            }
-            
-            // 3. Compute diffs
-            let toAdd = localSelectedSet.subtracting(serverSelectedSet)
-            let toRemove = serverSelectedSet.subtracting(localSelectedSet)
-            
-            // 4. Handle Removals
-            for item in toRemove {
-                if var members = newAssociations[sectionName]?[item] {
-                    members.removeAll { $0 == memberKey }
-                    if members.isEmpty {
-                        newAssociations[sectionName]?[item] = nil
-                        // Remove from canvas
-                        removeFromCanvas(canvas: &newCanvas, section: sectionName, item: item)
-                    } else {
-                        newAssociations[sectionName]?[item] = members
-                    }
-                }
-            }
-            
-            // 5. Handle Additions
-            for item in toAdd {
-                if !newAssociations[sectionName, default: [:]][item, default: []].contains(memberKey) {
-                    newAssociations[sectionName, default: [:]][item, default: []].append(memberKey)
-                }
-                // Add to canvas
-                addToCanvas(canvas: &newCanvas, section: sectionName, item: item, localPref: localPreference)
-            }
+        var updatedSelf = selfOwner
+        if mergedPreferences != selfOwner.working {
+            updatedSelf.pendingReplacement = FoodNotesPendingReplacement(id: UUID(), preferences: mergedPreferences)
+            updatedSelf.working = mergedPreferences
         }
-        
-        itemMemberAssociations = newAssociations
-        canvasPreferences = newCanvas
-    }
-    
-    private func removeFromCanvas(canvas: inout Preferences, section: String, item: String) {
-        switch canvas.sections[section] {
-        case .list(var items):
-            items.removeAll { $0 == item }
-            canvas.sections[section] = items.isEmpty ? nil : .list(items)
-        case .nested(var nestedDict):
-            for (nestedKey, var items) in nestedDict {
-                items.removeAll { $0 == item }
-                nestedDict[nestedKey] = items.isEmpty ? nil : items
-            }
-            let cleaned = nestedDict.compactMapValues { $0 }
-            canvas.sections[section] = cleaned.isEmpty ? nil : .nested(cleaned)
-        case nil:
-            break
+        if mergedMiscNotes != selfOwner.miscNotes {
+            updatedSelf.miscNotes = mergedMiscNotes
+            updatedSelf.requiresSync = true
         }
-    }
-    
-    private func addToCanvas(canvas: inout Preferences, section: String, item: String, localPref: PreferenceValue?) {
-        if case .nested(let localNested) = localPref {
-            if let nestedKey = localNested.first(where: { $0.value.contains(item) })?.key {
-                if case .nested(var existingNested) = canvas.sections[section] {
-                    var items = existingNested[nestedKey] ?? []
-                    if !items.contains(item) {
-                        items.append(item)
-                        existingNested[nestedKey] = items
-                    }
-                    canvas.sections[section] = .nested(existingNested)
-                } else {
-                    canvas.sections[section] = .nested([nestedKey: [item]])
-                }
-            }
-        } else {
-            if case .list(var existingItems) = canvas.sections[section] {
-                if !existingItems.contains(item) {
-                    existingItems.append(item)
-                    canvas.sections[section] = .list(existingItems)
-                }
-            } else {
-                canvas.sections[section] = .list([item])
-            }
-        }
-    }
-    
-    private func rebuildAssociationsAndCanvasFromCache() {
-        itemMemberAssociations = [:]
-        canvasPreferences = Preferences()
+        owners[selfKey] = updatedSelf
 
-        for (memberKey, prefs) in memberPreferencesCache {
-            updateAssociationsAndCanvas(for: memberKey, with: prefs)
+        var updatedEveryone = everyone
+        updatedEveryone.pendingReplacement = FoodNotesPendingReplacement(id: UUID(), preferences: Preferences())
+        updatedEveryone.working = Preferences()
+        if !updatedEveryone.miscNotes.isEmpty {
+            updatedEveryone.miscNotes = []
+            updatedEveryone.requiresSync = true
         }
+        owners[FoodNotesConstants.everyoneKey] = updatedEveryone
+
+        scheduleSync(for: selfKey, delayMs: 100)
+        scheduleSync(for: FoodNotesConstants.everyoneKey, delayMs: 100)
     }
-    
+
     // MARK: - Sync
-    
-    private func scheduleSync(for memberKey: String) {
-        pendingSyncMembers.insert(memberKey)
-        syncDebounceTask?.cancel()
-        
-        syncDebounceTask = Task {
-            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5s
-            if Task.isCancelled { return }
-            await performPendingSyncs()
+
+    private func scheduleSync(for ownerKey: OwnerKey, delayMs: UInt64 = 1_500) {
+        nextSyncToken &+= 1
+        let token = nextSyncToken
+        scheduledSyncTokens[ownerKey] = token
+
+        Task {
+            try? await Task.sleep(nanoseconds: delayMs * 1_000_000)
+            await self.flushIfScheduled(ownerKey: ownerKey, token: token)
         }
     }
-    
-    private func performPendingSyncs() async {
-        guard !isSyncing else { return }
-        let members = pendingSyncMembers
-        pendingSyncMembers.removeAll()
 
-        isSyncing = true
-        defer { isSyncing = false }
-
-        for memberKey in members {
-            await syncMember(memberKey)
-        }
-
-        // After all syncs complete, refresh the summary
-        refreshSummary()
+    private func flushIfScheduled(ownerKey: OwnerKey, token: UInt64) async {
+        guard scheduledSyncTokens[ownerKey] == token else { return }
+        await performSync(ownerKey: ownerKey, retryCount: 0)
     }
-    
-    private func syncMember(_ memberKey: String, retryCount: Int = 0) async {
-        guard let prefs = memberPreferencesCache[memberKey] else { return }
 
-        Log.debug("FoodNotesStore", "📤 [FoodNotesStore] syncMember: Syncing \(memberKey)")
+    private func performSync(ownerKey: OwnerKey, retryCount: Int) async {
+        guard var owner = owners[ownerKey] else { return }
+        guard (owner.pendingReplacement != nil || owner.requiresSync) && !owner.isSyncing else { return }
 
-        var content = buildContentFromPreferences(preferences: prefs, dynamicSteps: onboardingStore.dynamicSteps)
-
-        // Preserve misc notes that were set by IngrediBot
-        if let miscNotes = memberMiscNotes[memberKey], !miscNotes.isEmpty {
-            var preferencesDict = content["preferences"] as? [String: Any] ?? [:]
-            preferencesDict["misc"] = miscNotes
-            content["preferences"] = preferencesDict
-        }
-
-        let isEveryone = (memberKey == "Everyone")
-        var version = isEveryone ? familyVersion : (memberVersions[memberKey] ?? 0)
+        owner.isSyncing = true
+        let syncSessionEpoch = sessionEpoch
+        let syncEpoch = owner.resetEpoch
+        let syncedReplacementID = owner.pendingReplacement?.id
+        let syncVersion = owner.version
+        let syncPreferences = owner.working
+        let syncMiscNotes = owner.miscNotes
+        owners[ownerKey] = owner
+        await emitSnapshot()
 
         do {
+            var content = buildContentFromPreferences(preferences: syncPreferences)
+            if !syncMiscNotes.isEmpty {
+                var preferencesDict = content["preferences"] as? [String: Any] ?? [:]
+                preferencesDict["misc"] = syncMiscNotes
+                content["preferences"] = preferencesDict
+            }
+
             let response: WebService.FoodNotesResponse
-            if !isEveryone {
-                response = try await webService.updateMemberFoodNotes(
-                    memberId: memberKey,
-                    content: content,
-                    version: version
-                )
-                memberVersions[memberKey] = response.version
+            if ownerKey == FoodNotesConstants.everyoneKey {
+                response = try await webService.updateFoodNotes(content: content, version: syncVersion)
             } else {
-                response = try await webService.updateFoodNotes(content: content, version: version)
-                familyVersion = response.version
+                response = try await webService.updateMemberFoodNotes(
+                    memberId: ownerKey,
+                    content: content,
+                    version: syncVersion
+                )
             }
-            Log.debug("FoodNotesStore", "✅ [FoodNotesStore] syncMember: Success \(memberKey) v\(response.version)")
+
+            guard sessionEpoch == syncSessionEpoch,
+                  var current = owners[ownerKey],
+                  current.resetEpoch == syncEpoch else { return }
+
+            current.isSyncing = false
+            current.base = convertContentToPreferences(content: response.content)
+            current.version = response.version
+            current.miscNotes = extractMiscNotes(from: response.content)
+            current.requiresSync = false
+            if current.pendingReplacement?.id == syncedReplacementID {
+                current.pendingReplacement = nil
+            }
+            current.working = current.pendingReplacement?.preferences ?? current.base
+            owners[ownerKey] = current
+            scheduledSyncTokens[ownerKey] = nil
+
+            await emitSnapshot()
+            await summaryRefreshSink()
+
+            if current.pendingReplacement != nil || current.requiresSync {
+                scheduleSync(for: ownerKey, delayMs: 100)
+            }
         } catch let error as WebService.VersionMismatchError {
-            Log.warning("FoodNotesStore", "⚠️ [FoodNotesStore] syncMember: Version mismatch \(memberKey), attempt \(retryCount + 1)")
-            // Re-extract misc from server's current content before retrying
-            memberMiscNotes[memberKey] = extractMiscNotes(from: error.currentNote.content)
-            if isEveryone { familyVersion = error.currentNote.version }
-            else { memberVersions[memberKey] = error.currentNote.version }
-            guard retryCount < 3 else {
-                Log.error("FoodNotesStore", "❌ [FoodNotesStore] syncMember: Max retries for \(memberKey), scheduling deferred retry")
-                scheduleSync(for: memberKey)
-                return
+            guard sessionEpoch == syncSessionEpoch,
+                  var current = owners[ownerKey],
+                  current.resetEpoch == syncEpoch else { return }
+
+            current.isSyncing = false
+            current.base = convertContentToPreferences(content: error.currentNote.content)
+            current.version = error.currentNote.version
+            current.miscNotes = extractMiscNotes(from: error.currentNote.content)
+            current.working = current.pendingReplacement?.preferences ?? current.base
+            owners[ownerKey] = current
+
+            await emitSnapshot()
+
+            if retryCount < 3 {
+                await performSync(ownerKey: ownerKey, retryCount: retryCount + 1)
+            } else {
+                scheduleSync(for: ownerKey, delayMs: 2_000)
             }
-            await syncMember(memberKey, retryCount: retryCount + 1)
         } catch {
-            Log.error("FoodNotesStore", "❌ [FoodNotesStore] syncMember: Failed \(error)")
+            guard sessionEpoch == syncSessionEpoch,
+                  var current = owners[ownerKey],
+                  current.resetEpoch == syncEpoch else { return }
+
+            current.isSyncing = false
+            owners[ownerKey] = current
+            await emitSnapshot()
+            scheduleSync(for: ownerKey, delayMs: 2_000)
         }
     }
-    
-    // MARK: - Helpers
-    
-    func convertContentToPreferences(content: [String: Any], dynamicSteps: [DynamicStep]) -> Preferences {
+
+    // MARK: - Snapshot
+
+    private func emitSnapshot() async {
+        await snapshotSink(buildSnapshot())
+    }
+
+    private func buildSnapshot() -> FoodNotesSnapshot {
+        let projection = buildProjection()
+        let currentPreferences = owners[activeOwnerKey]?.working ?? Preferences()
+
+        return FoodNotesSnapshot(
+            activeOwnerKey: activeOwnerKey,
+            currentPreferences: currentPreferences,
+            ownerPreferences: owners.mapValues { $0.working },
+            canvasPreferences: projection.canvasPreferences,
+            itemMemberAssociations: projection.itemMemberAssociations,
+            memberMiscNotes: owners.mapValues { $0.miscNotes },
+            hasLoadedFoodNotes: hasLoadedFoodNotes,
+            isSyncing: owners.values.contains { $0.isSyncing }
+        )
+    }
+
+    private func buildProjection() -> FoodNotesProjection {
+        var associations: [String: [String: [String]]] = [:]
+        var canvas = Preferences()
+
+        for (ownerKey, owner) in owners {
+            let prefs = owner.working
+
+            for (sectionName, value) in prefs.sections {
+                switch value {
+                case .list(let items):
+                    let cleanedItems = FoodNotesNormalizer.uniqueStrings(items)
+                    if !cleanedItems.isEmpty {
+                        if case .list(let existingItems) = canvas.sections[sectionName] {
+                            canvas.sections[sectionName] = .list(
+                                FoodNotesNormalizer.uniqueStrings(existingItems + cleanedItems)
+                            )
+                        } else {
+                            canvas.sections[sectionName] = .list(cleanedItems)
+                        }
+                    }
+
+                    for item in cleanedItems {
+                        associations[sectionName, default: [:]][item, default: []].append(ownerKey)
+                    }
+
+                case .nested(let nestedDict):
+                    var canvasNested: [String: [String]]
+                    if case .nested(let existingNested) = canvas.sections[sectionName] {
+                        canvasNested = existingNested
+                    } else {
+                        canvasNested = [:]
+                    }
+
+                    for (nestedKey, items) in nestedDict {
+                        let cleanedItems = FoodNotesNormalizer.uniqueStrings(items)
+                        guard !cleanedItems.isEmpty else { continue }
+
+                        canvasNested[nestedKey] = FoodNotesNormalizer.uniqueStrings(
+                            (canvasNested[nestedKey] ?? []) + cleanedItems
+                        )
+
+                        for item in cleanedItems {
+                            associations[sectionName, default: [:]][item, default: []].append(ownerKey)
+                        }
+                    }
+
+                    let cleanedNested = canvasNested.compactMapValues { value in
+                        value.isEmpty ? nil : value
+                    }
+                    if !cleanedNested.isEmpty {
+                        canvas.sections[sectionName] = .nested(cleanedNested)
+                    }
+                }
+            }
+        }
+
+        for sectionName in Array(associations.keys) {
+            guard var sectionAssociations = associations[sectionName] else { continue }
+            for item in Array(sectionAssociations.keys) {
+                sectionAssociations[item] = FoodNotesNormalizer.uniqueStrings(
+                    sectionAssociations[item] ?? []
+                )
+            }
+            associations[sectionName] = sectionAssociations
+        }
+
+        return FoodNotesProjection(
+            canvasPreferences: FoodNotesNormalizer.normalize(canvas),
+            itemMemberAssociations: associations
+        )
+    }
+
+    // MARK: - Conversion
+
+    private func convertContentToPreferences(content: [String: Any]) -> Preferences {
         var preferences = Preferences()
+
         for (stepId, stepContent) in content {
-            guard let step = dynamicSteps.first(where: { $0.id == stepId }) else { continue }
-            let sectionName = step.header.name
-            
+            guard let step = schema.step(for: stepId) else { continue }
+
             if let itemsArray = stepContent as? [[String: Any]] {
                 let itemNames = itemsArray.compactMap { $0["name"] as? String }
-                if !itemNames.isEmpty { preferences.sections[sectionName] = .list(itemNames) }
+                if !itemNames.isEmpty {
+                    preferences.sections[step.sectionName] = .list(FoodNotesNormalizer.uniqueStrings(itemNames))
+                }
             } else if let nestedDict = stepContent as? [String: Any] {
                 var prefNested: [String: [String]] = [:]
                 for (key, val) in nestedDict {
                     if let arr = val as? [[String: Any]] {
                         let names = arr.compactMap { $0["name"] as? String }
-                        if !names.isEmpty { prefNested[key] = names }
+                        if !names.isEmpty {
+                            prefNested[key] = FoodNotesNormalizer.uniqueStrings(names)
+                        }
                     }
                 }
-                if !prefNested.isEmpty { preferences.sections[sectionName] = .nested(prefNested) }
+                if !prefNested.isEmpty {
+                    preferences.sections[step.sectionName] = .nested(prefNested)
+                }
             }
         }
-        return preferences
+
+        return FoodNotesNormalizer.normalize(preferences)
     }
-    
-    func buildContentFromPreferences(preferences: Preferences, dynamicSteps: [DynamicStep]) -> [String: Any] {
+
+    private func buildContentFromPreferences(preferences: Preferences) -> [String: Any] {
         var content: [String: Any] = [:]
-        for step in dynamicSteps {
-            let sectionName = step.header.name
-            guard let val = preferences.sections[sectionName] else {
-                // Empty section
-                content[step.id] = (step.type == .type1) ? [[String:Any]]() : [String:Any]()
+
+        for step in schema.steps {
+            guard let value = preferences.sections[step.sectionName] else {
+                content[step.stepId] = step.isList ? [[String: Any]]() : [String: Any]()
                 continue
             }
-            
-            switch val {
+
+            switch value {
             case .list(let items):
-                let arr = items.map { name in
-                    let icon = step.content.options?.first(where: { $0.name == name })?.icon ?? ""
-                    return ["name": name, "iconName": icon]
+                let normalizedItems = FoodNotesNormalizer.uniqueStrings(items)
+                let array = normalizedItems.map { itemName in
+                    [
+                        "name": itemName,
+                        "iconName": step.optionIcons[itemName] ?? ""
+                    ]
                 }
-                content[step.id] = arr
+                content[step.stepId] = array
+
             case .nested(let nested):
                 var nestedContent: [String: Any] = [:]
-                // Logic to map nested items to their structure (subSteps or regions)
-                // Simplified for brevity, assuming structure matches keys
                 for (key, items) in nested {
-                    let arr = items.map { name in
-                        // Icon lookup would go here
-                        return ["name": name, "iconName": ""]
+                    nestedContent[key] = FoodNotesNormalizer.uniqueStrings(items).map { itemName in
+                        [
+                            "name": itemName,
+                            "iconName": ""
+                        ]
                     }
-                    nestedContent[key] = arr
                 }
-                content[step.id] = nestedContent
+                content[step.stepId] = nestedContent
             }
         }
+
         return content
     }
 
-    private func hasAnyData(preferences: Preferences, miscNotes: [String]) -> Bool {
-        hasAnySelections(in: preferences) || !miscNotes.isEmpty
+    private func extractMiscNotes(from content: [String: Any]) -> [String] {
+        guard let preferences = content["preferences"] as? [String: Any],
+              let misc = preferences["misc"] as? [String] else {
+            return []
+        }
+        return FoodNotesNormalizer.uniqueStrings(misc)
     }
 
-    private func hasAnySelections(in preferences: Preferences) -> Bool {
-        for value in preferences.sections.values {
-            switch value {
-            case .list(let items):
-                if !items.isEmpty { return true }
-            case .nested(let nested):
-                if nested.values.contains(where: { !$0.isEmpty }) { return true }
-            }
+    // MARK: - Internal Helpers
+
+    private func ensureOwnerExists(_ ownerKey: OwnerKey) {
+        if owners[ownerKey] == nil {
+            owners[ownerKey] = FoodNotesOwnerState(resetEpoch: sessionEpoch)
         }
-        return false
+    }
+
+    private func resolvedMiscNotes(
+        previous: FoodNotesOwnerState,
+        server: FoodNotesServerNote?
+    ) -> [String] {
+        if previous.requiresSync {
+            return previous.miscNotes
+        }
+        return server?.miscNotes ?? []
     }
 
     private func mergePreferences(base: Preferences, with incoming: Preferences) -> Preferences {
@@ -592,37 +798,178 @@ final class FoodNotesStore {
 
             switch (existingValue, incomingValue) {
             case (.list(let existingItems), .list(let incomingItems)):
-                merged.sections[sectionName] = .list(mergeUniqueStrings(base: existingItems, with: incomingItems))
+                merged.sections[sectionName] = .list(
+                    FoodNotesNormalizer.uniqueStrings(existingItems + incomingItems)
+                )
+
             case (.nested(let existingNested), .nested(let incomingNested)):
                 var combined = existingNested
                 for (nestedKey, incomingItems) in incomingNested {
-                    let existingItems = combined[nestedKey] ?? []
-                    combined[nestedKey] = mergeUniqueStrings(base: existingItems, with: incomingItems)
+                    combined[nestedKey] = FoodNotesNormalizer.uniqueStrings(
+                        (combined[nestedKey] ?? []) + incomingItems
+                    )
                 }
                 merged.sections[sectionName] = .nested(combined)
+
             default:
-                // Step schema may have changed; keep existing owner shape.
                 continue
             }
         }
 
-        return merged
+        return FoodNotesNormalizer.normalize(merged)
     }
 
     private func mergeUniqueStrings(base: [String], with incoming: [String]) -> [String] {
-        var merged = base
-        for item in incoming where !merged.contains(item) {
-            merged.append(item)
-        }
-        return merged
+        FoodNotesNormalizer.uniqueStrings(base + incoming)
     }
-    
-    private func extractMiscNotes(from content: [String: Any]) -> [String] {
-        guard let preferences = content["preferences"] as? [String: Any],
-              let misc = preferences["misc"] as? [String] else {
-            return []
-        }
-        return misc
+}
+
+// MARK: - Supporting Types
+
+private enum FoodNotesConstants {
+    static let everyoneKey = "Everyone"
+}
+
+private final class FoodNotesSnapshotBridge: @unchecked Sendable {
+    private weak var store: FoodNotesStore?
+
+    @MainActor
+    func attach(to store: FoodNotesStore) {
+        self.store = store
     }
 
+    func deliver(snapshot: FoodNotesSnapshot) async {
+        await MainActor.run { [weak self] in
+            self?.store?.apply(snapshot)
+        }
+    }
+
+    func refreshSummary() async {
+        await MainActor.run { [weak self] in
+            self?.store?.refreshSummary()
+        }
+    }
+}
+
+private struct FoodNotesSchema: Sendable {
+    let steps: [FoodNotesSchemaStep]
+    private let stepsByID: [String: FoodNotesSchemaStep]
+
+    init(dynamicSteps: [DynamicStep]) {
+        let mapped = dynamicSteps.map { step in
+            FoodNotesSchemaStep(
+                stepId: step.id,
+                sectionName: step.header.name,
+                isList: step.type == .type1,
+                optionIcons: Dictionary(
+                    uniqueKeysWithValues: (step.content.options ?? []).map { ($0.name, $0.icon) }
+                )
+            )
+        }
+        self.steps = mapped
+        self.stepsByID = Dictionary(uniqueKeysWithValues: mapped.map { ($0.stepId, $0) })
+    }
+
+    func step(for stepId: String) -> FoodNotesSchemaStep? {
+        stepsByID[stepId]
+    }
+}
+
+private struct FoodNotesSchemaStep: Sendable {
+    let stepId: String
+    let sectionName: String
+    let isList: Bool
+    let optionIcons: [String: String]
+}
+
+private struct FoodNotesSnapshot: Sendable {
+    let activeOwnerKey: String
+    let currentPreferences: Preferences
+    let ownerPreferences: [String: Preferences]
+    let canvasPreferences: Preferences
+    let itemMemberAssociations: [String: [String: [String]]]
+    let memberMiscNotes: [String: [String]]
+    let hasLoadedFoodNotes: Bool
+    let isSyncing: Bool
+}
+
+private struct FoodNotesProjection: Sendable {
+    let canvasPreferences: Preferences
+    let itemMemberAssociations: [String: [String: [String]]]
+}
+
+private struct FoodNotesServerNote: Sendable {
+    let preferences: Preferences
+    let version: Int
+    let miscNotes: [String]
+}
+
+private struct FoodNotesPendingReplacement: Sendable {
+    let id: UUID
+    let preferences: Preferences
+}
+
+private struct FoodNotesOwnerState {
+    var base: Preferences = Preferences()
+    var working: Preferences = Preferences()
+    var pendingReplacement: FoodNotesPendingReplacement? = nil
+    var version: Int = 0
+    var miscNotes: [String] = []
+    var requiresSync: Bool = false
+    var isSyncing: Bool = false
+    var resetEpoch: UInt64 = 0
+}
+
+private enum FoodNotesNormalizer {
+    static func normalizeSectionValue(_ value: PreferenceValue?) -> PreferenceValue? {
+        guard let value else { return nil }
+
+        switch value {
+        case .list(let items):
+            let cleaned = uniqueStrings(items)
+            return cleaned.isEmpty ? nil : .list(cleaned)
+
+        case .nested(let nested):
+            let cleanedNested = nested.compactMapValues { items -> [String]? in
+                let cleaned = uniqueStrings(items)
+                return cleaned.isEmpty ? nil : cleaned
+            }
+            return cleanedNested.isEmpty ? nil : .nested(cleanedNested)
+        }
+    }
+
+    static func normalize(_ preferences: Preferences) -> Preferences {
+        var normalizedSections: [String: PreferenceValue] = [:]
+
+        for (sectionName, value) in preferences.sections {
+            if let normalizedValue = normalizeSectionValue(value) {
+                normalizedSections[sectionName] = normalizedValue
+            }
+        }
+
+        return Preferences(sections: normalizedSections)
+    }
+
+    static func uniqueStrings(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+
+        for value in values where seen.insert(value).inserted {
+            result.append(value)
+        }
+
+        return result
+    }
+
+    static func hasAnySelections(in preferences: Preferences) -> Bool {
+        for value in preferences.sections.values {
+            switch value {
+            case .list(let items):
+                if !items.isEmpty { return true }
+            case .nested(let nested):
+                if nested.values.contains(where: { !$0.isEmpty }) { return true }
+            }
+        }
+        return false
+    }
 }

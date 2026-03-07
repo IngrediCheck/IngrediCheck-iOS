@@ -188,6 +188,9 @@ struct RootContainerView: View {
             coordinator = AppNavigationCoordinator(initialRoute: .heyThere)
             onboarding.reset(flowType: .individual)
             familyStore.resetLocalState()
+            Task { @MainActor in
+                await foodNotesStore.resetLocalState()
+            }
             hasPendingFeedbackShortcut = false
             dismiss()
         }

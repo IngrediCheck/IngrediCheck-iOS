@@ -33,7 +33,7 @@ struct UserModel: Identifiable {
 }
 
 
-struct Preferences: Codable, Equatable {
+struct Preferences: Codable, Equatable, Sendable {
     var sections: [String: PreferenceValue] = [:]
     
     init() {
@@ -45,7 +45,7 @@ struct Preferences: Codable, Equatable {
     }
 }
 
-enum PreferenceValue: Codable, Equatable {
+enum PreferenceValue: Codable, Equatable, Sendable {
     case list([String])
     case nested([String: [String]])
 
