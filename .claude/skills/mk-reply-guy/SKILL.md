@@ -40,6 +40,8 @@ When the user runs **/mk-reply-guy** (or asks for "mk-reply-guy" / "reply guy" /
 
 ### Banned subreddits (do not search or propose)
 - **r/FoodAllergies** — we are banned; skip any candidate from this sub.
+- **r/keto** — we are banned; skip any candidate from this sub.
+- **r/EatCheapAndHealthy** — we are banned; skip any candidate from this sub.
 
 ### Target Subreddits
 Cast a wide net across these; prioritize subs where people discuss checking ingredients on packaged foods, labels, or shopping with restrictions. Prefer subs with recent activity (browse `/new/` or check that posts are from the last month). Do not use banned subreddits (see above).
@@ -358,7 +360,7 @@ Execute these steps using browser and fetch tools only. Do not create or call se
   (parse the HTML/markdown for post links and ages; prefer posts < 1 month old)
 
 ### Step 2 — Open and read each candidate post
-- **Skip banned subreddits:** Do not open or propose posts from r/FoodAllergies (we are banned there). If a search result or candidate is from a banned sub, skip it and pick the next candidate.
+- **Skip banned subreddits:** Do not open or propose posts from r/FoodAllergies, r/keto, or r/EatCheapAndHealthy (we are banned there). If a search result or candidate is from a banned sub, skip it and pick the next candidate.
 - **Open the post in the Cursor IDE browser** (navigate to the post URL with `mcp_cursor-ide-browser_browser_navigate`) so the user can see the thread. Prefer the in-IDE browser for opening and showing posts; use `mcp_web_fetch` for duplicate-checking and parsing comment text.
 - **CRITICAL: Verify post is NOT archived BEFORE proposing:**
   1. Check the post age in the page or snapshot. If it shows **6mo ago**, **1y ago**, **2y ago**, or any age ≥ 6 months, the post is archived. **SKIP immediately** - do NOT propose a comment.
