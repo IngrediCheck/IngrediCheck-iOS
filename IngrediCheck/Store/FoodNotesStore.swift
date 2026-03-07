@@ -221,9 +221,14 @@ final class FoodNotesStore {
     }
 
     /// Switches the active preferences to the specified member.
-    /// Saves the current member's state to cache before switching.
-    func preparePreferencesForMember(selectedMemberId: UUID?) {
-        let newMemberKey = selectedMemberId?.uuidString.lowercased() ?? "Everyone"
+    /// For single-member families, `nil` resolves to the sole member so we do
+    /// not fall back to an empty "Everyone" cache after migration.
+    func preparePreferencesForMember(selectedMemberId: UUID?, family: Family?) {
+        let effectiveMemberId = resolveEffectiveMemberId(
+            selectedMemberId: selectedMemberId,
+            family: family
+        )
+        let newMemberKey = effectiveMemberId?.uuidString.lowercased() ?? "Everyone"
         
         // 1. Save current preferences to cache for the OLD member
         if let currentKey = currentPreferencesOwnerKey {
@@ -245,9 +250,9 @@ final class FoodNotesStore {
         currentPreferencesOwnerKey = newMemberKey
     }
 
-    /// For single-member families, returns the sole member's ID so the edit
-    /// sheet binds to the member key (where data actually lives).
-    func resolveEditingMemberId(selectedMemberId: UUID?, family: Family?) -> UUID? {
+    /// For single-member families, resolves `nil` to the sole member's ID so
+    /// all food-notes flows bind to the member key where data actually lives.
+    func resolveEffectiveMemberId(selectedMemberId: UUID?, family: Family?) -> UUID? {
         guard selectedMemberId == nil,
               let family,
               family.otherMembers.isEmpty else {

@@ -89,7 +89,10 @@ struct EditableCanvasView: View {
             foodNotesStore.migrateSingleMemberEveryoneData(family: familyStore.family)
 
             // Prepare preferences for the current selection locally from the loaded data
-            foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+            foodNotesStore.preparePreferencesForMember(
+                selectedMemberId: familyStore.selectedMemberId,
+                family: familyStore.family
+            )
             didFinishInitialLoad = true
         }
         .onChange(of: store.preferences) { _ in
@@ -127,7 +130,10 @@ struct EditableCanvasView: View {
             // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
             // for the newly loaded member's existing state.
             isLoadingMemberPreferences = true
-            foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
+            foodNotesStore.preparePreferencesForMember(
+                selectedMemberId: newValue,
+                family: familyStore.family
+            )
             isLoadingMemberPreferences = false
         }
         .onChange(of: navCoordinator.isEditSheetPresented) { oldValue, newValue in
@@ -135,7 +141,10 @@ struct EditableCanvasView: View {
             // then refresh from cache (only after initial load)
             if oldValue == true && newValue == false && didFinishInitialLoad {
                 foodNotesStore.applyLocalPreferencesOptimistic()
-                foodNotesStore.preparePreferencesForMember(selectedMemberId: navCoordinator.editingMemberId ?? selectedMemberId)
+                foodNotesStore.preparePreferencesForMember(
+                    selectedMemberId: navCoordinator.editingMemberId ?? selectedMemberId,
+                    family: familyStore.family
+                )
             }
         }
         .onDisappear {
@@ -738,13 +747,16 @@ private extension EditableCanvasView {
             store.currentSectionIndex = sectionIndex
         }
         navCoordinator.editingStepId = card.stepId
-        let effectiveMemberId = foodNotesStore.resolveEditingMemberId(
+        let effectiveMemberId = foodNotesStore.resolveEffectiveMemberId(
             selectedMemberId: selectedMemberId,
             family: familyStore.family
         )
         navCoordinator.editingMemberId = effectiveMemberId
         // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
-        foodNotesStore.preparePreferencesForMember(selectedMemberId: effectiveMemberId)
+        foodNotesStore.preparePreferencesForMember(
+            selectedMemberId: effectiveMemberId,
+            family: familyStore.family
+        )
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             navCoordinator.isEditSheetPresented = true
         }

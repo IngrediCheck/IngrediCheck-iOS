@@ -70,7 +70,10 @@ struct MainCanvasView: View {
             await foodNotesStore.loadFoodNotesAll()
 
             // Prepare preferences for the current selection locally from the loaded data
-            foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+            foodNotesStore.preparePreferencesForMember(
+                selectedMemberId: familyStore.selectedMemberId,
+                family: familyStore.family
+            )
         }
 		.onChange(of: store.currentSectionIndex) { newIndex in
             // Update previous section index
@@ -125,7 +128,10 @@ struct MainCanvasView: View {
             // Mark as loading to prevent the onChange(of: preferences) from triggering a sync
             // for the newly loaded member's existing state.
             isLoadingMemberPreferences = true
-            foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
+            foodNotesStore.preparePreferencesForMember(
+                selectedMemberId: newValue,
+                family: familyStore.family
+            )
             isLoadingMemberPreferences = false
         }
         .navigationBarBackButtonHidden(true)

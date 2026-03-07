@@ -127,7 +127,10 @@ struct UnifiedCanvasView: View {
                 // (handlePreferencesChange runs in a Task and may not have completed before dismiss)
                 if mode == .editing && didFinishInitialLoad {
                     foodNotesStore.applyLocalPreferencesOptimistic()
-                    foodNotesStore.preparePreferencesForMember(selectedMemberId: coordinator.editingMemberId ?? selectedMemberId)
+                    foodNotesStore.preparePreferencesForMember(
+                        selectedMemberId: coordinator.editingMemberId ?? selectedMemberId,
+                        family: familyStore.family
+                    )
                 }
             }
         }
@@ -444,7 +447,10 @@ struct UnifiedCanvasView: View {
 
         await foodNotesStore.loadFoodNotesAll()
         foodNotesStore.migrateSingleMemberEveryoneData(family: familyStore.family)
-        foodNotesStore.preparePreferencesForMember(selectedMemberId: familyStore.selectedMemberId)
+        foodNotesStore.preparePreferencesForMember(
+            selectedMemberId: familyStore.selectedMemberId,
+            family: familyStore.family
+        )
         didFinishInitialLoad = true
     }
 
@@ -490,7 +496,10 @@ struct UnifiedCanvasView: View {
         }
         Log.debug("UnifiedCanvasView", "Member switched to \(newValue?.uuidString ?? "Everyone")")
         isLoadingMemberPreferences = true
-        foodNotesStore.preparePreferencesForMember(selectedMemberId: newValue)
+        foodNotesStore.preparePreferencesForMember(
+            selectedMemberId: newValue,
+            family: familyStore.family
+        )
         isLoadingMemberPreferences = false
     }
 
@@ -578,13 +587,16 @@ struct UnifiedCanvasView: View {
             store.currentSectionIndex = sectionIndex
         }
         coordinator.editingStepId = card.stepId
-        let effectiveMemberId = foodNotesStore.resolveEditingMemberId(
+        let effectiveMemberId = foodNotesStore.resolveEffectiveMemberId(
             selectedMemberId: selectedMemberId,
             family: familyStore.family
         )
         coordinator.editingMemberId = effectiveMemberId
         // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
-        foodNotesStore.preparePreferencesForMember(selectedMemberId: effectiveMemberId)
+        foodNotesStore.preparePreferencesForMember(
+            selectedMemberId: effectiveMemberId,
+            family: familyStore.family
+        )
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             coordinator.isEditSheetPresented = true
         }
