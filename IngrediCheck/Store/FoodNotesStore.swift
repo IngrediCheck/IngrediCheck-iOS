@@ -134,7 +134,7 @@ final class FoodNotesStore {
     // MARK: - Explicit Preference Writes
 
     func replacePreferences(_ preferences: Preferences, ownerKey: OwnerKey) async {
-        await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences)
+        await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences, sessionEpoch: writeEpoch)
     }
 
     func binding(for step: DynamicStep) -> Binding<PreferenceValue?> {
@@ -237,7 +237,7 @@ final class FoodNotesStore {
         pendingWriteTask = Task { @MainActor in
             _ = await previousTask?.result
             guard !Task.isCancelled, self.writeEpoch == writeEpoch else { return }
-            await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences)
+            await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences, sessionEpoch: writeEpoch)
         }
     }
 }
@@ -257,6 +257,7 @@ private actor FoodNotesEngine {
     private var hasLoadedFoodNotes = false
     private var scheduledSyncTokens: [OwnerKey: UInt64] = [:]
     private var nextSyncToken: UInt64 = 0
+    private var sessionEpoch: UInt64 = 0
 
     init(
         webService: WebService,
@@ -277,13 +278,16 @@ private actor FoodNotesEngine {
     }
 
     func refreshFromServer(family: Family?) async {
+        let refreshSessionEpoch = sessionEpoch
         do {
             let response = try await webService.fetchFoodNotesAll()
+            guard sessionEpoch == refreshSessionEpoch else { return }
             rebuildOwners(from: response)
             migrateSingleMemberEveryoneDataIfNeeded(family: family)
             hasLoadedFoodNotes = true
             await emitSnapshot()
         } catch {
+            guard sessionEpoch == refreshSessionEpoch else { return }
             Log.error("FoodNotesEngine", "refreshFromServer failed: \(error)")
             if owners.isEmpty {
                 ensureOwnerExists(FoodNotesConstants.everyoneKey)
@@ -293,7 +297,8 @@ private actor FoodNotesEngine {
         }
     }
 
-    func replacePreferences(ownerKey: OwnerKey, preferences: Preferences) async {
+    func replacePreferences(ownerKey: OwnerKey, preferences: Preferences, sessionEpoch: UInt64) async {
+        guard sessionEpoch == self.sessionEpoch else { return }
         ensureOwnerExists(ownerKey)
         var owner = owners[ownerKey] ?? FoodNotesOwnerState()
         let normalized = FoodNotesNormalizer.normalize(preferences)
@@ -333,6 +338,7 @@ private actor FoodNotesEngine {
     }
 
     func reset() async {
+        sessionEpoch &+= 1
         owners = [:]
         activeOwnerKey = FoodNotesConstants.everyoneKey
         hasLoadedFoodNotes = false
@@ -349,13 +355,13 @@ private actor FoodNotesEngine {
 
         var rebuilt: [OwnerKey: FoodNotesOwnerState] = [:]
         for key in allKeys {
-            let previous = owners[key] ?? FoodNotesOwnerState()
+            let previous = owners[key] ?? FoodNotesOwnerState(resetEpoch: sessionEpoch)
             let server = serverNotes[key]
 
             var next = previous
             next.base = server?.preferences ?? Preferences()
             next.version = server?.version ?? 0
-            next.miscNotes = server?.miscNotes ?? previous.miscNotes
+            next.miscNotes = resolvedMiscNotes(previous: previous, server: server)
             next.working = previous.pendingReplacement?.preferences ?? next.base
             rebuilt[key] = next
         }
@@ -456,6 +462,7 @@ private actor FoodNotesEngine {
         guard (owner.pendingReplacement != nil || owner.requiresSync) && !owner.isSyncing else { return }
 
         owner.isSyncing = true
+        let syncSessionEpoch = sessionEpoch
         let syncEpoch = owner.resetEpoch
         let syncedReplacementID = owner.pendingReplacement?.id
         let syncVersion = owner.version
@@ -483,7 +490,9 @@ private actor FoodNotesEngine {
                 )
             }
 
-            guard var current = owners[ownerKey], current.resetEpoch == syncEpoch else { return }
+            guard sessionEpoch == syncSessionEpoch,
+                  var current = owners[ownerKey],
+                  current.resetEpoch == syncEpoch else { return }
 
             current.isSyncing = false
             current.base = convertContentToPreferences(content: response.content)
@@ -504,7 +513,9 @@ private actor FoodNotesEngine {
                 scheduleSync(for: ownerKey, delayMs: 100)
             }
         } catch let error as WebService.VersionMismatchError {
-            guard var current = owners[ownerKey], current.resetEpoch == syncEpoch else { return }
+            guard sessionEpoch == syncSessionEpoch,
+                  var current = owners[ownerKey],
+                  current.resetEpoch == syncEpoch else { return }
 
             current.isSyncing = false
             current.base = convertContentToPreferences(content: error.currentNote.content)
@@ -521,7 +532,9 @@ private actor FoodNotesEngine {
                 scheduleSync(for: ownerKey, delayMs: 2_000)
             }
         } catch {
-            guard var current = owners[ownerKey], current.resetEpoch == syncEpoch else { return }
+            guard sessionEpoch == syncSessionEpoch,
+                  var current = owners[ownerKey],
+                  current.resetEpoch == syncEpoch else { return }
 
             current.isSyncing = false
             owners[ownerKey] = current
@@ -704,8 +717,18 @@ private actor FoodNotesEngine {
 
     private func ensureOwnerExists(_ ownerKey: OwnerKey) {
         if owners[ownerKey] == nil {
-            owners[ownerKey] = FoodNotesOwnerState()
+            owners[ownerKey] = FoodNotesOwnerState(resetEpoch: sessionEpoch)
         }
+    }
+
+    private func resolvedMiscNotes(
+        previous: FoodNotesOwnerState,
+        server: FoodNotesServerNote?
+    ) -> [String] {
+        if previous.requiresSync {
+            return previous.miscNotes
+        }
+        return server?.miscNotes ?? []
     }
 
     private func mergePreferences(base: Preferences, with incoming: Preferences) -> Preferences {
