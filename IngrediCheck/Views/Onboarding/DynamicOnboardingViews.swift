@@ -212,8 +212,8 @@ struct DynamicSubStepsQuestionView: View {
                             .onAppear {
                                 cardFrame = geo.frame(in: .global)
                             }
-                            .onChange(of: geo.frame(in: .global)) {
-                                cardFrame = $0
+                            .onChange(of: geo.frame(in: .global)) { _, newFrame in
+                                cardFrame = newFrame
                             }
                     }
                 )
@@ -758,6 +758,26 @@ struct EditSectionBottomSheet: View {
         }
         return .individual
     }
+
+    private var preferencesBinding: Binding<Preferences> {
+        Binding(
+            get: { foodNotesStore.currentPreferences },
+            set: { newValue in
+                let ownerKey = foodNotesStore.activeOwnerKey
+                Task { @MainActor in
+                    await foodNotesStore.replacePreferences(newValue, ownerKey: ownerKey)
+                }
+            }
+        )
+    }
+
+    private var bottomSafeAreaInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?
+            .safeAreaInsets.bottom ?? 0
+    }
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -794,7 +814,7 @@ struct EditSectionBottomSheet: View {
                     DynamicOnboardingStepView(
                         step: step,
                         flowType: effectiveFlowType,
-                        preferences: $store.preferences
+                        preferences: preferencesBinding
                     )
                     .frame(maxWidth: .infinity, alignment: .top)
                     .padding(.top, 8)
@@ -804,6 +824,9 @@ struct EditSectionBottomSheet: View {
             }
             
             Button(action: {
+                Task { @MainActor in
+                    await foodNotesStore.flushPendingSyncs(ownerKey: foodNotesStore.activeOwnerKey)
+                }
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                     isPresented = false
                 }
@@ -818,7 +841,7 @@ struct EditSectionBottomSheet: View {
             .padding(.trailing, 20)
             .padding(.bottom, 24)
         }
-        .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)
+        .padding(.bottom, bottomSafeAreaInset)
         .frame(maxWidth: .infinity)
         .background(Color.white)
         .cornerRadius(36, corners: [.topLeft, .topRight])

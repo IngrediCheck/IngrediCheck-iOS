@@ -31,7 +31,6 @@ struct UnifiedCanvasView: View {
 
     @State private var cardScrollTarget: UUID? = nil
     @State private var tagBarScrollTarget: UUID? = nil
-    @State private var isLoadingMemberPreferences: Bool = false
     @State private var didFinishInitialLoad: Bool = false
 
     // MARK: - Onboarding-specific State
@@ -46,7 +45,6 @@ struct UnifiedCanvasView: View {
     @State private var prevValue: CGFloat = 0
     @State private var maxScrollOffset: CGFloat = 0
     @State private var hasScrolledToTarget: Bool = false
-    @State private var headroomCollapsed: Bool = false
     @State private var scrollToEditedSection: String? = nil
 
     // MARK: - Computed Properties
@@ -110,35 +108,26 @@ struct UnifiedCanvasView: View {
         .task {
             await handleFoodNotesLoad()
         }
-        .onChange(of: store.currentSectionIndex) { newIndex in
+        .onChange(of: store.currentSectionIndex) { _, newIndex in
             handleSectionIndexChange(newIndex)
         }
-        .onChange(of: store.preferences) { _ in
-            handlePreferencesChange()
-        }
-        .onChange(of: familyStore.selectedMemberId) { newValue in
-            handleMemberSwitch(newValue)
+        .onChange(of: familyStore.selectedMemberId) { _, newValue in
+            Task { @MainActor in
+                await handleMemberSwitch(newValue)
+            }
         }
         .onChange(of: coordinator.isEditSheetPresented) { oldValue, newValue in
-            // When edit sheet is dismissed, scroll to the edited section and refresh canvas
             if oldValue == true && newValue == false, let stepId = coordinator.editingStepId {
                 scrollToEditedSection = stepId
-                // Flush current preferences to cache/canvas first so the first selection is never lost
-                // (handlePreferencesChange runs in a Task and may not have completed before dismiss)
-                if mode == .editing && didFinishInitialLoad {
-                    foodNotesStore.applyLocalPreferencesOptimistic()
-                    foodNotesStore.preparePreferencesForMember(
-                        selectedMemberId: coordinator.editingMemberId ?? selectedMemberId,
-                        family: familyStore.family
-                    )
+                Task { @MainActor in
+                    await foodNotesStore.flushPendingSyncs(ownerKey: foodNotesStore.activeOwnerKey)
                 }
             }
         }
         .onChange(of: coordinator.isAIBotSheetPresented) { oldValue, newValue in
-            // When AI bot sheet is dismissed, reload food notes to pick up misc notes changes
             if oldValue == true && newValue == false && mode == .editing {
-                Task {
-                    await foodNotesStore.loadFoodNotesAll()
+                Task { @MainActor in
+                    await foodNotesStore.refreshFromServer(family: familyStore.family)
                 }
             }
         }
@@ -204,7 +193,7 @@ struct UnifiedCanvasView: View {
                 cards: cards,
                 scrollTarget: $cardScrollTarget,
                 showPlaceholder: cards.isEmpty,
-                itemMemberAssociations: foodNotesStore.itemMemberAssociations ?? [:],
+                itemMemberAssociations: foodNotesStore.itemMemberAssociations,
                 showFamilyIcons: showFamilyIconsOnChips
             )
         } else {
@@ -299,7 +288,7 @@ struct UnifiedCanvasView: View {
                                 title: card.title,
                                 iconName: card.icon,
                                 onEdit: { openEdit(for: card) },
-                                itemMemberAssociations: foodNotesStore.itemMemberAssociations ?? [:],
+                                itemMemberAssociations: foodNotesStore.itemMemberAssociations,
                                 showFamilyIcons: showFamilyIconsOnChips,
                                 activeMemberId: selectedMemberId
                             )
@@ -316,7 +305,7 @@ struct UnifiedCanvasView: View {
             .onAppear {
                 scrollToTargetSectionIfNeeded(cards: cards, proxy: proxy)
             }
-            .onChange(of: didFinishInitialLoad) { _ in
+            .onChange(of: didFinishInitialLoad) {
                 scrollToTargetSectionIfNeeded(cards: cards, proxy: proxy)
             }
             .onChange(of: scrollToEditedSection) { _, stepId in
@@ -397,7 +386,7 @@ struct UnifiedCanvasView: View {
                     prevValue = scrollY
                     maxScrollOffset = scrollY < 0 ? scrollY : 0
                 }
-                .onChange(of: geo.frame(in: .named("editableCanvasScroll")).minY) { newValue in
+                .onChange(of: geo.frame(in: .named("editableCanvasScroll")).minY) { _, newValue in
                     scrollY = newValue
 
                     if scrollY < 0 {
@@ -435,6 +424,9 @@ struct UnifiedCanvasView: View {
 
     private func handleOnDisappear() {
         onDismiss?()
+        Task { @MainActor in
+            await foodNotesStore.flushPendingSyncs()
+        }
         if mode == .editing && coordinator.isEditSheetPresented {
             withAnimation(.easeInOut(duration: 0.2)) {
                 coordinator.isEditSheetPresented = false
@@ -445,11 +437,9 @@ struct UnifiedCanvasView: View {
     private func handleFoodNotesLoad() async {
         Log.debug("UnifiedCanvasView", "Food notes load task triggered")
 
-        await foodNotesStore.loadFoodNotesAll()
-        foodNotesStore.migrateSingleMemberEveryoneData(family: familyStore.family)
-        foodNotesStore.preparePreferencesForMember(
-            selectedMemberId: familyStore.selectedMemberId,
-            family: familyStore.family
+        await foodNotesStore.bootstrap(
+            family: familyStore.family,
+            selectedMemberId: familyStore.selectedMemberId
         )
         didFinishInitialLoad = true
     }
@@ -462,45 +452,9 @@ struct UnifiedCanvasView: View {
         }
     }
 
-    private func handlePreferencesChange() {
-        store.updateSectionCompletionStatus()
-
-        if isLoadingMemberPreferences {
-            Log.debug("UnifiedCanvasView", "Preferences updated during load, skipping save")
-            return
-        }
-
-        guard !store.preferences.sections.isEmpty else {
-            Log.debug("UnifiedCanvasView", "Skipping save - preferences are empty")
-            return
-        }
-
-        let changedSectionName = store.currentSection.name
-        Log.debug("UnifiedCanvasView", "Preferences changed, saving section \(changedSectionName)")
-
-        Task {
-            guard !isLoadingMemberPreferences, !store.preferences.sections.isEmpty else {
-                return
-            }
-
-            foodNotesStore.applyLocalPreferencesOptimistic()
-            foodNotesStore.updateFoodNotes()
-        }
-    }
-
-    private func handleMemberSwitch(_ newValue: UUID?) {
-        // Don't switch members before initial load completes - it would clear preferences
-        guard didFinishInitialLoad else {
-            Log.debug("UnifiedCanvasView", "Member switch ignored - initial load not complete")
-            return
-        }
+    private func handleMemberSwitch(_ newValue: UUID?) async {
         Log.debug("UnifiedCanvasView", "Member switched to \(newValue?.uuidString ?? "Everyone")")
-        isLoadingMemberPreferences = true
-        foodNotesStore.preparePreferencesForMember(
-            selectedMemberId: newValue,
-            family: familyStore.family
-        )
-        isLoadingMemberPreferences = false
+        await foodNotesStore.setActiveMember(newValue)
     }
 
     // MARK: - Scroll Helpers (Onboarding)
@@ -587,18 +541,16 @@ struct UnifiedCanvasView: View {
             store.currentSectionIndex = sectionIndex
         }
         coordinator.editingStepId = card.stepId
-        let effectiveMemberId = foodNotesStore.resolveEffectiveMemberId(
+        let effectiveMemberId = foodNotesStore.resolveEditingMemberId(
             selectedMemberId: selectedMemberId,
             family: familyStore.family
         )
         coordinator.editingMemberId = effectiveMemberId
-        // Ensure cache is loaded for this member so first selection is persisted (currentPreferencesOwnerKey is set)
-        foodNotesStore.preparePreferencesForMember(
-            selectedMemberId: effectiveMemberId,
-            family: familyStore.family
-        )
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-            coordinator.isEditSheetPresented = true
+        Task { @MainActor in
+            await foodNotesStore.setActiveMember(effectiveMemberId)
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                coordinator.isEditSheetPresented = true
+            }
         }
     }
 }

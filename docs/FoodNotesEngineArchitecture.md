@@ -1,294 +1,261 @@
-# Food Notes Engine Architecture (Race-Free Rewrite)
+# Food Notes Architecture
 
 ## Status
 
-Proposed architecture for a full replacement of the current owner-coupled `FoodNotesStore` mutation flow.
+Implemented on the `fix/single-member-edit-sheet-preferences` branch.
 
-Current baseline assumption: commit `a58e204` has been reverted, so onboarding no longer uses the
-`onAppear` owner-key initialization workaround.
+This document describes the architecture that replaced the old owner-coupled
+`FoodNotesStore` flow after commit `a58e204` was reverted. The current system
+does not depend on view lifecycle ordering or a synchronously-set global owner
+pointer to avoid onboarding data loss.
 
-## Problem Statement
+## Problem We Removed
 
-The current model relies on shared mutable state (`onboardingStore.preferences`) plus an implicit global owner pointer. This creates race-prone behavior when:
+The previous design relied on two race-prone ideas:
 
-- async load completes while edits are in progress,
-- selected member changes between user intent and async save execution,
-- local state is preserved/restored without explicit dirty semantics,
-- multiple owners are edited while fetch/sync is in-flight.
+- one shared mutable `onboardingStore.preferences` value,
+- one implicit "current owner" that async work read later.
 
-This doc defines a full redesign with explicit ownership, single-writer concurrency, and deterministic sync behavior.
+That made correctness depend on timing:
 
-## Goals
+- load finishing before or after a user edit,
+- member switches happening before or after a save task started,
+- onboarding `.onAppear` running before `.task`,
+- preserving only one owner's local cache during refresh.
 
-- Eliminate silent data loss and cross-owner data bleed.
-- Make race conditions structurally impossible for known edit/load/switch interleavings.
-- Keep UI responsive with optimistic updates.
-- Make sync conflict handling deterministic and testable.
-- Centralize all business logic in one concurrency boundary.
+## Landed Design
 
-## Non-Goals
+The rewrite keeps a single UI-facing `FoodNotesStore`, but moves mutable
+food-notes domain state behind a private `FoodNotesEngine` actor.
 
-- Preserve existing internal method shapes in `FoodNotesStore`.
-- Continue using `.onChange(of: store.preferences)` as the primary mutation trigger.
-- Maintain backward compatibility with implicit owner-based mutations.
+### Components
 
-## Design Principles
+1. `FoodNotesStore` (`@MainActor`, `@Observable`)
+- publishes view state,
+- exposes explicit owner-scoped APIs,
+- mirrors the active owner's preferences back into `Onboarding` only as a
+  compatibility projection for existing progress logic.
 
-- Single writer: one actor owns all mutable food-notes domain state.
-- Explicit intent: every mutation includes owner key and operation id.
-- Deterministic replay: local pending edits are replayable over fresh server state.
-- Derived views: UI state is a projection from actor state, never a second source of truth.
-- Idempotent sync: retries and duplicates cannot corrupt state.
+2. `FoodNotesEngine` (`actor`)
+- owns all mutable food-notes state,
+- serializes refresh, mutation, sync, and reset operations,
+- emits immutable snapshots back to `FoodNotesStore`.
 
-## Canonical Components
+3. `FoodNotesSnapshotBridge`
+- hops actor snapshots onto the main actor,
+- keeps the actor isolated from UI state mutation.
 
-1. `FoodNotesEngine` (`actor`)
-- Owns all mutable domain state.
-- Accepts read/write commands.
-- Handles load, mutation, debounce, sync, conflict resolution.
-
-2. `FoodNotesViewModel` (`@MainActor`)
-- Thin UI adapter.
-- Subscribes to engine snapshots and publishes view state.
-- Routes UI intents to engine commands.
-
-3. `WebService` gateway
-- Existing network layer.
-- No business decisions about merge/conflict semantics.
-
-## Canonical Data Model
+## Canonical State Model
 
 ```swift
-typealias OwnerKey = String // "Everyone" or member UUID lowercase
+typealias OwnerKey = String // "Everyone" or lowercase member UUID
 
-struct EngineState {
-    var owners: [OwnerKey: OwnerState]
-    var activeOwner: OwnerKey
-    var syncQueue: Set<OwnerKey>
-    var lastLoadRevision: UInt64
-}
-
-struct OwnerState {
-    var base: Preferences            // last acknowledged server snapshot
-    var working: Preferences         // currently visible local view
-    var pendingOps: [PreferenceOp]   // ordered local ops not yet acknowledged
-    var version: Int                 // server optimistic concurrency version
+struct FoodNotesOwnerState {
+    var base: Preferences
+    var working: Preferences
+    var pendingReplacement: FoodNotesPendingReplacement?
+    var version: Int
     var miscNotes: [String]
-    var lastMutationRevision: UInt64
-}
-
-struct PreferenceOp: Identifiable, Hashable, Codable {
-    var id: UUID
-    var ownerKey: OwnerKey
-    var kind: OpKind
-    var timestampMs: Int64
-}
-
-enum OpKind: Hashable, Codable {
-    case setList(section: String, values: [String])
-    case toggleListItem(section: String, item: String, selected: Bool)
-    case setNested(section: String, group: String, values: [String])
-    case clearSection(section: String)
-    case setMiscNotes([String])
+    var requiresSync: Bool
+    var isSyncing: Bool
+    var resetEpoch: UInt64
 }
 ```
 
-## Invariants (Must Hold at All Times)
+### Meaning
 
-1. `working == replay(base, pendingOps)` for each owner.
-2. No op is accepted without explicit `ownerKey`.
-3. Owner switching does not mutate any preferences.
-4. `pendingOps` order is stable and append-only until ack/rebase.
-5. Sync uses `base + pendingOps`; never raw UI snapshots from a shared global struct.
-6. Server ack advances `version` exactly once per acknowledged write.
-7. Engine is the only writer of `owners`, `activeOwner`, versions, and pending ops.
+- `base`: last confirmed server snapshot for that owner.
+- `working`: current local state shown in UI for that owner.
+- `pendingReplacement`: most recent unsynced full-preferences write for that owner.
+- `version`: optimistic concurrency version from backend.
+- `miscNotes`: owner-scoped freeform notes carried with the same owner state.
+- `requiresSync`: notes-only or migration-only sync flag.
+- `isSyncing`: sync in flight for that owner.
+- `resetEpoch`: invalidates stale async completions after owner reset.
 
-## Engine API Contract
+## Key Architectural Rules
+
+1. Every write is explicit about owner.
+2. Owner switching is a read/projection change, not a write.
+3. The engine actor is the only writer of owner state, versions, and sync flags.
+4. UI never saves by "looking up current owner later" inside async work.
+5. `onboardingStore.preferences` is not the source of truth.
+6. Refresh rebuilds all owners, not just the currently selected one.
+7. Stale sync completions are ignored after reset via `resetEpoch`.
+
+## Public Store API
+
+The UI writes through explicit methods:
 
 ```swift
-actor FoodNotesEngine {
-    // Bootstrapping
-    func bootstrap(family: Family?, selectedOwner: OwnerKey?) async
-    func refreshFromServer() async
-
-    // Reads
-    func snapshot() -> FoodNotesSnapshot
-    func snapshot(for ownerKey: OwnerKey) -> OwnerSnapshot
-
-    // Ownership
-    func setActiveOwner(_ ownerKey: OwnerKey)
-
-    // Mutations (intent-driven)
-    func apply(_ op: PreferenceOp)
-    func apply(ownerKey: OwnerKey, kind: OpKind)
-
-    // Sync lifecycle
-    func flushNow(ownerKey: OwnerKey?) async
-    func retryFailed(ownerKey: OwnerKey) async
-}
+func bootstrap(family: Family?, selectedMemberId: UUID?) async
+func refreshFromServer(family: Family?) async
+func setActiveMember(_ selectedMemberId: UUID?) async
+func replacePreferences(_ preferences: Preferences, ownerKey: OwnerKey) async
+func flushPendingSyncs(ownerKey: OwnerKey?) async
+func clearOwnerState(for memberId: UUID) async
+func resetLocalState() async
 ```
 
-All mutation APIs are explicit. No implicit active-owner write API should exist.
+There is no implicit mutation API tied to a global active owner.
 
-## Load / Refresh Algorithm
+## UI Contract
 
-1. Fetch all food notes from backend (`Everyone` + member notes).
-2. Convert server payload into `base` states for each owner.
-3. For each owner:
-- keep existing `pendingOps`,
-- recompute `working = replay(newBase, pendingOps)`,
-- preserve local edits without replacing `working` from stale shared UI state.
-4. Recompute derived projection (canvas union + item-member associations).
-5. Publish new snapshot.
+Views now follow this contract:
 
-No “preserve current owner only” behavior is allowed.
+1. Read active data from `foodNotesStore.currentPreferences`.
+2. Capture `foodNotesStore.activeOwnerKey` at mutation time.
+3. Call `replacePreferences(_:ownerKey:)` with that captured key.
+4. Flush explicitly on important boundaries such as edit-sheet dismissal and view disappearance.
 
-## Mutation Algorithm
+This removes the old `.onChange(of: store.preferences)` save pipeline.
 
-1. Validate owner key and normalize casing.
-2. Create op id and append to `pendingOps` for owner.
-3. Recompute owner `working = replay(base, pendingOps)`.
-4. Recompute derived global projection incrementally (or full rebuild for correctness-first baseline).
-5. Schedule owner-specific debounced sync task keyed by owner and token.
-6. Publish snapshot.
+## Refresh Algorithm
 
-Owner switch is irrelevant to mutation correctness because owner is explicit in op.
+`bootstrap` and manual refresh both route through `refreshFromServer(family:)`.
+
+Engine behavior:
+
+1. Fetch all food notes from backend.
+2. Parse server state into per-owner records.
+3. Rebuild the in-memory owner map for the union of:
+- existing local owners,
+- server owners,
+- `"Everyone"`,
+- current active owner.
+4. For each owner:
+- update `base` from server,
+- update `version` from server,
+- keep `working = pendingReplacement.preferences` when a local unsynced write exists,
+- otherwise set `working = base`.
+5. Run single-member migration if needed.
+6. Emit one coherent snapshot.
+
+This means refresh cannot clobber local in-flight edits just because a different owner is active.
+
+## Mutation Model
+
+The landed implementation uses coalesced full-owner replacements, not an op log.
+
+When UI changes preferences for an owner:
+
+1. Normalize the new `Preferences`.
+2. Store them as `pendingReplacement`.
+3. Set `working` to that normalized value immediately.
+4. Emit a snapshot immediately for optimistic UI.
+5. Schedule a debounced owner-specific sync.
+
+### Why this is still structurally safer
+
+- the owner is explicit,
+- the actor serializes all writes,
+- there is at most one pending local replacement per owner,
+- owner switches do not affect write routing,
+- refresh preserves unsynced local `working` state per owner.
 
 ## Sync Algorithm
 
-For each owner in sync queue:
+Sync is owner-scoped and tokenized.
 
-1. Build payload from `working` (which equals `replay(base, pendingOps)`).
-2. Send update with current `version`.
-3. On success:
-- update `version`,
-- set `base = working`,
-- clear acknowledged `pendingOps`,
-- keep `working` unchanged,
-- publish snapshot.
-4. On version mismatch:
-- fetch latest server note for that owner (or all-notes refresh),
-- set `base` to server state/version,
-- replay pending ops,
-- retry with bounded retry policy and backoff.
-5. On transient network failure:
-- keep `pendingOps`,
-- mark owner as unsynced,
-- retry with exponential backoff and jitter.
+1. Scheduling a sync records a token per owner.
+2. Only the latest token for that owner is allowed to flush.
+3. Sync sends the owner's current `working` preferences and `miscNotes` with the owner's current `version`.
+4. On success:
+- `base` becomes the server response,
+- `version` is updated,
+- matching `pendingReplacement` is cleared,
+- `working` remains pending local data if a newer replacement arrived during sync, otherwise it becomes `base`.
+5. On version mismatch:
+- load the server's latest owner note from the error payload,
+- update `base`, `version`, and `miscNotes`,
+- keep `working = pendingReplacement.preferences` if a local replacement still exists,
+- retry up to a bounded limit, then back off.
+6. On transient failure:
+- keep local pending state,
+- clear `isSyncing`,
+- retry later.
 
-## Conflict Resolution Policy
+## Reset Safety
 
-- Policy: local pending ops win over stale server snapshot because they represent user’s latest intent.
-- Mechanism: rebase by replaying `pendingOps` on top of fresh server `base`.
-- Duplicate protection: op IDs can be sent in metadata if server supports it. If not, client-side dedupe still applies by ack semantics and one-shot dequeue.
+Owner reset and app reset increment `resetEpoch`.
 
-## Migration Rules (Legacy Data)
+Any async sync completion that returns after a reset is ignored if its captured
+epoch no longer matches the current owner state. This prevents stale network
+responses from resurrecting cleared data.
 
-- Single-member `Everyone -> self` migration runs once in engine bootstrap.
-- Migration is data-transform, not a view concern.
-- Migration output is written through normal owner state, then synced.
-- Migration must be idempotent (safe to rerun after app restart).
+## Single-Member Migration
 
-## UI Integration Contract
+The old "Everyone" data migration is now engine-owned.
 
-Views must:
+When a family has no `otherMembers`:
 
-1. Bind displayed preferences from `FoodNotesSnapshot.activeOwnerPreferences`.
-2. Dispatch intent operations directly:
-- chip tap -> `toggleListItem`
-- multi-select edits -> `setList` / `setNested`
-- misc notes changes -> `setMiscNotes`
-3. Stop writing directly to shared `onboardingStore.preferences` as source of truth.
-4. Stop using `.onChange(of: preferences)` to infer and persist state.
+1. merge `"Everyone"` working data into the self-member owner,
+2. merge misc notes the same way,
+3. clear `"Everyone"`,
+4. mark both owners for sync,
+5. schedule sync from inside the engine.
 
-`Onboarding` can remain as navigation/progress state, but preference truth moves to engine snapshots.
+The migration no longer depends on view lifecycle hooks.
 
-## Hard-Cutover Implementation Plan
+## Derived Projection
 
-This is a single architecture replacement, not a sequence of tactical race patches.
+The engine rebuilds two derived values from all owner `working` states:
 
-1. Add new domain files:
-- `IngrediCheck/Store/FoodNotesEngine.swift`
-- `IngrediCheck/Store/FoodNotesTypes.swift` (ops, snapshots, owner state types)
-- `IngrediCheck/Store/FoodNotesViewModel.swift`
+1. `canvasPreferences`
+- union view used for summary cards.
 
-2. Rewire all food notes mutation entry points to engine intent APIs:
-- onboarding canvas
-- editable canvas
-- unified canvas
-- edit sheet interactions
+2. `itemMemberAssociations`
+- map of section/item to owning members.
 
-3. Replace old store write methods with compile-time unavailable stubs (temporary) to force callsite migration:
-- `preparePreferencesForMember`
-- `handleLocalPreferenceChange`
-- `applyLocalPreferencesOptimistic`
-- `updateFoodNotes` no-op path
+This rebuild happens from actor state, not from view-local caches.
 
-4. Move load/refresh/migration orchestration from views into engine bootstrap.
+## Invariants
 
-5. Remove owner-pointer dependent state and logic from `FoodNotesStore`.
+These are the rules the implementation is designed around:
 
-6. Keep a small compatibility bridge only for read-only rendering while views are rewired in the same rewrite branch.
+1. No mutation is accepted without an explicit owner key.
+2. Active-owner changes do not mutate owner data.
+3. `working` is always the UI-visible source for that owner.
+4. `base` only changes from server refresh or successful sync responses.
+5. `pendingReplacement` only clears after the matching write is acknowledged.
+6. A stale scheduled sync token cannot flush newer state.
+7. A stale network completion cannot reapply after reset.
 
-7. Delete compatibility bridge once all callsites compile against engine snapshots.
+## Tradeoffs
 
-## Verification and Test Plan (Required)
+This rewrite intentionally chose correctness of ownership and async ordering over
+fine-grained merge semantics.
 
-### Unit Tests (Actor-Level)
+### Current conflict policy
 
-- deterministic replay tests for each `OpKind`,
-- owner isolation tests (edit owner A never mutates owner B),
-- load-while-edit tests (pending ops survive refresh),
-- conflict rebase tests (version mismatch + replay),
-- debounce token tests (stale sync task cannot commit),
-- idempotency tests (duplicate apply/flush attempts).
+- within one client session: latest local owner snapshot wins,
+- against concurrent remote edits for the same owner: the client retries with its
+  latest local full-owner snapshot after version mismatch.
 
-### Property / Fuzz Tests
+That is acceptable for the current product surface because it eliminates the
+race conditions that were causing silent loss locally. If finer cross-device
+merging is needed later, it should be added inside the actor, not in views.
 
-- randomized interleavings of:
-  - owner switches,
-  - local ops,
-  - refresh completion,
-  - sync success/failure/mismatch.
-- assert invariants after each step.
+## Verification Completed
 
-### Integration Tests
+1. Legacy owner-coupled write path removed from canvases and edit sheets.
+2. Build verification completed with:
 
-- first tap during initial load is persisted,
-- rapid member switching while editing does not drop selections,
-- offline edits are replayed and synced after reconnect,
-- app relaunch with pending edits preserves and flushes correctly.
+```bash
+xcodebuild build -project IngrediCheck.xcodeproj -scheme IngrediCheck -destination 'id=8FA6A311-D245-4201-ABEA-50DF9C78140D' -derivedDataPath /tmp/IngrediCheckDerivedData
+```
 
-### Runtime Guards
+3. The rewrite compiles successfully (`BUILD SUCCEEDED`).
 
-- debug-only invariant checks after each mutation/sync transition,
-- structured logging with op ids, owner keys, versions, and transition reason.
+## Remaining Hardening Work
 
-## Operational Observability
+The architecture is landed, but automated regression coverage still needs to be
+added in a dedicated test target:
 
-- Metrics:
-  - pending ops count per owner,
-  - sync latency per owner,
-  - version mismatch frequency,
-  - retries and terminal failures.
-- Logs:
-  - `op_applied`, `sync_scheduled`, `sync_started`, `sync_succeeded`, `sync_rebased`, `sync_failed`.
+- owner isolation tests,
+- refresh-while-edit tests,
+- version mismatch retry tests,
+- reset-epoch stale completion tests,
+- rapid member-switch stress tests.
 
-## Risks and Mitigations
-
-- Risk: full rewrite complexity.
-  - Mitigation: strict API contract + invariant-heavy test suite before merge.
-
-- Risk: UI regression from new binding path.
-  - Mitigation: adapter layer with snapshot parity assertions during transition branch.
-
-- Risk: server semantics mismatch for conflict handling.
-  - Mitigation: explicit contract test cases against staging endpoints.
-
-## Acceptance Criteria
-
-- No mutable global owner pointer in write path.
-- All writes are explicit owner-scoped ops.
-- `working == replay(base, pendingOps)` invariant enforced.
-- All race-focused tests pass.
-- Manual QA validates no silent drops or cross-owner contamination.
+Those should validate the actor behavior directly instead of relying on SwiftUI lifecycle tests.
