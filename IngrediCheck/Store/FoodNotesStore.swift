@@ -19,6 +19,9 @@ final class FoodNotesStore {
     private let schema: FoodNotesSchema
     @ObservationIgnored private let bridge: FoodNotesSnapshotBridge
     @ObservationIgnored private let engine: FoodNotesEngine
+    @ObservationIgnored private var pendingWriteTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var pendingWriteSequence: UInt64 = 0
+    @ObservationIgnored private var writeEpoch: UInt64 = 0
 
     // MARK: - State
 
@@ -66,7 +69,7 @@ final class FoodNotesStore {
                 await bridge.refreshSummary()
             }
         )
-        bridge.store = self
+        bridge.attach(to: self)
     }
 
     // MARK: - Summary
@@ -134,7 +137,46 @@ final class FoodNotesStore {
         await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences)
     }
 
+    func binding(for step: DynamicStep) -> Binding<PreferenceValue?> {
+        let sectionName = step.header.name
+
+        return Binding(
+            get: { self.currentPreferences.sections[sectionName] },
+            set: { newValue in
+                self.updateSectionValue(newValue, sectionName: sectionName, ownerKey: self.activeOwnerKey)
+            }
+        )
+    }
+
+    func updateSectionValue(_ value: PreferenceValue?, sectionName: String, ownerKey: OwnerKey) {
+        let normalizedValue = FoodNotesNormalizer.normalizeSectionValue(value)
+        var nextPreferences = currentPreferences
+
+        if let normalizedValue {
+            nextPreferences.sections[sectionName] = normalizedValue
+        } else {
+            nextPreferences.sections.removeValue(forKey: sectionName)
+        }
+
+        guard nextPreferences != currentPreferences else { return }
+
+        currentPreferences = nextPreferences
+        if onboardingStore.preferences != nextPreferences {
+            onboardingStore.preferences = nextPreferences
+        }
+        onboardingStore.updateSectionCompletionStatus()
+
+        queuePreferencesWrite(nextPreferences, ownerKey: ownerKey)
+    }
+
     func flushPendingSyncs(ownerKey: OwnerKey? = nil) async {
+        while true {
+            let sequence = pendingWriteSequence
+            if let pendingWriteTask {
+                _ = await pendingWriteTask.result
+            }
+            guard sequence != pendingWriteSequence else { break }
+        }
         await engine.flushNow(ownerKey: ownerKey)
     }
 
@@ -145,6 +187,9 @@ final class FoodNotesStore {
     func resetLocalState() async {
         summaryRefreshTask?.cancel()
         summaryRefreshTask = nil
+        writeEpoch &+= 1
+        pendingWriteTask?.cancel()
+        pendingWriteTask = nil
         foodNotesSummary = nil
         await engine.reset()
     }
@@ -181,6 +226,19 @@ final class FoodNotesStore {
 
     static func ownerKey(for memberId: UUID) -> OwnerKey {
         memberId.uuidString.lowercased()
+    }
+
+    private func queuePreferencesWrite(_ preferences: Preferences, ownerKey: OwnerKey) {
+        let previousTask = pendingWriteTask
+        let engine = self.engine
+        let writeEpoch = self.writeEpoch
+        pendingWriteSequence &+= 1
+
+        pendingWriteTask = Task { @MainActor in
+            _ = await previousTask?.result
+            guard !Task.isCancelled, self.writeEpoch == writeEpoch else { return }
+            await engine.replacePreferences(ownerKey: ownerKey, preferences: preferences)
+        }
     }
 }
 
@@ -694,7 +752,12 @@ private enum FoodNotesConstants {
 }
 
 private final class FoodNotesSnapshotBridge: @unchecked Sendable {
-    weak var store: FoodNotesStore?
+    private weak var store: FoodNotesStore?
+
+    @MainActor
+    func attach(to store: FoodNotesStore) {
+        self.store = store
+    }
 
     func deliver(snapshot: FoodNotesSnapshot) async {
         await MainActor.run { [weak self] in
@@ -778,25 +841,29 @@ private struct FoodNotesOwnerState {
 }
 
 private enum FoodNotesNormalizer {
+    static func normalizeSectionValue(_ value: PreferenceValue?) -> PreferenceValue? {
+        guard let value else { return nil }
+
+        switch value {
+        case .list(let items):
+            let cleaned = uniqueStrings(items)
+            return cleaned.isEmpty ? nil : .list(cleaned)
+
+        case .nested(let nested):
+            let cleanedNested = nested.compactMapValues { items -> [String]? in
+                let cleaned = uniqueStrings(items)
+                return cleaned.isEmpty ? nil : cleaned
+            }
+            return cleanedNested.isEmpty ? nil : .nested(cleanedNested)
+        }
+    }
+
     static func normalize(_ preferences: Preferences) -> Preferences {
         var normalizedSections: [String: PreferenceValue] = [:]
 
         for (sectionName, value) in preferences.sections {
-            switch value {
-            case .list(let items):
-                let cleaned = uniqueStrings(items)
-                if !cleaned.isEmpty {
-                    normalizedSections[sectionName] = .list(cleaned)
-                }
-
-            case .nested(let nested):
-                let cleanedNested = nested.compactMapValues { items -> [String]? in
-                    let cleaned = uniqueStrings(items)
-                    return cleaned.isEmpty ? nil : cleaned
-                }
-                if !cleanedNested.isEmpty {
-                    normalizedSections[sectionName] = .nested(cleanedNested)
-                }
+            if let normalizedValue = normalizeSectionValue(value) {
+                normalizedSections[sectionName] = normalizedValue
             }
         }
 

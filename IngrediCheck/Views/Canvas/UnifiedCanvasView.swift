@@ -453,6 +453,7 @@ struct UnifiedCanvasView: View {
     }
 
     private func handleMemberSwitch(_ newValue: UUID?) async {
+        guard didFinishInitialLoad else { return }
         Log.debug("UnifiedCanvasView", "Member switched to \(newValue?.uuidString ?? "Everyone")")
         await foodNotesStore.setActiveMember(newValue)
     }

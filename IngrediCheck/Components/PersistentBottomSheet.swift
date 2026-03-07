@@ -494,6 +494,8 @@ struct PersistentBottomSheet: View {
         Task {
             // Wait for all pending uploads to complete before navigating
             await familyStore.waitForPendingUploads()
+            let ownerKey = await MainActor.run { foodNotesStore.activeOwnerKey }
+            await foodNotesStore.flushPendingSyncs(ownerKey: ownerKey)
 
             await MainActor.run {
                 // Reset member filter to "Everyone" for each new onboarding question
@@ -984,19 +986,10 @@ struct PersistentBottomSheet: View {
         case .onboardingStep(let stepId):
             // Dynamically load step from JSON using step ID
             if let step = store.step(for: stepId) {
-                let preferencesBinding = Binding(
-                    get: { foodNotesStore.currentPreferences },
-                    set: { newValue in
-                        let ownerKey = foodNotesStore.activeOwnerKey
-                        Task { @MainActor in
-                            await foodNotesStore.replacePreferences(newValue, ownerKey: ownerKey)
-                        }
-                    }
-                )
                 DynamicOnboardingStepView(
                     step: step,
                     flowType: getOnboardingFlowType(),
-                    preferences: preferencesBinding
+                    sectionValue: foodNotesStore.binding(for: step)
                 )
                 .padding(.top, 24)
                 .padding(.bottom, 80)

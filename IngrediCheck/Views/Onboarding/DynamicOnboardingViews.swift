@@ -15,7 +15,7 @@ import SwiftUI
 struct DynamicOptionsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
-    @Binding var preferences: Preferences
+    @Binding var sectionValue: PreferenceValue?
     @EnvironmentObject private var store: Onboarding
 
     private var headerVariant: DynamicHeaderVariant {
@@ -77,17 +77,14 @@ struct DynamicOptionsQuestionView: View {
     }
     
     private func valuesForCurrentStep() -> [String] {
-        let sectionName = step.header.name
-        guard let value = preferences.sections[sectionName],
-              case .list(let items) = value else {
+        guard case .list(let items) = sectionValue else {
             return []
         }
         return items
     }
     
     private func setValues(_ values: [String]) {
-        let sectionName = step.header.name
-        preferences.sections[sectionName] = .list(values)
+        sectionValue = values.isEmpty ? nil : .list(values)
     }
     
     private func toggleSelection(for name: String) {
@@ -126,7 +123,7 @@ struct DynamicOptionsQuestionView: View {
 struct DynamicSubStepsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
-    @Binding var preferences: Preferences
+    @Binding var sectionValue: PreferenceValue?
     @Environment(UserPreferences.self) var userPreferences
     @EnvironmentObject private var store: Onboarding
 
@@ -248,9 +245,7 @@ struct DynamicSubStepsQuestionView: View {
     }
     
     private func selections(for cardTitle: String) -> Set<String> {
-        let sectionName = step.header.name
-        guard let value = preferences.sections[sectionName],
-              case .nested(let nestedDict) = value,
+        guard case .nested(let nestedDict) = sectionValue,
               let items = nestedDict[cardTitle] else {
             return []
         }
@@ -288,18 +283,22 @@ struct DynamicSubStepsQuestionView: View {
     }
     
     private func syncPreferences(from set: Set<String>, for cardTitle: String) {
-        let sectionName = step.header.name
-        var nestedDict: [String: [String]]
-        
-        if let existingValue = preferences.sections[sectionName],
-           case .nested(let existingDict) = existingValue {
-            nestedDict = existingDict
+        var nestedDict = currentNestedSelections()
+
+        if set.isEmpty {
+            nestedDict[cardTitle] = nil
         } else {
-            nestedDict = [:]
+            nestedDict[cardTitle] = Array(set)
         }
-        
-        nestedDict[cardTitle] = Array(set)
-        preferences.sections[sectionName] = .nested(nestedDict)
+
+        sectionValue = nestedDict.isEmpty ? nil : .nested(nestedDict)
+    }
+
+    private func currentNestedSelections() -> [String: [String]] {
+        guard case .nested(let nestedDict) = sectionValue else {
+            return [:]
+        }
+        return nestedDict
     }
 }
 
@@ -331,7 +330,7 @@ struct TutorialOverlayPreferenceKey: PreferenceKey {
 struct DynamicRegionsQuestionView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
-    @Binding var preferences: Preferences
+    @Binding var sectionValue: PreferenceValue?
     @EnvironmentObject private var store: Onboarding
 
     @State private var sections: [SectionedChipModel] = []
@@ -345,10 +344,10 @@ struct DynamicRegionsQuestionView: View {
         }
     }
 
-    init(step: DynamicStep, flowType: OnboardingFlowType, preferences: Binding<Preferences>) {
+    init(step: DynamicStep, flowType: OnboardingFlowType, sectionValue: Binding<PreferenceValue?>) {
         self.step = step
         self.flowType = flowType
-        self._preferences = preferences
+        self._sectionValue = sectionValue
         
         let initialSections: [SectionedChipModel] = (step.content.regions ?? []).map { region in
             SectionedChipModel(
@@ -442,9 +441,7 @@ struct DynamicRegionsQuestionView: View {
     }
     
     private func selections(for sectionTitle: String) -> Set<String> {
-        let stepSectionName = step.header.name
-        guard let value = preferences.sections[stepSectionName],
-              case .nested(let nestedDict) = value,
+        guard case .nested(let nestedDict) = sectionValue,
               let items = nestedDict[sectionTitle] else {
             return []
         }
@@ -500,15 +497,11 @@ struct DynamicRegionsQuestionView: View {
     }
     
     private func clearAllSections() {
-        let stepSectionName = step.header.name
-        // Just empty the whole nested dictionary for this step
-        preferences.sections[stepSectionName] = .nested([:])
+        sectionValue = nil
     }
     
     private func clearGlobalExclusivesFromOtherSections(currentSectionTitle: String) {
-        let stepSectionName = step.header.name
-        guard let value = preferences.sections[stepSectionName],
-              case .nested(var nestedDict) = value else { return }
+        guard case .nested(var nestedDict) = sectionValue else { return }
         
         var changed = false
         for (key, items) in nestedDict {
@@ -531,27 +524,27 @@ struct DynamicRegionsQuestionView: View {
         }
         
         if changed {
-            preferences.sections[stepSectionName] = .nested(nestedDict)
+            sectionValue = nestedDict.isEmpty ? nil : .nested(nestedDict)
         }
     }
     
     private func syncRegionPreferences(from set: Set<String>, for sectionTitle: String) {
-        let stepSectionName = step.header.name
-        var nestedDict: [String: [String]]
-        
-        // Get existing nested dict or create new one
-        if let existingValue = preferences.sections[stepSectionName],
-           case .nested(let existingDict) = existingValue {
-            nestedDict = existingDict
+        var nestedDict = currentNestedSelections()
+
+        if set.isEmpty {
+            nestedDict[sectionTitle] = nil
         } else {
-            nestedDict = [:]
+            nestedDict[sectionTitle] = Array(set)
         }
-        
-        // Update the specific region's selections
-        nestedDict[sectionTitle] = Array(set)
-        
-        // Save back to preferences
-        preferences.sections[stepSectionName] = .nested(nestedDict)
+
+        sectionValue = nestedDict.isEmpty ? nil : .nested(nestedDict)
+    }
+
+    private func currentNestedSelections() -> [String: [String]] {
+        guard case .nested(let nestedDict) = sectionValue else {
+            return [:]
+        }
+        return nestedDict
     }
 }
 
@@ -636,16 +629,16 @@ private struct DynamicRegionSectionRow: View {
 struct DynamicOnboardingStepView: View {
     let step: DynamicStep
     let flowType: OnboardingFlowType
-    @Binding var preferences: Preferences
+    @Binding var sectionValue: PreferenceValue?
     
     var body: some View {
         switch step.type {
         case .type1:
-            DynamicOptionsQuestionView(step: step, flowType: flowType, preferences: $preferences)
+            DynamicOptionsQuestionView(step: step, flowType: flowType, sectionValue: $sectionValue)
         case .type2:
-            DynamicSubStepsQuestionView(step: step, flowType: flowType, preferences: $preferences)
+            DynamicSubStepsQuestionView(step: step, flowType: flowType, sectionValue: $sectionValue)
         case .type3:
-            DynamicRegionsQuestionView(step: step, flowType: flowType, preferences: $preferences)
+            DynamicRegionsQuestionView(step: step, flowType: flowType, sectionValue: $sectionValue)
         case .unknown:
             // Fallback simple view – safe default for unexpected types.
             VStack(spacing: 12) {
@@ -759,18 +752,6 @@ struct EditSectionBottomSheet: View {
         return .individual
     }
 
-    private var preferencesBinding: Binding<Preferences> {
-        Binding(
-            get: { foodNotesStore.currentPreferences },
-            set: { newValue in
-                let ownerKey = foodNotesStore.activeOwnerKey
-                Task { @MainActor in
-                    await foodNotesStore.replacePreferences(newValue, ownerKey: ownerKey)
-                }
-            }
-        )
-    }
-
     private var bottomSafeAreaInset: CGFloat {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
@@ -814,7 +795,7 @@ struct EditSectionBottomSheet: View {
                     DynamicOnboardingStepView(
                         step: step,
                         flowType: effectiveFlowType,
-                        preferences: preferencesBinding
+                        sectionValue: foodNotesStore.binding(for: step)
                     )
                     .frame(maxWidth: .infinity, alignment: .top)
                     .padding(.top, 8)
