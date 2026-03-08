@@ -597,12 +597,14 @@ struct PersistentBottomSheet: View {
         case .whosThisFor:
             WhosThisFor {
                 AnalyticsService.shared.trackOnboarding("Onboarding Flow Selected", properties: ["flow_type": "individual"])
+                #if DEBUG
                 if UITestHarness.isEnabled {
                     await authController.ensureDebugSession()
                     coordinator.showCanvas(.dietaryPreferencesAndRestrictions(isFamilyFlow: false))
                     coordinator.navigateInBottomSheet(.dietaryPreferencesSheet(isFamilyFlow: false))
                     return
                 }
+                #endif
                 await authController.signIn()
                 guard authController.hasEffectiveSession else {
                     Log.error("PersistentBottomSheet", "Sign-in failed, cannot create Bite Buddy family")
@@ -617,11 +619,13 @@ struct PersistentBottomSheet: View {
                 }
             } addFamilyPressed: {
                 AnalyticsService.shared.trackOnboarding("Onboarding Flow Selected", properties: ["flow_type": "family"])
+                #if DEBUG
                 if UITestHarness.isEnabled {
                     await authController.ensureDebugSession()
                     coordinator.showCanvas(.letsMeetYourIngrediFam)
                     return
                 }
+                #endif
                 await authController.signIn()
                 guard authController.hasEffectiveSession else {
                     Log.error("PersistentBottomSheet", "Sign-in failed, cannot proceed to family flow")
