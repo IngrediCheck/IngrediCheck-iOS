@@ -38,6 +38,7 @@ struct ScanDataCard: View {
     
     private var matchStatus: DTO.ProductRecommendation? {
         guard let scan = scan else { return nil }
+        guard hasRenderableProduct else { return nil }
 
         // If user has no food notes at all, always show a neutral "no preferences"
         // state regardless of scan type/state, so the card never flips to "Unknown"
@@ -72,9 +73,20 @@ struct ScanDataCard: View {
         // 2. Currently polling for updates (e.g., 2nd photo being processed)
         (scan?.state == "analyzing" || scan?.state == "processing_images") || isPolling
     }
-    
+
+    private var hasRenderableProduct: Bool {
+        guard let product = product else { return false }
+
+        return (product.name?.isEmpty == false)
+            || (product.brand?.isEmpty == false)
+            || !product.ingredients.isEmpty
+            || !product.images.isEmpty
+    }
+
     private var notFoundState: Bool {
-        scan?.product_info.name == nil && scan?.product_info.brand == nil && scan?.product_info.ingredients.isEmpty == true
+        guard let scan = scan else { return false }
+        guard !hasRenderableProduct else { return false }
+        return scan.state == "done"
     }
     
     // Skeleton mode: show redacted placeholders when scanId is "skeleton" (initial empty state)
@@ -190,6 +202,7 @@ struct ScanDataCard: View {
         }
         .frame(width: 300, height: 120)
         .contentShape(Rectangle())
+        .accessibilityIdentifier("scan_data_card")
         .onTapGesture {
             if let product = product {
                 onTap?(product, matchStatus, ingredientRecommendations, overallAnalysis, scanId)
@@ -474,12 +487,12 @@ struct ScanDataCard: View {
                 submittingStateView
             } else if isPendingMode || (isLoading && scan == nil) {
                 loadingStateView
-            } else if let product = product {
+            } else if hasRenderableProduct, let product = product {
                 productDetailsView(product: product)
+            } else if let error = errorState, !hasRenderableProduct {
+                errorView(error: error)
             } else if notFoundState {
                 notFoundView
-            } else if let error = errorState, product == nil {
-                errorView(error: error)
             }
         }
     }
@@ -584,12 +597,14 @@ struct ScanDataCard: View {
                             .font(NunitoFont.semiBold.size(14))
                             .foregroundColor(Color.white.opacity(0.85))
                             .lineLimit(2)
+                            .accessibilityIdentifier("scan_card_product_name")
                     }
                     if let brand = product.brand, !brand.isEmpty {
                         Text(brand)
                             .font(ManropeFont.regular.size(12))
                             .foregroundColor(.white.opacity(0.7))
                             .lineLimit(1)
+                            .accessibilityIdentifier("scan_card_brand")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -781,6 +796,7 @@ struct ScanDataCard: View {
                 .foregroundColor(Color.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
+                .accessibilityIdentifier("scan_card_not_found_title")
             
             Text("Help us identify it, add a few photos of the product.")
                 .font(ManropeFont.semiBold.size(10))
@@ -799,10 +815,12 @@ struct ScanDataCard: View {
             Text("Something went wrong")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color.white)
+                .accessibilityIdentifier("scan_card_error_title")
             Text(error)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(Color.white.opacity(0.9))
                 .lineLimit(2)
+                .accessibilityIdentifier("scan_card_error_message")
             Spacer(minLength: 0)
         }
     }

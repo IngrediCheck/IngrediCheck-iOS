@@ -5,12 +5,18 @@ import UIKit
 struct DebugBarcodeInjectorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isBarcodeFieldFocused: Bool
-    @State private var barcode = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    @State private var barcode = ""
 
     let onInject: (String) -> Void
 
     private var normalizedBarcode: String {
         barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func isLikelyBarcode(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (8...20).contains(trimmed.count) else { return false }
+        return trimmed.allSatisfy(\.isNumber)
     }
 
     var body: some View {
@@ -19,6 +25,38 @@ struct DebugBarcodeInjectorSheet: View {
                 Text("DEBUG only. This sends a typed barcode through the same path used by live camera detection.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                if !DebugScanQAMode.presets.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Sample barcodes")
+                            .font(.headline)
+
+                        ForEach(DebugScanQAMode.presets) { preset in
+                            Button {
+                                barcode = preset.barcode
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(preset.label)
+                                            .foregroundStyle(.primary)
+                                        Text(preset.barcode)
+                                            .font(.caption.monospacedDigit())
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color(.secondarySystemBackground))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("debug_barcode_preset_\(preset.barcode)")
+                        }
+                    }
+                }
 
                 TextField("Enter barcode", text: $barcode)
                     .textInputAutocapitalization(.never)
@@ -35,12 +73,15 @@ struct DebugBarcodeInjectorSheet: View {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.secondarySystemBackground))
                     )
+                    .accessibilityIdentifier("debug_barcode_input")
 
                 HStack(spacing: 12) {
                     Button("Paste Clipboard") {
-                        barcode = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                        let clipboard = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                        barcode = Self.isLikelyBarcode(clipboard) ? clipboard : ""
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("debug_barcode_paste_button")
 
                     Spacer()
 
@@ -49,11 +90,13 @@ struct DebugBarcodeInjectorSheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(normalizedBarcode.isEmpty)
+                    .accessibilityIdentifier("debug_barcode_inject_button")
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(20)
+            .accessibilityIdentifier("debug_barcode_injector_sheet")
             .navigationTitle("Inject Barcode")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -61,10 +104,11 @@ struct DebugBarcodeInjectorSheet: View {
                     Button("Close") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("debug_barcode_close_button")
                 }
             }
         }
-        .presentationDetents([.height(240)])
+        .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
         .onAppear {
             isBarcodeFieldFocused = true

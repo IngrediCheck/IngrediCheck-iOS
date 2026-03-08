@@ -381,6 +381,17 @@ private enum AuthFlowMode {
             AnalyticsService.shared.captureAPIError(endpoint: "signInAnonymously", errorType: "auth", error: error.localizedDescription)
         }
     }
+
+#if DEBUG
+    @MainActor
+    func ensureDebugSession() async {
+        if session != nil {
+            return
+        }
+
+        await signInWithNewAnonymousAccount()
+    }
+#endif
     
     public func handleSignInWithAppleCompletion(result: Result<ASAuthorization, Error>) {
         Task {

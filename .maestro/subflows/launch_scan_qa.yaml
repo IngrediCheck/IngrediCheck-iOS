@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+    arguments:
+      "--debug-scan-qa": true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "scan_debug_injector_button"
+    timeout: 30000
+- assertVisible:
+    id: "scan_camera_view"
