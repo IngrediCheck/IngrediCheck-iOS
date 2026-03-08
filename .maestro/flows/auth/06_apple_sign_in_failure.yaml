@@ -1,0 +1,17 @@
+appId: llc.fungee.ingredicheck
+tags: [auth]
+---
+- runFlow: ../../subflows/launch/auth_apple_failure.yaml
+- extendedWaitUntil:
+    visible:
+      id: sign_in_sheet
+    timeout: 30000
+- tapOn: Apple
+- extendedWaitUntil:
+    visible:
+      text: Apple sign-in failed in simulator test mode.
+    timeout: 30000
+- assertVisible:
+    id: sign_in_sheet
+- assertVisible:
+    text: Apple sign-in failed in simulator test mode.

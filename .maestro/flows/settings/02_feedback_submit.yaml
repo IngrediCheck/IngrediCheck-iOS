@@ -1,0 +1,24 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, feedback]
+---
+- runFlow: ../../subflows/launch/settings.yaml
+- scrollUntilVisible:
+    element:
+      text: Feedback
+    direction: DOWN
+    timeout: 30000
+- tapOn: Feedback
+- extendedWaitUntil:
+    visible:
+      id: feedback_view
+    timeout: 30000
+- tapOn:
+    id: feedback_note_input
+- inputText: Simulator feedback path
+- tapOn:
+    id: feedback_submit_button
+- extendedWaitUntil:
+    visible:
+      text: Feedback Submitted
+    timeout: 30000
+- assertVisible: Feedback Submitted

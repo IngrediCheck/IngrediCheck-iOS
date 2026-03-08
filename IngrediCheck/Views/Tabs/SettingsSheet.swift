@@ -29,6 +29,7 @@ struct SettingsContentView: View {
     @State private var deleteConfirmText: String = ""
     @State private var showEditableCanvas: Bool = false
     @State private var editTargetSectionName: String? = nil
+    @State private var uiTestShareMessage: String? = nil
     
     // Binding helper to avoid local @Bindable in body
     private var startScanningOnAppStartBinding: Binding<Bool> {
@@ -56,6 +57,7 @@ struct SettingsContentView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background(Capsule().fill(.paletteAccent))
+            .accessibilityIdentifier("settings_feedback_submitted_toast")
         }
     }
     
@@ -122,6 +124,7 @@ struct SettingsContentView: View {
                                 Spacer()
                                 Toggle("", isOn: startScanningOnAppStartBinding)
                                     .labelsHidden()
+                                    .accessibilityIdentifier("settings_start_scanning_toggle")
                             }
                             .padding( 16)
                         }
@@ -151,12 +154,14 @@ struct SettingsContentView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_manage_family_button")
                                 Divider()
                                     .padding(.horizontal, 16)
                                 settingsRow(icon: "Pen-Line-2", title: "Food Notes", iconColor: Color(hex: "#75990E")) {
                                     editTargetSectionName = nil
                                     showEditableCanvas = true
                                 }
+                                .accessibilityIdentifier("settings_food_notes_button")
                             }
                         }
                     }
@@ -176,6 +181,7 @@ struct SettingsContentView: View {
                                 rowContent(image: Image("About-Me"), title: "About me")
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("settings_about_button")
                         }
                     }
                     
@@ -192,16 +198,29 @@ struct SettingsContentView: View {
                                 isFeedbackPresented = true
                             } label: { rowContent(image: Image("Feedback-icon"), title: "Feedback") }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_feedback_button")
                             Divider()
                                 .padding(.horizontal, 16)
-                            ShareLink(item: URL(string: "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615")!, subject: Text("IngrediCheck"), message: Text("Check out IngrediCheck, it helps you and your family check food ingredients easily!")) {
-                                rowContent(image: Image("share") , title: "Share us", iconColor: Color(hex: "#75990E"))
+                            if UITestHarness.isEnabled {
+                                Button {
+                                    uiTestShareMessage = UITestHarness.fixture?.shareMessage ?? "Share us tapped"
+                                } label: {
+                                    rowContent(image: Image("share"), title: "Share us", iconColor: Color(hex: "#75990E"))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_share_button")
+                            } else {
+                                ShareLink(item: URL(string: "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615")!, subject: Text("IngrediCheck"), message: Text("Check out IngrediCheck, it helps you and your family check food ingredients easily!")) {
+                                    rowContent(image: Image("share") , title: "Share us", iconColor: Color(hex: "#75990E"))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_share_button")
                             }
-                            .buttonStyle(.plain)
                             Divider()
                                 .padding(.horizontal, 16)
                             NavigationLink { TipJarView() } label: { rowContent(image: Image("Tip-Jar-icon"), title: "Tip Jar") }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_tip_jar_button")
                         }
                     }
                     
@@ -218,18 +237,21 @@ struct SettingsContentView: View {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/about")!)
                             } label: { rowContent(image: Image("Help-icon"), title: "Help") }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_help_button")
                             Divider()
                                 .padding(.horizontal, 16)
                             NavigationLink {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/terms-conditions")!)
                             } label: { rowContent(image: Image("Terms-of-use"), title: "Terms of use") }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_terms_button")
                             Divider()
                                 .padding(.horizontal, 16)
                             NavigationLink {
                                 WebView(url: URL(string: "https://www.ingredicheck.app/privacy-policy")!)
                             } label: { rowContent(image: Image("Privacy-polices"), title: "Privacy policy") }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings_privacy_button")
                             Divider()
                                 .padding(.horizontal, 16)
                             if authController.isInternalUser {
@@ -277,6 +299,17 @@ struct SettingsContentView: View {
                     }
                 
             }
+            .overlay(alignment: .bottom) {
+                if let uiTestShareMessage {
+                    Text(uiTestShareMessage)
+                        .font(ManropeFont.medium.size(12))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(Color.white))
+                        .accessibilityIdentifier("settings_share_result")
+                        .padding(.bottom, 16)
+                }
+            }
             // Use navigationDestination for standard iOS push navigation with swipe-back gesture
             .navigationDestination(isPresented: $showEditableCanvas) {
                 UnifiedCanvasView(
@@ -293,6 +326,7 @@ struct SettingsContentView: View {
                 .environment(foodNotesStore)
             }
         .background(Color.pageBackground)
+            .accessibilityIdentifier("settings_content_view")
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .dismissKeyboardOnTap()

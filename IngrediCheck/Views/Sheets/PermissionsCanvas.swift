@@ -42,7 +42,8 @@ struct PermissionsCanvas: View {
                             handleCameraToggleChanged(to: newValue)
                         }
                     ),
-                    isLocked: cameraEnabled
+                    isLocked: cameraEnabled,
+                    accessibilityId: "permissions_camera_toggle"
                 )
 
                 permissionRow(
@@ -55,7 +56,8 @@ struct PermissionsCanvas: View {
                             handleNotificationsToggleChanged(to: newValue)
                         }
                     ),
-                    isLocked: notificationsEnabled
+                    isLocked: notificationsEnabled,
+                    accessibilityId: "permissions_notifications_toggle"
                 )
 
                 permissionRow(
@@ -68,7 +70,8 @@ struct PermissionsCanvas: View {
                             guard newValue, !isSignedIn else { return }
                             coordinator.navigateInBottomSheet(.loginToContinue)
                         }
-                    )
+                    ),
+                    accessibilityId: "permissions_signin_toggle"
                 )
             }
        
@@ -106,6 +109,12 @@ struct PermissionsCanvas: View {
     }
 
     private func refreshPermissionStates() {
+        if UITestHarness.isEnabled, let permissions = UITestHarness.fixture?.permissions {
+            cameraEnabled = permissions.cameraAuthorized
+            notificationsEnabled = permissions.notificationsAuthorized
+            return
+        }
+
         let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
         cameraEnabled = (cameraStatus == .authorized)
 
@@ -117,6 +126,11 @@ struct PermissionsCanvas: View {
     }
 
     private func handleCameraToggleChanged(to newValue: Bool) {
+        if UITestHarness.isEnabled {
+            cameraEnabled = newValue
+            return
+        }
+
         if newValue == false {
             if cameraEnabled {
                 cameraEnabled = true
@@ -146,6 +160,11 @@ struct PermissionsCanvas: View {
     }
 
     private func handleNotificationsToggleChanged(to newValue: Bool) {
+        if UITestHarness.isEnabled {
+            notificationsEnabled = newValue
+            return
+        }
+
         if newValue == false {
             if notificationsEnabled {
                 notificationsEnabled = true
@@ -183,12 +202,49 @@ struct PermissionsCanvas: View {
         }
     }
 
+    @ViewBuilder
     private func permissionRow(
         icon: String,
         title: String,
         subtitle: String,
         isOn: Binding<Bool>,
-        isLocked: Bool = false
+        isLocked: Bool = false,
+        accessibilityId: String? = nil
+    ) -> some View {
+        let isActionRow = accessibilityId == "permissions_signin_toggle"
+
+        if isActionRow {
+            Button {
+                guard !isOn.wrappedValue else { return }
+                isOn.wrappedValue = true
+            } label: {
+                permissionRowContent(
+                    icon: icon,
+                    title: title,
+                    subtitle: subtitle,
+                    isOn: isOn,
+                    isLocked: isLocked
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(accessibilityId ?? "")
+        } else {
+            permissionRowContent(
+                icon: icon,
+                title: title,
+                subtitle: subtitle,
+                isOn: isOn,
+                isLocked: isLocked
+            )
+        }
+    }
+
+    private func permissionRowContent(
+        icon: String,
+        title: String,
+        subtitle: String,
+        isOn: Binding<Bool>,
+        isLocked: Bool
     ) -> some View {
         HStack(alignment: .top, spacing: 0) {
             Image(icon)
@@ -203,10 +259,9 @@ struct PermissionsCanvas: View {
 
                 Text(subtitle)
                     .font(ManropeFont.regular.size(12))
-                    .foregroundStyle(.grayScale100)                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.grayScale100)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            
-            
 
             Spacer()
 
@@ -217,6 +272,7 @@ struct PermissionsCanvas: View {
                 .allowsHitTesting(!isLocked)
         }
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 }
 

@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [home, settings]
+---
+- runFlow: ../../subflows/launch/home.yaml
+- extendedWaitUntil:
+    visible:
+      id: home_profile_button
+    timeout: 30000
+- tapOn:
+    id: home_profile_button
+- extendedWaitUntil:
+    visible:
+      id: settings_content_view
+    timeout: 30000
+- assertVisible:
+    id: settings_manage_family_button

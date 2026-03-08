@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [onboarding]
+---
+- runFlow: ../../subflows/launch/onboarding_individual.yaml
+- extendedWaitUntil:
+    visible:
+      text: Who do you grocery shop for?
+    timeout: 30000
+- tapOn:
+    id: whos_this_for_just_me
+- extendedWaitUntil:
+    visible:
+      id: dietary_preferences_intro_view
+    timeout: 30000
+- assertVisible:
+    text: Let's Go!

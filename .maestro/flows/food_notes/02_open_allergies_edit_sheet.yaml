@@ -1,0 +1,22 @@
+appId: llc.fungee.ingredicheck
+tags: [food-notes]
+---
+- runFlow: ../../subflows/launch/food_notes.yaml
+- extendedWaitUntil:
+    visible:
+      id: food_notes_edit_allergies
+    timeout: 30000
+- tapOn:
+    id: food_notes_edit_allergies
+- extendedWaitUntil:
+    visible:
+      id: food_notes_edit_sheet
+    timeout: 30000
+- assertVisible:
+    text: Peanuts
+- tapOn:
+    text: Done
+- extendedWaitUntil:
+    visible:
+      id: unified_canvas_view
+    timeout: 30000

@@ -1,0 +1,17 @@
+appId: llc.fungee.ingredicheck
+tags: [auth, onboarding]
+---
+- runFlow: ../../subflows/launch/auth_sign_in.yaml
+- extendedWaitUntil:
+    visible:
+      id: sign_in_sheet
+    timeout: 30000
+- tapOn: Sign in later
+- extendedWaitUntil:
+    visible:
+      text: Who do you grocery shop for?
+    timeout: 30000
+- assertVisible:
+    text: Just Me
+- assertVisible:
+    text: Add Family

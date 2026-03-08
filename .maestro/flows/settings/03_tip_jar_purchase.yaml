@@ -1,0 +1,20 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, tip-jar]
+---
+- runFlow: ../../subflows/launch/settings.yaml
+- scrollUntilVisible:
+    element:
+      text: Tip Jar
+    direction: DOWN
+    timeout: 30000
+- tapOn: Tip Jar
+- extendedWaitUntil:
+    visible:
+      id: tip_jar_view
+    timeout: 30000
+- tapOn: Small Tip
+- extendedWaitUntil:
+    visible:
+      text: Thanks for supporting IngrediCheck
+    timeout: 30000
+- assertVisible: Thanks for supporting IngrediCheck

@@ -35,7 +35,7 @@ struct SplashScreen: View {
                         .scaledToFill()
                         .ignoresSafeArea()
                 } content: {
-                    RootContainerView(restoredState: (canvas: .home, sheet: .homeDefault))
+                    RootContainerView(restoredState: restoredState ?? (canvas: .home, sheet: .homeDefault))
                         .environment(authController)
                         .environment(familyStore)
                 }
@@ -66,6 +66,26 @@ struct SplashScreen: View {
         }
         .task {
 #if DEBUG
+            if UITestHarness.isEnabled, let fixture = UITestHarness.fixture {
+                await authController.signOut()
+                await UITestHarness.prepareRuntime()
+                if fixture.requiresSession {
+                    await authController.ensureDebugSession()
+                }
+
+                if fixture.launchesWithCompletedOnboarding {
+                    OnboardingPersistence.shared.markCompleted()
+                } else {
+                    OnboardingPersistence.shared.reset()
+                }
+
+                restoredState = fixture.restoredState
+                shouldNavigateToHome = fixture.restoredState?.canvas == .home
+                shouldNavigateToOnboarding = fixture.restoredState?.canvas != .home
+                isCheckingLaunchState = false
+                return
+            }
+
             if DebugScanQAMode.isEnabled {
                 await authController.ensureDebugSession()
                 OnboardingPersistence.shared.markCompleted()

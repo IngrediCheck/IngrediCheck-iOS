@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+tags: [home, chat]
+---
+- runFlow: ../../subflows/launch/home.yaml
+- extendedWaitUntil:
+    visible:
+      id: home_view
+    timeout: 30000
+- tapOn: Open chat
+- extendedWaitUntil:
+    visible:
+      id: chat_view
+    timeout: 30000
+- assertVisible:
+    id: chat_input

@@ -96,6 +96,7 @@ struct UnifiedCanvasView: View {
             }
         )
         .background(Color.pageBackground)
+        .accessibilityIdentifier("unified_canvas_view")
         .navigationTitle(mode == .editing ? (titleOverride ?? "Food Notes") : "")
         .navigationBarTitleDisplayMode(.inline)
         // Sync indicator removed - using redacted loading for initial load only

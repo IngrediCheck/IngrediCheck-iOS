@@ -89,6 +89,7 @@
 		D3F6ACCC2F1102EC0019F5C4 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F6ACCB2F1102EC0019F5C4 /* ToastManager.swift */; };
 		D3F946B6F45C9CE7AC0B5E2C /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6E6DC0F6EC4EA734D9E172 /* ShimmerModifier.swift */; };
 		D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */; };
+		F0A100012F5A000000000001 /* UITestHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A100012F5A000000000002 /* UITestHarness.swift */; };
 		FA2A590D2F14B99000C57D89 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2A590C2F14B99000C57D89 /* Config.swift */; };
 		FA2CB6442F078CB300E65B90 /* dynamicJsonData.json in Resources */ = {isa = PBXBuildFile; fileRef = FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */; };
 /* End PBXBuildFile section */
@@ -169,6 +170,7 @@
 		D3FFA0AF2F0B12340088E044 /* Family/ManageFamilyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Family/ManageFamilyView.swift; sourceTree = "<group>"; };
 		E50DF6D250314A65AF243C50 /* RemoteOnboardingMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOnboardingMetadata.swift; sourceTree = "<group>"; };
 		EA6E6DC0F6EC4EA734D9E172 /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
+		F0A100012F5A000000000002 /* UITestHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestHarness.swift; sourceTree = "<group>"; };
 		FA2A590C2F14B99000C57D89 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		FA2CB6432F078C7400E65B90 /* dynamicJsonData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dynamicJsonData.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -364,6 +366,7 @@
 				D3BECBCA2ED989B70088E044 /* backend */,
 				D3BECBA72ED9898E0088E044 /* Components */,
 				FA2A590C2F14B99000C57D89 /* Config.swift */,
+				F0A100012F5A000000000003 /* Testing */,
 				1FF63CC92E32020C005BEDF1 /* Utilities */,
 				39705AF42BD5AC38000E487D /* IngrediCheck.entitlements */,
 				392D9C072B73665500166CF1 /* Info.plist */,
@@ -402,6 +405,14 @@
 				FAA88CBC2EF6B62300449EDF /* Resource */,
 			);
 			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		F0A100012F5A000000000003 /* Testing */ = {
+			isa = PBXGroup;
+			children = (
+				F0A100012F5A000000000002 /* UITestHarness.swift */,
+			);
+			path = Testing;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -582,6 +593,7 @@
 				D3F6ACCC2F1102EC0019F5C4 /* ToastManager.swift in Sources */,
 				397C85FF2B6C08FE00FB9DAD /* DTO.swift in Sources */,
 				D3FFA0B02F0B12340088E044 /* Family/ManageFamilyView.swift in Sources */,
+				F0A100012F5A000000000001 /* UITestHarness.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

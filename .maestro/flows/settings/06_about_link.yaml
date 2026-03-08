@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, support]
+---
+- runFlow: ../../subflows/launch/settings.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings_about_button
+    timeout: 30000
+- tapOn:
+    id: settings_about_button
+- extendedWaitUntil:
+    visible:
+      id: web_view
+    timeout: 30000
+- assertVisible:
+    id: web_view

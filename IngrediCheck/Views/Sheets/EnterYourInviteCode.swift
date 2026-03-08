@@ -44,6 +44,7 @@ struct EnterYourInviteCode : View {
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .accessibilityIdentifier("enter_invite_code_view")
                 }
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .leading) {
@@ -116,6 +117,28 @@ struct EnterYourInviteCode : View {
                             isVerifying = true
                             isError = false
                         }
+
+#if DEBUG
+                        if UITestHarness.isEnabled {
+                            await authController.ensureDebugSession()
+                            print("[EnterYourInviteCode] UITest mode join with code=\(entered)")
+                            await familyStore.join(inviteCode: entered)
+
+                            await MainActor.run {
+                                isVerifying = false
+
+                                if familyStore.errorMessage == nil {
+                                    print("[EnterYourInviteCode] UITest join success")
+                                    isError = false
+                                    yesPressed?()
+                                } else {
+                                    print("[EnterYourInviteCode] UITest join failed, error=\(familyStore.errorMessage ?? "nil")")
+                                    isError = true
+                                }
+                            }
+                            return
+                        }
+#endif
                         
                         // Ensure user is authenticated (sign in anonymously if needed) before joining
                         if await authController.signInState != .signedIn {
@@ -161,6 +184,7 @@ struct EnterYourInviteCode : View {
                     )
                 }
                 .disabled(isVerifying || !isCodeComplete)
+                .accessibilityIdentifier("invite_code_verify_button")
                 
                 Spacer()
             }
@@ -217,6 +241,7 @@ struct EnterYourInviteCode : View {
                     }
                     .frame(width: 1, height: 1)
                     .opacity(0.01)
+                    .accessibilityIdentifier("invite_code_input")
                     .onChange(of: shouldFocus) { newValue in
                         if newValue {
                             isFocused = true
@@ -229,25 +254,31 @@ struct EnterYourInviteCode : View {
                     }
 
                 // Visual OTP boxes
-                HStack(spacing: 14) {
-                    HStack(spacing: 8) {
-                        box(0)
-                        box(1)
-                        box(2)
-                    }
+                Button {
+                    isFocused = true
+                } label: {
+                    HStack(spacing: 14) {
+                        HStack(spacing: 8) {
+                            box(0)
+                            box(1)
+                            box(2)
+                        }
 
-                    RoundedRectangle(cornerRadius: 10)
-                        .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FFE2E0") : .grayScale40)
-                        .frame(width: 12, height: 2.5)
+                        RoundedRectangle(cornerRadius: 10)
+                            .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FFE2E0") : .grayScale40)
+                            .frame(width: 12, height: 2.5)
 
-                    HStack(spacing: 8) {
-                        box(3)
-                        box(4)
-                        box(5)
+                        HStack(spacing: 8) {
+                            box(3)
+                            box(4)
+                            box(5)
+                        }
                     }
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { isFocused = true }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Invite code entry")
+                .accessibilityIdentifier("invite_code_boxes")
             }
             .onAppear {
                 // Pre-fill input if parent provided existing code

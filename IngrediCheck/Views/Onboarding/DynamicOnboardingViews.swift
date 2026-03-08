@@ -826,6 +826,9 @@ struct EditSectionBottomSheet: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Done")
+            .accessibilityIdentifier("food_notes_edit_done_button")
             .padding(.trailing, 20)
             .padding(.bottom, 24)
         }
@@ -838,6 +841,7 @@ struct EditSectionBottomSheet: View {
         .offset(y: dragOffset)
         .animation(isDragging ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: dragOffset)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: stepId)
+        .accessibilityIdentifier("food_notes_edit_sheet")
         .onAppear {
             // Only sync familyStore.selectedMemberId if a specific member was selected AND it's different
             // This prevents triggering unnecessary onChange handlers that could reset preferences

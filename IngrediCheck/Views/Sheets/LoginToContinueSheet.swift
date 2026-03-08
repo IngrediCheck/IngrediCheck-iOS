@@ -122,6 +122,7 @@ struct LoginToContinueSheet: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(authController.isUpgradingAccount)
+                    .accessibilityIdentifier("login_to_continue_google_button")
 
                     Button {
                         Task {
@@ -151,6 +152,7 @@ struct LoginToContinueSheet: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(authController.isUpgradingAccount)
+                    .accessibilityIdentifier("login_to_continue_apple_button")
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 32)
@@ -160,6 +162,7 @@ struct LoginToContinueSheet: View {
             .background(Color.white)
             .cornerRadius(40)
             .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+            .accessibilityIdentifier("login_to_continue_view")
         }
     }
     
@@ -226,6 +229,7 @@ struct LoginToContinueSheet: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(authController.isUpgradingAccount)
+                .accessibilityIdentifier("login_to_continue_google_button")
 
                 Button {
                     Task {
@@ -255,6 +259,7 @@ struct LoginToContinueSheet: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(authController.isUpgradingAccount)
+                .accessibilityIdentifier("login_to_continue_apple_button")
             }
             .padding(.top, 24)
             .padding(.bottom, 20)
@@ -263,6 +268,7 @@ struct LoginToContinueSheet: View {
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 20)
+        .accessibilityIdentifier("login_to_continue_view")
     }
 }
 

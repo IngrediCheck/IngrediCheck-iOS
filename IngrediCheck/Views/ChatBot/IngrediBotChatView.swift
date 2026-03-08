@@ -69,6 +69,11 @@ struct IngrediBotChatView: View {
             Spacer()
                 .frame(height: 8)
 
+            Color.clear
+                .frame(height: 1)
+                .accessibilityElement()
+                .accessibilityIdentifier("chat_view")
+
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
@@ -168,6 +173,8 @@ struct IngrediBotChatView: View {
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(Color.gray.opacity(0.2))
                     )
+                    .accessibilityLabel("Type your answer")
+                    .accessibilityIdentifier("chat_input")
                 
                 Button {
                     sendMessage()
@@ -193,6 +200,8 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
+                .accessibilityLabel("Send")
+                .accessibilityIdentifier("chat_send_button")
             }
         }
         .padding(.horizontal, 20)
@@ -248,6 +257,7 @@ struct IngrediBotChatView: View {
                 .foregroundStyle(.grayScale120)
                 .padding(.top, 16)
                 .padding(.trailing, 16)
+                .accessibilityIdentifier("chat_skip_button")
             }
         }
     }

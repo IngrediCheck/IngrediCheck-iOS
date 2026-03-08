@@ -52,6 +52,17 @@ struct EditableCanvasCard: View {
         return !hasSectioned && !hasChips
     }
 
+    private var editButtonAccessibilityId: String {
+        let slug = title
+            .lowercased()
+            .replacingOccurrences(of: "&", with: "and")
+            .replacingOccurrences(of: "/", with: "_")
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "_")
+        return "food_notes_edit_\(slug)"
+    }
+
     private func memberIdentifiers(for itemName: String) -> [String] {
         guard let memberIds = itemMemberAssociations[title]?[itemName] else {
             return []
@@ -99,6 +110,7 @@ struct EditableCanvasCard: View {
                                 .foregroundStyle(.grayScale30)
                         )
                     }
+                    .accessibilityIdentifier(editButtonAccessibilityId)
                 }
             }
 
@@ -214,6 +226,7 @@ struct MiscNotesCard: View {
                                 .foregroundStyle(.grayScale30)
                         )
                     }
+                    .accessibilityIdentifier("food_notes_notes_chat_button")
                 }
             }
 

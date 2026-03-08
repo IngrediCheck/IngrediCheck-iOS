@@ -55,6 +55,7 @@ struct WhosThisFor: View {
                         }
                     }
                 )
+                .accessibilityIdentifier("whos_this_for_just_me")
 
                 SecondaryButton(
                     title: "Add Family",
@@ -76,6 +77,7 @@ struct WhosThisFor: View {
                         }
                     }
                 )
+                .accessibilityIdentifier("whos_this_for_add_family")
                 
             }
             

@@ -38,6 +38,7 @@ import os
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitle("Favorites")
         .background(Color.pageBackground)
+        .accessibilityIdentifier("favorites_page_view")
     }
 }
 
@@ -61,6 +62,7 @@ import os
             }
         }
         .background(Color.pageBackground)
+        .accessibilityIdentifier("recent_scans_page_view")
     }
 
     private var filteredScans: [DTO.Scan] {

@@ -1,0 +1,12 @@
+appId: llc.fungee.ingredicheck
+tags: [product]
+---
+- runFlow: ../../subflows/launch/product_detail.yaml
+- extendedWaitUntil:
+    visible:
+      id: product_detail_view
+    timeout: 30000
+- assertVisible:
+    id: product_detail_favorite_button
+- assertVisible:
+    text: Diet Coke Soft Drink

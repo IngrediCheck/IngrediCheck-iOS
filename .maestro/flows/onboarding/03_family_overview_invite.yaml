@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [onboarding, family]
+---
+- runFlow: ../../subflows/launch/onboarding_family.yaml
+- extendedWaitUntil:
+    visible:
+      id: family_overview_view
+    timeout: 30000
+- tapOn:
+    id: family_overview_invite_button_33333333-3333-3333-3333-333333333333
+- extendedWaitUntil:
+    visible:
+      id: family_overview_invite_result
+    timeout: 30000
+- assertVisible:
+    id: family_overview_invite_result

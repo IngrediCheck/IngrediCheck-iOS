@@ -1,0 +1,4 @@
+appId: llc.fungee.ingredicheck
+---
+- tapOn:
+    id: "scan_ui_test_inject_photo_button"

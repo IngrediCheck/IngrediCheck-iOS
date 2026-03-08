@@ -16,6 +16,7 @@ struct LetsMeetYourIngrediFamView: View {
     @State private var showLeaveConfirm = false
     @State private var shareItems: ShareItem?
     @State private var isGeneratingInviteCode: Bool = false
+    @State private var uiTestInviteMessage: String? = nil
     
     private let appStoreURL = "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615"
     
@@ -98,6 +99,7 @@ struct LetsMeetYourIngrediFamView: View {
                     .foregroundStyle(.grayScale150)
 //                    .padding(.top, 32)
                     .padding(.bottom, 12)
+                    .accessibilityIdentifier("family_overview_view")
                   
 
                 ScrollView {
@@ -231,6 +233,7 @@ struct LetsMeetYourIngrediFamView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("family_overview_invite_button_\(member.id.uuidString.lowercased())")
                             }
                             .padding(16)
                             .background(
@@ -284,6 +287,19 @@ struct LetsMeetYourIngrediFamView: View {
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
         }
+        .overlay(alignment: .top) {
+            if let uiTestInviteMessage {
+                Text(uiTestInviteMessage)
+                    .font(ManropeFont.medium.size(12))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.white))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(uiTestInviteMessage)
+                    .accessibilityIdentifier("family_overview_invite_result")
+                    .padding(.top, 12)
+            }
+        }
     }
     
     // MARK: - Invite Share Helper
@@ -311,9 +327,13 @@ struct LetsMeetYourIngrediFamView: View {
             return
         }
         
-        let message = inviteShareMessage(inviteCode: code)
-        let items = [message]
-        shareItems = ShareItem(items: items)
+        if UITestHarness.isEnabled {
+            uiTestInviteMessage = "Invite sent"
+        } else {
+            let message = inviteShareMessage(inviteCode: code)
+            let items = [message]
+            shareItems = ShareItem(items: items)
+        }
     }
     
     private func inviteShareMessage(inviteCode: String) -> String {
@@ -413,4 +433,3 @@ fileprivate struct OnboardingSmartAvatarView: View {
 #Preview {
     LetsMeetYourIngrediFamView()
 }
-

@@ -1,0 +1,14 @@
+appId: llc.fungee.ingredicheck
+tags: [auth, smoke]
+---
+- runFlow: ../../subflows/launch/auth_sign_in.yaml
+- extendedWaitUntil:
+    visible:
+      id: sign_in_sheet
+    timeout: 30000
+- assertVisible:
+    text: Google
+- assertVisible:
+    text: Apple
+- assertVisible:
+    text: Sign in later

@@ -129,6 +129,11 @@ struct MeetYourProfileView: View {
             }
             .padding(.top, 24)
 
+            Color.clear
+                .frame(height: 1)
+                .accessibilityElement()
+                .accessibilityIdentifier("meet_your_profile_view")
+
             // Greeting Title
             HStack(spacing: 8) {
                 Text("Hello,")
@@ -193,6 +198,9 @@ struct MeetYourProfileView: View {
                 GreenCapsule(title: isFromFamilyOverview ? "Done" : "Continue", width: 159)
                     .frame(width: 159)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(isFromFamilyOverview ? "Done" : "Continue")
+            .accessibilityIdentifier("meet_your_profile_continue_button")
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity)

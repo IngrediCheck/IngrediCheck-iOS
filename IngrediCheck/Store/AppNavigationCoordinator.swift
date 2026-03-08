@@ -98,7 +98,7 @@ class AppNavigationCoordinator {
         // If the user has completed onboarding previously, FORCE start at .home
         // regardless of what the caller passed (unless we want to support deep linking to specific onboarding steps, 
         // but for app launch .heyThere is usually passed).
-        if OnboardingPersistence.shared.isLocallyCompleted {
+        if OnboardingPersistence.shared.isLocallyCompleted && !UITestHarness.isEnabled {
             self.currentCanvasRoute = .home
             self.onboardingFlow = .individual // Default, will be updated if needed or doesn't matter for Home
             self.currentBottomSheetRoute = .homeDefault

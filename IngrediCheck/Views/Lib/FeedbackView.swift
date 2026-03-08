@@ -75,6 +75,7 @@ struct FeedbackView: View {
                         TextEditor(text: $feedbackData.note)
                             .focused($isFocused)
                             .frame(height: 120)
+                            .accessibilityIdentifier("feedback_note_input")
                             .clipShape(
                                 RoundedRectangle(cornerRadius: 8)
                             )
@@ -96,6 +97,7 @@ struct FeedbackView: View {
                 }
                 .scrollIndicators(.hidden)
                 .padding()
+                .accessibilityIdentifier("feedback_view")
                 .navigationTitle("Help me Improve 🥹")
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationBarItems(
@@ -127,9 +129,10 @@ struct FeedbackView: View {
                     showTitle: true,
                     showCancelButton: true
                 )
-                    .presentationDetents([.large])
-                    .presentationBackground(.regularMaterial)
-                    .padding(.horizontal)
+                .presentationDetents([.large])
+                .presentationBackground(.regularMaterial)
+                .padding(.horizontal)
+                .accessibilityIdentifier("feedback_view")
             }
         }
     }
@@ -138,6 +141,7 @@ struct FeedbackView: View {
         Button("Cancel") {
             dismiss()
         }
+        .accessibilityIdentifier("feedback_cancel_button")
     }
     
     private var nextOrSubmitButtonTitle: String {
@@ -157,6 +161,7 @@ struct FeedbackView: View {
                 dismiss()
             }
         }
+        .accessibilityIdentifier(captureImages ? "feedback_next_button" : "feedback_submit_button")
     }
     
     private var captureImages: Bool {

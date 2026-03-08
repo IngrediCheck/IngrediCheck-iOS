@@ -48,6 +48,18 @@ final class FamilyStore {
     init(service: FamilyService = FamilyService()) {
         self.service = service
     }
+
+    private var isUITestMode: Bool {
+        UITestHarness.isEnabled
+    }
+
+    private func uiTestNextVersion(from family: Family?) -> Int64 {
+        (family?.version ?? 0) + 1
+    }
+
+    private func uiTestFamilyFromFixture() -> Family? {
+        UITestHarness.fixture?.family
+    }
     
     // MARK: - Pending members (onboarding helpers)
     
@@ -588,6 +600,15 @@ final class FamilyStore {
     }
 
     func loadCurrentFamily() async {
+        if isUITestMode {
+            updateFamilyAndCache(uiTestFamilyFromFixture())
+            selectedMemberId = UITestHarness.fixture?.selectedMemberId
+            syncPendingInviteStatus()
+            isLoading = false
+            errorMessage = nil
+            return
+        }
+
         await withCoalescedFetch { [self] in
             Log.debug("FamilyStore", "loadCurrentFamily() called")
 
@@ -626,6 +647,20 @@ final class FamilyStore {
         selfMember: FamilyMember,
         otherMembers: [FamilyMember]
     ) async {
+        if isUITestMode {
+            updateFamilyAndCache(
+                Family(
+                    name: name,
+                    selfMember: selfMember,
+                    otherMembers: otherMembers,
+                    version: uiTestNextVersion(from: family)
+                )
+            )
+            selectedMemberId = selfMember.id
+            errorMessage = nil
+            return
+        }
+
         Log.debug("FamilyStore", "🔵 createOrUpdateFamily called")
         Log.debug("FamilyStore", "📝 Parameters - name: \(name), self: \(selfMember.name) (id: \(selfMember.id)), others: \(otherMembers.map { $0.name })")
         isLoading = true
@@ -661,6 +696,20 @@ final class FamilyStore {
     
     /// Updates an existing family's name
     func updateFamily(name: String) async {
+        if isUITestMode {
+            guard let currentFamily = family else { return }
+            updateFamilyAndCache(
+                Family(
+                    name: name,
+                    selfMember: currentFamily.selfMember,
+                    otherMembers: currentFamily.otherMembers,
+                    version: uiTestNextVersion(from: currentFamily)
+                )
+            )
+            errorMessage = nil
+            return
+        }
+
         Log.debug("FamilyStore", "🔵 updateFamily called")
         Log.debug("FamilyStore", "📝 Parameters - name: \(name)")
         isLoading = true
@@ -693,6 +742,21 @@ final class FamilyStore {
     // MARK: - Members
     
     func addMember(_ member: FamilyMember) async {
+        if isUITestMode {
+            guard let currentFamily = family else { return }
+            var nextFamily = currentFamily
+            nextFamily.otherMembers.append(member)
+            updateFamilyAndCache(
+                Family(
+                    name: nextFamily.name,
+                    selfMember: nextFamily.selfMember,
+                    otherMembers: nextFamily.otherMembers,
+                    version: uiTestNextVersion(from: currentFamily)
+                )
+            )
+            return
+        }
+
         Log.debug("FamilyStore", "addMember called for \(member.name)")
         isLoading = true
         errorMessage = nil
@@ -709,6 +773,35 @@ final class FamilyStore {
     }
     
     func editMember(_ member: FamilyMember) async {
+        if isUITestMode {
+            guard let currentFamily = family else { return }
+            if currentFamily.selfMember.id == member.id {
+                updateFamilyAndCache(
+                    Family(
+                        name: currentFamily.name,
+                        selfMember: member,
+                        otherMembers: currentFamily.otherMembers,
+                        version: uiTestNextVersion(from: currentFamily)
+                    )
+                )
+                return
+            }
+
+            var otherMembers = currentFamily.otherMembers
+            if let idx = otherMembers.firstIndex(where: { $0.id == member.id }) {
+                otherMembers[idx] = member
+            }
+            updateFamilyAndCache(
+                Family(
+                    name: currentFamily.name,
+                    selfMember: currentFamily.selfMember,
+                    otherMembers: otherMembers,
+                    version: uiTestNextVersion(from: currentFamily)
+                )
+            )
+            return
+        }
+
         Log.debug("FamilyStore", "editMember called for \(member.id)")
         isLoading = true
         errorMessage = nil
@@ -803,6 +896,20 @@ final class FamilyStore {
     }
 
     func deleteMember(id: UUID) async {
+        if isUITestMode {
+            guard let currentFamily = family else { return }
+            let filtered = currentFamily.otherMembers.filter { $0.id != id }
+            updateFamilyAndCache(
+                Family(
+                    name: currentFamily.name,
+                    selfMember: currentFamily.selfMember,
+                    otherMembers: filtered,
+                    version: uiTestNextVersion(from: currentFamily)
+                )
+            )
+            return
+        }
+
         Log.debug("FamilyStore", "deleteMember called for id=\(id)")
         isLoading = true
         errorMessage = nil
@@ -820,6 +927,11 @@ final class FamilyStore {
     // MARK: - Invites
     
     func invite(memberId: UUID) async -> String? {
+        if isUITestMode {
+            setInvitePendingForPendingOtherMember(id: memberId, pending: true)
+            return "TEST-\(memberId.uuidString.prefix(4))"
+        }
+
         Log.debug("FamilyStore", "invite called for memberId=\(memberId)")
         isInviting = true
         errorMessage = nil
@@ -838,6 +950,26 @@ final class FamilyStore {
     }
     
     func join(inviteCode: String) async {
+        if isUITestMode {
+            let joinedFamily = uiTestFamilyFromFixture() ?? Family(
+                name: "Joined Family",
+                selfMember: FamilyMember(
+                    id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
+                    name: "Joined User",
+                    color: "#BAFFC9",
+                    joined: true,
+                    imageFileHash: "memoji_6",
+                    invitePending: nil
+                ),
+                otherMembers: [],
+                version: 1
+            )
+            updateFamilyAndCache(joinedFamily)
+            selectedMemberId = joinedFamily.selfMember.id
+            errorMessage = nil
+            return
+        }
+
         Log.debug("FamilyStore", "join called with code=\(inviteCode)")
         isJoining = true
         errorMessage = nil
@@ -854,6 +986,12 @@ final class FamilyStore {
     }
     
     func leave() async {
+        if isUITestMode {
+            updateFamilyAndCache(nil)
+            selectedMemberId = nil
+            return
+        }
+
         Log.debug("FamilyStore", "leave called")
         isLoading = true
         errorMessage = nil
@@ -873,6 +1011,26 @@ final class FamilyStore {
     /// Uses a default avatar (memoji_3) for guest users to match the handling in other onboarding flows.
     /// Throws error for UI handling (navigation blocking).
     func createBiteBuddyFamily() async throws {
+        if isUITestMode {
+            let selfMember = FamilyMember(
+                id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,
+                name: "Bite Buddy",
+                color: "#FFFFBA",
+                joined: true,
+                imageFileHash: "memoji_3",
+                invitePending: nil
+            )
+            let created = Family(
+                name: "Bite Buddy",
+                selfMember: selfMember,
+                otherMembers: [],
+                version: 1
+            )
+            updateFamilyAndCache(created)
+            selectedMemberId = selfMember.id
+            return
+        }
+
         Log.debug("FamilyStore", "createBiteBuddyFamily called")
         isLoading = true
         errorMessage = nil
@@ -904,6 +1062,31 @@ final class FamilyStore {
     /// Creates a family immediately with the given self name.
     /// Throws error for UI handling (Toast/Navigation blocking).
     func createFamilyImmediate(selfName: String) async throws {
+        if isUITestMode {
+            let trimmed = selfName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                throw NSError(domain: "FamilyStore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
+            }
+            let member = FamilyMember(
+                id: UUID(),
+                name: trimmed,
+                color: "#BAFFC9",
+                joined: true,
+                imageFileHash: "memoji_3",
+                invitePending: nil
+            )
+            updateFamilyAndCache(
+                Family(
+                    name: "\(trimmed)'s Family",
+                    selfMember: member,
+                    otherMembers: [],
+                    version: 1
+                )
+            )
+            selectedMemberId = member.id
+            return
+        }
+
         Log.debug("FamilyStore", "🔵 createFamilyImmediate called")
         Log.debug("FamilyStore", "📝 Parameter - selfName: \(selfName)")
         isLoading = true

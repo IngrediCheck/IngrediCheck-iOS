@@ -426,6 +426,9 @@ struct ScanCameraView: View {
 
     // MARK: - Rating Prompt
     private func checkAndPromptForRating() {
+        if UITestHarness.isEnabled {
+            return
+        }
         if userPreferences.canPromptForRating() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 userPreferences.recordRatingPrompt()
@@ -940,7 +943,11 @@ struct ScanCameraView: View {
                 .ignoresSafeArea()
                 .onAppear {
 #if targetEnvironment(simulator)
+                    if UITestHarness.isEnabled {
+                        cameraStatus = UITestHarness.fixture?.permissions.cameraAuthorized == true ? .authorized : .denied
+                    } else {
                     cameraStatus = .authorized
+                    }
 #else
                     let status = AVCaptureDevice.authorizationStatus(for: .video)
                     cameraStatus = status
@@ -1373,7 +1380,7 @@ struct ScanCameraView: View {
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
 #if DEBUG
-                if mode == .scanner {
+                if mode == .scanner, !UITestHarness.isEnabled {
                     Button {
                         isShowingDebugBarcodeInjector = true
                     } label: {
@@ -1384,6 +1391,20 @@ struct ScanCameraView: View {
                     .accessibilityLabel("Inject barcode")
                     .accessibilityIdentifier("scan_debug_injector_button")
                 }
+
+                if mode == .photo, !UITestHarness.isEnabled {
+                    Button {
+                        Task {
+                            await processPhoto(image: Self.makeUITestPhoto())
+                        }
+                    } label: {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .accessibilityLabel("Inject photo")
+                    .accessibilityIdentifier("scan_debug_photo_injector_button")
+                }
 #endif
                 if mode == .scanner {
                     FlashToggleButton(isScannerMode: true)
@@ -1393,6 +1414,13 @@ struct ScanCameraView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("scan_camera_view")
+        .overlay(alignment: .topTrailing) {
+#if DEBUG
+            if UITestHarness.isEnabled {
+                uiTestActionOverlay
+            }
+#endif
+        }
         .onAppear {
             // Track that camera is in navigation stack (for ProductDetail "Add Photo" navigation)
             appState?.hasCameraInStack = true
@@ -1426,6 +1454,56 @@ extension ScanCameraView {
         // Set presentation source
         self._presentationSource = State(initialValue: presentationSource)
     }
+
+    private static func makeUITestPhoto() -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 800, height: 800))
+        return renderer.image { context in
+            UIColor(red: 0.61, green: 0.81, blue: 0.06, alpha: 1.0).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 800, height: 800))
+
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .center
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 64),
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: paragraph
+            ]
+            let text = "UI TEST PHOTO"
+            text.draw(
+                in: CGRect(x: 80, y: 320, width: 640, height: 100),
+                withAttributes: attributes
+            )
+        }
+    }
+
+#if DEBUG
+    @ViewBuilder
+    private var uiTestActionOverlay: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            if mode == .scanner {
+                Button("Inject Barcode") {
+                    isShowingDebugBarcodeInjector = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(hex: "#91B640"))
+                .accessibilityIdentifier("scan_ui_test_inject_barcode_button")
+            }
+
+            if mode == .photo {
+                Button("Inject Photo") {
+                    Task {
+                        await processPhoto(image: Self.makeUITestPhoto())
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(hex: "#91B640"))
+                .accessibilityIdentifier("scan_ui_test_inject_photo_button")
+            }
+        }
+        .padding(.top, 92)
+        .padding(.trailing, 16)
+    }
+#endif
 
 
     // MARK: - Photo Picker for gallery selection
