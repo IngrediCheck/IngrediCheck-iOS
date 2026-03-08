@@ -65,6 +65,16 @@ struct SplashScreen: View {
             }
         }
         .task {
+#if DEBUG
+            if DebugScanQAMode.isEnabled {
+                await authController.ensureDebugSession()
+                OnboardingPersistence.shared.markCompleted()
+                restoredState = (canvas: .home, sheet: .homeDefault)
+                shouldNavigateToHome = true
+                isCheckingLaunchState = false
+                return
+            }
+#endif
             let firstLaunchKey = "hasLaunchedOncePreviewFlow"
             let hasLaunchedBefore = UserDefaults.standard.bool(forKey: firstLaunchKey)
 

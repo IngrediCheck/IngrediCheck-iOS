@@ -29,6 +29,7 @@ struct HomeView: View {
     @State private var isLoadingStats: Bool = false
     @State private var hasCheckedAutoScan: Bool = false
     @State private var didFinishInitialLoad: Bool = false
+    @State private var hasAutoOpenedDebugScanner: Bool = false
     // ---------------------------
     // MERGED FROM YOUR BRANCH
     // ---------------------------
@@ -621,6 +622,18 @@ struct HomeView: View {
                     // Only trigger once when HomeView first appears (not when returning from navigation)
                     guard !hasCheckedAutoScan else { return }
                     hasCheckedAutoScan = true
+#if DEBUG
+                    if DebugScanQAMode.isEnabled {
+                        guard !hasAutoOpenedDebugScanner else { return }
+                        hasAutoOpenedDebugScanner = true
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 300_000_000)
+                            guard appState.navigationPath.isEmpty else { return }
+                            appState.navigate(to: .scanCamera(initialMode: .scanner, initialScanId: nil))
+                        }
+                        return
+                    }
+#endif
                     if userPreferences.startScanningOnAppStart {
                         // Small delay to ensure view is fully loaded
                         Task { @MainActor in

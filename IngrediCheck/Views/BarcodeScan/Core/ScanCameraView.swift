@@ -922,6 +922,13 @@ struct ScanCameraView: View {
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
+#if targetEnvironment(simulator)
+                        if DebugScanQAMode.isEnabled {
+                            Text("Simulator QA mode is active.")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+#endif
 #endif
                     }
                 )
@@ -930,6 +937,9 @@ struct ScanCameraView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
                 .onAppear {
+#if targetEnvironment(simulator)
+                    cameraStatus = .authorized
+#else
                     let status = AVCaptureDevice.authorizationStatus(for: .video)
                     cameraStatus = status
                     switch status {
@@ -945,6 +955,7 @@ struct ScanCameraView: View {
                     @unknown default:
                         break
                     }
+#endif
                     camera.scanningEnabled = (mode == .scanner)
                     isCaptured = UIScreen.main.isCaptured
                     updateToastState()
