@@ -1380,7 +1380,7 @@ struct ScanCameraView: View {
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
 #if DEBUG
-                if mode == .scanner {
+                if mode == .scanner, !UITestHarness.isEnabled {
                     Button {
                         isShowingDebugBarcodeInjector = true
                     } label: {
@@ -1392,7 +1392,7 @@ struct ScanCameraView: View {
                     .accessibilityIdentifier("scan_debug_injector_button")
                 }
 
-                if UITestHarness.isEnabled, mode == .photo {
+                if mode == .photo, !UITestHarness.isEnabled {
                     Button {
                         Task {
                             await processPhoto(image: Self.makeUITestPhoto())

@@ -4,6 +4,7 @@ struct SignInToIngrediCheckSheet: View {
     @Environment(AuthController.self) private var authController
     @Environment(AppNavigationCoordinator.self) private var coordinator
     @State private var isSigningIn = false
+    @State private var authErrorMessage: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,6 +41,16 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.top, 28)
             .padding(.horizontal, 24)
 
+            if let authErrorMessage {
+                Text(authErrorMessage)
+                    .font(ManropeFont.medium.size(12))
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 16)
+                    .padding(.horizontal, 24)
+                    .accessibilityIdentifier("auth_error_message")
+            }
+
             HStack(spacing: 0) {
                 Rectangle()
                     .fill(
@@ -65,6 +76,7 @@ struct SignInToIngrediCheckSheet: View {
 
             Button {
                 Task {
+                    authErrorMessage = nil
                     isSigningIn = true
                     await authController.signIn()
                     coordinator.navigateInBottomSheet(.whosThisFor)
@@ -99,6 +111,7 @@ struct SignInToIngrediCheckSheet: View {
     }
 
     private func handleGoogleSignIn() {
+        authErrorMessage = nil
         isSigningIn = true
         authController.signInWithGoogle { result in
             switch result {
@@ -139,12 +152,16 @@ struct SignInToIngrediCheckSheet: View {
                 }
             case .failure(let error):
                 Log.error("SignInToIngrediCheckSheet", "Google Sign-In failed: \(error.localizedDescription)")
-                isSigningIn = false
+                Task { @MainActor in
+                    authErrorMessage = error.localizedDescription
+                    isSigningIn = false
+                }
             }
         }
     }
 
     private func handleAppleSignIn() {
+        authErrorMessage = nil
         isSigningIn = true
         authController.signInWithApple { result in
             switch result {
@@ -185,7 +202,10 @@ struct SignInToIngrediCheckSheet: View {
                 }
             case .failure(let error):
                 Log.error("SignInToIngrediCheckSheet", "Apple Sign-In failed: \(error.localizedDescription)")
-                isSigningIn = false
+                Task { @MainActor in
+                    authErrorMessage = error.localizedDescription
+                    isSigningIn = false
+                }
             }
         }
     }

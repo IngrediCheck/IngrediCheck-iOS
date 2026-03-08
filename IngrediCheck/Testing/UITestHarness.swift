@@ -34,7 +34,9 @@ enum UITestTipPurchaseOutcome {
 enum UITestScenario: String {
     case authSignIn
     case authGoogle
+    case authGoogleFailure
     case authApple
+    case authAppleFailure
     case onboardingIndividual
     case onboardingFamily
     case joinFamily
@@ -348,49 +350,29 @@ actor UITestRuntime {
 }
 
 private enum UITestFixtures {
+    private struct SharedFixtureData {
+        lazy var family: Family = UITestFixtures.makeFamily()
+        lazy var scans: [DTO.Scan] = UITestFixtures.makeScans()
+        lazy var stats: DTO.StatsResponse = UITestFixtures.makeStats()
+        lazy var favorites: [DTO.ListItem] = UITestFixtures.makeFavorites(from: scans)
+        lazy var foodNotesAll: WebService.FoodNotesAllResponse = UITestFixtures.makeFoodNotesAll(for: family)
+        lazy var foodNotesSummary: DTO.FoodNotesSummaryResponse = UITestFixtures.makeFoodNotesSummary()
+    }
+
     static func fixture(for scenario: UITestScenario) -> UITestFixture {
-        let family = makeFamily()
-        let scans = makeScans()
-        let stats = makeStats()
-        let favorites = makeFavorites(from: scans)
-        let foodNotesAll = makeFoodNotesAll(for: family)
-        let foodNotesSummary = DTO.FoodNotesSummaryResponse(
-            summary: "Avoid peanuts, dairy, and lactose. Prefer lower sugar snacks for the family.",
-            generatedAt: isoDateString(),
-            isCached: false
-        )
+        var shared = SharedFixtureData()
 
         switch scenario {
         case .authSignIn:
-            return UITestFixture(
-                scenario: scenario,
-                restoredState: (canvas: .heyThere, sheet: .signInToIngrediCheck),
-                requiresSession: false,
-                launchesWithCompletedOnboarding: false,
-                marksOnboardingCompleted: false,
-                authProvider: nil,
-                googleOutcome: .success,
-                appleOutcome: .success,
-                homeRoute: nil,
-                openSettingsSheet: false,
-                startScanningOnAppStart: false,
-                family: nil,
-                selectedMemberId: nil,
-                foodNotesAll: nil,
-                foodNotesSummary: nil,
-                permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
-                chatReplies: chatReplies(),
-                tipProducts: tipProducts(),
-                tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
-                shareMessage: "Share IngrediCheck"
-            )
+            return signInSheetFixture(scenario: scenario)
         case .authGoogle:
-            return authFixture(scenario: scenario, provider: .google)
+            return authFixture(scenario: scenario, shared: &shared)
+        case .authGoogleFailure:
+            return signInSheetFixture(scenario: scenario, googleOutcome: .failure)
         case .authApple:
-            return authFixture(scenario: scenario, provider: .apple)
+            return authFixture(scenario: scenario, shared: &shared)
+        case .authAppleFailure:
+            return signInSheetFixture(scenario: scenario, appleOutcome: .failure)
         case .onboardingIndividual:
             return UITestFixture(
                 scenario: scenario,
@@ -409,15 +391,16 @@ private enum UITestFixtures {
                 foodNotesAll: nil,
                 foodNotesSummary: nil,
                 permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                scans: [],
+                stats: emptyStats(),
+                favorites: [],
                 chatReplies: chatReplies(),
                 tipProducts: tipProducts(),
                 tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
                 shareMessage: "Share IngrediCheck"
             )
         case .onboardingFamily:
+            let family = shared.family
             return UITestFixture(
                 scenario: scenario,
                 restoredState: (canvas: .letsMeetYourIngrediFam, sheet: .letsMeetYourIngrediFam),
@@ -432,12 +415,12 @@ private enum UITestFixtures {
                 startScanningOnAppStart: false,
                 family: family,
                 selectedMemberId: family.selfMember.id,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
                 permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites,
                 chatReplies: chatReplies(),
                 tipProducts: tipProducts(),
                 tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
@@ -461,9 +444,9 @@ private enum UITestFixtures {
                 foodNotesAll: nil,
                 foodNotesSummary: nil,
                 permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                scans: [],
+                stats: emptyStats(),
+                favorites: [],
                 chatReplies: chatReplies(),
                 tipProducts: tipProducts(),
                 tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
@@ -474,110 +457,112 @@ private enum UITestFixtures {
                 scenario: scenario,
                 homeRoute: nil,
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .settings:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: nil,
                 openSettingsSheet: true,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .manageFamily:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: .manageFamily,
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .foodNotes:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: .editableCanvas(targetSection: nil),
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .scanBarcode:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: .scanCamera(initialMode: .scanner, initialScanId: nil),
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .scanPhoto:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: .scanCamera(initialMode: .photo, initialScanId: nil),
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .productDetail:
+            let firstScan = shared.scans[0]
             return homeFixture(
                 scenario: scenario,
-                homeRoute: .productDetail(scanId: scans[0].id, initialScan: scans[0]),
+                homeRoute: .productDetail(scanId: firstScan.id, initialScan: firstScan),
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .favorites:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: .favoritesAll,
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .recentScans:
             return homeFixture(
                 scenario: scenario,
                 homeRoute: .recentScansAll,
                 openSettingsSheet: false,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
             )
         case .chat:
+            let family = shared.family
             return UITestFixture(
                 scenario: scenario,
                 restoredState: (canvas: .home, sheet: .chatConversation),
@@ -592,18 +577,19 @@ private enum UITestFixtures {
                 startScanningOnAppStart: false,
                 family: family,
                 selectedMemberId: family.selfMember.id,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
                 permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites,
                 chatReplies: chatReplies(),
                 tipProducts: tipProducts(),
                 tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
                 shareMessage: "Share IngrediCheck"
             )
         case .permissions:
+            let family = shared.family
             return UITestFixture(
                 scenario: scenario,
                 restoredState: (canvas: .whyWeNeedThesePermissions, sheet: .quickAccessNeeded),
@@ -618,12 +604,12 @@ private enum UITestFixtures {
                 startScanningOnAppStart: false,
                 family: family,
                 selectedMemberId: family.selfMember.id,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
                 permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: false),
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites,
                 chatReplies: chatReplies(),
                 tipProducts: tipProducts(),
                 tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
@@ -634,12 +620,12 @@ private enum UITestFixtures {
                 scenario: scenario,
                 homeRoute: nil,
                 openSettingsSheet: true,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites,
                 tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck")
             )
         case .support:
@@ -647,20 +633,54 @@ private enum UITestFixtures {
                 scenario: scenario,
                 homeRoute: nil,
                 openSettingsSheet: true,
-                family: family,
-                foodNotesAll: foodNotesAll,
-                foodNotesSummary: foodNotesSummary,
-                scans: scans,
-                stats: stats,
-                favorites: favorites,
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites,
                 shareMessage: "Share us tapped"
             )
         }
     }
 
-    private static func authFixture(scenario: UITestScenario, provider: UITestAuthProvider) -> UITestFixture {
-        let family = makeFamily()
-        let scans = makeScans()
+    private static func signInSheetFixture(
+        scenario: UITestScenario,
+        googleOutcome: UITestAuthOutcome = .success,
+        appleOutcome: UITestAuthOutcome = .success
+    ) -> UITestFixture {
+        UITestFixture(
+            scenario: scenario,
+            restoredState: (canvas: .heyThere, sheet: .signInToIngrediCheck),
+            requiresSession: false,
+            launchesWithCompletedOnboarding: false,
+            marksOnboardingCompleted: false,
+            authProvider: nil,
+            googleOutcome: googleOutcome,
+            appleOutcome: appleOutcome,
+            homeRoute: nil,
+            openSettingsSheet: false,
+            startScanningOnAppStart: false,
+            family: nil,
+            selectedMemberId: nil,
+            foodNotesAll: nil,
+            foodNotesSummary: nil,
+            permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
+            scans: [],
+            stats: emptyStats(),
+            favorites: [],
+            chatReplies: chatReplies(),
+            tipProducts: tipProducts(),
+            tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
+            shareMessage: "Share IngrediCheck"
+        )
+    }
+
+    private static func authFixture(
+        scenario: UITestScenario,
+        shared: inout SharedFixtureData
+    ) -> UITestFixture {
+        let family = shared.family
         return UITestFixture(
             scenario: scenario,
             restoredState: (canvas: .heyThere, sheet: .signInToIngrediCheck),
@@ -672,23 +692,19 @@ private enum UITestFixtures {
             // corresponding button is tapped, and the simulated provider
             // is then applied inside signInWithGoogle/signInWithApple.
             authProvider: nil,
-            googleOutcome: provider == .google ? .success : .success,
-            appleOutcome: provider == .apple ? .success : .success,
+            googleOutcome: .success,
+            appleOutcome: .success,
             homeRoute: nil,
             openSettingsSheet: false,
             startScanningOnAppStart: false,
             family: family,
             selectedMemberId: family.selfMember.id,
-            foodNotesAll: makeFoodNotesAll(for: family),
-            foodNotesSummary: DTO.FoodNotesSummaryResponse(
-                summary: "Avoid peanuts, dairy, and lactose. Prefer lower sugar snacks for the family.",
-                generatedAt: isoDateString(),
-                isCached: false
-            ),
+            foodNotesAll: shared.foodNotesAll,
+            foodNotesSummary: shared.foodNotesSummary,
             permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
-            scans: scans,
-            stats: makeStats(),
-            favorites: makeFavorites(from: scans),
+            scans: shared.scans,
+            stats: shared.stats,
+            favorites: shared.favorites,
             chatReplies: chatReplies(),
             tipProducts: tipProducts(),
             tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
@@ -740,6 +756,23 @@ private enum UITestFixtures {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: Date())
+    }
+
+    private static func makeFoodNotesSummary() -> DTO.FoodNotesSummaryResponse {
+        DTO.FoodNotesSummaryResponse(
+            summary: "Avoid peanuts, dairy, and lactose. Prefer lower sugar snacks for the family.",
+            generatedAt: isoDateString(),
+            isCached: false
+        )
+    }
+
+    private static func emptyStats() -> DTO.StatsResponse {
+        DTO.StatsResponse(
+            avgScans: 0,
+            barcodeScansCount: 0,
+            matchingStats: DTO.MatchingStats(matched: 0, unmatched: 0, uncertain: 0),
+            weeklyStats: nil
+        )
     }
 
     private static func makeFamily() -> Family {

@@ -4,7 +4,7 @@ tags: [auth, onboarding]
 - runFlow: ../../subflows/launch/auth_sign_in.yaml
 - extendedWaitUntil:
     visible:
-      text: Sign in later
+      id: sign_in_sheet
     timeout: 30000
 - tapOn: Sign in later
 - extendedWaitUntil:
