@@ -1,0 +1,23 @@
+appId: llc.fungee.ingredicheck
+tags: [scan, product]
+---
+- runFlow: ../../subflows/launch/scan_barcode.yaml
+- extendedWaitUntil:
+    visible:
+      id: scan_ui_test_inject_barcode_button
+    timeout: 30000
+- runFlow:
+    file: ../../subflows/inject_barcode.yaml
+    env:
+      PRESET_LABEL: "Coca-Cola 12 oz"
+- extendedWaitUntil:
+    visible:
+      text: Diet Coke Soft Drink
+    timeout: 40000
+- tapOn: Diet Coke Soft Drink
+- extendedWaitUntil:
+    visible:
+      id: product_detail_view
+    timeout: 30000
+- assertVisible:
+    id: product_detail_favorite_button

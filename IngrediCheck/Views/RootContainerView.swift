@@ -48,10 +48,14 @@ struct RootContainerView: View {
     @State private var appState = AppState()
     @State private var userPreferences = UserPreferences()
     @State private var hasPendingFeedbackShortcut = false
+    @State private var didApplyUITestScenario = false
 
     // --- DEVELOP BRANCH (keep these)
     @Environment(FamilyStore.self) private var familyStore
     @Environment(AuthController.self) private var authController
+    @Environment(ScanHistoryStore.self) private var scanHistoryStore
+    @Environment(DietaryPreferences.self) private var dietaryPreferences
+    @Environment(OnboardingState.self) private var onboardingState
 
     @Environment(\.dismiss) private var dismiss
 
@@ -160,9 +164,17 @@ struct RootContainerView: View {
             switch sheet {
             case .settings:
                 SettingsSheet()
+                    .environment(appState)
+                    .environment(authController)
+                    .environment(familyStore)
+                    .environment(dietaryPreferences)
+                    .environment(foodNotesStore)
                     .environment(userPreferences)
+                    .environment(webService)
                     .environment(memojiStore)
                     .environment(coordinator)
+                    .environment(onboardingState)
+                    .environmentObject(onboarding)
             case .scan:
                 // Not used here; keep empty or route to a scan view if needed later
                 EmptyView()
@@ -205,6 +217,24 @@ struct RootContainerView: View {
             }
         }
         .task {
+            if UITestHarness.isEnabled, !didApplyUITestScenario, let fixture = UITestHarness.fixture {
+                didApplyUITestScenario = true
+                familyStore.selectedMemberId = fixture.selectedMemberId
+                scanHistoryStore.applyUITestScans(fixture.scans)
+                appState.listsTabState.scans = fixture.scans
+                appState.listsTabState.listItems = fixture.favorites
+                userPreferences.startScanningOnAppStart = fixture.startScanningOnAppStart
+                await foodNotesStore.bootstrap(family: fixture.family, selectedMemberId: fixture.selectedMemberId)
+
+                if fixture.openSettingsSheet {
+                    appState.activeSheet = .settings
+                }
+
+                if let route = fixture.homeRoute {
+                    appState.navigate(to: route)
+                }
+            }
+
             await withTaskGroup(of: Void.self) { group in
                 // Family load runs concurrently — FamilyStore's isFetchInFlight
                 // guard prevents duplicate calls if prefetch is already in-flight

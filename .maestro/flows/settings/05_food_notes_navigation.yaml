@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, food-notes]
+---
+- runFlow: ../../subflows/launch/settings.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings_food_notes_button
+    timeout: 30000
+- tapOn:
+    id: settings_food_notes_button
+- extendedWaitUntil:
+    visible:
+      id: unified_canvas_view
+    timeout: 30000
+- assertVisible:
+    id: food_notes_edit_allergies

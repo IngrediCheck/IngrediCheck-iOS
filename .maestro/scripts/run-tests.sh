@@ -36,6 +36,25 @@ if [[ -z "$SIM_UDID" ]]; then
 fi
 
 open -a Simulator >/dev/null 2>&1 || true
+
+BOOTED_UDIDS="$(xcrun simctl list devices booted -j | python3 - <<'PY'
+import json
+import sys
+
+data = json.load(sys.stdin)
+for runtime_devices in data.get("devices", {}).values():
+    for device in runtime_devices:
+        if device.get("state") == "Booted":
+            print(device["udid"])
+PY
+)"
+
+while IFS= read -r booted_udid; do
+  if [[ -n "$booted_udid" && "$booted_udid" != "$SIM_UDID" ]]; then
+    xcrun simctl shutdown "$booted_udid" >/dev/null 2>&1 || true
+  fi
+done <<< "$BOOTED_UDIDS"
+
 xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$SIM_UDID" -b
 
@@ -55,7 +74,6 @@ xcrun simctl uninstall "$SIM_UDID" "$APP_ID" >/dev/null 2>&1 || true
 xcrun simctl install "$SIM_UDID" "$APP_PATH"
 
 MAESTRO_ARGS=(
-  --device "$SIM_UDID"
   test
   --config config.yaml
   --format HTML

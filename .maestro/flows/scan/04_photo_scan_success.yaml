@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+tags: [scan, photo]
+---
+- runFlow: ../../subflows/launch/scan_photo.yaml
+- extendedWaitUntil:
+    visible:
+      id: scan_ui_test_inject_photo_button
+    timeout: 30000
+- runFlow: ../../subflows/inject_photo.yaml
+- extendedWaitUntil:
+    visible:
+      id: scan_card_product_name
+    timeout: 40000
+- assertVisible:
+    text: Sea Salt Veggie Chips

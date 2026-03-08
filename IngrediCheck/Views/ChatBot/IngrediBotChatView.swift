@@ -168,6 +168,7 @@ struct IngrediBotChatView: View {
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(Color.gray.opacity(0.2))
                     )
+                    .accessibilityIdentifier("chat_input")
                 
                 Button {
                     sendMessage()
@@ -193,11 +194,13 @@ struct IngrediBotChatView: View {
                             )
                         )
                 }
+                .accessibilityIdentifier("chat_send_button")
             }
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 20)
+        .accessibilityIdentifier("chat_view")
         .onAppear {
             let conv = chatStore.conversation(for: contextKey)
             if !conv.messages.isEmpty {
@@ -248,6 +251,7 @@ struct IngrediBotChatView: View {
                 .foregroundStyle(.grayScale120)
                 .padding(.top, 16)
                 .padding(.trailing, 16)
+                .accessibilityIdentifier("chat_skip_button")
             }
         }
     }

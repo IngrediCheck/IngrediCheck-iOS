@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+tags: [auth]
+---
+- runFlow: ../../subflows/launch/auth_google.yaml
+- extendedWaitUntil:
+    visible:
+      text: Google
+    timeout: 30000
+- tapOn: Google
+- extendedWaitUntil:
+    visible:
+      id: home_view
+    timeout: 30000
+- assertVisible:
+    id: home_profile_button

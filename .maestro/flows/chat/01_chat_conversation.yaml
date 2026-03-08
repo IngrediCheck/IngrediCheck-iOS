@@ -1,0 +1,19 @@
+appId: llc.fungee.ingredicheck
+tags: [chat]
+---
+- runFlow: ../../subflows/launch/chat.yaml
+- extendedWaitUntil:
+    visible:
+      id: chat_view
+    timeout: 30000
+- tapOn:
+    id: chat_input
+- inputText: hello
+- tapOn:
+    id: chat_send_button
+- extendedWaitUntil:
+    visible:
+      text: Hello from the simulator QA harness\.
+    timeout: 30000
+- assertVisible:
+    text: Hello from the simulator QA harness\.

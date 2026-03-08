@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+tags: [home, scan]
+---
+- runFlow: ../../subflows/launch/home.yaml
+- extendedWaitUntil:
+    visible:
+      id: home_view
+    timeout: 30000
+- tapOn: Open scanner
+- extendedWaitUntil:
+    visible:
+      id: scan_camera_view
+    timeout: 30000
+- assertVisible:
+    id: scan_ui_test_inject_barcode_button

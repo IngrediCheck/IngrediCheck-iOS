@@ -119,6 +119,7 @@ struct HomeView: View {
                             .onTapGesture {
                                 isSettingsPresented = true
                             }
+                            .accessibilityIdentifier("home_profile_button")
                     }
                     .padding(.bottom, 24)
                     .frame(maxWidth: .infinity)
@@ -448,6 +449,7 @@ struct HomeView: View {
                 )
             }
             .background(Color.pageBackground)
+            .accessibilityIdentifier("home_view")
             //            .padding(.top , 16)
             //            .background(Color.red)
             

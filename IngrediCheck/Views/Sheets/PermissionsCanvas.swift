@@ -42,7 +42,8 @@ struct PermissionsCanvas: View {
                             handleCameraToggleChanged(to: newValue)
                         }
                     ),
-                    isLocked: cameraEnabled
+                    isLocked: cameraEnabled,
+                    accessibilityId: "permissions_camera_toggle"
                 )
 
                 permissionRow(
@@ -55,7 +56,8 @@ struct PermissionsCanvas: View {
                             handleNotificationsToggleChanged(to: newValue)
                         }
                     ),
-                    isLocked: notificationsEnabled
+                    isLocked: notificationsEnabled,
+                    accessibilityId: "permissions_notifications_toggle"
                 )
 
                 permissionRow(
@@ -68,7 +70,8 @@ struct PermissionsCanvas: View {
                             guard newValue, !isSignedIn else { return }
                             coordinator.navigateInBottomSheet(.loginToContinue)
                         }
-                    )
+                    ),
+                    accessibilityId: "permissions_signin_toggle"
                 )
             }
        
@@ -80,6 +83,7 @@ struct PermissionsCanvas: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white)
+        .accessibilityIdentifier("permissions_canvas")
         .task {
             refreshPermissionStates()
         }
@@ -106,6 +110,12 @@ struct PermissionsCanvas: View {
     }
 
     private func refreshPermissionStates() {
+        if UITestHarness.isEnabled, let permissions = UITestHarness.fixture?.permissions {
+            cameraEnabled = permissions.cameraAuthorized
+            notificationsEnabled = permissions.notificationsAuthorized
+            return
+        }
+
         let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
         cameraEnabled = (cameraStatus == .authorized)
 
@@ -117,6 +127,11 @@ struct PermissionsCanvas: View {
     }
 
     private func handleCameraToggleChanged(to newValue: Bool) {
+        if UITestHarness.isEnabled {
+            cameraEnabled = newValue
+            return
+        }
+
         if newValue == false {
             if cameraEnabled {
                 cameraEnabled = true
@@ -146,6 +161,11 @@ struct PermissionsCanvas: View {
     }
 
     private func handleNotificationsToggleChanged(to newValue: Bool) {
+        if UITestHarness.isEnabled {
+            notificationsEnabled = newValue
+            return
+        }
+
         if newValue == false {
             if notificationsEnabled {
                 notificationsEnabled = true
@@ -188,7 +208,8 @@ struct PermissionsCanvas: View {
         title: String,
         subtitle: String,
         isOn: Binding<Bool>,
-        isLocked: Bool = false
+        isLocked: Bool = false,
+        accessibilityId: String? = nil
     ) -> some View {
         HStack(alignment: .top, spacing: 0) {
             Image(icon)
@@ -215,6 +236,7 @@ struct PermissionsCanvas: View {
                 .tint(Color(hex: "#91B640"))
                 .disabled(isOn.wrappedValue)
                 .allowsHitTesting(!isLocked)
+                .accessibilityIdentifier(accessibilityId ?? "")
         }
         .padding(.vertical, 8)
     }

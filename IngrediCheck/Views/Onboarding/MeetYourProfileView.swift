@@ -193,10 +193,12 @@ struct MeetYourProfileView: View {
                 GreenCapsule(title: isFromFamilyOverview ? "Done" : "Continue", width: 159)
                     .frame(width: 159)
             }
+            .accessibilityIdentifier("meet_your_profile_continue_button")
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity)
         .dismissKeyboardOnTap()
+        .accessibilityIdentifier("meet_your_profile_view")
         .onAppear {
             if let member = targetMember {
                 // If it's the self member and "Just Me" flow, backend defaults the member name to "Me"

@@ -503,6 +503,7 @@ struct ProductDetailView: View {
                                 .rotationEffect(.degrees(reanalysisRotation))
                         }
                         .disabled(isReanalyzingLocally)
+                        .accessibilityIdentifier("product_detail_reanalyze_button")
                         .onChange(of: isReanalyzingLocally) { _, isReanalyzing in
                             if isReanalyzing {
                                 withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
@@ -525,6 +526,7 @@ struct ProductDetailView: View {
                             .foregroundStyle(isFavorite ? Color(hex: "#FF1100") : .grayScale150)
                     }
                     .disabled(scanId == nil && product == nil)
+                    .accessibilityIdentifier("product_detail_favorite_button")
                 }
                 .padding(.trailing, 4)
             }
@@ -608,6 +610,7 @@ struct ProductDetailView: View {
             appState?.displayedScanId = nil
             appState?.displayedAnalysisId = nil
         }
+        .accessibilityIdentifier("product_detail_view")
     }
 
     // MARK: - Displayed Scan Context (for AIBot FAB)

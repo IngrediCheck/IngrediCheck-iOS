@@ -16,6 +16,7 @@ struct LetsMeetYourIngrediFamView: View {
     @State private var showLeaveConfirm = false
     @State private var shareItems: ShareItem?
     @State private var isGeneratingInviteCode: Bool = false
+    @State private var uiTestInviteMessage: String? = nil
     
     private let appStoreURL = "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615"
     
@@ -231,6 +232,7 @@ struct LetsMeetYourIngrediFamView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("family_overview_invite_button_\(member.id.uuidString.lowercased())")
                             }
                             .padding(16)
                             .background(
@@ -284,6 +286,18 @@ struct LetsMeetYourIngrediFamView: View {
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
         }
+        .overlay(alignment: .bottom) {
+            if let uiTestInviteMessage {
+                Text(uiTestInviteMessage)
+                    .font(ManropeFont.medium.size(12))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.white))
+                    .accessibilityIdentifier("family_overview_invite_result")
+                    .padding(.bottom, 16)
+            }
+        }
+        .accessibilityIdentifier("family_overview_view")
     }
     
     // MARK: - Invite Share Helper
@@ -312,8 +326,12 @@ struct LetsMeetYourIngrediFamView: View {
         }
         
         let message = inviteShareMessage(inviteCode: code)
-        let items = [message]
-        shareItems = ShareItem(items: items)
+        if UITestHarness.isEnabled {
+            uiTestInviteMessage = message
+        } else {
+            let items = [message]
+            shareItems = ShareItem(items: items)
+        }
     }
     
     private func inviteShareMessage(inviteCode: String) -> String {
@@ -413,4 +431,3 @@ fileprivate struct OnboardingSmartAvatarView: View {
 #Preview {
     LetsMeetYourIngrediFamView()
 }
-

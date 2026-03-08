@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, support]
+---
+- runFlow: ../../subflows/launch/settings.yaml
+- scrollUntilVisible:
+    element:
+      text: Privacy policy
+    direction: DOWN
+    timeout: 30000
+- tapOn: Privacy policy
+- extendedWaitUntil:
+    visible:
+      id: web_view
+    timeout: 30000
+- assertVisible:
+    id: web_view

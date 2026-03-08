@@ -161,6 +161,7 @@ struct EnterYourInviteCode : View {
                     )
                 }
                 .disabled(isVerifying || !isCodeComplete)
+                .accessibilityIdentifier("invite_code_verify_button")
                 
                 Spacer()
             }
@@ -179,6 +180,7 @@ struct EnterYourInviteCode : View {
 //        )
         .navigationBarBackButtonHidden(true)
         .dismissKeyboardOnTap()
+        .accessibilityIdentifier("enter_invite_code_view")
     }
 
     struct InviteTextField: View {
@@ -217,6 +219,7 @@ struct EnterYourInviteCode : View {
                     }
                     .frame(width: 1, height: 1)
                     .opacity(0.01)
+                    .accessibilityIdentifier("invite_code_input")
                     .onChange(of: shouldFocus) { newValue in
                         if newValue {
                             isFocused = true
@@ -248,6 +251,7 @@ struct EnterYourInviteCode : View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { isFocused = true }
+                .accessibilityIdentifier("invite_code_boxes")
             }
             .onAppear {
                 // Pre-fill input if parent provided existing code

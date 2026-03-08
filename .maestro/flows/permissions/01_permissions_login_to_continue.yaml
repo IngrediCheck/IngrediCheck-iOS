@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [permissions]
+---
+- runFlow: ../../subflows/launch/permissions.yaml
+- extendedWaitUntil:
+    visible:
+      id: permissions_canvas
+    timeout: 30000
+- tapOn:
+    id: permissions_signin_toggle
+- extendedWaitUntil:
+    visible:
+      id: login_to_continue_view
+    timeout: 30000
+- assertVisible:
+    id: login_to_continue_google_button

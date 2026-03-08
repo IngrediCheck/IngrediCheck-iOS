@@ -10,6 +10,7 @@ import SwiftUI
 struct TipJarView: View {
     
     @StateObject var vm = TipJarViewModel()
+    @State private var uiTestPurchaseMessage: String?
     
     var body: some View {
         ZStack {
@@ -30,22 +31,48 @@ struct TipJarView: View {
                 
                 Spacer()
                 
-                ForEach(vm.productsArr) { product in
-                    Button {
-                        Task {
-                            await vm.purchase(product)
+                if UITestHarness.isEnabled, let fixture = UITestHarness.fixture {
+                    ForEach(fixture.tipProducts) { product in
+                        Button {
+                            switch fixture.tipPurchaseOutcome {
+                            case .success(let message), .cancelled(let message), .failed(let message):
+                                uiTestPurchaseMessage = message
+                            }
+                        } label: {
+                            TipCard(description: product.title, price: product.price)
                         }
-                    } label: {
-                        TipCard(description: product.description, price: product.displayPrice)
+                        .accessibilityIdentifier("tip_jar_product_\(product.id)")
                     }
-
-                    
+                } else {
+                    ForEach(vm.productsArr) { product in
+                        Button {
+                            Task {
+                                await vm.purchase(product)
+                            }
+                        } label: {
+                            TipCard(description: product.description, price: product.displayPrice)
+                        }
+                    }
                 }
                 
                 Spacer()
             }
             .padding(.horizontal)
+
+            if let uiTestPurchaseMessage {
+                VStack {
+                    Spacer()
+                    Text(uiTestPurchaseMessage)
+                        .font(.headline)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Capsule().fill(Color.white))
+                        .accessibilityIdentifier("tip_jar_purchase_result")
+                        .padding(.bottom, 40)
+                }
+            }
         }
+        .accessibilityIdentifier("tip_jar_view")
     }
 }
 

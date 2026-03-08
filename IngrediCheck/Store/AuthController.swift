@@ -136,6 +136,8 @@ private enum AuthFlowMode {
     private let keychain = KeychainSwift()
     @MainActor private var appleSignInCoordinator: AppleSignInCoordinator?
     @MainActor private var signInTask: Task<Void, Never>?
+    @MainActor private var uiTestAuthProvider: UITestAuthProvider?
+    @MainActor private var uiTestDisplayEmail: String?
 
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
@@ -156,6 +158,9 @@ private enum AuthFlowMode {
     }
     
     @MainActor var signedInWithApple: Bool {
+        if uiTestAuthProvider == .apple {
+            return true
+        }
         guard let session = session else { return false }
         // Check identities first
         if let identities = session.user.identities {
@@ -172,6 +177,9 @@ private enum AuthFlowMode {
     }
     
     @MainActor var signedInWithGoogle: Bool {
+        if uiTestAuthProvider == .google {
+            return true
+        }
         guard let session = session else { return false }
         // Check identities first
         if let identities = session.user.identities {
@@ -188,6 +196,9 @@ private enum AuthFlowMode {
     }
     
     @MainActor var signedInAsGuest: Bool {
+        if let uiTestAuthProvider {
+            return uiTestAuthProvider == .guest
+        }
         guard let session = session else { return false }
         
         // If we have an explicit anonymous identity
@@ -218,6 +229,9 @@ private enum AuthFlowMode {
     }
     
     @MainActor var currentUserEmail: String? {
+        if let uiTestDisplayEmail {
+            return uiTestDisplayEmail
+        }
         return session?.user.email
     }
 
@@ -230,6 +244,10 @@ private enum AuthFlowMode {
 
     // Email to display in UI; hides Apple's private relay emails for better UX
     @MainActor var displayableEmail: String? {
+        if let uiTestDisplayEmail, !uiTestDisplayEmail.isEmpty {
+            return uiTestDisplayEmail
+        }
+
         guard let email = session?.user.email, !email.isEmpty else { return nil }
         if signedInWithApple {
             // Hide Apple's private relay emails
@@ -239,6 +257,14 @@ private enum AuthFlowMode {
     }
 
     @MainActor var currentSignInProviderDisplay: (icon: String, text: String)? {
+        if uiTestAuthProvider == .google {
+            return ("g.circle", "Signed in with Google")
+        }
+
+        if uiTestAuthProvider == .apple {
+            return ("applelogo", "Signed in with Apple")
+        }
+
         if signedInWithGoogle {
             return ("g.circle", "Signed in with Google")
         }
@@ -386,12 +412,30 @@ private enum AuthFlowMode {
     @MainActor
     func ensureDebugSession() async {
         if session != nil {
+            applyUITestAuthFixtureIfNeeded()
             return
         }
 
         await signInWithNewAnonymousAccount()
+        applyUITestAuthFixtureIfNeeded()
     }
 #endif
+
+    @MainActor
+    private func applyUITestAuthFixtureIfNeeded() {
+        guard UITestHarness.isEnabled, let fixture = UITestHarness.fixture else { return }
+        if let provider = fixture.authProvider {
+            uiTestAuthProvider = provider
+            switch provider {
+            case .guest:
+                uiTestDisplayEmail = nil
+            case .google:
+                uiTestDisplayEmail = "simulator.google@ingredicheck.app"
+            case .apple:
+                uiTestDisplayEmail = "simulator.apple@ingredicheck.app"
+            }
+        }
+    }
     
     public func handleSignInWithAppleCompletion(result: Result<ASAuthorization, Error>) {
         Task {
@@ -549,6 +593,24 @@ private enum AuthFlowMode {
 
     public func signInWithGoogle(completion: ((Result<Void, Error>) -> Void)? = nil) {
         Task {
+            if UITestHarness.isEnabled {
+                let outcome = UITestHarness.fixture?.googleOutcome ?? .success
+                if outcome == .failure {
+                    await MainActor.run {
+                        completion?(.failure(NSError(domain: "UITestAuth", code: 1, userInfo: [NSLocalizedDescriptionKey: "Google sign-in failed in simulator test mode."])))
+                    }
+                    return
+                }
+
+                await signIn()
+                await MainActor.run {
+                    uiTestAuthProvider = .google
+                    uiTestDisplayEmail = "simulator.google@ingredicheck.app"
+                    completion?(.success(()))
+                }
+                return
+            }
+
             do {
                 let credentials = try await requestGoogleIDToken()
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
@@ -568,6 +630,24 @@ private enum AuthFlowMode {
 
     public func signInWithApple(completion: ((Result<Void, Error>) -> Void)? = nil) {
         Task {
+            if UITestHarness.isEnabled {
+                let outcome = UITestHarness.fixture?.appleOutcome ?? .success
+                if outcome == .failure {
+                    await MainActor.run {
+                        completion?(.failure(NSError(domain: "UITestAuth", code: 2, userInfo: [NSLocalizedDescriptionKey: "Apple sign-in failed in simulator test mode."])))
+                    }
+                    return
+                }
+
+                await signIn()
+                await MainActor.run {
+                    uiTestAuthProvider = .apple
+                    uiTestDisplayEmail = "simulator.apple@ingredicheck.app"
+                    completion?(.success(()))
+                }
+                return
+            }
+
             do {
                 let credentials = try await requestAppleIDToken()
                 let session = try await finalizeAuth(with: credentials, mode: .signIn)
@@ -614,6 +694,10 @@ private enum AuthFlowMode {
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
         self.session = session
         isUpgradingAccount = false
+        if session == nil {
+            uiTestAuthProvider = nil
+            uiTestDisplayEmail = nil
+        }
         
         if let session {
             signInState = .signedIn

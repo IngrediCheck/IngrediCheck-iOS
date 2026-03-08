@@ -27,6 +27,7 @@ struct SignInToIngrediCheckSheet: View {
                     isDisabled: isSigningIn,
                     action: handleGoogleSignIn
                 )
+                .accessibilityIdentifier("auth_google_button")
 
                 AuthProviderCapsuleButton(
                     title: "Apple",
@@ -34,6 +35,7 @@ struct SignInToIngrediCheckSheet: View {
                     isDisabled: isSigningIn,
                     action: handleAppleSignIn
                 )
+                .accessibilityIdentifier("auth_apple_button")
             }
             .padding(.top, 28)
             .padding(.horizontal, 24)
@@ -75,6 +77,7 @@ struct SignInToIngrediCheckSheet: View {
             .disabled(isSigningIn)
             .padding(.top, 18)
             .padding(.horizontal, 24)
+            .accessibilityIdentifier("auth_guest_button")
 
             LegalDisclaimerView()
             .padding(.top, 24)
@@ -82,6 +85,7 @@ struct SignInToIngrediCheckSheet: View {
             .padding(.horizontal, 24)
         }
         .background(Color.white)
+        .accessibilityIdentifier("sign_in_sheet")
         .overlay {
             if isSigningIn {
                 ZStack {
@@ -100,6 +104,19 @@ struct SignInToIngrediCheckSheet: View {
             switch result {
             case .success:
                 Task {
+                    if UITestHarness.isEnabled {
+                        await MainActor.run {
+                            if UITestHarness.fixture?.marksOnboardingCompleted == true {
+                                coordinator.showCanvas(.home)
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.showCanvas(.letsGetStarted)
+                                coordinator.navigateInBottomSheet(.whosThisFor)
+                            }
+                            isSigningIn = false
+                        }
+                        return
+                    }
                     let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
                     Log.debug("SignInToIngrediCheckSheet", "Google sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                     await MainActor.run {
@@ -133,6 +150,19 @@ struct SignInToIngrediCheckSheet: View {
             switch result {
             case .success:
                 Task {
+                    if UITestHarness.isEnabled {
+                        await MainActor.run {
+                            if UITestHarness.fixture?.marksOnboardingCompleted == true {
+                                coordinator.showCanvas(.home)
+                                coordinator.navigateInBottomSheet(.homeDefault)
+                            } else {
+                                coordinator.showCanvas(.letsGetStarted)
+                                coordinator.navigateInBottomSheet(.whosThisFor)
+                            }
+                            isSigningIn = false
+                        }
+                        return
+                    }
                     let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
                     Log.debug("SignInToIngrediCheckSheet", "Apple sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                     await MainActor.run {

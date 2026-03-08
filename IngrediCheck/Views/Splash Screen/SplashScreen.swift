@@ -66,6 +66,27 @@ struct SplashScreen: View {
         }
         .task {
 #if DEBUG
+            if UITestHarness.isEnabled, let fixture = UITestHarness.fixture {
+                await UITestHarness.prepareRuntime()
+                if fixture.requiresSession {
+                    await authController.ensureDebugSession()
+                } else {
+                    await authController.signOut()
+                }
+
+                if fixture.launchesWithCompletedOnboarding {
+                    OnboardingPersistence.shared.markCompleted()
+                } else {
+                    OnboardingPersistence.shared.reset()
+                }
+
+                restoredState = fixture.restoredState
+                shouldNavigateToHome = fixture.restoredState?.canvas == .home
+                shouldNavigateToOnboarding = fixture.restoredState?.canvas != .home
+                isCheckingLaunchState = false
+                return
+            }
+
             if DebugScanQAMode.isEnabled {
                 await authController.ensureDebugSession()
                 OnboardingPersistence.shared.markCompleted()

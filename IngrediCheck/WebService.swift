@@ -638,6 +638,19 @@ struct ChatStreamError: Error, LocalizedError {
         onAnalysis: @escaping (DTO.ScanAnalysisResult) -> Void,
         onError: @escaping (ScanStreamError, String?) -> Void  // (error, scanId)
     ) async throws {
+        if UITestHarness.isEnabled {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if let scan = await UITestRuntime.shared.barcodeScan(barcode: barcode) {
+                onProductInfo(scan.product_info, scan.id, scan.product_info_source ?? "ui_test", scan.images)
+                if let analysis = scan.analysis_result {
+                    try? await Task.sleep(nanoseconds: 150_000_000)
+                    onAnalysis(analysis)
+                }
+            } else {
+                onError(ScanStreamError(message: "Product not found in simulator fixture.", statusCode: 404), nil)
+            }
+            return
+        }
         
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
@@ -891,6 +904,9 @@ struct ChatStreamError: Error, LocalizedError {
         scanId: String,
         imageData: Data
     ) async throws -> DTO.SubmitImageResponse {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.submitPhoto(scanId: scanId)
+        }
 
         let submitStartTime = Date().timeIntervalSince1970
         let imageSizeKB = imageData.count / 1024
@@ -955,6 +971,10 @@ struct ChatStreamError: Error, LocalizedError {
     }
     
     func reanalyzeScan(scanId: String) async throws -> DTO.Scan {
+        if UITestHarness.isEnabled, let scan = await UITestRuntime.shared.reanalyze(scanId: scanId) {
+            return scan
+        }
+
         Log.debug("REANALYZE", "🔄 Reanalyzing scan - scan_id: \(scanId)")
         
         // Wake up fly.io backend before reanalyze
@@ -1022,6 +1042,28 @@ struct ChatStreamError: Error, LocalizedError {
         onResponse: @escaping (String, String, String) -> Void,  // (conversationId, turnId, response)
         onError: @escaping (ChatStreamError, String?, String?) -> Void  // (error, conversationId, turnId)
     ) async throws {
+        if UITestHarness.isEnabled {
+            let contextKey: String
+            if let productContext = context as? DTO.ProductScanContext {
+                contextKey = "product_scan:\(productContext.scan_id)"
+            } else if context is DTO.FoodNotesContext {
+                contextKey = "food_notes"
+            } else if let feedbackContext = context as? DTO.FeedbackContext {
+                contextKey = "feedback:\(feedbackContext.feedback_id ?? "general")"
+            } else {
+                contextKey = "home"
+            }
+
+            let result = await UITestRuntime.shared.chatResponse(
+                message: message,
+                conversationId: conversationId,
+                contextKey: contextKey
+            )
+            onThinking(result.conversationId, result.turnId)
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            onResponse(result.conversationId, result.turnId, result.response)
+            return
+        }
         
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
@@ -1268,6 +1310,10 @@ struct ChatStreamError: Error, LocalizedError {
     }
     
     func getConversation(conversationId: String) async throws -> DTO.ConversationResponse {
+        if UITestHarness.isEnabled, let conversation = await UITestRuntime.shared.conversation(conversationId: conversationId) {
+            return conversation
+        }
+
         Log.debug("CHAT", "📥 Fetching conversation - conversation_id: \(conversationId)")
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
@@ -1318,6 +1364,9 @@ struct ChatStreamError: Error, LocalizedError {
     }
     
     func getScan(scanId: String) async throws -> DTO.Scan {
+        if UITestHarness.isEnabled, let scan = await UITestRuntime.shared.scan(scanId: scanId) {
+            return scan
+        }
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             Log.error("PHOTO_SCAN", "❌ Auth error - no access token for polling")
@@ -1420,6 +1469,9 @@ struct ChatStreamError: Error, LocalizedError {
         limit: Int = 20,
         offset: Int = 0
     ) async throws -> DTO.ScanHistoryResponse {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.scanHistory(limit: limit, offset: offset)
+        }
 
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
@@ -1494,6 +1546,10 @@ struct ChatStreamError: Error, LocalizedError {
     }
 
     func fetchStats() async throws -> DTO.StatsResponse {
+        if UITestHarness.isEnabled, let stats = await UITestRuntime.shared.stats() {
+            return stats
+        }
+
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
         
@@ -1653,6 +1709,9 @@ struct ChatStreamError: Error, LocalizedError {
     /// POST /v2/scan/{scan_id}/favorite
     /// Returns the new `is_favorited` state
     func toggleFavorite(scanId: String) async throws -> Bool {
+        if UITestHarness.isEnabled, let updated = await UITestRuntime.shared.toggleFavorite(scanId: scanId) {
+            return updated
+        }
         
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             Log.error("FAVORITE", "❌ Auth error - no access token")
@@ -1723,6 +1782,9 @@ struct ChatStreamError: Error, LocalizedError {
     }
     
     func getFavorites(searchText: String? = nil) async throws -> [DTO.ListItem] {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.favorites()
+        }
 
         let requestId = UUID().uuidString
         let startTime = Date().timeIntervalSince1970
@@ -2460,6 +2522,10 @@ struct ChatStreamError: Error, LocalizedError {
     }
     
     func fetchFoodNotesAll() async throws -> FoodNotesAllResponse? {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.fetchFoodNotesAll()
+        }
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2533,6 +2599,10 @@ struct ChatStreamError: Error, LocalizedError {
     /// Fetches a summary of the user's food notes from the AI server.
     /// Returns nil if no food notes exist (404) or if the response is empty.
     func fetchFoodNotesSummary() async throws -> DTO.FoodNotesSummaryResponse? {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.fetchFoodNotesSummary()
+        }
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2580,6 +2650,10 @@ struct ChatStreamError: Error, LocalizedError {
     }
 
     func updateFoodNotes(content: [String: Any], version: Int, isRetry: Bool = false) async throws -> FoodNotesResponse {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.updateFoodNotes(ownerKey: "Everyone", content: content, version: version)
+        }
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2711,6 +2785,10 @@ struct ChatStreamError: Error, LocalizedError {
     
     /// Update food notes for a specific family member by ID.
     func updateMemberFoodNotes(memberId: String, content: [String: Any], version: Int, isRetry: Bool = false) async throws -> FoodNotesResponse {
+        if UITestHarness.isEnabled {
+            return await UITestRuntime.shared.updateFoodNotes(ownerKey: memberId.lowercased(), content: content, version: version)
+        }
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2788,6 +2866,10 @@ struct ChatStreamError: Error, LocalizedError {
     // MARK: - Feedback API
 
     func submitFeedback(request: DTO.FeedbackRequest) async throws -> DTO.Scan {
+        if UITestHarness.isEnabled, let scan = await UITestRuntime.shared.submitFeedback(scanId: request.scan_id) {
+            return scan
+        }
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
             throw NetworkError.authError
         }
@@ -2832,8 +2914,14 @@ struct ChatStreamError: Error, LocalizedError {
     }
 
     func updateFeedback(feedbackId: String, vote: String) async throws -> DTO.Scan {
+        if UITestHarness.isEnabled,
+           let fixture = await UITestRuntime.shared.currentFixture(),
+           let scan = await UITestRuntime.shared.updateFeedback(scanId: fixture.scans.first?.id) {
+            return scan
+        }
+
         guard let token = try? await supabaseClient.auth.session.accessToken else {
-             throw NetworkError.authError
+            throw NetworkError.authError
         }
         
         let updateRequest = DTO.FeedbackUpdateRequest(vote: vote)

@@ -51,6 +51,19 @@ struct WelcomeBack: View {
                         switch result {
                         case .success:
                             Task {
+                                if UITestHarness.isEnabled {
+                                    await MainActor.run {
+                                        if UITestHarness.fixture?.marksOnboardingCompleted == true {
+                                            coordinator.showCanvas(.home)
+                                            coordinator.navigateInBottomSheet(.homeDefault)
+                                        } else {
+                                            coordinator.showCanvas(.letsGetStarted)
+                                            coordinator.navigateInBottomSheet(.whosThisFor)
+                                        }
+                                        isSigningIn = false
+                                    }
+                                    return
+                                }
                                 let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
                                 Log.debug("WelcomeBack", "Google sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                                 await MainActor.run {
@@ -89,6 +102,19 @@ struct WelcomeBack: View {
                         switch result {
                         case .success:
                             Task {
+                                if UITestHarness.isEnabled {
+                                    await MainActor.run {
+                                        if UITestHarness.fixture?.marksOnboardingCompleted == true {
+                                            coordinator.showCanvas(.home)
+                                            coordinator.navigateInBottomSheet(.homeDefault)
+                                        } else {
+                                            coordinator.showCanvas(.letsGetStarted)
+                                            coordinator.navigateInBottomSheet(.whosThisFor)
+                                        }
+                                        isSigningIn = false
+                                    }
+                                    return
+                                }
                                 let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
                                 Log.debug("WelcomeBack", "Apple sign-in metadata: stage=\(metadata?.stage?.rawValue ?? "nil"), flowType=\(metadata?.flowType?.rawValue ?? "nil"), stepId=\(metadata?.currentStepId ?? "nil"), bottomSheet=\(metadata?.bottomSheetRoute?.rawValue ?? "nil")")
                                 await MainActor.run {

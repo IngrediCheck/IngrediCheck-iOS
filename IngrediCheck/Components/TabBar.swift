@@ -34,6 +34,9 @@ struct TabBar: View {
                             .foregroundColor(Color(hex: "676A64"))
                             .frame(width: 26, height: 26)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open recent scans")
+                    .accessibilityIdentifier("tab_bar_recent_scans_button")
                    
                     
                     Spacer()
@@ -52,6 +55,8 @@ struct TabBar: View {
                             .frame(width: 26, height: 26)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Open chat")
+                    .accessibilityIdentifier("tab_bar_chat_button")
                 }
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12.5)
@@ -100,7 +105,10 @@ struct TabBar: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.bottom, 18)
+                .accessibilityLabel("Open scanner")
+                .accessibilityIdentifier("tab_bar_scan_button")
             }
+            .accessibilityIdentifier("tab_bar")
             .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
                 Button("Later", role: .cancel) { }
                 Button("Open Settings") {
@@ -118,6 +126,15 @@ struct TabBar: View {
     // MARK: - Camera Permission Handling
 
     private func handleScannerTap() {
+        if UITestHarness.isEnabled {
+            if UITestHarness.fixture?.permissions.cameraAuthorized == true {
+                appState.navigate(to: .scanCamera(initialMode: nil, initialScanId: nil))
+            } else {
+                showCameraPermissionAlert = true
+            }
+            return
+        }
+
         let status = AVCaptureDevice.authorizationStatus(for: .video)
 
         switch status {

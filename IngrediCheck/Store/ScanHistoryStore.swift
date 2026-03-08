@@ -272,4 +272,19 @@ import SwiftUI
     func getFavoriteScans() -> [DTO.Scan] {
         return scans.filter { $0.is_favorited == true }
     }
+
+    @MainActor
+    func applyUITestScans(_ seededScans: [DTO.Scan]) {
+        scans = seededScans
+        scanCache = Dictionary(uniqueKeysWithValues: seededScans.map { ($0.id, $0) })
+        barcodeToScanIdMap = seededScans.reduce(into: [:]) { partial, scan in
+            if let barcode = scan.barcode, !barcode.isEmpty {
+                partial[barcode] = scan.id
+            }
+        }
+        hasMore = false
+        hasLoaded = true
+        isLoading = false
+        lastError = nil
+    }
 }

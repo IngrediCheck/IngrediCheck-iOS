@@ -118,6 +118,7 @@ struct ManageFamilyView: View {
     @FocusState private var isEditingFamilyName: Bool
     @State private var shareItems: ShareItem?
     @State private var isGeneratingInviteCode: Bool = false
+    @State private var uiTestInviteMessage: String? = nil
     
     private let appStoreURL = "https://apps.apple.com/us/app/ingredicheck-grocery-scanner/id6477521615"
     
@@ -237,10 +238,22 @@ struct ManageFamilyView: View {
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
         }
+        .overlay(alignment: .bottom) {
+            if let uiTestInviteMessage {
+                Text(uiTestInviteMessage)
+                    .font(ManropeFont.medium.size(12))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.white))
+                    .accessibilityIdentifier("manage_family_invite_result")
+                    .padding(.bottom, 16)
+            }
+        }
         .onDisappear {
             // Reset flag when leaving family management
             coordinator.isCreatingFamilyFromSettings = false
         }
+        .accessibilityIdentifier("manage_family_view")
     }
     
     // MARK: - Invite Share Helper
@@ -269,8 +282,12 @@ struct ManageFamilyView: View {
         }
         
         let message = inviteShareMessage(inviteCode: code)
-        let items = [message]
-        shareItems = ShareItem(items: items)
+        if UITestHarness.isEnabled {
+            uiTestInviteMessage = message
+        } else {
+            let items = [message]
+            shareItems = ShareItem(items: items)
+        }
     }
     
     private func inviteShareMessage(inviteCode: String) -> String {
@@ -473,6 +490,7 @@ struct ManageFamilyView: View {
                     .shadow(color: Color(hex: "#CECECE63").opacity(0.39), radius: 4.8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("manage_family_invite_button_\(member.id.uuidString.lowercased())")
             }
         }
     }

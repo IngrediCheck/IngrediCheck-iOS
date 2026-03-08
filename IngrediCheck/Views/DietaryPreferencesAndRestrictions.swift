@@ -65,6 +65,7 @@ struct DietaryPreferencesAndRestrictions: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .accessibilityIdentifier("dietary_preferences_intro_view")
         .onAppear {
             coordinator.setCanvasRoute(.dietaryPreferencesAndRestrictions(isFamilyFlow: isFamilyFlow))
         }
@@ -104,10 +105,12 @@ struct DietaryPreferencesSheetContent: View {
                 GreenCapsule(title: "Let's Go!", takeFullWidth: false)
             }
             .padding(.top, isFamilyFlow ? 8 : 32)
+            .accessibilityIdentifier("dietary_preferences_lets_go_button")
         }
         .padding(.vertical, isFamilyFlow ? 16 : 32)
         .padding(.horizontal, 20)
         .frame(height: 263)
+        .accessibilityIdentifier("dietary_preferences_sheet")
     }
 }
 
