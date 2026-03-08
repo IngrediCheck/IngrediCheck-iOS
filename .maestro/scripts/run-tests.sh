@@ -37,11 +37,12 @@ fi
 
 open -a Simulator >/dev/null 2>&1 || true
 
-BOOTED_UDIDS="$(xcrun simctl list devices booted -j | python3 - <<'PY'
+BOOTED_JSON="$(xcrun simctl list devices booted -j)"
+BOOTED_UDIDS="$(BOOTED_JSON="$BOOTED_JSON" python3 - <<'PY'
 import json
-import sys
+import os
 
-data = json.load(sys.stdin)
+data = json.loads(os.environ["BOOTED_JSON"])
 for runtime_devices in data.get("devices", {}).values():
     for device in runtime_devices:
         if device.get("state") == "Booted":
@@ -73,6 +74,19 @@ fi
 xcrun simctl uninstall "$SIM_UDID" "$APP_ID" >/dev/null 2>&1 || true
 xcrun simctl install "$SIM_UDID" "$APP_PATH"
 
+FLOW_FILES=()
+while IFS= read -r flow_file; do
+  FLOW_FILES+=("$flow_file")
+done < <(
+  cd "$MAESTRO_DIR"
+  find flows -type f -name '*.yaml' | sort
+)
+
+if [[ ${#FLOW_FILES[@]} -eq 0 ]]; then
+  echo "Could not locate any Maestro flow files under $MAESTRO_DIR/flows" >&2
+  exit 1
+fi
+
 MAESTRO_ARGS=(
   test
   --config config.yaml
@@ -89,7 +103,7 @@ if [[ -n "${MAESTRO_EXCLUDE_TAGS:-}" ]]; then
   MAESTRO_ARGS+=(--exclude-tags "$MAESTRO_EXCLUDE_TAGS")
 fi
 
-MAESTRO_ARGS+=(flows)
+MAESTRO_ARGS+=("${FLOW_FILES[@]}")
 
 (
   cd "$MAESTRO_DIR"

@@ -15,7 +15,7 @@ tags: [food-notes]
 - assertVisible:
     text: Peanuts
 - tapOn:
-    id: food_notes_edit_done_button
+    text: Done
 - extendedWaitUntil:
     visible:
       id: unified_canvas_view

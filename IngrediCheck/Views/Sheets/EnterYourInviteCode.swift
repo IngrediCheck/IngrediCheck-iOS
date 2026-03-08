@@ -117,6 +117,28 @@ struct EnterYourInviteCode : View {
                             isVerifying = true
                             isError = false
                         }
+
+#if DEBUG
+                        if UITestHarness.isEnabled {
+                            await authController.ensureDebugSession()
+                            print("[EnterYourInviteCode] UITest mode join with code=\(entered)")
+                            await familyStore.join(inviteCode: entered)
+
+                            await MainActor.run {
+                                isVerifying = false
+
+                                if familyStore.errorMessage == nil {
+                                    print("[EnterYourInviteCode] UITest join success")
+                                    isError = false
+                                    yesPressed?()
+                                } else {
+                                    print("[EnterYourInviteCode] UITest join failed, error=\(familyStore.errorMessage ?? "nil")")
+                                    isError = true
+                                }
+                            }
+                            return
+                        }
+#endif
                         
                         // Ensure user is authenticated (sign in anonymously if needed) before joining
                         if await authController.signInState != .signedIn {

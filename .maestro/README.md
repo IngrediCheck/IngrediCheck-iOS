@@ -70,5 +70,5 @@ maestro test --config config.yaml flows/01_scan_success.yaml
 ## Notes
 
 - The suite uses the `debugScanQA` launch flag, which the app maps to the existing simulator-only debug scan mode.
-- `clearState` and `clearKeychain` are used on launch so each flow starts from a clean app session.
+- The app-owned UI test harness resets runtime state on launch so flows do not rely on Maestro `clearState` or `clearKeychain`.
 - The flows use broad regex matches for known-good products instead of hard-coding every character of the backend response.

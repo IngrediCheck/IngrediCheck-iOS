@@ -4,13 +4,19 @@ tags: [chat]
 - runFlow: ../../subflows/launch/chat.yaml
 - extendedWaitUntil:
     visible:
+      id: home_view
+    timeout: 30000
+- tapOn:
+    text: Open chat
+- extendedWaitUntil:
+    visible:
       id: chat_view
     timeout: 30000
 - tapOn:
-    id: chat_input
+    text: "\"Type your answer...\""
 - inputText: hello
 - tapOn:
-    id: chat_send_button
+    text: Send
 - extendedWaitUntil:
     visible:
       text: Hello from the simulator QA harness\.

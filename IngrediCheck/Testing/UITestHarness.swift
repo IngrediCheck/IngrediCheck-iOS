@@ -562,31 +562,16 @@ private enum UITestFixtures {
                 favorites: shared.favorites
             )
         case .chat:
-            let family = shared.family
-            return UITestFixture(
+            return homeFixture(
                 scenario: scenario,
-                restoredState: (canvas: .home, sheet: .chatConversation),
-                requiresSession: true,
-                launchesWithCompletedOnboarding: true,
-                marksOnboardingCompleted: true,
-                authProvider: .google,
-                googleOutcome: .success,
-                appleOutcome: .success,
                 homeRoute: nil,
                 openSettingsSheet: false,
-                startScanningOnAppStart: false,
-                family: family,
-                selectedMemberId: family.selfMember.id,
+                family: shared.family,
                 foodNotesAll: shared.foodNotesAll,
                 foodNotesSummary: shared.foodNotesSummary,
-                permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
                 scans: shared.scans,
                 stats: shared.stats,
-                favorites: shared.favorites,
-                chatReplies: chatReplies(),
-                tipProducts: tipProducts(),
-                tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
-                shareMessage: "Share IngrediCheck"
+                favorites: shared.favorites
             )
         case .permissions:
             let family = shared.family

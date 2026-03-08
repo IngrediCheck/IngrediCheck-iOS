@@ -826,6 +826,8 @@ struct EditSectionBottomSheet: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Done")
             .accessibilityIdentifier("food_notes_edit_done_button")
             .padding(.trailing, 20)
             .padding(.bottom, 24)

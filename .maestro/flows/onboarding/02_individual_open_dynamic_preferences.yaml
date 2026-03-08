@@ -4,9 +4,10 @@ tags: [onboarding, food-notes]
 - runFlow: ../../subflows/launch/onboarding_individual.yaml
 - extendedWaitUntil:
     visible:
-      id: whos_this_for_view
+      text: Who do you grocery shop for?
     timeout: 30000
-- tapOn: Just Me
+- tapOn:
+    id: whos_this_for_just_me
 - extendedWaitUntil:
     visible:
       text: Let's Go!

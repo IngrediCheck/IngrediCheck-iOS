@@ -83,7 +83,6 @@ struct PermissionsCanvas: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white)
-        .accessibilityIdentifier("permissions_canvas")
         .task {
             refreshPermissionStates()
         }
@@ -203,6 +202,7 @@ struct PermissionsCanvas: View {
         }
     }
 
+    @ViewBuilder
     private func permissionRow(
         icon: String,
         title: String,
@@ -210,6 +210,41 @@ struct PermissionsCanvas: View {
         isOn: Binding<Bool>,
         isLocked: Bool = false,
         accessibilityId: String? = nil
+    ) -> some View {
+        let isActionRow = accessibilityId == "permissions_signin_toggle"
+
+        if isActionRow {
+            Button {
+                guard !isOn.wrappedValue else { return }
+                isOn.wrappedValue = true
+            } label: {
+                permissionRowContent(
+                    icon: icon,
+                    title: title,
+                    subtitle: subtitle,
+                    isOn: isOn,
+                    isLocked: isLocked
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(accessibilityId ?? "")
+        } else {
+            permissionRowContent(
+                icon: icon,
+                title: title,
+                subtitle: subtitle,
+                isOn: isOn,
+                isLocked: isLocked
+            )
+        }
+    }
+
+    private func permissionRowContent(
+        icon: String,
+        title: String,
+        subtitle: String,
+        isOn: Binding<Bool>,
+        isLocked: Bool
     ) -> some View {
         HStack(alignment: .top, spacing: 0) {
             Image(icon)
@@ -224,10 +259,9 @@ struct PermissionsCanvas: View {
 
                 Text(subtitle)
                     .font(ManropeFont.regular.size(12))
-                    .foregroundStyle(.grayScale100)                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.grayScale100)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            
-            
 
             Spacer()
 
@@ -236,9 +270,9 @@ struct PermissionsCanvas: View {
                 .tint(Color(hex: "#91B640"))
                 .disabled(isOn.wrappedValue)
                 .allowsHitTesting(!isLocked)
-                .accessibilityIdentifier(accessibilityId ?? "")
         }
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 }
 

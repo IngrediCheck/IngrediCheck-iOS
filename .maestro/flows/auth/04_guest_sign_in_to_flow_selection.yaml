@@ -9,7 +9,7 @@ tags: [auth, onboarding]
 - tapOn: Sign in later
 - extendedWaitUntil:
     visible:
-      id: whos_this_for_view
+      text: Who do you grocery shop for?
     timeout: 30000
 - assertVisible:
     text: Just Me

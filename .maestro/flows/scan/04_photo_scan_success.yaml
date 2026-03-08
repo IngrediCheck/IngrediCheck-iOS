@@ -9,7 +9,7 @@ tags: [scan, photo]
 - runFlow: ../../subflows/inject_photo.yaml
 - extendedWaitUntil:
     visible:
-      id: scan_card_product_name
+      text: Sea Salt Veggie Chips
     timeout: 40000
 - assertVisible:
     text: Sea Salt Veggie Chips

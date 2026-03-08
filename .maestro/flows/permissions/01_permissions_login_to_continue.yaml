@@ -4,7 +4,7 @@ tags: [permissions]
 - runFlow: ../../subflows/launch/permissions.yaml
 - extendedWaitUntil:
     visible:
-      id: permissions_canvas
+      text: Why we need these permissions
     timeout: 30000
 - tapOn:
     id: permissions_signin_toggle
@@ -13,4 +13,4 @@ tags: [permissions]
       id: login_to_continue_view
     timeout: 30000
 - assertVisible:
-    id: login_to_continue_google_button
+    text: Google

@@ -220,6 +220,7 @@ struct RootContainerView: View {
             if UITestHarness.isEnabled, !didApplyUITestScenario, let fixture = UITestHarness.fixture {
                 didApplyUITestScenario = true
                 familyStore.selectedMemberId = fixture.selectedMemberId
+                await familyStore.loadCurrentFamily()
                 scanHistoryStore.applyUITestScans(fixture.scans)
                 appState.listsTabState.scans = fixture.scans
                 appState.listsTabState.listItems = fixture.favorites
@@ -239,12 +240,27 @@ struct RootContainerView: View {
                 // Family load runs concurrently — FamilyStore's isFetchInFlight
                 // guard prevents duplicate calls if prefetch is already in-flight
                 group.addTask { @MainActor in
+                    if UITestHarness.isEnabled, UITestHarness.fixture != nil {
+                        return
+                    }
                     if authController.session != nil {
                         await familyStore.loadCurrentFamily()
                     }
                 }
                 // Onboarding restoration runs concurrently
                 group.addTask { @MainActor in
+                    if UITestHarness.isEnabled, UITestHarness.fixture != nil {
+                        if let stepId = coordinator.currentOnboardingStepId {
+                            onboarding.restoreState(forStepId: stepId)
+                        } else if case .fineTuneYourExperience = coordinator.currentBottomSheetRoute {
+                            onboarding.restoreState(forStepId: "lifeStyle")
+                        } else if case .workingOnSummary = coordinator.currentBottomSheetRoute {
+                            onboarding.restoreToLastStep()
+                        }
+                        onboarding.updateSectionCompletionStatus()
+                        return
+                    }
+
                     print("[OnboardingMeta] RootContainerView.task: attempting restore on launch")
                     await OnboardingPersistence.shared.restore(into: coordinator)
 

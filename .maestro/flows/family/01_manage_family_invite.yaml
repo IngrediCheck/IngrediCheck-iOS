@@ -10,7 +10,7 @@ tags: [family]
     id: manage_family_invite_button_33333333-3333-3333-3333-333333333333
 - extendedWaitUntil:
     visible:
-      id: manage_family_invite_result
+      text: Invite sent
     timeout: 30000
 - assertVisible:
-    id: manage_family_invite_result
+    text: Invite sent

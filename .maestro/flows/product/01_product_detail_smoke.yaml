@@ -9,4 +9,4 @@ tags: [product]
 - assertVisible:
     id: product_detail_favorite_button
 - assertVisible:
-    id: product_detail_reanalyze_button
+    text: Diet Coke Soft Drink

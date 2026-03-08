@@ -129,6 +129,11 @@ struct MeetYourProfileView: View {
             }
             .padding(.top, 24)
 
+            Color.clear
+                .frame(height: 1)
+                .accessibilityElement()
+                .accessibilityIdentifier("meet_your_profile_view")
+
             // Greeting Title
             HStack(spacing: 8) {
                 Text("Hello,")
@@ -173,7 +178,6 @@ struct MeetYourProfileView: View {
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
             }
-            .accessibilityIdentifier("meet_your_profile_view")
             .padding(.top, 24)
             .padding(.bottom, 16)
             

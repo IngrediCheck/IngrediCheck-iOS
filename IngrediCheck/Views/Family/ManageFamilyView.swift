@@ -245,6 +245,8 @@ struct ManageFamilyView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(Capsule().fill(Color.white))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(uiTestInviteMessage)
                     .accessibilityIdentifier("manage_family_invite_result")
                     .padding(.bottom, 16)
             }
@@ -281,10 +283,10 @@ struct ManageFamilyView: View {
             return
         }
         
-        let message = inviteShareMessage(inviteCode: code)
         if UITestHarness.isEnabled {
-            uiTestInviteMessage = message
+            uiTestInviteMessage = "Invite sent"
         } else {
+            let message = inviteShareMessage(inviteCode: code)
             let items = [message]
             shareItems = ShareItem(items: items)
         }

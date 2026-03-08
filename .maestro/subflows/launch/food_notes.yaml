@@ -1,8 +1,6 @@
 appId: llc.fungee.ingredicheck
 ---
 - launchApp:
-    clearState: true
-    clearKeychain: true
     stopApp: true
     arguments:
       "--ui-test-mode": true

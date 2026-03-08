@@ -35,7 +35,7 @@ struct SplashScreen: View {
                         .scaledToFill()
                         .ignoresSafeArea()
                 } content: {
-                    RootContainerView(restoredState: (canvas: .home, sheet: .homeDefault))
+                    RootContainerView(restoredState: restoredState ?? (canvas: .home, sheet: .homeDefault))
                         .environment(authController)
                         .environment(familyStore)
                 }
@@ -67,11 +67,10 @@ struct SplashScreen: View {
         .task {
 #if DEBUG
             if UITestHarness.isEnabled, let fixture = UITestHarness.fixture {
+                await authController.signOut()
                 await UITestHarness.prepareRuntime()
                 if fixture.requiresSession {
                     await authController.ensureDebugSession()
-                } else {
-                    await authController.signOut()
                 }
 
                 if fixture.launchesWithCompletedOnboarding {
