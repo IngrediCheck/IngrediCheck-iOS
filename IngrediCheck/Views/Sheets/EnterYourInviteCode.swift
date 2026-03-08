@@ -44,6 +44,7 @@ struct EnterYourInviteCode : View {
                         .font(NunitoFont.bold.size(22))
                         .foregroundStyle(.grayScale150)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .accessibilityIdentifier("enter_invite_code_view")
                 }
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .leading) {
@@ -180,7 +181,6 @@ struct EnterYourInviteCode : View {
 //        )
         .navigationBarBackButtonHidden(true)
         .dismissKeyboardOnTap()
-        .accessibilityIdentifier("enter_invite_code_view")
     }
 
     struct InviteTextField: View {
@@ -232,25 +232,30 @@ struct EnterYourInviteCode : View {
                     }
 
                 // Visual OTP boxes
-                HStack(spacing: 14) {
-                    HStack(spacing: 8) {
-                        box(0)
-                        box(1)
-                        box(2)
-                    }
+                Button {
+                    isFocused = true
+                } label: {
+                    HStack(spacing: 14) {
+                        HStack(spacing: 8) {
+                            box(0)
+                            box(1)
+                            box(2)
+                        }
 
-                    RoundedRectangle(cornerRadius: 10)
-                        .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FFE2E0") : .grayScale40)
-                        .frame(width: 12, height: 2.5)
+                        RoundedRectangle(cornerRadius: 10)
+                            .foregroundStyle(isError && !code.last!.isEmpty ? Color(hex: "FFE2E0") : .grayScale40)
+                            .frame(width: 12, height: 2.5)
 
-                    HStack(spacing: 8) {
-                        box(3)
-                        box(4)
-                        box(5)
+                        HStack(spacing: 8) {
+                            box(3)
+                            box(4)
+                            box(5)
+                        }
                     }
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { isFocused = true }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Invite code entry")
                 .accessibilityIdentifier("invite_code_boxes")
             }
             .onAppear {

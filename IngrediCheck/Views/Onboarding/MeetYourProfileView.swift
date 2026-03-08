@@ -173,6 +173,7 @@ struct MeetYourProfileView: View {
                     .font(NunitoFont.bold.size(22))
                     .foregroundStyle(.grayScale150)
             }
+            .accessibilityIdentifier("meet_your_profile_view")
             .padding(.top, 24)
             .padding(.bottom, 16)
             
@@ -193,12 +194,13 @@ struct MeetYourProfileView: View {
                 GreenCapsule(title: isFromFamilyOverview ? "Done" : "Continue", width: 159)
                     .frame(width: 159)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(isFromFamilyOverview ? "Done" : "Continue")
             .accessibilityIdentifier("meet_your_profile_continue_button")
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity)
         .dismissKeyboardOnTap()
-        .accessibilityIdentifier("meet_your_profile_view")
         .onAppear {
             if let member = targetMember {
                 // If it's the self member and "Just Me" flow, backend defaults the member name to "Me"

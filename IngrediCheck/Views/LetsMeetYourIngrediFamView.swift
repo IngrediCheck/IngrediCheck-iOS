@@ -99,6 +99,7 @@ struct LetsMeetYourIngrediFamView: View {
                     .foregroundStyle(.grayScale150)
 //                    .padding(.top, 32)
                     .padding(.bottom, 12)
+                    .accessibilityIdentifier("family_overview_view")
                   
 
                 ScrollView {
@@ -286,18 +287,19 @@ struct LetsMeetYourIngrediFamView: View {
         .sheet(item: $shareItems) { shareItem in
             ShareSheet(activityItems: shareItem.items)
         }
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: .top) {
             if let uiTestInviteMessage {
                 Text(uiTestInviteMessage)
                     .font(ManropeFont.medium.size(12))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(Capsule().fill(Color.white))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(uiTestInviteMessage)
                     .accessibilityIdentifier("family_overview_invite_result")
-                    .padding(.bottom, 16)
+                    .padding(.top, 12)
             }
         }
-        .accessibilityIdentifier("family_overview_view")
     }
     
     // MARK: - Invite Share Helper
@@ -325,10 +327,10 @@ struct LetsMeetYourIngrediFamView: View {
             return
         }
         
-        let message = inviteShareMessage(inviteCode: code)
         if UITestHarness.isEnabled {
-            uiTestInviteMessage = message
+            uiTestInviteMessage = "Invite sent"
         } else {
+            let message = inviteShareMessage(inviteCode: code)
             let items = [message]
             shareItems = ShareItem(items: items)
         }
