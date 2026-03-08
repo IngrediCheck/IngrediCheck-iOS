@@ -190,6 +190,7 @@ struct ScanDataCard: View {
         }
         .frame(width: 300, height: 120)
         .contentShape(Rectangle())
+        .accessibilityIdentifier("scan_data_card")
         .onTapGesture {
             if let product = product {
                 onTap?(product, matchStatus, ingredientRecommendations, overallAnalysis, scanId)
@@ -584,12 +585,14 @@ struct ScanDataCard: View {
                             .font(NunitoFont.semiBold.size(14))
                             .foregroundColor(Color.white.opacity(0.85))
                             .lineLimit(2)
+                            .accessibilityIdentifier("scan_card_product_name")
                     }
                     if let brand = product.brand, !brand.isEmpty {
                         Text(brand)
                             .font(ManropeFont.regular.size(12))
                             .foregroundColor(.white.opacity(0.7))
                             .lineLimit(1)
+                            .accessibilityIdentifier("scan_card_brand")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -781,6 +784,7 @@ struct ScanDataCard: View {
                 .foregroundColor(Color.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
+                .accessibilityIdentifier("scan_card_not_found_title")
             
             Text("Help us identify it, add a few photos of the product.")
                 .font(ManropeFont.semiBold.size(10))
@@ -799,10 +803,12 @@ struct ScanDataCard: View {
             Text("Something went wrong")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color.white)
+                .accessibilityIdentifier("scan_card_error_title")
             Text(error)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(Color.white.opacity(0.9))
                 .lineLimit(2)
+                .accessibilityIdentifier("scan_card_error_message")
             Spacer(minLength: 0)
         }
     }

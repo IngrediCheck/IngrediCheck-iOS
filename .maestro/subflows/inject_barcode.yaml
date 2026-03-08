@@ -1,0 +1,11 @@
+appId: llc.fungee.ingredicheck
+---
+- tapOn:
+    id: "scan_debug_injector_button"
+- extendedWaitUntil:
+    visible:
+      text: "Inject Barcode"
+    timeout: 5000
+- waitForAnimationToEnd
+- inputText: "${BARCODE}"
+- tapOn: "Inject"

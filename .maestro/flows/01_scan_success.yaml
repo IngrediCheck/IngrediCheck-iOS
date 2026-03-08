@@ -1,0 +1,17 @@
+appId: llc.fungee.ingredicheck
+tags:
+  - smoke
+  - scanner
+  - simulator
+---
+- runFlow: ../subflows/launch_scan_qa.yaml
+- runFlow:
+    file: ../subflows/inject_barcode.yaml
+    env:
+      BARCODE: "049000028911"
+- extendedWaitUntil:
+    visible:
+      text: ".*[Dd]iet [Cc]oke.*|.*[Cc]oke.*"
+    timeout: 40000
+- assertVisible:
+    text: ".*[Dd]iet [Cc]oke.*|.*[Cc]oke.*"

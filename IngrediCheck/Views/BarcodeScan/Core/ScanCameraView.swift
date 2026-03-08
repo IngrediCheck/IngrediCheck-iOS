@@ -922,11 +922,13 @@ struct ScanCameraView: View {
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
+                            .accessibilityIdentifier("scan_simulator_debug_hint")
 #if targetEnvironment(simulator)
                         if DebugScanQAMode.isEnabled {
                             Text("Simulator QA mode is active.")
                                 .font(.footnote)
                                 .foregroundColor(.secondary)
+                                .accessibilityIdentifier("scan_simulator_qa_mode_label")
                         }
 #endif
 #endif
@@ -1380,6 +1382,7 @@ struct ScanCameraView: View {
                             .foregroundColor(.white)
                     }
                     .accessibilityLabel("Inject barcode")
+                    .accessibilityIdentifier("scan_debug_injector_button")
                 }
 #endif
                 if mode == .scanner {
@@ -1389,6 +1392,7 @@ struct ScanCameraView: View {
         }
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("scan_camera_view")
         .onAppear {
             // Track that camera is in navigation stack (for ProductDetail "Add Photo" navigation)
             appState?.hasCameraInStack = true

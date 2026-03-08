@@ -53,6 +53,7 @@ struct DebugBarcodeInjectorSheet: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("debug_barcode_preset_\(preset.barcode)")
                         }
                     }
                 }
@@ -72,6 +73,7 @@ struct DebugBarcodeInjectorSheet: View {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.secondarySystemBackground))
                     )
+                    .accessibilityIdentifier("debug_barcode_input")
 
                 HStack(spacing: 12) {
                     Button("Paste Clipboard") {
@@ -79,6 +81,7 @@ struct DebugBarcodeInjectorSheet: View {
                         barcode = Self.isLikelyBarcode(clipboard) ? clipboard : ""
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("debug_barcode_paste_button")
 
                     Spacer()
 
@@ -87,11 +90,13 @@ struct DebugBarcodeInjectorSheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(normalizedBarcode.isEmpty)
+                    .accessibilityIdentifier("debug_barcode_inject_button")
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(20)
+            .accessibilityIdentifier("debug_barcode_injector_sheet")
             .navigationTitle("Inject Barcode")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -99,6 +104,7 @@ struct DebugBarcodeInjectorSheet: View {
                     Button("Close") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("debug_barcode_close_button")
                 }
             }
         }

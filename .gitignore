@@ -102,6 +102,8 @@ private_keys/
 *.log
 .claude/debug.txt
 .claude/settings.local.json
+.maestro/build/
+.maestro/reports/
 
 # App Store Connect CLI config
 .asc/
