@@ -1,5 +1,4 @@
 import SwiftUI
-import PostHog
 
 @main
 struct IngrediCheckApp: App {

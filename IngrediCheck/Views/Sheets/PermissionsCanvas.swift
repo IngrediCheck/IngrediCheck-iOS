@@ -12,7 +12,7 @@ struct PermissionsCanvas: View {
     @State private var showNotificationsPermissionAlert: Bool = false
 
     private var isSignedIn: Bool {
-        authController.session != nil && !authController.signedInAsGuest
+        authController.hasEffectiveSession && !authController.signedInAsGuest
     }
 
     var body: some View {

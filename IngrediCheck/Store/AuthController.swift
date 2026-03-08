@@ -6,7 +6,6 @@ import KeychainSwift
 import GoogleSignIn
 import GoogleSignInSwift
 import CryptoKit
-import PostHog
 import os
 
 enum AuthControllerError: Error, LocalizedError {
@@ -138,6 +137,7 @@ private enum AuthFlowMode {
     @MainActor private var signInTask: Task<Void, Never>?
     @MainActor private var uiTestAuthProvider: UITestAuthProvider?
     @MainActor private var uiTestDisplayEmail: String?
+    @MainActor private var hasLocalDebugSession = false
 
     private static let deviceIdKey = "deviceId"
     private static var hasRegisteredDevice = false
@@ -235,6 +235,10 @@ private enum AuthFlowMode {
         return session?.user.email
     }
 
+    @MainActor var hasEffectiveSession: Bool {
+        session != nil || hasLocalDebugSession
+    }
+
     // Returns true if the email looks like Apple's private relay address
     @MainActor private func isAppleRelayEmail(_ email: String) -> Bool {
         let lowercased = email.lowercased()
@@ -274,7 +278,7 @@ private enum AuthFlowMode {
         }
         
         // Fallback for valid non-guest sessions where provider is missing
-        if session != nil && !signedInAsGuest {
+        if hasEffectiveSession && !signedInAsGuest {
              return ("person.circle", "Signed in")
         }
         
@@ -301,6 +305,12 @@ private enum AuthFlowMode {
             // Clear onboarding state before sign-out
             await MainActor.run {
                 OnboardingPersistence.shared.setStage(.none)
+            }
+            if AppRuntimePolicy.usesLocalUITestAuth {
+                await MainActor.run {
+                    clearLocalDebugSession()
+                }
+                return
             }
             _ = try await supabaseClient.auth.signOut()
         } catch AuthError.sessionMissing {
@@ -346,7 +356,13 @@ private enum AuthFlowMode {
         // so SwiftUI .task(id:) cancellation won't kill the network request.
         // Inherits @MainActor (no Sendable issues with self).
         let task = Task {
-            await signInWithNewAnonymousAccount()
+            if AppRuntimePolicy.usesLocalUITestAuth {
+                await MainActor.run {
+                    installLocalDebugSession()
+                }
+            } else {
+                await signInWithNewAnonymousAccount()
+            }
         }
 
         signInTask = task
@@ -411,12 +427,12 @@ private enum AuthFlowMode {
 #if DEBUG
     @MainActor
     func ensureDebugSession() async {
-        if session != nil {
+        if hasEffectiveSession {
             applyUITestAuthFixtureIfNeeded()
             return
         }
 
-        await signInWithNewAnonymousAccount()
+        await signIn()
         applyUITestAuthFixtureIfNeeded()
     }
 #endif
@@ -435,6 +451,33 @@ private enum AuthFlowMode {
                 uiTestDisplayEmail = "simulator.apple@ingredicheck.app"
             }
         }
+    }
+
+    @MainActor
+    private func installLocalDebugSession(provider: UITestAuthProvider = .guest) {
+        hasLocalDebugSession = true
+        session = nil
+        signInState = .signedIn
+        uiTestAuthProvider = provider
+        switch provider {
+        case .guest:
+            uiTestDisplayEmail = nil
+        case .google:
+            uiTestDisplayEmail = "simulator.google@ingredicheck.app"
+        case .apple:
+            uiTestDisplayEmail = "simulator.apple@ingredicheck.app"
+        }
+    }
+
+    @MainActor
+    private func clearLocalDebugSession() {
+        hasLocalDebugSession = false
+        session = nil
+        signInState = .signedOut
+        uiTestAuthProvider = nil
+        uiTestDisplayEmail = nil
+        Self.hasRegisteredDevice = false
+        AnalyticsService.shared.resetAnalytics()
     }
     
     public func handleSignInWithAppleCompletion(result: Result<ASAuthorization, Error>) {
@@ -692,9 +735,16 @@ private enum AuthFlowMode {
 
     @MainActor
     private func handleSessionChange(event: AuthChangeEvent, session: Session?) {
+        if AppRuntimePolicy.usesLocalUITestAuth, hasLocalDebugSession, session == nil {
+            return
+        }
+
+        if session != nil {
+            hasLocalDebugSession = false
+        }
         self.session = session
         isUpgradingAccount = false
-        if session == nil {
+        if session == nil, !hasLocalDebugSession {
             uiTestAuthProvider = nil
             uiTestDisplayEmail = nil
         }
@@ -724,6 +774,9 @@ private enum AuthFlowMode {
     
     @MainActor
     private func registerDeviceAfterLogin(session: Session, authProvider: String) {
+        guard !AppRuntimePolicy.skipsDeviceRegistration else {
+            return
+        }
         guard !Self.hasRegisteredDevice else {
             return
         }

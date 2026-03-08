@@ -243,7 +243,7 @@ struct RootContainerView: View {
                     if UITestHarness.isEnabled, UITestHarness.fixture != nil {
                         return
                     }
-                    if authController.session != nil {
+                    if authController.hasEffectiveSession {
                         await familyStore.loadCurrentFamily()
                     }
                 }

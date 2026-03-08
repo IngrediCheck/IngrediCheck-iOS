@@ -102,7 +102,7 @@ struct SettingsContentView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 4)
                         
-                        if authController.session != nil && !authController.signedInAsGuest {
+                        if authController.hasEffectiveSession && !authController.signedInAsGuest {
                             accountSignedInCard()
                         } else {
                             accountGuestCard()
@@ -281,7 +281,7 @@ struct SettingsContentView: View {
                     // Danger
                     VStack(spacing: 12) {
                         sectionCard {
-                            if authController.session != nil && !authController.signedInAsGuest {
+                            if authController.hasEffectiveSession && !authController.signedInAsGuest {
                                 DeleteAccountView(labelText: "Delete Data & Account", showDeleteConfirm: $showDeleteConfirm)
                                     .padding(16)
                                 

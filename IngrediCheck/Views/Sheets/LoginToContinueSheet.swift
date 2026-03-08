@@ -98,7 +98,7 @@ struct LoginToContinueSheet: View {
                         Task {
                             await authController.upgradeCurrentAccount(to: .google)
                             await MainActor.run {
-                                if authController.session != nil && !authController.signedInAsGuest {
+                                if authController.hasEffectiveSession && !authController.signedInAsGuest {
                                     onSignedIn()
                                 }
                             }
@@ -128,7 +128,7 @@ struct LoginToContinueSheet: View {
                         Task {
                             await authController.upgradeCurrentAccount(to: .apple)
                             await MainActor.run {
-                                if authController.session != nil && !authController.signedInAsGuest {
+                                if authController.hasEffectiveSession && !authController.signedInAsGuest {
                                     onSignedIn()
                                 }
                             }
@@ -205,7 +205,7 @@ struct LoginToContinueSheet: View {
                     Task {
                         await authController.upgradeCurrentAccount(to: .google)
                         await MainActor.run {
-                            if authController.session != nil && !authController.signedInAsGuest {
+                            if authController.hasEffectiveSession && !authController.signedInAsGuest {
                                 onSignedIn()
                             }
                         }
@@ -235,7 +235,7 @@ struct LoginToContinueSheet: View {
                     Task {
                         await authController.upgradeCurrentAccount(to: .apple)
                         await MainActor.run {
-                            if authController.session != nil && !authController.signedInAsGuest {
+                            if authController.hasEffectiveSession && !authController.signedInAsGuest {
                                 onSignedIn()
                             }
                         }

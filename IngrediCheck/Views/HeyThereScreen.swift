@@ -89,7 +89,7 @@ struct HeyThereScreen: View {
                 // reach the tutorial screen.
                 Task { await TutorialVideoManager.shared.downloadIfNeeded() }
 
-                if authController.session == nil {
+                if !authController.hasEffectiveSession {
                     print("[OnboardingMeta] Auto-triggering guest login on .whosThisFor screen")
                     await authController.signIn()
 

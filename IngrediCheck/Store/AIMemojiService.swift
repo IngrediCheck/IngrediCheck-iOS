@@ -7,7 +7,6 @@
 
 import UIKit
 import os
-import PostHog
 
 /// Container for a generated memoji image and its storage location.
 struct GeneratedMemoji {
@@ -151,7 +150,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
         Log.error("AIMemojiService", "❌ Request failed with message: \(message)")
 
         let latency = (Date().timeIntervalSince1970 - startTime) * 1000
-        PostHogSDK.shared.capture("Memoji Image Generation Failed", properties: [
+        AnalyticsService.shared.capture("Memoji Image Generation Failed", properties: [
             "total_latency_ms": latency,
             "status_code": httpResponse.statusCode
         ])
@@ -226,7 +225,7 @@ func generateMemojiImage(requestBody: MemojiRequest) async throws -> GeneratedMe
     Log.debug("AIMemojiService", "generateMemojiImage: Using storagePath=\(storagePath)")
 
     let latency = (Date().timeIntervalSince1970 - startTime) * 1000
-    PostHogSDK.shared.capture("Memoji Image Generated", properties: [
+    AnalyticsService.shared.capture("Memoji Image Generated", properties: [
         "total_latency_ms": latency
     ])
 

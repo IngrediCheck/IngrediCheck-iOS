@@ -3,7 +3,6 @@ import SwiftUI
 import UIKit
 import CryptoKit
 import Supabase
-import PostHog
 import Network
 import CoreTelephony
 import os
@@ -257,7 +256,7 @@ struct ChatStreamError: Error, LocalizedError {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 120
 
-        PostHogSDK.shared.capture("Unified Analysis Stream Started", properties: analyticsProperties)
+        AnalyticsService.shared.capture("Unified Analysis Stream Started", properties: analyticsProperties)
         let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -266,7 +265,7 @@ struct ChatStreamError: Error, LocalizedError {
 
         guard httpResponse.statusCode == 200 else {
             analyticsProperties["status_code"] = httpResponse.statusCode
-            PostHogSDK.shared.capture("Unified Analysis Stream Failed - HTTP", properties: analyticsProperties)
+            AnalyticsService.shared.capture("Unified Analysis Stream Failed - HTTP", properties: analyticsProperties)
             AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "http", statusCode: httpResponse.statusCode)
 
             let message = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
@@ -406,7 +405,7 @@ struct ChatStreamError: Error, LocalizedError {
                             var productProps = analyticsProperties
                             productProps["product_name"] = product.name ?? "Unknown"
                             productProps["state"] = "analyzing"
-                            PostHogSDK.shared.capture("Unified Analysis Stream Product", properties: productProps)
+                            AnalyticsService.shared.capture("Unified Analysis Stream Product", properties: productProps)
                             
                             await MainActor.run {
                                 onProduct(product)
@@ -423,7 +422,7 @@ struct ChatStreamError: Error, LocalizedError {
                             var analysisProps = analyticsProperties
                             analysisProps["recommendations_count"] = recommendations.count
                             analysisProps["state"] = "done"
-                            PostHogSDK.shared.capture("Unified Analysis Stream Done", properties: analysisProps)
+                            AnalyticsService.shared.capture("Unified Analysis Stream Done", properties: analysisProps)
                             
                             // Send product update again (to ensure match status is updated with analysis)
                             if let product = scanPayload.toProduct() {
@@ -445,7 +444,7 @@ struct ChatStreamError: Error, LocalizedError {
 
                         var errorProps = analyticsProperties
                         errorProps["error_message"] = errorMessage
-                        PostHogSDK.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
+                        AnalyticsService.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
                         AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "http", error: errorMessage)
 
                         await MainActor.run {
@@ -461,7 +460,7 @@ struct ChatStreamError: Error, LocalizedError {
                     var errorProps = analyticsProperties
                     errorProps["decode_stage"] = "scan"
                     errorProps["raw_payload"] = payloadString
-                    PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    AnalyticsService.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
                     AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "decode")
                     Log.error("SSE", "Failed to decode scan payload: \(error)")
                 }
@@ -477,7 +476,7 @@ struct ChatStreamError: Error, LocalizedError {
                     productProps["product_latency_ms"] = productLatency
                     productProps["product_name"] = product.name ?? "Unknown"
 
-                    PostHogSDK.shared.capture("Unified Analysis Stream Product", properties: productProps)
+                    AnalyticsService.shared.capture("Unified Analysis Stream Product", properties: productProps)
 
                     await MainActor.run {
                         onProduct(product)
@@ -486,7 +485,7 @@ struct ChatStreamError: Error, LocalizedError {
                     var errorProps = analyticsProperties
                     errorProps["decode_stage"] = "product"
                     errorProps["raw_payload"] = payloadString
-                    PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    AnalyticsService.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
                     AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "decode")
                 }
             case "analysis":
@@ -505,7 +504,7 @@ struct ChatStreamError: Error, LocalizedError {
                     }
                     analysisProps["recommendations_count"] = recommendations.count
 
-                    PostHogSDK.shared.capture("Unified Analysis Stream Recommendations", properties: analysisProps)
+                    AnalyticsService.shared.capture("Unified Analysis Stream Recommendations", properties: analysisProps)
 
                     await MainActor.run {
                         onAnalysis(recommendations)
@@ -514,7 +513,7 @@ struct ChatStreamError: Error, LocalizedError {
                     var errorProps = analyticsProperties
                     errorProps["decode_stage"] = "analysis"
                     errorProps["raw_payload"] = payloadString
-                    PostHogSDK.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
+                    AnalyticsService.shared.capture("Unified Analysis Stream Decode Error", properties: errorProps)
                     AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "decode")
                 }
             case "error":
@@ -546,7 +545,7 @@ struct ChatStreamError: Error, LocalizedError {
                 errorProps["error_status"] = statusCode ?? 0
                 errorProps["elapsed_ms"] = (Date().timeIntervalSince1970 - startTime) * 1000
 
-                PostHogSDK.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
+                AnalyticsService.shared.capture("Unified Analysis Stream Error Event", properties: errorProps)
                 AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "http", error: errorMessage)
 
                 await MainActor.run {
@@ -609,7 +608,7 @@ struct ChatStreamError: Error, LocalizedError {
                 var errorProps = analyticsProperties
                 errorProps["error"] = error.localizedDescription
                 errorProps["elapsed_ms"] = (Date().timeIntervalSince1970 - startTime) * 1000
-                PostHogSDK.shared.capture("Unified Analysis Stream Network Error", properties: errorProps)
+                AnalyticsService.shared.capture("Unified Analysis Stream Network Error", properties: errorProps)
                 AnalyticsService.shared.captureAPIError(endpoint: "streamUnifiedAnalysis", errorType: "network", error: error.localizedDescription)
 
                 await MainActor.run {
@@ -626,7 +625,7 @@ struct ChatStreamError: Error, LocalizedError {
             completionProps["product_received"] = productReceivedTime != nil
             completionProps["analysis_received"] = analysisReceivedTime != nil
 
-            PostHogSDK.shared.capture("Unified Analysis Stream Completed", properties: completionProps)
+            AnalyticsService.shared.capture("Unified Analysis Stream Completed", properties: completionProps)
         }
     }
 
@@ -685,7 +684,7 @@ struct ChatStreamError: Error, LocalizedError {
         Log.debug("BARCODE_SCAN", "📡 API Call: POST \(endpoint)")
         Log.debug("BARCODE_SCAN", "📡 Request body: barcode=\(barcode)")
         
-        PostHogSDK.shared.capture("Barcode Scan Started", properties: [
+        AnalyticsService.shared.capture("Barcode Scan Started", properties: [
             "request_id": requestId,
             "barcode": barcode
         ])
@@ -696,7 +695,7 @@ struct ChatStreamError: Error, LocalizedError {
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             Log.error("BARCODE_SCAN", "❌ HTTP Error - Status: \(statusCode)")
-            PostHogSDK.shared.capture("Barcode Scan Failed - HTTP", properties: [
+            AnalyticsService.shared.capture("Barcode Scan Failed - HTTP", properties: [
                 "request_id": requestId,
                 "status_code": statusCode
             ])
@@ -747,7 +746,7 @@ struct ChatStreamError: Error, LocalizedError {
                         // Initial state - product info is being fetched
                         // product_info may be empty at this stage
                         Log.debug("BARCODE_SCAN", "⏳ State: fetching_product_info - waiting for product info...")
-                        PostHogSDK.shared.capture("Barcode Scan State", properties: [
+                        AnalyticsService.shared.capture("Barcode Scan State", properties: [
                             "request_id": requestId,
                             "scan_id": scan.id,
                             "state": scan.state,
@@ -758,7 +757,7 @@ struct ChatStreamError: Error, LocalizedError {
                     case "processing_images":
                         // Images are being processed
                         Log.debug("BARCODE_SCAN", "🖼️ State: processing_images - processing uploaded images...")
-                        PostHogSDK.shared.capture("Barcode Scan State", properties: [
+                        AnalyticsService.shared.capture("Barcode Scan State", properties: [
                             "request_id": requestId,
                             "scan_id": scan.id,
                             "state": scan.state,
@@ -774,7 +773,7 @@ struct ChatStreamError: Error, LocalizedError {
                         let productInfo = scan.product_info
                         let productInfoSource = scan.product_info_source ?? "unknown"
                         
-                        PostHogSDK.shared.capture("Barcode Scan Product Info", properties: [
+                        AnalyticsService.shared.capture("Barcode Scan Product Info", properties: [
                             "request_id": requestId,
                             "scan_id": scan.id,
                             "source": productInfoSource,
@@ -799,7 +798,7 @@ struct ChatStreamError: Error, LocalizedError {
                             Log.debug("BARCODE_SCAN", "🎯 Scan complete - no polling needed (SSE stream)")
                             
                             let totalLatency = (Date().timeIntervalSince1970 - startTime) * 1000
-                            PostHogSDK.shared.capture("Barcode Scan Analysis", properties: [
+                            AnalyticsService.shared.capture("Barcode Scan Analysis", properties: [
                                 "request_id": requestId,
                                 "scan_id": scan.id,
                                 "total_latency_ms": totalLatency
@@ -819,7 +818,7 @@ struct ChatStreamError: Error, LocalizedError {
                         
                         Log.error("BARCODE_SCAN", "❌ State: error - scan_id: \(scan.id), error: \(errorMessage)")
                         
-                        PostHogSDK.shared.capture("Barcode Scan Error", properties: [
+                        AnalyticsService.shared.capture("Barcode Scan Error", properties: [
                             "request_id": requestId,
                             "scan_id": scan.id,
                             "error": errorMessage
@@ -1120,7 +1119,7 @@ struct ChatStreamError: Error, LocalizedError {
         }
         Log.debug("CHAT", requestBodyLog)
         
-        PostHogSDK.shared.capture("Chat Message Started", properties: [
+        AnalyticsService.shared.capture("Chat Message Started", properties: [
             "request_id": requestId,
             "has_conversation_id": conversationId != nil
         ])
@@ -1148,7 +1147,7 @@ struct ChatStreamError: Error, LocalizedError {
             throw NetworkError.invalidResponse(422)
         default:
             Log.error("CHAT", "❌ HTTP Error - Status: \(httpResponse.statusCode)")
-            PostHogSDK.shared.capture("Chat Message Failed - HTTP", properties: [
+            AnalyticsService.shared.capture("Chat Message Failed - HTTP", properties: [
                 "request_id": requestId,
                 "status_code": httpResponse.statusCode
             ])
@@ -1197,7 +1196,7 @@ struct ChatStreamError: Error, LocalizedError {
                             let latency = (Date().timeIntervalSince1970 - startTime) * 1000
                             Log.debug("CHAT", "📦 Event: turn (thinking) - conversation_id: \(thinkingEvent.conversation_id), turn_id: \(thinkingEvent.turn_id), latency: \(Int(latency))ms")
                             
-                            PostHogSDK.shared.capture("Chat Turn Thinking", properties: [
+                            AnalyticsService.shared.capture("Chat Turn Thinking", properties: [
                                 "request_id": requestId,
                                 "conversation_id": thinkingEvent.conversation_id,
                                 "turn_id": thinkingEvent.turn_id
@@ -1214,7 +1213,7 @@ struct ChatStreamError: Error, LocalizedError {
                             let latency = (Date().timeIntervalSince1970 - startTime) * 1000
                             Log.debug("CHAT", "📦 Event: turn (done) - conversation_id: \(doneEvent.conversation_id), turn_id: \(doneEvent.turn_id), response_length: \(doneEvent.response.count), latency: \(Int(latency))ms")
                             
-                            PostHogSDK.shared.capture("Chat Turn Done", properties: [
+                            AnalyticsService.shared.capture("Chat Turn Done", properties: [
                                 "request_id": requestId,
                                 "conversation_id": doneEvent.conversation_id,
                                 "turn_id": doneEvent.turn_id,
@@ -1242,7 +1241,7 @@ struct ChatStreamError: Error, LocalizedError {
                     
                     Log.error("CHAT", "❌ Event: error - conversation_id: \(errorEvent.conversation_id ?? "nil"), turn_id: \(errorEvent.turn_id ?? "nil"), error: \(errorEvent.error)")
                     
-                    PostHogSDK.shared.capture("Chat Error", properties: [
+                    AnalyticsService.shared.capture("Chat Error", properties: [
                         "request_id": requestId,
                         "conversation_id": errorEvent.conversation_id ?? "",
                         "turn_id": errorEvent.turn_id ?? "",
@@ -1406,7 +1405,7 @@ struct ChatStreamError: Error, LocalizedError {
                        let submitTime = imageSubmitTimes[userImage.content_hash] {
                         reportedProcessedHashes.insert(userImage.content_hash)
                         let latency = (Date().timeIntervalSince1970 - submitTime) * 1000
-                        PostHogSDK.shared.capture("Photo Scan Image Processed", properties: [
+                        AnalyticsService.shared.capture("Photo Scan Image Processed", properties: [
                             "scan_id": scanId,
                             "content_hash": userImage.content_hash,
                             "latency_ms": latency
@@ -1506,7 +1505,7 @@ struct ChatStreamError: Error, LocalizedError {
         }
         
         guard httpResponse.statusCode == 200 else {
-            PostHogSDK.shared.capture("Scan History Fetch Failed", properties: [
+            AnalyticsService.shared.capture("Scan History Fetch Failed", properties: [
                 "request_id": requestId,
                 "status_code": httpResponse.statusCode,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
@@ -1521,7 +1520,7 @@ struct ChatStreamError: Error, LocalizedError {
 
             Log.debug("SCAN_HISTORY", "✅ fetchScanHistory success - \(historyResponse.scans.count) scans, total: \(historyResponse.total), latency: \(String(format: "%.0f", latencyMs))ms")
 
-            PostHogSDK.shared.capture("Scan History Fetch Successful", properties: [
+            AnalyticsService.shared.capture("Scan History Fetch Successful", properties: [
                 "request_id": requestId,
                 "scan_count": historyResponse.scans.count,
                 "total": historyResponse.total,
@@ -1534,7 +1533,7 @@ struct ChatStreamError: Error, LocalizedError {
             let latencyMs = (Date().timeIntervalSince1970 - startTime) * 1000
             Log.error("SCAN_HISTORY", "❌ Failed to decode response - error: \(error.localizedDescription), latency: \(String(format: "%.0f", latencyMs))ms")
             
-            PostHogSDK.shared.capture("Scan History Decode Error", properties: [
+            AnalyticsService.shared.capture("Scan History Decode Error", properties: [
                 "request_id": requestId,
                 "error": error.localizedDescription,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
@@ -1572,7 +1571,7 @@ struct ChatStreamError: Error, LocalizedError {
         let httpResponse = response as! HTTPURLResponse
 
         guard httpResponse.statusCode == 200 else {
-            PostHogSDK.shared.capture("Stats Fetch Failed", properties: [
+            AnalyticsService.shared.capture("Stats Fetch Failed", properties: [
                 "request_id": requestId,
                 "status_code": httpResponse.statusCode,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
@@ -1584,7 +1583,7 @@ struct ChatStreamError: Error, LocalizedError {
         do {
             let stats = try JSONDecoder().decode(DTO.StatsResponse.self, from: data)
             
-            PostHogSDK.shared.capture("Stats Fetch Successful", properties: [
+            AnalyticsService.shared.capture("Stats Fetch Successful", properties: [
                 "request_id": requestId,
                 "avg_scans": stats.avgScans,
                 "barcode_scans_count": stats.barcodeScansCount,
@@ -1598,7 +1597,7 @@ struct ChatStreamError: Error, LocalizedError {
         } catch {
             print("Failed to decode StatsResponse: \(error)")
             
-            PostHogSDK.shared.capture("Stats Decode Error", properties: [
+            AnalyticsService.shared.capture("Stats Decode Error", properties: [
                 "request_id": requestId,
                 "error": error.localizedDescription,
                 "latency_ms": (Date().timeIntervalSince1970 - startTime) * 1000
@@ -1816,7 +1815,7 @@ struct ChatStreamError: Error, LocalizedError {
         guard httpResponse.statusCode == 200 else {
             print("Bad response from server: \(httpResponse.statusCode)")
 
-            PostHogSDK.shared.capture("Favorites Fetch Failed", properties: [
+            AnalyticsService.shared.capture("Favorites Fetch Failed", properties: [
                 "request_id": requestId,
                 "has_search_text": searchText != nil,
                 "search_length": searchText?.count ?? 0,
@@ -1831,7 +1830,7 @@ struct ChatStreamError: Error, LocalizedError {
         do {
             let listItems = try JSONDecoder().decode([DTO.ListItem].self, from: data)
 
-            PostHogSDK.shared.capture("Favorites Fetch Successful", properties: [
+            AnalyticsService.shared.capture("Favorites Fetch Successful", properties: [
                 "request_id": requestId,
                 "has_search_text": searchText != nil,
                 "search_length": searchText?.count ?? 0,
@@ -1845,7 +1844,7 @@ struct ChatStreamError: Error, LocalizedError {
             let responseText = String(data: data, encoding: .utf8) ?? ""
             print(responseText)
 
-            PostHogSDK.shared.capture("Favorites Fetch Decode Error", properties: [
+            AnalyticsService.shared.capture("Favorites Fetch Decode Error", properties: [
                 "request_id": requestId,
                 "has_search_text": searchText != nil,
                 "search_length": searchText?.count ?? 0,
@@ -1869,7 +1868,7 @@ struct ChatStreamError: Error, LocalizedError {
         
         func buildRequest(_ token: String) -> URLRequest {
             if let id {
-                PostHogSDK.shared.capture("User Inputed Preference", properties: [
+                AnalyticsService.shared.capture("User Inputed Preference", properties: [
                     "request_id": requestId,
                     "endpoint": SafeEatsEndpoint.preference_lists_default_items.rawValue,
                     "client_activity_id": clientActivityId,
@@ -1887,7 +1886,7 @@ struct ChatStreamError: Error, LocalizedError {
                     .build()
                 
             } else {
-                PostHogSDK.shared.capture("User Inputed Preference", properties: [
+                AnalyticsService.shared.capture("User Inputed Preference", properties: [
                     "request_id": requestId,
                     "endpoint": SafeEatsEndpoint.preference_lists_default.rawValue,
                     "client_activity_id": clientActivityId,
@@ -1916,7 +1915,7 @@ struct ChatStreamError: Error, LocalizedError {
 
         guard ([200, 201, 204, 422].contains(httpResponse.statusCode)) else {
 
-            PostHogSDK.shared.capture("User Input Validation: Bad response from the server", properties: [
+            AnalyticsService.shared.capture("User Input Validation: Bad response from the server", properties: [
                 "request_id": requestId,
                 "client_activity_id": clientActivityId,
                 "preference_text": preferenceText,
@@ -1930,7 +1929,7 @@ struct ChatStreamError: Error, LocalizedError {
         }
         
         do {
-            PostHogSDK.shared.capture("User Input Validation Successful", properties: [
+            AnalyticsService.shared.capture("User Input Validation Successful", properties: [
                 "request_id": requestId,
                 "client_activity_id": clientActivityId,
                 "preference_text": preferenceText,
@@ -1939,7 +1938,7 @@ struct ChatStreamError: Error, LocalizedError {
             
             return try JSONDecoder().decode(DTO.PreferenceValidationResult.self, from: data)
         } catch {
-            PostHogSDK.shared.capture("User Input Validation Error", properties: [
+            AnalyticsService.shared.capture("User Input Validation Error", properties: [
                 "request_id": requestId,
                 "client_activity_id": clientActivityId,
                 "preference_text": preferenceText,
@@ -2385,7 +2384,7 @@ struct ChatStreamError: Error, LocalizedError {
                         "app_version": appVersion,
                         "device_model": deviceModel
                     ]
-                    PostHogSDK.shared.capture("ai_ping", properties: properties)
+                    AnalyticsService.shared.capture("ai_ping", properties: properties)
                 }
             } catch {
                 // Non-critical, silently ignore
@@ -2426,7 +2425,7 @@ struct ChatStreamError: Error, LocalizedError {
                         properties["carrier"] = carrier
                     }
 
-                    PostHogSDK.shared.capture("edge_ping", properties: properties)
+                    AnalyticsService.shared.capture("edge_ping", properties: properties)
                 }
             } catch {
                 // Non-critical, silently ignore

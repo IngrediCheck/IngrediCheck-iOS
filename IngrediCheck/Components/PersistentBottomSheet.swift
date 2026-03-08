@@ -604,7 +604,7 @@ struct PersistentBottomSheet: View {
                     return
                 }
                 await authController.signIn()
-                guard authController.session != nil else {
+                guard authController.hasEffectiveSession else {
                     Log.error("PersistentBottomSheet", "Sign-in failed, cannot create Bite Buddy family")
                     return
                 }
@@ -623,7 +623,7 @@ struct PersistentBottomSheet: View {
                     return
                 }
                 await authController.signIn()
-                guard authController.session != nil else {
+                guard authController.hasEffectiveSession else {
                     Log.error("PersistentBottomSheet", "Sign-in failed, cannot proceed to family flow")
                     return
                 }

@@ -137,7 +137,7 @@ struct SplashScreen: View {
             // We'll give it a tiny grace period if it's nil? 
             // Checks on kill/launch typically have session ready from keychain immediately if using GoTrue synchronously or fast async.
             
-            if authController.session != nil {
+            if authController.hasEffectiveSession {
                  print("[SplashScreen] Session exists, checking metadata...")
                 // Session exists
             } else {
@@ -145,7 +145,7 @@ struct SplashScreen: View {
                  try? await Task.sleep(nanoseconds: 100_000_000)
             }
             
-            if authController.session != nil {
+            if authController.hasEffectiveSession {
                 // Check metadata
                 let metadata = await OnboardingPersistence.shared.fetchRemoteMetadata()
                 print("[SplashScreen] Metadata check result: \(metadata != nil ? "found" : "not found")")
