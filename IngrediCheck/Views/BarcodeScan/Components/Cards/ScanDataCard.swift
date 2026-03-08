@@ -38,6 +38,7 @@ struct ScanDataCard: View {
     
     private var matchStatus: DTO.ProductRecommendation? {
         guard let scan = scan else { return nil }
+        guard hasRenderableProduct else { return nil }
 
         // If user has no food notes at all, always show a neutral "no preferences"
         // state regardless of scan type/state, so the card never flips to "Unknown"
@@ -72,9 +73,20 @@ struct ScanDataCard: View {
         // 2. Currently polling for updates (e.g., 2nd photo being processed)
         (scan?.state == "analyzing" || scan?.state == "processing_images") || isPolling
     }
-    
+
+    private var hasRenderableProduct: Bool {
+        guard let product = product else { return false }
+
+        return (product.name?.isEmpty == false)
+            || (product.brand?.isEmpty == false)
+            || !product.ingredients.isEmpty
+            || !product.images.isEmpty
+    }
+
     private var notFoundState: Bool {
-        scan?.product_info.name == nil && scan?.product_info.brand == nil && scan?.product_info.ingredients.isEmpty == true
+        guard let scan = scan else { return false }
+        guard !hasRenderableProduct else { return false }
+        return scan.state == "done"
     }
     
     // Skeleton mode: show redacted placeholders when scanId is "skeleton" (initial empty state)
@@ -475,12 +487,12 @@ struct ScanDataCard: View {
                 submittingStateView
             } else if isPendingMode || (isLoading && scan == nil) {
                 loadingStateView
-            } else if let product = product {
+            } else if hasRenderableProduct, let product = product {
                 productDetailsView(product: product)
+            } else if let error = errorState, !hasRenderableProduct {
+                errorView(error: error)
             } else if notFoundState {
                 notFoundView
-            } else if let error = errorState, product == nil {
-                errorView(error: error)
             }
         }
     }

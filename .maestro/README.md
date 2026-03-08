@@ -17,6 +17,7 @@ Unlike the older `kincalendar` suite, these flows are intentionally self-contain
 
 - `01_scan_success.yaml`: launches the app in debug scan QA mode and verifies a successful barcode scan renders a result card
 - `02_open_product_detail.yaml`: launches the app in debug scan QA mode, scans a known-good barcode, and verifies product detail navigation
+- `03_invalid_barcode_no_result.yaml`: launches the app in debug scan QA mode and verifies an invalid barcode renders the “couldn’t identify” state
 
 ## What it does not cover
 
@@ -71,4 +72,3 @@ maestro test --config config.yaml flows/01_scan_success.yaml
 - The suite uses the `debugScanQA` launch flag, which the app maps to the existing simulator-only debug scan mode.
 - `clearState` and `clearKeychain` are used on launch so each flow starts from a clean app session.
 - The flows use broad regex matches for known-good products instead of hard-coding every character of the backend response.
-- The invalid-barcode path is still better covered manually right now because fresh sessions with no food notes do not surface a stable error-specific UI state.
