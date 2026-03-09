@@ -1,0 +1,14 @@
+appId: llc.fungee.ingredicheck
+tags: [lists, recent-scans, empty]
+---
+- runFlow: ../../subflows/launch/recent_scans_empty.yaml
+- extendedWaitUntil:
+    visible:
+      id: recent_scans_page_view
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      text: "No Scans !"
+    timeout: 30000
+- assertVisible:
+    text: "No Scans !"

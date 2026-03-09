@@ -1,0 +1,17 @@
+appId: llc.fungee.ingredicheck
+tags: [home, family]
+---
+- runFlow: ../../subflows/launch/home.yaml
+- extendedWaitUntil:
+    visible:
+      id: home_view
+    timeout: 30000
+- assertVisible:
+    text: Aarav
+- scrollUntilVisible:
+    element:
+      text: Your IngrediFam
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    text: Your IngrediFam

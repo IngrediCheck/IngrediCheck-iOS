@@ -48,6 +48,7 @@ struct IngredientsAlertCard: View {
                 isExpanded.toggle()
             }
         }
+        .accessibilityIdentifier("product_detail_ingredient_alert")
     }
     
     private var header: some View {

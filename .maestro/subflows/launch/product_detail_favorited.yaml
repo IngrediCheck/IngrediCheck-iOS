@@ -1,0 +1,8 @@
+appId: llc.fungee.ingredicheck
+---
+- launchApp:
+    stopApp: true
+    arguments:
+      "--ui-test-mode": true
+      "--ui-test-scenario=productDetailFavorited": true
+- waitForAnimationToEnd

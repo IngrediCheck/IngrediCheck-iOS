@@ -454,6 +454,7 @@ struct SettingsContentView: View {
                                         .foregroundStyle(Color(hex: "#FF1100"))
                                         .frame(maxWidth: .infinity)
                                 }
+                                .accessibilityIdentifier("settings_sign_out_confirm_button")
 
                                 Divider()
 
@@ -470,6 +471,8 @@ struct SettingsContentView: View {
                             .frame(width: 270, height: 167)
                             .background(Color.grayScale10)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .accessibilityElement(children: .contain)
+                            .accessibilityIdentifier("settings_sign_out_confirm_dialog")
                         }
 
                         if showDeleteConfirm {
@@ -489,6 +492,7 @@ struct SettingsContentView: View {
                                         .textInputAutocapitalization(.characters)
                                         .disableAutocorrection(true)
                                         .font(ManropeFont.medium.size(16))
+                                        .accessibilityIdentifier("settings_delete_confirm_text_field")
                                     Rectangle()
                                         .fill(Color(hex: "#E3E3E3"))
                                         .frame(height: 1)
@@ -816,9 +820,10 @@ struct SettingsContentView: View {
                 }
                 .foregroundStyle(Color(hex: "#F04438"))
             }
+            .accessibilityIdentifier("settings_delete_account_button")
         }
     }
-    
+
     struct ResetAppStateView: View {
         
         let labelText: String
@@ -846,6 +851,7 @@ struct SettingsContentView: View {
                 }
                 .foregroundStyle(Color(hex: "#F04438"))
             }
+            .accessibilityIdentifier("settings_reset_app_button")
             .confirmationDialog(
                 "This will sign you out and reset the app",
                 isPresented: $confirmationShown,
@@ -933,7 +939,8 @@ struct SettingsContentView: View {
                         .foregroundStyle(.grayScale10)
                 )
             }
-            
+            .accessibilityIdentifier("settings_sign_out_button")
+
         }
     }
 }

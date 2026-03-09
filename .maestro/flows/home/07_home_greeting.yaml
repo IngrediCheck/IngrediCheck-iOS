@@ -1,0 +1,10 @@
+appId: llc.fungee.ingredicheck
+tags: [home, greeting]
+---
+- runFlow: ../../subflows/launch/home.yaml
+- extendedWaitUntil:
+    visible:
+      id: home_view
+    timeout: 30000
+- assertVisible:
+    text: Aarav

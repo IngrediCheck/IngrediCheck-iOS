@@ -160,6 +160,7 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(height: 196)
+                    .accessibilityIdentifier("home_food_notes_card")
 
                     // Family + Average scans - use GeometryReader to ensure equal width
                     GeometryReader { geometry in
@@ -353,6 +354,7 @@ struct HomeView: View {
                                     .foregroundStyle(Color(hex: "#EEEEEE"))
                             )
                     )
+                    .accessibilityIdentifier("home_recent_scans_section")
                     } // end else (real content)
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)

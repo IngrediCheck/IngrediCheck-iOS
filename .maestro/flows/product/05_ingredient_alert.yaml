@@ -1,0 +1,21 @@
+appId: llc.fungee.ingredicheck
+tags: [product, ingredients, alert]
+---
+- runFlow: ../../subflows/launch/product_detail_favorited.yaml
+- extendedWaitUntil:
+    visible:
+      id: product_detail_view
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: product_detail_ingredient_alert
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: product_detail_ingredient_alert
+- extendedWaitUntil:
+    visible:
+      text: Wheat Flour
+    timeout: 10000
+- assertVisible:
+    text: Wheat Flour

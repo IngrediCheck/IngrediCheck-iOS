@@ -1,0 +1,14 @@
+appId: llc.fungee.ingredicheck
+tags: [family]
+---
+- runFlow: ../../subflows/launch/manage_family.yaml
+- extendedWaitUntil:
+    visible:
+      id: manage_family_view
+    timeout: 30000
+- assertVisible:
+    text: Aarav
+- assertVisible:
+    text: Riya
+- assertVisible:
+    text: Kabir

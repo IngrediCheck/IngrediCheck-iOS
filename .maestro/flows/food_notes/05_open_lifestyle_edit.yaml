@@ -1,0 +1,25 @@
+appId: llc.fungee.ingredicheck
+tags: [food-notes]
+---
+- runFlow: ../../subflows/launch/food_notes.yaml
+- extendedWaitUntil:
+    visible:
+      id: unified_canvas_view
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: food_notes_edit_life_style
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: food_notes_edit_life_style
+- extendedWaitUntil:
+    visible:
+      id: food_notes_edit_sheet
+    timeout: 30000
+- tapOn:
+    text: Done
+- extendedWaitUntil:
+    visible:
+      id: unified_canvas_view
+    timeout: 30000

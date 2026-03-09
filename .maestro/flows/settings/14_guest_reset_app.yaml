@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, guest, reset]
+---
+- runFlow: ../../subflows/launch/settings_guest.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings_content_view
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: settings_reset_app_button
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: settings_reset_app_button

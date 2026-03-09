@@ -61,6 +61,7 @@ struct FilterSegmentedControl: View {
         }
         .padding(2)
         .frame(width: 105, height: 31)
+        .accessibilityIdentifier("recent_scans_filter_control")
         .background(
             Capsule()
                 .stroke(Color.white)
