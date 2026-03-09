@@ -2,6 +2,10 @@ appId: llc.fungee.ingredicheck
 tags: [settings, auth, sign-out]
 ---
 - runFlow: ../../subflows/launch/settings.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings_content_view
+    timeout: 30000
 - scrollUntilVisible:
     element:
       id: settings_sign_out_button
@@ -11,7 +15,7 @@ tags: [settings, auth, sign-out]
     id: settings_sign_out_button
 - extendedWaitUntil:
     visible:
-      text: Sign out
+      id: settings_sign_out_confirm_dialog
     timeout: 10000
 - tapOn:
-    text: Sign out
+    id: settings_sign_out_confirm_button

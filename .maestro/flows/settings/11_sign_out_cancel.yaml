@@ -15,7 +15,7 @@ tags: [settings, auth, sign-out]
     id: settings_sign_out_button
 - extendedWaitUntil:
     visible:
-      text: Not now
+      id: settings_sign_out_confirm_dialog
     timeout: 10000
 - tapOn:
     text: Not now

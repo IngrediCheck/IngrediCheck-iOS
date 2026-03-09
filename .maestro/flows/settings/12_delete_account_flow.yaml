@@ -1,7 +1,15 @@
 appId: llc.fungee.ingredicheck
 tags: [settings, auth, delete-account]
 ---
+# NOTE: Under --ui-test-mode the harness uses a local debug session,
+# so AuthController.deleteAccount() cannot reach the real backend.
+# This flow only verifies the confirmation dialog UI (text field focus,
+# Confirm button enablement) — not actual account deletion.
 - runFlow: ../../subflows/launch/settings.yaml
+- extendedWaitUntil:
+    visible:
+      id: settings_content_view
+    timeout: 30000
 - scrollUntilVisible:
     element:
       id: settings_delete_account_button
@@ -11,10 +19,10 @@ tags: [settings, auth, delete-account]
     id: settings_delete_account_button
 - extendedWaitUntil:
     visible:
-      text: "Type \"DELETE\" to confirm"
+      id: settings_delete_confirm_text_field
     timeout: 10000
 - tapOn:
-    text: "Type \"DELETE\" to confirm"
+    id: settings_delete_confirm_text_field
 - inputText: DELETE
 - tapOn:
     text: Confirm
