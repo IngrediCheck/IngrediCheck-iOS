@@ -19,3 +19,9 @@ tags: [settings, auth, sign-out]
     timeout: 10000
 - tapOn:
     id: settings_sign_out_confirm_button
+- extendedWaitUntil:
+    visible:
+      id: sign_in_sheet
+    timeout: 15000
+- assertVisible:
+    id: sign_in_sheet

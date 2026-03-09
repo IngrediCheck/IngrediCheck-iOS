@@ -26,3 +26,12 @@ tags: [settings, auth, delete-account]
 - inputText: DELETE
 - tapOn:
     text: Confirm
+# Verify the app signed out — proves typing DELETE enabled the Confirm button
+# and the delete action triggered (even though the backend call is a no-op
+# under the local auth harness).
+- extendedWaitUntil:
+    visible:
+      id: sign_in_sheet
+    timeout: 15000
+- assertVisible:
+    id: sign_in_sheet
