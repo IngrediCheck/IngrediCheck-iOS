@@ -1,0 +1,15 @@
+appId: llc.fungee.ingredicheck
+tags: [product, ingredients]
+---
+- runFlow: ../../subflows/launch/product_detail.yaml
+- extendedWaitUntil:
+    visible:
+      id: product_detail_view
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: product_detail_ingredients_section
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: product_detail_ingredients_section

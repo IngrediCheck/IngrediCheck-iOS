@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [lists, recent-scans]
+---
+- runFlow: ../../subflows/launch/recent_scans.yaml
+- extendedWaitUntil:
+    visible:
+      id: recent_scans_page_view
+    timeout: 30000
+- tapOn:
+    text: Diet Coke Soft Drink
+- extendedWaitUntil:
+    visible:
+      id: product_detail_view
+    timeout: 30000
+- assertVisible:
+    text: Diet Coke Soft Drink

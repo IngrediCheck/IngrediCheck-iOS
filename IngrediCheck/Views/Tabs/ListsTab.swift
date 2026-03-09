@@ -157,6 +157,7 @@ import os
                     }
                 )
                 .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("recent_scans_empty_state")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

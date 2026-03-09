@@ -1,0 +1,14 @@
+appId: llc.fungee.ingredicheck
+tags: [food-notes, chat]
+---
+- runFlow: ../../subflows/launch/food_notes.yaml
+- extendedWaitUntil:
+    visible:
+      id: unified_canvas_view
+    timeout: 30000
+- tapOn:
+    id: food_notes_notes_chat_button
+- extendedWaitUntil:
+    visible:
+      id: chat_view
+    timeout: 30000

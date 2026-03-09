@@ -1,0 +1,17 @@
+appId: llc.fungee.ingredicheck
+tags: [home, content]
+---
+- runFlow: ../../subflows/launch/home.yaml
+- extendedWaitUntil:
+    visible:
+      id: home_view
+    timeout: 30000
+- assertVisible:
+    id: home_food_notes_card
+- scrollUntilVisible:
+    element:
+      id: home_recent_scans_section
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: home_recent_scans_section

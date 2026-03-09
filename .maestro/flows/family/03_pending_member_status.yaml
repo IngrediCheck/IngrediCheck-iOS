@@ -1,0 +1,12 @@
+appId: llc.fungee.ingredicheck
+tags: [family, invite]
+---
+- runFlow: ../../subflows/launch/manage_family.yaml
+- extendedWaitUntil:
+    visible:
+      id: manage_family_view
+    timeout: 30000
+- assertVisible:
+    text: Kabir
+- assertVisible:
+    id: manage_family_invite_button_33333333-3333-3333-3333-333333333333

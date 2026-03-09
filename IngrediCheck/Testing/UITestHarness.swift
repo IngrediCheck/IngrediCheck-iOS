@@ -53,6 +53,10 @@ enum UITestScenario: String {
     case permissions
     case tipJar
     case support
+    case productDetailFavorited
+    case productDetailStale
+    case recentScansEmpty
+    case settingsGuest
 }
 
 struct UITestFixture {
@@ -625,6 +629,97 @@ private enum UITestFixtures {
                 stats: shared.stats,
                 favorites: shared.favorites,
                 shareMessage: "Share us tapped"
+            )
+        case .productDetailFavorited:
+            let oreoScan = shared.scans[1] // Oreo Original (is_favorited: true)
+            return homeFixture(
+                scenario: scenario,
+                homeRoute: .productDetail(scanId: oreoScan.id, initialScan: oreoScan),
+                openSettingsSheet: false,
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites
+            )
+        case .productDetailStale:
+            let scans = shared.scans
+            let dietCoke = scans[0]
+            let staleDietCoke = DTO.Scan(
+                id: dietCoke.id,
+                scan_type: dietCoke.scan_type,
+                barcode: dietCoke.barcode,
+                state: dietCoke.state,
+                product_info: dietCoke.product_info,
+                product_info_source: dietCoke.product_info_source,
+                product_info_vote: dietCoke.product_info_vote,
+                analysis_result: DTO.ScanAnalysisResult(
+                    id: dietCoke.analysis_result?.id,
+                    overall_analysis: dietCoke.analysis_result?.overall_analysis,
+                    overall_match: dietCoke.analysis_result?.overall_match,
+                    ingredient_analysis: dietCoke.analysis_result?.ingredient_analysis ?? [],
+                    is_stale: true,
+                    vote: dietCoke.analysis_result?.vote
+                ),
+                images: dietCoke.images,
+                latest_guidance: dietCoke.latest_guidance,
+                created_at: dietCoke.created_at,
+                last_activity_at: dietCoke.last_activity_at,
+                error: dietCoke.error,
+                is_favorited: dietCoke.is_favorited,
+                analysis_id: dietCoke.analysis_id
+            )
+            var staleScans = scans
+            staleScans[0] = staleDietCoke
+            return homeFixture(
+                scenario: scenario,
+                homeRoute: .productDetail(scanId: staleDietCoke.id, initialScan: staleDietCoke),
+                openSettingsSheet: false,
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: staleScans,
+                stats: shared.stats,
+                favorites: shared.favorites
+            )
+        case .recentScansEmpty:
+            return homeFixture(
+                scenario: scenario,
+                homeRoute: .recentScansAll,
+                openSettingsSheet: false,
+                family: shared.family,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                scans: [],
+                stats: emptyStats(),
+                favorites: []
+            )
+        case .settingsGuest:
+            return UITestFixture(
+                scenario: scenario,
+                restoredState: (canvas: .home, sheet: .homeDefault),
+                requiresSession: true,
+                launchesWithCompletedOnboarding: true,
+                marksOnboardingCompleted: true,
+                authProvider: .guest,
+                googleOutcome: .success,
+                appleOutcome: .success,
+                homeRoute: nil,
+                openSettingsSheet: true,
+                startScanningOnAppStart: false,
+                family: shared.family,
+                selectedMemberId: shared.family.selfMember.id,
+                foodNotesAll: shared.foodNotesAll,
+                foodNotesSummary: shared.foodNotesSummary,
+                permissions: UITestPermissions(cameraAuthorized: true, notificationsAuthorized: true),
+                scans: shared.scans,
+                stats: shared.stats,
+                favorites: shared.favorites,
+                chatReplies: chatReplies(),
+                tipProducts: tipProducts(),
+                tipPurchaseOutcome: .success(message: "Thanks for supporting IngrediCheck"),
+                shareMessage: "Share IngrediCheck"
             )
         }
     }

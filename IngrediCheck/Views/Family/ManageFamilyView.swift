@@ -459,6 +459,7 @@ struct ManageFamilyView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isSingleMember)
+                .accessibilityIdentifier("manage_family_leave_button")
                 .confirmationDialog("Leave Family", isPresented: $showLeaveConfirm) {
                     Button("Leave Family", role: .destructive) {
                         Task { await familyStore.leave() }
@@ -543,6 +544,7 @@ private struct FamilyCardView: View {
                             .textInputAutocapitalization(.words)
                             .disableAutocorrection(true)
                             .focused($isEditingFamilyName)
+                            .accessibilityIdentifier("manage_family_name_field")
                             .submitLabel(.done)
                             .onSubmit {
                                 isEditingFamilyName = false

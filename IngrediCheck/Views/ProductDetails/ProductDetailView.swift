@@ -419,6 +419,7 @@ struct ProductDetailView: View {
                                 }
                                 .padding(.horizontal, 20)
                                 .padding(.bottom, 40)
+                                .accessibilityIdentifier("product_detail_ingredients_section")
                             }
                         }
                         .redacted(reason: isPlaceholderMode ? .placeholder : [])

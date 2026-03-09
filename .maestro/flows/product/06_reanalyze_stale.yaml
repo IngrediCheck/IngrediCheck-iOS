@@ -1,0 +1,12 @@
+appId: llc.fungee.ingredicheck
+tags: [product, reanalyze]
+---
+- runFlow: ../../subflows/launch/product_detail_stale.yaml
+- extendedWaitUntil:
+    visible:
+      id: product_detail_view
+    timeout: 30000
+- assertVisible:
+    id: product_detail_reanalyze_button
+- tapOn:
+    id: product_detail_reanalyze_button

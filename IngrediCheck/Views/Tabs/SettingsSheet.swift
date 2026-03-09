@@ -816,9 +816,10 @@ struct SettingsContentView: View {
                 }
                 .foregroundStyle(Color(hex: "#F04438"))
             }
+            .accessibilityIdentifier("settings_delete_account_button")
         }
     }
-    
+
     struct ResetAppStateView: View {
         
         let labelText: String
@@ -846,6 +847,7 @@ struct SettingsContentView: View {
                 }
                 .foregroundStyle(Color(hex: "#F04438"))
             }
+            .accessibilityIdentifier("settings_reset_app_button")
             .confirmationDialog(
                 "This will sign you out and reset the app",
                 isPresented: $confirmationShown,
@@ -933,7 +935,8 @@ struct SettingsContentView: View {
                         .foregroundStyle(.grayScale10)
                 )
             }
-            
+            .accessibilityIdentifier("settings_sign_out_button")
+
         }
     }
 }

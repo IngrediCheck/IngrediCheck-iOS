@@ -1,0 +1,16 @@
+appId: llc.fungee.ingredicheck
+tags: [lists, favorites]
+---
+- runFlow: ../../subflows/launch/favorites.yaml
+- extendedWaitUntil:
+    visible:
+      id: favorites_page_view
+    timeout: 30000
+- tapOn:
+    text: Oreo Original
+- extendedWaitUntil:
+    visible:
+      text: Ingredients
+    timeout: 30000
+- assertVisible:
+    text: Oreo Original

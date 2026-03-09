@@ -1,0 +1,20 @@
+appId: llc.fungee.ingredicheck
+tags: [settings, auth, delete-account]
+---
+- runFlow: ../../subflows/launch/settings.yaml
+- scrollUntilVisible:
+    element:
+      id: settings_delete_account_button
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: settings_delete_account_button
+- extendedWaitUntil:
+    visible:
+      text: "Type \"DELETE\" to confirm"
+    timeout: 10000
+- tapOn:
+    text: "Type \"DELETE\" to confirm"
+- inputText: DELETE
+- tapOn:
+    text: Confirm
