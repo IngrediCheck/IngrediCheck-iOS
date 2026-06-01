@@ -1102,6 +1102,82 @@ private enum UITestFixtures {
     }
 }
 
+/// Lightweight, simulator-only debug mode that exercises the live barcode-scan QA
+/// path through the debug barcode injector. Enabled via the `--debug-scan-qa` launch
+/// argument (see `.maestro/subflows/launch_scan_qa.yaml`). Distinct from
+/// `UITestHarness`, which mocks the backend; this mode drives the real scan pipeline.
+enum DebugScanQAMode {
+    static let launchArgument = "--debug-scan-qa"
+
+    struct Preset: Identifiable {
+        let label: String
+        let barcode: String
+        var id: String { barcode }
+    }
+
+    /// Known-good and known-invalid barcodes surfaced as quick-select buttons in the
+    /// debug barcode injector. Mirrors the products seeded in `UITestFixtures.makeScans()`.
+    static let presets: [Preset] = [
+        Preset(label: "Coca-Cola 12 oz", barcode: "049000028911"),
+        Preset(label: "Oreo Original", barcode: "044000032547"),
+        Preset(label: "Invalid", barcode: "000000000000")
+    ]
+
+    static var isEnabled: Bool {
+#if targetEnvironment(simulator)
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains(launchArgument) {
+            return true
+        }
+        if let rawValue = arguments.first(where: { $0.hasPrefix("\(launchArgument)=") })?
+            .split(separator: "=", maxSplits: 1)
+            .last
+        {
+            return isTruthy(String(rawValue))
+        }
+        return false
+#else
+        false
+#endif
+    }
+
+    private static func isTruthy(_ rawValue: String) -> Bool {
+        switch rawValue.lowercased() {
+        case "1", "true", "yes", "y":
+            true
+        default:
+            false
+        }
+    }
+}
+
+/// Centralizes the runtime behavior changes that keep automated simulator runs from
+/// touching production services (analytics, backend device registration) and from
+/// depending on real authentication. Introduced to isolate simulator auth and analytics.
+enum AppRuntimePolicy {
+    /// True under any automated harness: the fully-mocked `UITestHarness` flows or the
+    /// live-pipeline `DebugScanQAMode` scan QA flows.
+    static var isAutomatedRun: Bool {
+        UITestHarness.isEnabled || DebugScanQAMode.isEnabled
+    }
+
+    /// The mocked UI-test flows install a local fake Supabase session instead of
+    /// performing real authentication; this gates that install/clear/guard logic.
+    static var usesLocalUITestAuth: Bool {
+        UITestHarness.isEnabled
+    }
+
+    /// Suppress analytics during automated runs so test traffic does not pollute metrics.
+    static var disablesAnalytics: Bool {
+        isAutomatedRun
+    }
+
+    /// Skip backend device registration during automated runs.
+    static var skipsDeviceRegistration: Bool {
+        isAutomatedRun
+    }
+}
+
 private extension DTO.ScanAnalysisResult {
     init(
         id: String?,
